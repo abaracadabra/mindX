@@ -1,0 +1,29 @@
+{
+  "name": "@deltaverse/idebt-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TypeScript clients for the off-chain services iDEBT depends on: mindX, AgenticPlace, BANKON, Parsec x402.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./mindx": "./src/mindx-client.ts",
+    "./agenticplace": "./src/agenticplace-client.ts",
+    "./bankon": "./src/bankon-client.ts",
+    "./parsec": "./src/parsec-x402-client.ts",
+    "./chainmap": "./src/chainmap.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "viem": "^2.21.0",
+    "algosdk": "^2.9.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.5.0"
+  }
+}

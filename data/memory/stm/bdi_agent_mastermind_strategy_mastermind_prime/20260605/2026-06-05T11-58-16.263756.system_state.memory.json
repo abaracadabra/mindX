@@ -1,0 +1,182 @@
+{
+  "timestamp": "2026-06-05T11:58:16.263756",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_deliberation",
+    "data": {
+      "selected_goal": {
+        "id": "9145c9ea",
+        "goal": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]",
+        "priority": 1,
+        "status": "pending",
+        "added_at": 1780662430.896867,
+        "is_primary": true
+      },
+      "full_desire_queue": [
+        {
+          "id": "9145c9ea",
+          "goal": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780662430.896867,
+          "is_primary": true
+        },
+        {
+          "id": "9215077a",
+          "goal": "Implement the following evolution: Implement comprehensive input validation for API requests [target: system, priority: 9, backlog_idx: 16]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780662474.896866,
+          "is_primary": true
+        },
+        {
+          "id": "182f9d62",
+          "goal": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780662526.0177438,
+          "is_primary": true
+        },
+        {
+          "id": "27b086d7",
+          "goal": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780662528.5995035,
+          "is_primary": true
+        },
+        {
+          "id": "3c0e0880",
+          "goal": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780662531.7992768,
+          "is_primary": true
+        },
+        {
+          "id": "5e4d9f2e",
+          "goal": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780662534.9349463,
+          "is_primary": true
+        },
+        {
+          "id": "82898c05",
+          "goal": "{\"error\": \"TimeoutError\", \"message\": \"Request timed out after 120s. Model may be too large or server overloaded.\"}",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780662565.7009149
+        },
+        {
+          "id": "0c7f78d1",
+          "goal": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780662565.9305017,
+          "is_primary": true
+        },
+        {
+          "id": "a9737478",
+          "goal": "Implement the following evolution: Implement comprehensive input validation for API requests [target: system, priority: 9, backlog_idx: 19]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780682034.2017643,
+          "is_primary": true
+        },
+        {
+          "id": "161efc49",
+          "goal": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780683933.5719287,
+          "is_primary": true
+        },
+        {
+          "id": "2401fb74",
+          "goal": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780683936.706951,
+          "is_primary": true
+        },
+        {
+          "id": "3681b3fa",
+          "goal": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780683967.6136858,
+          "is_primary": true
+        },
+        {
+          "id": "296ecc5e",
+          "goal": "Implement the following evolution: Implement comprehensive input validation for API requests [target: system, priority: 9, backlog_idx: 22]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780683968.967084,
+          "is_primary": true
+        },
+        {
+          "id": "7514e46d",
+          "goal": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780684069.687586,
+          "is_primary": true
+        },
+        {
+          "id": "b352223b",
+          "goal": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780684100.8293998,
+          "is_primary": true
+        },
+        {
+          "id": "82768b26",
+          "goal": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780684131.6937668,
+          "is_primary": true
+        },
+        {
+          "id": "7cb1d0d8",
+          "goal": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780684162.6121178,
+          "is_primary": true
+        },
+        {
+          "id": "26f802fc",
+          "goal": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780684193.612559,
+          "is_primary": true
+        },
+        {
+          "id": "d7eff084",
+          "goal": "Implement the following evolution: Implement comprehensive input validation for API requests [target: system, priority: 9, backlog_idx: 25]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780685896.259768,
+          "is_primary": true
+        }
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+    "run_id": "0f95f345"
+  },
+  "tags": [
+    "bdi_deliberation",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "b4325fc6f985f9dc"
+}

@@ -1,0 +1,47 @@
+{
+  "timestamp": "2026-06-05T04:53:17.939161",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_deliberation",
+    "data": {
+      "selected_goal": {
+        "id": "939ae96a",
+        "goal": "Implement the following evolution: Implement comprehensive input validation for API requests [target: system, priority: 9, backlog_idx: 13]",
+        "priority": 1,
+        "status": "pending",
+        "added_at": 1780660319.8966908,
+        "is_primary": true
+      },
+      "full_desire_queue": [
+        {
+          "id": "939ae96a",
+          "goal": "Implement the following evolution: Implement comprehensive input validation for API requests [target: system, priority: 9, backlog_idx: 13]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780660319.8966908,
+          "is_primary": true
+        },
+        {
+          "id": "9644b5ef",
+          "goal": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1780660396.3115528,
+          "is_primary": true
+        }
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+    "run_id": "8310a193"
+  },
+  "tags": [
+    "bdi_deliberation",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "c6155ac9bab51ad6"
+}

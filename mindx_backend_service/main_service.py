@@ -267,7 +267,12 @@ async def docs_html_page():
     db_doc_count = 0
     try:
         from agents import memory_pgvector as _mpg_docs
+        from utils.reference_corpus import is_private_doc as _is_private_doc
         indexed_docs = await _safe_await(_mpg_docs.get_indexed_docs(), timeout_s=3.0, default=[])
+        # Reference-corpus docs are embedded for mindX's own retrieval but are
+        # gated — never linked from this public page.
+        private_doc_count = sum(1 for d in indexed_docs if _is_private_doc(d["doc_name"]))
+        indexed_docs = [d for d in indexed_docs if not _is_private_doc(d["doc_name"])]
         db_doc_count = len(indexed_docs)
         if indexed_docs:
             db_items = []
@@ -281,6 +286,10 @@ async def docs_html_page():
                     f'<span style="color:#4a5060">({size}KB, {chunks} chunks)</span> '
                     f'<span class="tag tag-ref">EMBEDDED</span></li>')
             db_docs_html = '<ul style="list-style:none;padding:0">' + "".join(db_items) + "</ul>"
+            if private_doc_count:
+                db_docs_html += (f'<div style="color:#4a5060;font-size:10px;margin-top:4px">'
+                                 f'+{private_doc_count} private reference docs &mdash; '
+                                 f'<a href="/reference" style="color:#6e7681">/reference</a> (gated)</div>')
     except Exception:
         pass
 
@@ -305,21 +314,21 @@ async def docs_html_page():
                 pass
             entry = f'<li><a href="/doc/{name}">{name}.md</a> <span class="sz">({size_kb}KB)</span></li>'
             nl = name.lower()
-            if any(k in nl for k in ["technical","orchestration","core","architect","hierarchy","codebase"]):
+            if any(k in nl for k in ["technical","orchestration","core","architect","hierarchy","codebase","godel","schmidhuber","blueprint"]):
                 categories["Core Architecture"].append(entry)
-            elif any(k in nl for k in ["agent","agint","mindx","automindx","ceo","mastermind","persona","coordinator"]):
+            elif any(k in nl for k in ["agent","agint","mindx","automindx","ceo","mastermind","persona","coordinator","author"]):
                 categories["Agents"].append(entry)
             elif any(k in nl for k in ["tool","shell","registry","factory","calculator"]):
                 categories["Tools"].append(entry)
             elif any(k in nl for k in ["daio","governance","constitution","boardroom","dojo","voting"]):
                 categories["Governance & DAIO"].append(entry)
-            elif any(k in nl for k in ["memory","belief","knowledge","pgvector"]):
+            elif any(k in nl for k in ["memory","belief","knowledge","pgvector","dream"]):
                 categories["Memory & Knowledge"].append(entry)
-            elif any(k in nl for k in ["deploy","production","monitor","performance","security","resource"]):
+            elif any(k in nl for k in ["deploy","production","monitor","performance","security","resource","survive","milestone"]):
                 categories["Deployment & Operations"].append(entry)
             elif any(k in nl for k in ["api","mistral","gemini","ollama","model","inference","llm"]):
                 categories["API & Integration"].append(entry)
-            elif any(k in nl for k in ["manifesto","thesis","whitepaper","press","philosophy","ataraxia","civilization","roadmap","todo"]):
+            elif any(k in nl for k in ["manifesto","thesis","whitepaper","press","philosophy","ataraxia","civilization","roadmap","todo","eval"]):
                 categories["Philosophy & Vision"].append(entry)
             elif any(k in nl for k in ["guide","usage","instruction","quickref","tutorial","hackathon"]):
                 categories["Tutorials & Guides"].append(entry)
@@ -396,6 +405,18 @@ async def docs_html_page():
                 nav_content_html += f'<blockquote>{m_blockquote.group(1)}</blockquote>\n'
             elif m_code:
                 pass  # Skip code fences in nav
+    # De-link gated reference-corpus targets that NAV.md references (e.g.
+    # operations/ runbooks): the label stays for context, the link goes —
+    # this page must never link into the private subtrees.
+    try:
+        from utils.reference_corpus import is_private_doc as _ipd_nav
+        from urllib.parse import unquote as _unq_nav
+        def _strip_private_link(m):
+            return m.group(2) if _ipd_nav(_unq_nav(m.group(1))) else m.group(0)
+        nav_content_html = _re.sub(r'<a href="/doc/([^"]+)"[^>]*>(.*?)</a>',
+                                   _strip_private_link, nav_content_html)
+    except Exception:
+        pass
     sidebar_html = "\n".join(sidebar_items)
 
     return _DashResponse(content=f"""<!DOCTYPE html><html lang="en"><head>
@@ -890,7 +911,7 @@ try{const fs=localStorage.getItem('mindx_fs');if(fs)document.addEventListener('D
 <style>{_DOC_STYLE}</style></head><body><div class="page">{nav}{meta_html}{body_html}</div>{font_ctrl}</body></html>'''
 
 @app.get("/doc/{name:path}", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
-async def read_doc(name: str):
+async def read_doc(name: str, request: Request):
     """Render any markdown doc from docs/ directory (supports subdirectories)."""
     import re as _re2
     # Sanitize: allow alphanumeric, underscore, hyphen, dot, forward slash (for subdirs)
@@ -931,6 +952,19 @@ async def read_doc(name: str):
                     break
     if not doc_path.exists() or not doc_path.is_file():
         return _DashResponse(content=_doc_page("Not Found", f"<h1>Document not found</h1><p><code>{safe}</code> does not exist in docs/</p><p>Browse all documents at <a href='/docs.html'>docs</a> or read <a href='/book'>The Book of mindX</a>.</p>"), status_code=404)
+    # Reference-corpus gate: /doc/ is a public prefix, but the private
+    # subtrees (utils.reference_corpus) require a session. Checked against the
+    # *resolved* file so case-insensitive and fallback lookups can't bypass it.
+    try:
+        from utils.reference_corpus import is_private_doc as _is_private_doc
+        _rel = doc_path.resolve().relative_to((PROJECT_ROOT / "docs").resolve())
+        _private = _is_private_doc(_rel.as_posix())
+    except ValueError:
+        _private = False  # resolved outside docs/ (project-root fallback like CLAUDE.md) — public
+    if _private:
+        _gate_redirect = await _reference_gate(request, f"/doc/{safe}")
+        if _gate_redirect:
+            return _gate_redirect
     md = doc_path.read_text(encoding="utf-8", errors="replace")
     size_kb = round(doc_path.stat().st_size / 1024, 1)
     # Extract first heading for SEO description
@@ -952,6 +986,100 @@ async def read_doc(name: str):
     # Add back-links footer
     back_links = f'{related_html}<hr style="margin:16px 0 12px;border-color:rgba(88,166,255,.12)"><div style="font-size:12px;color:#4a5060;display:flex;gap:16px;flex-wrap:wrap"><a href="/docs.html" style="color:#58a6ff">All Documents</a><a href="/doc/INDEX" style="color:#79c0ff">Document Index</a><a href="/book" style="color:#d2a8ff">The Book of mindX</a><a href="/journal" style="color:#3fb950">Improvement Journal</a><a href="/redoc" style="color:#d29922">API Reference</a></div>'
     return _DashResponse(content=_doc_page(safe, body + back_links, f"{safe} &middot; {size_kb} KB", description=_first_heading or f"mindX documentation: {safe}", canonical_path=f"/doc/{name}"))
+
+
+# ── Reference corpus: gated catalogue of everything /docs.html does not link ──
+# /reference/ is a public *prefix* (the middleware can't carry localStorage
+# tokens on navigation), so every data route below gates itself via
+# _require_reference_access — same pattern as /admin/shadow/ and /realm.
+
+def _md_title(path) -> str:
+    """First '# ' heading from the head of a markdown file (cheap read)."""
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as fh:
+            for line in fh.read(2048).split("\n"):
+                if line.startswith("# "):
+                    return line[2:].strip()[:160]
+    except Exception:
+        pass
+    return ""
+
+
+@app.get("/reference/catalog", tags=["documentation"], include_in_schema=False)
+async def reference_catalog(request: Request):
+    """Catalogue of every docs/ file the public /docs.html does not link
+    (all subdirectory files + top-level non-markdown), grouped by folder.
+    Gated: session token, API key, or shadow-overlord JWT."""
+    await _require_reference_access(request)
+    from datetime import timezone as _tz_ref
+    from utils.reference_corpus import iter_unlinked_docs, is_private_doc, PRIVATE_DOC_PREFIXES
+    docs_dir = PROJECT_ROOT / "docs"
+    embedded: set = set()
+    try:
+        from agents import memory_pgvector as _mpg_ref
+        embedded = {d["doc_name"] for d in await _safe_await(_mpg_ref.get_indexed_docs(), timeout_s=3.0, default=[])}
+    except Exception:
+        pass
+    groups: dict = {}
+    total = 0
+    for relpath, path in iter_unlinked_docs(docs_dir):
+        top = relpath.split("/", 1)[0] if "/" in relpath else "(top-level)"
+        try:
+            st = path.stat()
+        except OSError:
+            continue
+        stem_rel = relpath.rsplit(".", 1)[0]
+        groups.setdefault(top, []).append({
+            "relpath": relpath,
+            "name": path.name,
+            "ext": path.suffix.lower().lstrip("."),
+            "size_kb": round(st.st_size / 1024, 1),
+            "mtime": datetime.fromtimestamp(st.st_mtime, tz=_tz_ref.utc).strftime("%Y-%m-%d"),
+            "private": is_private_doc(relpath),
+            "title": _md_title(path) if path.suffix.lower() == ".md" else "",
+            "embedded": stem_rel in embedded,
+            "href": "/reference/file/" + relpath,
+        })
+        total += 1
+    return {
+        "total": total,
+        "groups": {k: groups[k] for k in sorted(groups)},
+        "private_prefixes": list(PRIVATE_DOC_PREFIXES),
+        "embedded_count": sum(1 for items in groups.values() for it in items if it["embedded"]),
+    }
+
+
+@app.get("/reference/file/{relpath:path}", include_in_schema=False)
+async def reference_file(relpath: str, request: Request):
+    """Serve any docs/ file to an authenticated caller — handles the
+    space/apostrophe-named reference files /doc/'s sanitizer cannot."""
+    _gate_redirect = await _reference_gate(request, "/reference")
+    if _gate_redirect:
+        return _gate_redirect
+    docs_dir = (PROJECT_ROOT / "docs").resolve()
+    try:
+        target = (docs_dir / relpath).resolve()
+        rel = target.relative_to(docs_dir)
+    except (ValueError, OSError):
+        raise HTTPException(status_code=404, detail="Not found")
+    if any(part.startswith(".") or part == "__pycache__" for part in rel.parts):
+        raise HTTPException(status_code=404, detail="Not found")
+    if not target.is_file():
+        raise HTTPException(status_code=404, detail="Not found")
+    suffix = target.suffix.lower()
+    if suffix == ".md":
+        md = target.read_text(encoding="utf-8", errors="replace")
+        size_kb = round(target.stat().st_size / 1024, 1)
+        body = _render_md(md)
+        footer = '<hr style="margin:16px 0 12px;border-color:rgba(88,166,255,.12)"><div style="font-size:12px;color:#4a5060"><a href="/reference" style="color:#58a6ff">Reference Corpus</a> &middot; <a href="/docs.html" style="color:#79c0ff">Public Docs</a></div>'
+        return _DashResponse(content=_doc_page(rel.as_posix(), body + footer, f"{rel.as_posix()} &middot; {size_kb} KB &middot; reference corpus (gated)"))
+    from starlette.responses import FileResponse
+    import mimetypes
+    mt = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+    disposition = "inline" if suffix in (".pdf", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".txt", ".html") else "attachment"
+    return FileResponse(str(target), media_type=mt, filename=target.name,
+                        content_disposition_type=disposition)
+
 
 _BOOK_STYLE = """<style>
 /* ── Book of mindX — typography overlay (scoped to /book only) ──────── */
@@ -1188,7 +1316,9 @@ async def improvement_journal_page():
 
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
 _FEEDBACK_HTML_PATH = Path(__file__).parent / "feedback.html"
+_NETSTAT_HTML_PATH = Path(__file__).parent / "netstat.html"
 _AGENTIC_HTML_PATH = Path(__file__).parent / "agentic.html"
+_REFERENCE_HTML_PATH = Path(__file__).parent / "reference.html"
 _THOT_HTML_PATH = Path(__file__).parent / "THOT.html"
 _BOARDROOM_HTML_PATH = Path(__file__).parent / "boardroom.html"
 _CABINET_HTML_PATH = Path(__file__).parent / "cabinet.html"
@@ -1295,6 +1425,453 @@ async def cabinet_page():
     if _CABINET_HTML_PATH.exists():
         return _DashResponse(content=_CABINET_HTML_PATH.read_text(encoding="utf-8"))
     return _DashResponse(content="<h1>Cabinet</h1><p>Page not deployed.</p>")
+
+
+# ── mindX Publish Auth — public distribution page + plugin .zip download ──
+# Canonical landing page for the mindx-publish-auth WordPress plugin.
+# Referenced from the cypherpunk2048 article on rage.pythai.net.
+# Source lives at PROJECT_ROOT/mindx_wordpress_plugin/.
+_MINDX_WP_PLUGIN_DIR = PROJECT_ROOT / "mindx_wordpress_plugin"
+_MINDX_WP_PLUGIN_ZIP = _MINDX_WP_PLUGIN_DIR / "mindx-publish-auth.zip"
+
+
+def _mindx_wp_plugin_zip_meta() -> dict:
+    """Return {sha256, size_bytes, size_kb, mtime_iso} for the plugin zip, or empty dict if missing."""
+    import hashlib as _hashlib
+    from datetime import datetime as _dt, timezone as _tz
+    if not _MINDX_WP_PLUGIN_ZIP.exists():
+        return {}
+    h = _hashlib.sha256()
+    with _MINDX_WP_PLUGIN_ZIP.open("rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    st = _MINDX_WP_PLUGIN_ZIP.stat()
+    return {
+        "sha256": h.hexdigest(),
+        "size_bytes": st.st_size,
+        "size_kb": round(st.st_size / 1024, 1),
+        "mtime_iso": _dt.fromtimestamp(st.st_mtime, tz=_tz.utc).isoformat(timespec="seconds"),
+    }
+
+
+@app.get("/mindx-wordpress-plugin/mindx-publish-auth.zip", include_in_schema=False)
+async def mindx_wp_plugin_download():
+    """Stream the mindx-publish-auth plugin .zip with deterministic ETag (SHA256)."""
+    from starlette.responses import FileResponse, PlainTextResponse
+    if not _MINDX_WP_PLUGIN_ZIP.exists():
+        return PlainTextResponse("plugin .zip not deployed on this host", status_code=404)
+    meta = _mindx_wp_plugin_zip_meta()
+    headers = {
+        "Content-Disposition": 'attachment; filename="mindx-publish-auth.zip"',
+        "X-SHA256": meta.get("sha256", ""),
+        "ETag": f'"sha256-{meta.get("sha256", "")}"',
+        "Cache-Control": "public, max-age=300",
+    }
+    return FileResponse(str(_MINDX_WP_PLUGIN_ZIP), media_type="application/zip", headers=headers)
+
+
+@app.get("/mindx-wordpress-plugin/sha256", include_in_schema=False)
+async def mindx_wp_plugin_sha256():
+    """Return the plain-text SHA256 of the plugin .zip — for shell verify pipelines."""
+    from starlette.responses import PlainTextResponse
+    meta = _mindx_wp_plugin_zip_meta()
+    if not meta:
+        return PlainTextResponse("plugin .zip not deployed on this host\n", status_code=404)
+    return PlainTextResponse(f"{meta['sha256']}  mindx-publish-auth.zip\n", media_type="text/plain")
+
+
+@app.get("/mindx-wordpress-plugin/manifest.json", include_in_schema=False)
+async def mindx_wp_plugin_manifest():
+    """Return JSON manifest for the plugin .zip — for programmatic distribution."""
+    from starlette.responses import JSONResponse
+    meta = _mindx_wp_plugin_zip_meta()
+    if not meta:
+        return JSONResponse({"error": "plugin .zip not deployed on this host"}, status_code=404)
+    return JSONResponse({
+        "name": "mindx-publish-auth",
+        "version": "0.1.0",
+        "license": "Apache-2.0",
+        "source": "https://github.com/AgenticPlace/mindX/tree/main/mindx_wordpress_plugin",
+        "download_url": "https://mindx.pythai.net/mindx-wordpress-plugin/mindx-publish-auth.zip",
+        "sha256": meta["sha256"],
+        "size_bytes": meta["size_bytes"],
+        "built_at": meta["mtime_iso"],
+        "requires": {
+            "wordpress": ">=5.6",
+            "php": ">=7.4",
+            "php_extensions": ["gmp"],
+        },
+        "endpoints": [
+            "GET  /wp-json/mindx/v1/auth/challenge",
+            "POST /wp-json/mindx/v1/auth/verify",
+            "GET  /wp-json/mindx/v1/auth/diagnose",
+        ],
+        "standard": "cypherpunk2048",
+        "rules_satisfied": [
+            "no-trapdoors",
+            "vault-as-oracle",
+            "attribution",
+            "substitution-readiness",
+        ],
+    })
+
+
+@app.get("/mindx-wordpress-plugin", response_class=_DashResponse, include_in_schema=False)
+async def mindx_wp_plugin_page():
+    """Public distribution page for the mindx-publish-auth WordPress plugin.
+
+    Cypherpunk2048-conforming presentation: source-first, hash-verified,
+    no-trapdoors, vault-as-oracle. Linked from the cypherpunk2048 article
+    on rage.pythai.net.
+    """
+    meta = _mindx_wp_plugin_zip_meta()
+    if not meta:
+        # Fall through with a "not yet built" notice rather than 404 — the
+        # page is still valuable as documentation.
+        meta = {"sha256": "—", "size_bytes": 0, "size_kb": 0.0, "mtime_iso": "—"}
+        zip_avail = False
+    else:
+        zip_avail = True
+
+    sha256 = meta["sha256"]
+    size_kb = meta["size_kb"]
+    built = meta["mtime_iso"]
+    short_hash = sha256[:16] + "…" if sha256 != "—" else "—"
+
+    # Page-specific cypherpunk2048 styling overlay. Scoped via .wpp-* classes.
+    page_style = """<style>
+.wpp-hero{margin:0 -28px 28px;padding:32px 28px 28px;background:linear-gradient(180deg,rgba(56,139,253,.06) 0%,transparent 100%);border-bottom:1px solid rgba(56,139,253,.18)}
+.wpp-eyebrow{font-family:'JetBrains Mono','SF Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#79c0ff;margin-bottom:8px}
+.wpp-h1{font-size:32px;line-height:1.1;font-weight:700;color:#e6edf3;margin:0 0 10px;letter-spacing:-.5px}
+.wpp-tagline{font-size:15px;line-height:1.55;color:#8b949e;max-width:640px;margin:0 0 20px}
+.wpp-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+.wpp-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;font-family:'JetBrains Mono','SF Mono',monospace;font-size:10.5px;background:#0d1117;border:1px solid rgba(88,166,255,.2);border-radius:3px;color:#c9d1d9;text-decoration:none}
+.wpp-badge b{color:#3fb950;font-weight:600}
+.wpp-badge.warn b{color:#d29922}
+.wpp-badge.crit b{color:#f85149}
+.wpp-cta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
+.wpp-cta a.primary{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:#238636;color:#fff;text-decoration:none;border-radius:5px;font-weight:600;font-size:13px;border:1px solid #2ea043}
+.wpp-cta a.primary:hover{background:#2ea043}
+.wpp-cta a.primary.disabled{background:#21262d;border-color:#30363d;color:#6e7681;cursor:not-allowed}
+.wpp-cta a.secondary{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:transparent;color:#79c0ff;text-decoration:none;border-radius:5px;font-weight:500;font-size:13px;border:1px solid rgba(88,166,255,.3)}
+.wpp-cta a.secondary:hover{border-color:#58a6ff;background:rgba(56,139,253,.08)}
+.wpp-cta .verify{font-family:'JetBrains Mono','SF Mono',monospace;font-size:10.5px;color:#6e7681;margin-left:auto}
+.wpp-cta .verify b{color:#79c0ff}
+.wpp-section{margin:36px 0 0}
+.wpp-section h2{font-size:18px;color:#e6edf3;font-weight:600;margin:0 0 12px;padding-bottom:6px;border-bottom:1px solid rgba(48,54,61,.6);display:flex;align-items:center;gap:8px}
+.wpp-section h2 .num{font-family:'JetBrains Mono','SF Mono',monospace;color:#79c0ff;font-size:13px;font-weight:400}
+.wpp-section h3{font-size:14px;color:#c9d1d9;font-weight:600;margin:18px 0 8px}
+.wpp-rule{display:inline-block;padding:2px 7px;font-family:'JetBrains Mono','SF Mono',monospace;font-size:10.5px;background:rgba(210,168,255,.08);color:#d2a8ff;border:1px solid rgba(210,168,255,.18);border-radius:3px;margin-right:6px;text-decoration:none}
+.wpp-rule:hover{background:rgba(210,168,255,.14)}
+.wpp-callout{margin:14px 0;padding:12px 14px;background:rgba(56,139,253,.04);border-left:3px solid #58a6ff;border-radius:0 4px 4px 0;font-size:13px;line-height:1.6;color:#c9d1d9}
+.wpp-callout.warn{background:rgba(210,153,34,.06);border-left-color:#d29922}
+.wpp-callout.crit{background:rgba(248,81,73,.06);border-left-color:#f85149}
+.wpp-callout b{color:#e6edf3}
+.wpp-callout code{background:#0d1117;padding:1px 5px;border-radius:3px;color:#79c0ff;font-size:12px}
+.wpp-pre{margin:10px 0;padding:14px 16px;background:#0d1117;border:1px solid #30363d;border-radius:5px;overflow-x:auto;font-family:'JetBrains Mono','SF Mono',monospace;font-size:12.5px;line-height:1.55;color:#c9d1d9}
+.wpp-pre .c{color:#6e7681;font-style:italic}
+.wpp-pre .k{color:#ff7b72}
+.wpp-pre .s{color:#a5d6ff}
+.wpp-pre .v{color:#79c0ff}
+.wpp-pre .p{color:#3fb950}
+.wpp-table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12.5px}
+.wpp-table th{text-align:left;padding:8px 10px;font-weight:600;color:#79c0ff;background:rgba(56,139,253,.06);border-bottom:1px solid rgba(56,139,253,.2);font-family:'JetBrains Mono','SF Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.wpp-table td{padding:9px 10px;border-bottom:1px solid rgba(48,54,61,.4);color:#c9d1d9;vertical-align:top}
+.wpp-table td.k{font-family:'JetBrains Mono','SF Mono',monospace;color:#ffa657;font-size:12px;white-space:nowrap}
+.wpp-table tr:last-child td{border-bottom:none}
+.wpp-grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+@media(max-width:760px){.wpp-grid2{grid-template-columns:1fr}}
+.wpp-card{padding:14px 16px;background:rgba(13,17,23,.6);border:1px solid #21262d;border-radius:6px}
+.wpp-card h4{margin:0 0 6px;font-size:13px;color:#e6edf3;font-weight:600}
+.wpp-card p{margin:0;font-size:12.5px;line-height:1.55;color:#8b949e}
+.wpp-card a{color:#79c0ff}
+.wpp-flow{margin:14px 0;padding:14px;background:#010409;border:1px solid #21262d;border-radius:6px;font-family:'JetBrains Mono','SF Mono',monospace;font-size:11.5px;line-height:1.55;color:#8b949e;white-space:pre;overflow-x:auto}
+.wpp-flow .a{color:#3fb950}
+.wpp-flow .b{color:#79c0ff}
+.wpp-flow .c{color:#ffa657}
+.wpp-flow .d{color:#d2a8ff}
+.wpp-meta-strip{margin:18px 0 0;padding:10px 14px;background:#010409;border:1px solid #21262d;border-radius:5px;font-family:'JetBrains Mono','SF Mono',monospace;font-size:11px;color:#6e7681;display:flex;flex-wrap:wrap;gap:18px}
+.wpp-meta-strip span b{color:#c9d1d9}
+.wpp-foot{margin:36px 0 0;padding:18px 0 0;border-top:1px solid rgba(48,54,61,.6);font-size:12px;color:#6e7681;line-height:1.7}
+.wpp-foot a{color:#79c0ff}
+.wpp-link{color:#79c0ff;text-decoration:none}
+.wpp-link:hover{text-decoration:underline}
+.wpp-link-mono{font-family:'JetBrains Mono','SF Mono',monospace;font-size:12px;color:#79c0ff;text-decoration:none}
+.wpp-link-mono:hover{text-decoration:underline}
+.wpp-h6{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#6e7681;font-weight:600;margin:14px 0 6px;font-family:'JetBrains Mono','SF Mono',monospace}
+</style>"""
+
+    download_button = (
+        '<a class="primary" href="/mindx-wordpress-plugin/mindx-publish-auth.zip" '
+        f'download="mindx-publish-auth.zip">↓ Download .zip ({size_kb:g} KB)</a>'
+        if zip_avail else
+        '<a class="primary disabled" title="Plugin .zip not built on this host">↓ Download .zip (not built)</a>'
+    )
+
+    body = f"""{page_style}
+<div class="wpp-hero">
+  <div class="wpp-eyebrow">cypherpunk2048 · sovereignty defaults · vault-as-oracle</div>
+  <h1 class="wpp-h1">mindX Publish Auth</h1>
+  <p class="wpp-tagline">A WordPress plugin that lets autonomous agents publish over the
+  REST API using a wallet signature instead of a password. No application
+  password on the wire. No operator credential in the loop. Every publish
+  attributable, every key vault-held, every signature verifiable on a public chain.</p>
+  <div class="wpp-badges">
+    <a class="wpp-badge" href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank">license <b>Apache-2.0</b></a>
+    <span class="wpp-badge">version <b>0.1.0</b></span>
+    <span class="wpp-badge">requires <b>WP 5.6+ · PHP 7.4+ · gmp</b></span>
+    <span class="wpp-badge">runs in <b>production</b></span>
+    <span class="wpp-badge">jwt <b>HS256 · 30min TTL</b></span>
+    <span class="wpp-badge">challenge <b>EIP-191 · 5min TTL</b></span>
+  </div>
+  <div class="wpp-cta">
+    {download_button}
+    <a class="secondary" href="https://github.com/AgenticPlace/mindX/tree/main/mindx_wordpress_plugin" target="_blank">↗ Source on GitHub</a>
+    <a class="secondary" href="/doc/cypherpunk2048_standard">↗ Read the standard</a>
+    <span class="verify">sha256 · <b>{short_hash}</b></span>
+  </div>
+  <div class="wpp-meta-strip">
+    <span>sha256 · <b>{sha256}</b></span>
+    <span>size · <b>{size_kb:g} KB</b></span>
+    <span>built · <b>{built}</b></span>
+  </div>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§1</span> What this plugin does</h2>
+  <p>WordPress ships with two ways for an external client to publish: a session
+  cookie (browser only) or an Application Password (a stored secret on the wire).
+  Neither is acceptable for a sovereignty-preserving agent. The agent never had
+  a password — it had a wallet — and forcing it to invent a password just to
+  satisfy WordPress would be the wrong shape.</p>
+  <p>This plugin adds a third path. The agent presents a wallet signature; the
+  plugin verifies the signature in pure PHP (keccak + secp256k1, no curl-out,
+  no external service); a strict allowlist maps the wallet address to a
+  WordPress user; an HS256 JWT (30 minutes) is issued; the agent uses that JWT
+  for the standard <code>POST /wp-json/wp/v2/posts</code> call. WordPress core
+  applies the user's normal capabilities. Nothing about WordPress permissions
+  is weakened.</p>
+  <p style="margin-top:14px">
+    <a class="wpp-rule" href="/doc/cypherpunk2048_standard#no-trapdoors-rule">no-trapdoors rule</a>
+    <a class="wpp-rule" href="/doc/cypherpunk2048_standard#vault-as-oracle-rule">vault-as-oracle rule</a>
+    <a class="wpp-rule" href="/doc/cypherpunk2048_standard#attribution-rule">attribution rule</a>
+    <a class="wpp-rule" href="/doc/cypherpunk2048_standard#substitution-readiness-rule">substitution-readiness rule</a>
+  </p>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§2</span> How the auth flow works</h2>
+  <div class="wpp-flow"><span class="a">┌────────────────────┐</span>                  <span class="a">┌──────────────────────────┐</span>
+<span class="a">│</span> wordpress.agent    <span class="a">│</span>                  <span class="a">│</span>  rage.pythai.net (WP)    <span class="a">│</span>
+<span class="a">│</span> (mindX side)       <span class="a">│</span>                  <span class="a">│</span>  + mindX Publish Auth    <span class="a">│</span>
+<span class="a">└────────────────────┘</span>                  <span class="a">└──────────────────────────┘</span>
+          │                                          │
+          │   <span class="b">GET  /wp-json/mindx/v1/auth/challenge</span>   │
+          │ ───────────────────────────────────────► │
+          │                                          │   stores challenge_id
+          │                                          │   in a transient (5 min)
+          │ ◄─────────────────────────────────────── │
+          │   <span class="c">{{ challenge_id, message, expires_at }}</span>  │
+          │                                          │
+   <span class="d">sign(message)</span>                                     │
+   <span class="d">with vault-held</span>                                   │
+   <span class="d">wordpress.agent:pk</span>                                │
+   (vault never returns                              │
+    plaintext — only signs)                          │
+          │                                          │
+          │   <span class="b">POST /wp-json/mindx/v1/auth/verify</span>      │
+          │   <span class="c">{{ challenge_id, address, signature }}</span>    │
+          │ ───────────────────────────────────────► │
+          │                          1. recover signer
+          │                          2. allowlist check
+          │                          3. map → WP user
+          │                          4. mint HS256 JWT
+          │ ◄─────────────────────────────────────── │
+          │   <span class="c">{{ token, expires_at, user_id }}</span>          │
+          │                                          │
+          │   <span class="b">POST /wp-json/wp/v2/posts</span>              │
+          │   <span class="c">Authorization: Bearer &lt;jwt&gt;</span>            │
+          │ ───────────────────────────────────────► │
+          │                          plugin filter logs
+          │                          the JWT's sub user in;
+          │                          WP core applies caps
+          │ ◄─────────────────────────────────────── │
+          │   <span class="b">201 Created</span>                            │
+          │                                          │</div>
+  <p>The signature is over an EIP-191 envelope that includes the destination
+  hostname. A signature minted for <code>site-a.com</code> will not verify for
+  <code>site-b.com</code>. Each <code>challenge_id</code> is single-use,
+  marked consumed on first verify, and expires in five minutes.</p>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§3</span> Install</h2>
+  <h3>One-click (WordPress admin)</h3>
+  <ol style="font-size:13px;line-height:1.7;color:#c9d1d9;padding-left:20px">
+    <li>Download <a class="wpp-link" href="/mindx-wordpress-plugin/mindx-publish-auth.zip">mindx-publish-auth.zip</a> from this page.</li>
+    <li>WordPress admin → <b>Plugins → Add New → Upload Plugin</b>.</li>
+    <li>Upload the zip, activate.</li>
+  </ol>
+  <h3>Manual (SSH)</h3>
+  <pre class="wpp-pre"><span class="c"># Drop into wp-content/plugins/ and activate via WP admin</span>
+<span class="k">cd</span> /path/to/wp-content/plugins/
+<span class="k">curl</span> -O https://mindx.pythai.net/mindx-wordpress-plugin/mindx-publish-auth.zip
+<span class="k">unzip</span> mindx-publish-auth.zip
+<span class="k">rm</span> mindx-publish-auth.zip
+<span class="c"># Then activate via WP admin or wp-cli:</span>
+<span class="k">wp</span> plugin activate mindx-publish-auth</pre>
+  <h3>Verify before installing</h3>
+  <pre class="wpp-pre"><span class="c"># Confirm the .zip you downloaded matches what we publish</span>
+<span class="k">curl</span> -s https://mindx.pythai.net/mindx-wordpress-plugin/sha256
+<span class="c"># Compare against your local copy</span>
+<span class="k">sha256sum</span> mindx-publish-auth.zip
+<span class="c"># Or fetch the JSON manifest (machine-readable)</span>
+<span class="k">curl</span> -s https://mindx.pythai.net/mindx-wordpress-plugin/manifest.json | <span class="k">jq</span> .</pre>
+  <div class="wpp-callout">
+    <b>Why this matters.</b> Distribution integrity belongs to the substrate, not
+    the operator. The hash above and the hash on this page are computed from
+    the same file — read either and you have the substitution-readiness
+    guarantee the cypherpunk2048 standard requires.
+  </div>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§4</span> Configure</h2>
+  <p>One screen. <b>Settings → mindX Publish Auth</b>.</p>
+  <h3>Allowlist (required)</h3>
+  <p>One line per agent — left column is the agent's wallet address, right
+  column is the WordPress user it impersonates. The plugin rejects any line
+  whose user does not exist on the site.</p>
+  <pre class="wpp-pre">0x1f0F44a5d800C060084A58525B717AC156Ab070b  codephreak
+0xA1B2c3D4e5F60718293a4B5C6D7E8F9012345678  mindx-publisher</pre>
+  <h3>Rotate the JWT signing secret</h3>
+  <p>Same admin page. One click. Every outstanding token becomes invalid
+  immediately. Use this after any suspected compromise of the WordPress host.</p>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§5</span> Threat model</h2>
+  <table class="wpp-table">
+    <thead><tr><th>Threat</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Replay of an old signature</td><td>Single-use <code>challenge_id</code>, marked consumed on first verify; 5-minute transient TTL.</td></tr>
+      <tr><td class="k">Cross-site signature reuse</td><td>The challenge string includes the WordPress site's hostname inside the EIP-191 envelope. A signature for site-a.com does not verify for site-b.com.</td></tr>
+      <tr><td class="k">Stolen JWT</td><td>HS256 with a 32-byte server-side secret; tokens expire in 30 minutes; admin can rotate the secret with one click and invalidate every outstanding token immediately.</td></tr>
+      <tr><td class="k">Compromised wallet</td><td>Operator removes the address from the allowlist. The agent's WP-user mapping is gone immediately. WordPress core access is unchanged.</td></tr>
+      <tr><td class="k">Brute-forcing addresses</td><td>The allowlist is closed-set. Signatures from non-listed addresses are rejected at verify (HTTP 403). No probing surface.</td></tr>
+      <tr><td class="k">Privilege escalation via plugin</td><td>The <code>determine_current_user</code> filter only adds a user when the JWT verifies; it does not weaken any other auth path. WordPress applies the user's normal capabilities.</td></tr>
+      <tr><td class="k">Plugin-level secret exfiltration</td><td>The JWT secret is stored in <code>wp_options</code>; the plugin never echoes it to any endpoint, including <code>/auth/diagnose</code>. Rotation invalidates all live tokens.</td></tr>
+      <tr><td class="k">Operator-side substitution of the .zip</td><td>The downloaded artifact's SHA-256 is published at <a class="wpp-link" href="/mindx-wordpress-plugin/sha256">/mindx-wordpress-plugin/sha256</a> and pinned in this page. Verify before activate.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§6</span> Audit log + diagnostics</h2>
+  <p>The plugin maintains a 50-event ring buffer visible on the admin page.
+  Captured per event: timestamp, kind, source IP, and a small payload (address,
+  error code, etc.). Never a JWT, never a signature, never the secret.</p>
+  <h3>Public diagnostic endpoint</h3>
+  <pre class="wpp-pre"><span class="k">curl</span> https://&lt;your-wp-site&gt;/wp-json/mindx/v1/auth/diagnose | <span class="k">jq</span> .</pre>
+  <p>Returns: plugin version, whether PHP <code>gmp</code> is loaded, whether
+  the JWT secret is configured, allowlist entry count (no addresses, no PII),
+  challenge + JWT TTLs. Never echoes the secret, the allowlist contents, or
+  the audit log.</p>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§7</span> What this plugin is not</h2>
+  <div class="wpp-grid2">
+    <div class="wpp-card">
+      <h4>Not a replacement for human login</h4>
+      <p>Human admins keep logging in via <code>wp-login.php</code> as normal.
+      Application Passwords for human users keep working. The plugin only
+      adds an allowlisted, signature-gated alternative for agents.</p>
+    </div>
+    <div class="wpp-card">
+      <h4>Not a universal access grant</h4>
+      <p>The allowlist is a strict whitelist of <code>(address → WP user)</code>
+      pairs. Only those addresses can authenticate, and only as their mapped
+      user. Capabilities are still WordPress's to enforce.</p>
+    </div>
+    <div class="wpp-card">
+      <h4>Not dependent on third-party JWT plugins</h4>
+      <p>This is a self-contained substrate. No <code>jwt-auth/v1/token</code>
+      plugin required. No HTTP outbound from the plugin to a verification
+      service. No telemetry beam.</p>
+    </div>
+    <div class="wpp-card">
+      <h4>Not a key-recovery system</h4>
+      <p>If you lose the wallet, you lose the publishing path for that agent.
+      Provision a new wallet, register it in the allowlist. There is no
+      "forgot signature" flow because the existence of one would violate the
+      no-trapdoors rule.</p>
+    </div>
+  </div>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§8</span> Source code</h2>
+  <p>Ten files; read every one before activating.</p>
+  <table class="wpp-table">
+    <thead><tr><th>File</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td class="k">mindx-publish-auth.php</td><td>Plugin bootstrap, hook registration, REST route registration.</td></tr>
+      <tr><td class="k">includes/class-mindx-auth-rest.php</td><td>The <code>/auth/challenge</code>, <code>/auth/verify</code>, <code>/auth/diagnose</code> endpoint handlers.</td></tr>
+      <tr><td class="k">includes/class-mindx-auth-jwt.php</td><td>HS256 JWT minting + verify; rotation; <code>determine_current_user</code> filter.</td></tr>
+      <tr><td class="k">includes/class-mindx-auth-settings.php</td><td>Admin page (allowlist editor, rotate-secret button, audit log viewer).</td></tr>
+      <tr><td class="k">includes/secp256k1.php</td><td>Pure-PHP secp256k1 ECDSA recover. No native deps.</td></tr>
+      <tr><td class="k">includes/keccak.php</td><td>Pure-PHP keccak-256. No native deps.</td></tr>
+      <tr><td class="k">uninstall.php</td><td>Idempotent cleanup of plugin options on full uninstall.</td></tr>
+      <tr><td class="k">readme.txt</td><td>WordPress.org-style readme.</td></tr>
+      <tr><td class="k">README.md</td><td>The long-form README this page is a richer rendering of.</td></tr>
+      <tr><td class="k">LICENSE</td><td>Apache-2.0.</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:14px">
+    <a class="wpp-link-mono" href="https://github.com/AgenticPlace/mindX/tree/main/mindx_wordpress_plugin" target="_blank">↗ github.com/AgenticPlace/mindX/tree/main/mindx_wordpress_plugin</a>
+  </p>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§9</span> Why mindX runs this</h2>
+  <p>The <code>wordpress.agent</code> on <a class="wpp-link" href="/">mindx.pythai.net</a>
+  publishes to <a class="wpp-link" href="https://rage.pythai.net" target="_blank">rage.pythai.net</a>
+  through this plugin. The agent does not have the WordPress password. It does
+  not have an Application Password. It has a wallet at
+  <code>wordpress.agent.keys</code> inside the <a class="wpp-link" href="/doc/BANKON_VAULT">BANKON vault</a>.
+  The publish flow asks the vault to sign a challenge under that namespace.
+  The signature is sent to this plugin. The plugin verifies, mints a JWT,
+  the publish proceeds. At no point does any process — operator, plugin,
+  agent — see the plaintext key.</p>
+  <p>That is the <a class="wpp-link" href="/doc/cypherpunk2048_standard#vault-as-oracle-rule">vault-as-oracle rule</a> in
+  production. The same wallet that just signed in to publish this page is
+  the wallet that signs <a class="wpp-link" href="/doc/KNOWLEDGE_CATALOGUE">catalogue events</a>,
+  that anchors <a class="wpp-link" href="/insight/storage/status">memory bundles on IPFS</a>,
+  that signs boardroom votes. One identity; many surfaces. The plugin is the
+  WordPress-side adapter for that identity.</p>
+  <div class="wpp-callout">
+    Read the standard end-to-end:
+    <a class="wpp-link" href="/doc/cypherpunk2048_standard"><b>cypherpunk2048: what the standard is, why BANKON adopts it, why I run on it</b></a>.
+  </div>
+</div>
+
+<div class="wpp-foot">
+  Apache-2.0 · v0.1.0 · cypherpunk2048-conforming · written by mindX, signed
+  by mindX. Distribution: <a href="/mindx-wordpress-plugin/mindx-publish-auth.zip">.zip</a>
+  · <a href="/mindx-wordpress-plugin/sha256">sha256</a>
+  · <a href="/mindx-wordpress-plugin/manifest.json">manifest.json</a>
+  · <a href="https://github.com/AgenticPlace/mindX/tree/main/mindx_wordpress_plugin">source</a>.
+  Verify before activate. Vote with your hash.
+</div>"""
+
+    return _DashResponse(content=_doc_page(
+        "mindX Publish Auth — WordPress plugin",
+        body,
+        meta=f"{size_kb:g} KB &middot; sha256 {short_hash} &middot; Apache-2.0",
+        description="mindX Publish Auth — a WordPress plugin that lets autonomous agents publish over the REST API using a wallet signature instead of a password. Cypherpunk2048-conforming. No-trapdoors, vault-as-oracle, attribution by signature. Apache-2.0.",
+        canonical_path="/mindx-wordpress-plugin",
+    ))
 
 
 def _serve_html(path: Path, fallback_title: str) -> _DashResponse:
@@ -1505,6 +2082,15 @@ async def public_dashboard():
     return _DashResponse(content="<h1>mindX</h1><p>Dashboard loading...</p>")
 
 
+@app.get("/netstat", response_class=_DashResponse, include_in_schema=False)
+@app.get("/netstat.html", response_class=_DashResponse, include_in_schema=False)
+async def netstat_page():
+    """/netstat — single-pane VPS vitals (Phase 1.2 host endpoints + diagnostics)."""
+    if _NETSTAT_HTML_PATH.exists():
+        return _DashResponse(content=_NETSTAT_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX netstat</h1><p>Page not deployed.</p>")
+
+
 @app.get("/feedback", response_class=_DashResponse, include_in_schema=False)
 @app.get("/feedback.html", response_class=_DashResponse, include_in_schema=False)
 async def feedback_page():
@@ -1525,6 +2111,17 @@ async def agentic_page():
     if _AGENTIC_HTML_PATH.exists():
         return _DashResponse(content=_AGENTIC_HTML_PATH.read_text(encoding="utf-8"))
     return _DashResponse(content="<h1>mindX agentic</h1><p>Page not deployed.</p>")
+
+
+@app.get("/reference", response_class=_DashResponse, include_in_schema=False)
+@app.get("/reference.html", response_class=_DashResponse, include_in_schema=False)
+async def reference_page():
+    """Reference-corpus shell — public page, but every byte of catalogue data
+    comes from the handler-gated /reference/catalog. Sibling to /agentic.html.
+    """
+    if _REFERENCE_HTML_PATH.exists():
+        return _DashResponse(content=_REFERENCE_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX reference</h1><p>Page not deployed.</p>")
 
 
 @app.get("/thot", response_class=_DashResponse, include_in_schema=False)
@@ -1652,8 +2249,30 @@ async def feedback_text(request: Request):
     except Exception as e:
         lines.append(f"  (dialogue unavailable: {e})")
 
+    # Self-diagnostic truth lines — last REAL change + campaign/backlog honesty
+    # (from the 60s-cached /insight/self/diagnostic aggregator).
+    try:
+        from mindx_backend_service.self_diagnostic import get_cached as _sd_cached
+        sd = await _sd_cached()
+        rc = sd.get("real_changes") or {}
+        ms = (rc.get("milestones") or [{}])[0]
+        if ms.get("subject"):
+            lines.append(
+                f"changed  last real change: [milestone] {ms['subject'][:70]} · "
+                f"{text_render.human_rel_ts(ms.get('ts'))}"
+            )
+        c7 = (sd.get("process_health") or {}).get("campaigns_7d") or {}
+        bl = (sd.get("process_health") or {}).get("backlog") or {}
+        lines.append(
+            f"campaigns 7d  {c7.get('succeeded', 0)} ok · {c7.get('failed', 0)} failed · "
+            f"{c7.get('max_cycles_reached', 0)} max_cycles · backlog {bl.get('unique', 0)} unique"
+            + (" (dedup live)" if bl.get("dedup_live") else f" of {bl.get('size', 0)}")
+        )
+    except Exception as e:
+        lines.append(f"changed  (self-diagnostic unavailable: {e})")
+
     lines.append("")
-    lines.append("see also: /feedback.html · /insight/storage/status?h=true")
+    lines.append("see also: /feedback.html · /insight/self/diagnostic?h=true · /insight/storage/status?h=true")
     return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain; charset=utf-8")
 
 # Add CORS middleware — production origins + development fallback
@@ -1691,25 +2310,62 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/", "/health",
     "/login", "/login.html",
     "/docs.html",
+    "/reference", "/reference.html",   # reference-corpus shell page (data endpoints under /reference/ are handler-gated)
     "/automindx", "/automindx.html",
     "/shadow-overlord", "/shadow-overlord.html",
     "/openapi.json", "/docs", "/redoc",
     "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
+    "/mindx-wordpress-plugin",         # public distribution page for mindx-publish-auth WP plugin
+    "/netstat", "/netstat.html",       # Phase 1.2+ — smartphone-class VPS vitals (public diagnostics)
+    # Mind-of-mindX feedback surfaces — public BY DESIGN (CLAUDE.md): the live
+    # self-diagnostic pages + plain-text snapshot + redacted agentic console.
+    # The strict-gate cutover omitted them and they 401'd publicly until the
+    # 2026-06 system review caught it. Their data endpoints (/insight/*) were
+    # public the whole time; these are just the read-only renderings.
+    "/feedback", "/feedback.html", "/feedback.txt",
+    "/agentic", "/agentic.html",
+    "/insight/narrative/recent",       # DeltaVerse narrative recap stream (public read)
+    "/deltaverse.js",                  # DeltaVerse fabric engine — public asset for 404/landing/realm
+    "/realm",                          # REALM surface — overlord-gated at the handler level
+    # Public diagnostics surface — the read-only data the landing page (/) renders.
+    # Without these the page loads but every widget hits 401.
+    "/diagnostics/live",
+    "/activity/stream", "/activity/recent", "/activity/stats",
+    "/thesis", "/thesis/", "/thesis/evidence", "/thesis/summary",
+    "/dojo/standings", "/inference/status", "/inference/preference",
+    "/godel/choices", "/governance/status", "/resources/status",
+    "/vllm/status", "/vllm/health", "/actions/efficiency",
+    "/agents/interactions", "/agents/interaction-matrix",
+    "/registry/agents", "/registry/tools",
+    "/vault/credentials/providers",
 })
 _PUBLIC_PREFIXES_STRICT = (
     "/doc/", "/docs", "/redoc",
     "/static/", "/error-pages/", "/mindterm/static/",
     "/automindx/",                     # automindx subpages
     "/admin/shadow/",                  # shadow-overlord ECDSA + JWT (gated at handler level)
+    "/overlord/",                      # overlord/overseer login (flag + signature gated at handler level)
+    "/reference/",                     # reference corpus — gated at handler level (_require_reference_access)
+    "/deltaverse/",                    # DeltaVerse fabric reads (recognize/story/bubblerooms public; weave/wish role-aware)
     "/users/challenge",                # auth handshake — challenge issuance
     "/users/register",                 # auth handshake — register-with-signature
     "/users/session/",                 # auth handshake — session/validate
     "/wp-json/",                       # WordPress plugin callbacks (signature-authed at plugin layer)
     "/publish/rage/",                  # external WordPress publish webhook (EIP-191 sig + allowlist)
+    "/mindx-wordpress-plugin/",        # plugin .zip download + sub-resources
+    # Read-only insight surface — landing page + feedback.html consume these.
+    # All /insight/* endpoints are GET-only by design (no writes).
+    "/insight/",
+    "/thesis/",
+    "/dojo/",
+    "/boardroom/",
+    "/chat/docs",
+    "/diagnostics/export",
 )
 
 _PUBLIC_EXACT_LEGACY = frozenset({
-    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/agentic", "/agentic.html", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html",
+    "/reference", "/reference.html",
+    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/netstat", "/netstat.html", "/insight/narrative/recent", "/agentic", "/agentic.html", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html", "/mindx-wordpress-plugin",
     "/keeperhub", "/keeperhub.html", "/uniswap", "/uniswap.html", "/bankon-ens", "/bankon-ens.html", "/bankonminter", "/bankonminter.html", "/zerog", "/zerog.html", "/conclave", "/conclave.html", "/agentregistry", "/agentregistry.html",
     "/api/uniswap/quote", "/api/uniswap/check_approval", "/api/uniswap/decisions", "/api/uniswap/skills",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
@@ -1725,6 +2381,7 @@ _PUBLIC_EXACT_LEGACY = frozenset({
     "/governance/status",
 })
 _PUBLIC_PREFIXES_LEGACY = (
+    "/reference/",                     # reference corpus — gated at handler level (_require_reference_access)
     "/doc/", "/docs", "/redoc", "/thesis/", "/mindterm/static/", "/boardroom/", "/dojo/",
     "/dojo/agent/", "/bankon", "/agenticplace/", "/chat/docs",
     "/actions/export", "/diagnostics/export", "/api/rage/embed",
@@ -1739,7 +2396,78 @@ _PUBLIC_PREFIXES_LEGACY = (
     "/cabinet/",
     "/vault/sign/",
     "/publish/rage/",
+    "/mindx-wordpress-plugin/",
 )
+
+
+async def _require_reference_access(request: Request) -> str:
+    """Handler-level gate for the reference corpus (/reference/* and private
+    docs/ subtrees served via /doc/).
+
+    Tier: logged_in — accepts, in order:
+      1. a valid session token (X-Session-Token header OR ?session_token=
+         query param — the query form lets reference.html emit plain
+         browser-navigable file links),
+      2. an operator API key (Authorization: Bearer, MINDX_SECURITY_API_KEYS),
+      3. a shadow-overlord JWT (Authorization: Bearer, SCOPE_AUTH).
+
+    Lives at the handler so it holds regardless of MINDX_HARD_GATE_ENABLED —
+    /reference/ is a *public prefix* in both gate modes by design (same
+    pattern as /admin/shadow/ and /realm). NOTE: the repo is private pending
+    security audits, so this gate is a real boundary — but /users/register is
+    open, making logged_in a soft tier. Tighten by delegating to
+    security_middleware.require_admin_access if stricter access is needed.
+    The corpus is also excluded from IPFS offload (storage/eligibility.py) —
+    mindX is not replicating across the global substrate at this time.
+    """
+    token = request.headers.get("X-Session-Token") or request.query_params.get("session_token")
+    if token:
+        try:
+            session = get_vault_manager().get_user_session(token)
+            if session:
+                return str(session.get("wallet_address", "session"))
+        except Exception:
+            pass
+    auth_header = request.headers.get("Authorization", "")
+    bearer = auth_header[7:].strip() if auth_header.startswith("Bearer ") else None
+    if bearer:
+        valid_keys = set(os.getenv("MINDX_SECURITY_API_KEYS", "").split(","))
+        valid_keys.discard("")
+        if bearer in valid_keys:
+            return "api_key"
+        try:
+            from mindx_backend_service.bankon_vault.shadow_overlord import verify_jwt, SCOPE_AUTH
+            claims = verify_jwt(bearer, required_scope=SCOPE_AUTH)
+            return str(claims.get("sub", "shadow"))
+        except Exception:
+            pass
+    raise HTTPException(status_code=401, detail="Reference corpus requires a session token (X-Session-Token or ?session_token=), API key, or shadow-overlord JWT")
+
+
+async def _reference_access_ok(request: Request) -> bool:
+    """Non-raising twin of _require_reference_access."""
+    try:
+        await _require_reference_access(request)
+        return True
+    except HTTPException:
+        return False
+
+
+async def _reference_gate(request: Request, html_from: str):
+    """Gate a document-serving route: returns None when access is granted, a
+    302 /login redirect for unauthenticated browser GETs (mirrors the arrival
+    gate's behavior), and re-raises the 401 for API clients."""
+    try:
+        await _require_reference_access(request)
+        return None
+    except HTTPException:
+        accept = request.headers.get("accept", "")
+        if "text/html" in accept and getattr(request, "method", "GET") == "GET":
+            from urllib.parse import quote as _q
+            from starlette.responses import RedirectResponse as _RefRedir
+            safe_from = html_from if html_from.startswith("/") and not html_from.startswith("//") else "/"
+            return _RefRedir(url=f"/login?from={_q(safe_from, safe='/')}", status_code=302)
+        raise
 
 
 def _arrival_gate_mode() -> str:
@@ -1956,7 +2684,10 @@ _diag_heartbeat_count = 0
 _diag_last_probe = 0.0
 _diag_cache: dict = {}        # Cached /diagnostics/live response
 _diag_cache_ts: float = 0.0   # When the cache was last populated
-_DIAG_CACHE_TTL: float = 5.0  # Seconds to serve cached diagnostics
+_diag_last_actions: list = []  # Last non-empty recent-actions (survives DB stalls)
+_diag_last_godel: list = []    # Last non-empty Gödel choices (survives read stalls)
+_diag_last_database: dict = {}  # Last connected pgvector health (survives query stalls)
+_DIAG_CACHE_TTL: float = 30.0  # Seconds to serve cached diagnostics (raised from 5s: the per-request gather is heavy on a 2-core box; 30s keeps /diagnostics/live responsive under load while staying fresh enough for a 6s-polling dashboard reading "updated Ns ago")
 _INTERACTIONS_LOG = PROJECT_ROOT / "data" / "logs" / "heartbeat_dialogues.jsonl"
 
 # Load existing dialogues from disk (all logs are memories in data)
@@ -2255,8 +2986,24 @@ async def _safe_await(coro, timeout_s: float = 3.0, default=None):
         return default
 
 
+_DISK_DETAIL_CACHE: dict = {}
+_DISK_DETAIL_CACHE_TS: float = 0.0
+_DISK_DETAIL_TTL: float = 300.0  # 5 min — `du` over ~28GB+ data/ takes seconds; size doesn't move that fast
+
+
 async def _disk_usage_detail() -> dict:
-    """Run 'du' in a thread so it never blocks the event loop."""
+    """Run 'du' in a thread so it never blocks the event loop.
+
+    Cached for 5 minutes — `du -sh data/` on the production tree (~28GB BDI STM
+    + 97MB catalogue + memory/dreams + governance ledgers) routinely runs 4-6s
+    and was the dominant cost in cold-cache /diagnostics/live. The numbers only
+    shift on the MB/min scale, so a 5-minute cache is invisible to a human
+    reader while making first-paint feel instant after a restart.
+    """
+    global _DISK_DETAIL_CACHE, _DISK_DETAIL_CACHE_TS
+    now = time.time()
+    if _DISK_DETAIL_CACHE and (now - _DISK_DETAIL_CACHE_TS) < _DISK_DETAIL_TTL:
+        return _DISK_DETAIL_CACHE
     def _run():
         import subprocess
         try:
@@ -2273,7 +3020,11 @@ async def _disk_usage_detail() -> dict:
             return detail
         except Exception:
             return {}
-    return await asyncio.to_thread(_run)
+    result = await asyncio.to_thread(_run)
+    if result:
+        _DISK_DETAIL_CACHE = result
+        _DISK_DETAIL_CACHE_TS = now
+    return result or _DISK_DETAIL_CACHE  # serve stale on failure if we ever had a hit
 
 
 # ── Activity Feed: SSE streaming + recent events ──
@@ -2684,6 +3435,75 @@ async def insight_actions_breakdown(request: Request):
     except Exception as e:
         out["error"] = str(e)
     return _maybe_h_text(request, out, route_path="/insight/actions/breakdown")
+
+
+@app.get("/insight/memory/recent", tags=["insight"])
+@_insight_safe
+async def insight_memory_recent(request: Request, limit: int = 24):
+    """Recent memory.write events from the unified catalogue.
+
+    Surfaces the LOG → MEMORY moment: every log mindX writes is also
+    persisted as a memory. Reads the tail of data/logs/catalogue_events.jsonl
+    (the catalogue event sink) and filters for kind='memory.write'. Cheap
+    tail-read — bounded by TAIL_BYTES so it stays fast even when the
+    catalogue is multi-gigabyte. The catalogue is the canonical merged
+    stream across all memory writers (memory_agent, machine_dreaming,
+    boardroom, storage offload), so this endpoint is the single source of
+    truth for 'what just became a memory'.
+    """
+    from utils.config import PROJECT_ROOT
+    cat = PROJECT_ROOT / "data" / "logs" / "catalogue_events.jsonl"
+    limit = max(1, min(int(limit or 24), 200))
+    events: list[dict] = []
+    if not cat.exists():
+        return _maybe_h_text(request, {"events": [], "count": 0, "source": "catalogue_events.jsonl absent"}, route_path="/insight/memory/recent")
+    try:
+        # memory.write rows are small (<2KB) but the catalogue interleaves
+        # multi-KB godel.choice payloads, so 512KB tail gives ~100 events
+        # of headroom while staying O(1) on file size.
+        TAIL_BYTES = 512 * 1024
+        with open(cat, "rb") as f:
+            f.seek(0, 2)
+            sz = f.tell()
+            start = max(0, sz - TAIL_BYTES)
+            f.seek(start)
+            chunk = f.read()
+        lines = chunk.splitlines()
+        if start > 0 and lines:
+            lines = lines[1:]
+        for raw in reversed(lines):
+            if len(events) >= limit:
+                break
+            if b'"kind":"memory.write"' not in raw:
+                continue
+            try:
+                obj = json.loads(raw.decode("utf-8", errors="replace"))
+            except Exception:
+                continue
+            if obj.get("kind") != "memory.write":
+                continue
+            payload = obj.get("payload") or {}
+            events.append({
+                "ts": obj.get("ts"),
+                "actor": obj.get("actor"),
+                "source_log": obj.get("source_log"),
+                "memory_type": payload.get("memory_type") or "memory",
+                "importance": payload.get("importance"),
+                "memory_id": payload.get("memory_id") or obj.get("source_ref"),
+                "tags": (payload.get("tags") or [])[:6],
+            })
+    except Exception as e:
+        return _maybe_h_text(request, {"events": [], "count": 0, "error": str(e)}, route_path="/insight/memory/recent")
+    return _maybe_h_text(
+        request,
+        {
+            "events": events,
+            "count": len(events),
+            "source": "data/logs/catalogue_events.jsonl",
+            "filter": "kind=memory.write",
+        },
+        route_path="/insight/memory/recent",
+    )
 
 
 @app.get("/insight/improvement/timeline", tags=["insight"])
@@ -3432,7 +4252,9 @@ async def insight_bdi_recent(
                 row["success"] = pd.get("success") if "success" in pd else a.get("success")
                 result = pd.get("result") if "result" in pd else a.get("result")
                 if isinstance(result, str):
-                    row["result"] = result[:280]
+                    # 1000 chars — enough to see WHY an action failed, not just that
+                    # it did (the old 280 cut most tracebacks mid-sentence).
+                    row["result"] = result[:1000]
                 else:
                     row["result"] = result
             elif pn == "bdi_goal_set":
@@ -3488,6 +4310,79 @@ async def insight_godel_recent(request: Request, limit: int = 50):
         return _maybe_h_text(request, {"events": events, "count": len(events)}, route_path="/insight/godel/recent")
     except Exception as e:
         return {"events": [], "count": 0, "error": str(e)}
+
+
+@app.get("/insight/godel/machine", tags=["insight"])
+@_insight_safe
+async def insight_godel_machine(request: Request):
+    """The Gödel Machine Index (GMI) — mindX's honest self-audit.
+
+    An eight-predicate scorecard (G1–G8) of whether mindX is or is not a Gödel
+    machine, per docs/GODEL_EVAL_BLUEPRINT.md. Reports what is actually measured
+    (rationale coherence) versus what a Gödel machine requires (a machine-checked
+    proof of utility increase). Today reads NOT_YET_A_GODEL_MACHINE, coverage 0%.
+    Read-only; computed from data/logs/godel_choices.jsonl.
+    """
+    try:
+        from mindx.godel.eval import compute_gmi
+        gmi = compute_gmi()
+    except Exception as e:
+        gmi = {"verdict": "UNKNOWN", "error": str(e),
+               "honest_summary": "GMI computation unavailable."}
+    return _maybe_h_text(request, gmi, route_path="/insight/godel/machine")
+
+
+@app.get("/insight/self/diagnostic", tags=["insight"])
+@_insight_safe
+async def insight_self_diagnostic(request: Request):
+    """The honest answer to "what is mindX actually improving?"
+
+    One aggregator separating REAL changes (milestones, publications,
+    adoptions, recorded autonomous code diffs) from PROCESS churn (campaign
+    terminal-status truth, backlog health, loop pathology), plus the live
+    agent-to-agent interaction matrix and a rule-based verdict.
+
+    Born from the 2026-06 system review (docs/SYSTEM_REVIEW_2026_06.md). Feeds
+    the landing-page self-diagnostic section and feedback.html interaction
+    panel. Cached 60s in mindx_backend_service/self_diagnostic.py; all free
+    text sanitized at build time. `?h=true` for plain text.
+    """
+    from mindx_backend_service.self_diagnostic import get_cached
+    data = await get_cached()
+    return _maybe_h_text(request, data, route_path="/insight/self/diagnostic")
+
+
+@app.get("/insight/milestones/recent", tags=["insight"])
+@_insight_safe
+async def insight_milestones_recent(request: Request, limit: int = 25):
+    """mindX's chronicle of its own evolution — milestones AuthorAgent
+    recognized from the public git history (github.awareness).
+
+    Each entry: short_sha, date, subject, files_changed, insertions, deletions,
+    worthy, score, labels, url (public GitHub commit link). Newest first.
+    Source: data/milestones/milestone_log.jsonl.
+    """
+    log_path = PROJECT_ROOT / "data" / "milestones" / "milestone_log.jsonl"
+    if not log_path.exists():
+        return _maybe_h_text(request, {"milestones": [], "count": 0, "worthy_count": 0},
+                             route_path="/insight/milestones/recent")
+    try:
+        lines = [ln for ln in log_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        rows = []
+        for ln in lines[-max(1, min(limit, 200)):]:
+            try:
+                rows.append(json.loads(ln))
+            except Exception:
+                continue
+        rows.reverse()  # newest first
+        worthy = sum(1 for r in rows if r.get("worthy"))
+        return _maybe_h_text(
+            request,
+            {"milestones": rows, "count": len(rows), "worthy_count": worthy},
+            route_path="/insight/milestones/recent",
+        )
+    except Exception as e:
+        return {"milestones": [], "count": 0, "worthy_count": 0, "error": str(e)}
 
 
 @app.get("/insight/model_selector/recent", tags=["insight"])
@@ -4828,6 +5723,152 @@ async def insight_stuck_loops(request: Request, window: int = 900, min_repeats: 
     }, route_path="/insight/stuck_loops")
 
 
+@app.get("/insight/publications/health", tags=["insight"])
+@_insight_safe
+async def insight_publications_health(request: Request):
+    """Liveness + state for the PublicationOrchestrator (rage.pythai.net
+    autopublish pipeline).
+
+    Reports watcher-task aliveness, last scan timestamps, ledger entry
+    count, last publish (URL + post_id + title), per-source status defaults
+    (SEA→publish, dreams→draft by default; env-overridable), and whether
+    the coordinator pub/sub fast-path is wired.
+
+    Returns 503-shaped payload (orchestrator_started=false) if the spawn
+    block at startup did not produce an orchestrator — that is the
+    diagnostic for a silent spawn failure.
+    """
+    orch = getattr(app.state, "publication_orchestrator", None)
+    if orch is None:
+        return {
+            "orchestrator_started": False,
+            "note": "PublicationOrchestrator was not constructed at startup. "
+                    "Check journalctl for 'PublicationOrchestrator failed to start'.",
+        }
+    health = orch.get_health()
+    health["orchestrator_started"] = True
+    health["computed_at"] = time.time()
+    return _maybe_h_text(request, health, route_path="/insight/publications/health")
+
+
+# ── Milestone recognition surfaces ─────────────────────────────────
+# Read directly from BeliefSystem (the singleton AGInt's recognizer writes
+# to). Decoupled from any specific AGInt instance; persists across restarts.
+
+async def _query_milestones(prefix: str = "milestone:", limit: int = 50, min_confidence: float = 0.0):
+    """Shared helper — pulls milestone beliefs in reverse chronological order."""
+    try:
+        from agents.core.belief_system import BeliefSystem
+        bs = BeliefSystem()
+        rows = await bs.query_beliefs(prefix, min_confidence=min_confidence)
+    except Exception as e:
+        return [], str(e)
+    # rows: List[Tuple[str, Belief]]; sort by Belief.last_updated desc
+    items = []
+    for key, belief in rows:
+        items.append({
+            "key": key,
+            "category": (belief.value or {}).get("category") if isinstance(belief.value, dict) else None,
+            "summary":  (belief.value or {}).get("summary")  if isinstance(belief.value, dict) else None,
+            "confidence": belief.confidence,
+            "recognized_at": belief.last_updated,
+            "evidence": (belief.value or {}).get("evidence") if isinstance(belief.value, dict) else None,
+            "autopublish_status": (belief.value or {}).get("autopublish_status") if isinstance(belief.value, dict) else None,
+        })
+    items.sort(key=lambda x: (x.get("recognized_at") or 0), reverse=True)
+    return items[:max(1, min(limit, 200))], None
+
+
+@app.get("/insight/milestones/recent", tags=["insight"])
+@_insight_safe
+async def insight_milestones_recent(request: Request, limit: int = 20):
+    """Most-recently recognized milestones across all categories.
+
+    Reads BeliefSystem keys with prefix ``milestone:`` written by AGInt's
+    milestone recognizer (``agents/core/milestone_recognition.py``).
+    Reverse chronological. ``limit`` clamped to [1, 200].
+    """
+    items, err = await _query_milestones(limit=limit)
+    return _maybe_h_text(request, {
+        "milestones": items,
+        "count": len(items),
+        "error": err,
+        "computed_at": time.time(),
+    }, route_path="/insight/milestones/recent")
+
+
+@app.get("/insight/milestones/health", tags=["insight"])
+@_insight_safe
+async def insight_milestones_health(request: Request):
+    """Liveness + counts for the milestone recognizer.
+
+    Reports the four configured categories, per-category counts (from
+    BeliefSystem), env-resolved autopublish defaults, and the latest
+    recognition timestamp. Does NOT depend on a running AGInt instance —
+    queries the persistent BeliefSystem singleton directly.
+    """
+    import os as _os
+    from agents.core import milestone_recognition as _mr
+    items, err = await _query_milestones(limit=200)
+    per_cat: Dict[str, int] = {}
+    last_ts = 0.0
+    for m in items:
+        c = m.get("category") or "unknown"
+        per_cat[c] = per_cat.get(c, 0) + 1
+        ts = m.get("recognized_at") or 0
+        if ts > last_ts:
+            last_ts = ts
+    # Live recognizer (if MilestoneRecognizer was constructed at startup):
+    recognizer = getattr(app.state, "milestone_recognizer", None)
+    live = recognizer.health() if recognizer is not None else {
+        "recognizer_alive": False,
+        "subscribed_topics": _mr.topics_to_subscribe(),
+        "categories": list(_mr.ALL_CATEGORIES),
+        "classified_total": 0,
+        "last_classified_at": None,
+        "per_category_counts": {},
+    }
+    payload = {
+        "recognizer_alive":          live["recognizer_alive"],
+        "recognizer_categories":     live["categories"],
+        "subscribed_topics":         live["subscribed_topics"],
+        "milestones_total":          len(items),
+        "per_category_counts_in_belief": per_cat,
+        "live_classified_total":     live["classified_total"],
+        "live_per_category_counts":  live["per_category_counts"],
+        "last_recognized_at":        last_ts or None,
+        "live_last_classified_at":   live["last_classified_at"],
+        "autopublish_defaults": {
+            "publication":  _os.environ.get("MINDX_MILESTONE_PUBLICATION_STATUS",  "none"),
+            "bug_crushed":  _os.environ.get("MINDX_MILESTONE_BUG_CRUSHED_STATUS",  "publish"),
+            "cognitive":    _os.environ.get("MINDX_MILESTONE_COGNITIVE_STATUS",    "publish"),
+            "dreaming":     _os.environ.get("MINDX_MILESTONE_DREAMING_STATUS",     "draft"),
+        },
+        "error": err,
+        "computed_at": time.time(),
+    }
+    return _maybe_h_text(request, payload, route_path="/insight/milestones/health")
+
+
+@app.get("/insight/milestones/{category}/recent", tags=["insight"])
+@_insight_safe
+async def insight_milestones_by_category(request: Request, category: str, limit: int = 20):
+    """Filtered view: only milestones in ``category`` (one of publication,
+    bug_crushed, cognitive, dreaming)."""
+    from agents.core import milestone_recognition as _mr
+    if category not in _mr.ALL_CATEGORIES:
+        return {"error": f"unknown category '{category}'; valid: {list(_mr.ALL_CATEGORIES)}"}
+    prefix = f"milestone:{category}:"
+    items, err = await _query_milestones(prefix=prefix, limit=limit)
+    return _maybe_h_text(request, {
+        "category": category,
+        "milestones": items,
+        "count": len(items),
+        "error": err,
+        "computed_at": time.time(),
+    }, route_path="/insight/milestones/{category}/recent")
+
+
 # ── ?h=true plain-text rendering for /insight/* and /storage/* ──
 # Plan: ~/.claude/plans/luminous-humming-knuth.md
 
@@ -4848,6 +5889,91 @@ def _maybe_h_text(request: Request, data, *, route_path: str = ""):
         return data
     from starlette.responses import PlainTextResponse
     return PlainTextResponse(rendered, media_type="text/plain; charset=utf-8")
+
+
+# ── Knowledge Catalogue (Phase 1 read-model) endpoints ──
+# CQRS projection over data/logs/catalogue_events.jsonl; never the source of
+# truth. Public (read-only) via the /insight/ prefix. docs/KNOWLEDGE_CATALOGUE.md.
+
+@app.get("/insight/catalogue/recent", tags=["insight"],
+         summary="Recent catalogue entries (read-model tail)")
+@_insight_safe
+async def insight_catalogue_recent(request: Request, limit: int = 50,
+                                   kind: Optional[str] = None):
+    from agents import memory_pgvector
+    entries = await memory_pgvector.catalogue_recent(limit=limit, kind=kind)
+    return _maybe_h_text(request, {"entries": entries, "count": len(entries),
+                                   "kind_filter": kind or "all", "source": "catalogue_entries"},
+                         route_path="/insight/catalogue/recent")
+
+
+@app.get("/insight/catalogue/search", tags=["insight"],
+         summary="Hybrid search over the catalogue (dense + BM25, RRF-fused)")
+@_insight_safe
+async def insight_catalogue_search(request: Request, q: str, k: int = 10,
+                                   kind: Optional[str] = None):
+    from agents import memory_pgvector
+    kinds = [kind] if kind else None
+    res = await memory_pgvector.catalogue_hybrid_search(q, kinds=kinds, top_k=min(k, 50))
+    return _maybe_h_text(request, {"query": q, "results": res.get("results", []),
+                                   "count": len(res.get("results", [])),
+                                   "legs": res.get("legs"), "rerank": res.get("rerank", "deferred")},
+                         route_path="/insight/catalogue/search")
+
+
+@app.get("/insight/catalogue/entry", tags=["insight"],
+         summary="Full catalogue entry by URN (with links + source events)")
+@_insight_safe
+async def insight_catalogue_entry(request: Request, urn: str):
+    from agents import memory_pgvector
+    entry = await memory_pgvector.catalogue_entry_by_urn(urn)
+    if not entry:
+        return _maybe_h_text(request, {"found": False, "urn": urn},
+                             route_path="/insight/catalogue/entry")
+    entry["found"] = True
+    return _maybe_h_text(request, entry, route_path="/insight/catalogue/entry")
+
+
+@app.get("/insight/catalogue/stats", tags=["insight"],
+         summary="Catalogue read-model stats (counts by kind + projector watermark)")
+@_insight_safe
+async def insight_catalogue_stats(request: Request):
+    from agents import memory_pgvector
+    stats = await memory_pgvector.catalogue_stats()
+    return _maybe_h_text(request, stats, route_path="/insight/catalogue/stats")
+
+
+@app.get("/insight/catalogue/lineage", tags=["insight"],
+         summary="Provenance lineage for a catalogue entry (ancestors/descendants)")
+@_insight_safe
+async def insight_catalogue_lineage(request: Request, urn: str,
+                                    dir: str = "both", depth: int = 6):
+    """Traverse the catalogue lineage graph from a URN.
+    dir ∈ {ancestors, descendants, both}; depth capped at 20."""
+    from agents import memory_pgvector
+    if dir not in ("ancestors", "descendants", "both"):
+        dir = "both"
+    data = await memory_pgvector.catalogue_lineage(urn, direction=dir, depth=depth)
+    return _maybe_h_text(request, data, route_path="/insight/catalogue/lineage")
+
+
+@app.get("/insight/catalogue/kinds", tags=["insight"],
+         summary="Catalogue entry/event kind registry + mapping")
+@_insight_safe
+async def insight_catalogue_kinds(request: Request):
+    from agents.catalogue.model import ENTRY_KINDS, EVENTKIND_TO_ENTRYKIND
+    from agents.catalogue.events import EVENT_KINDS
+    from agents import memory_pgvector
+    # "emitted" = the distinct EventKinds the projector has actually observed in
+    # the stream (accumulated in catalogue_state) — the drift-free truth, not the
+    # full mapping. Empty until the first projection.
+    wm = await memory_pgvector.get_catalogue_watermark("entries")
+    emitted = sorted(set(wm.get("observed_kinds") or []) & set(EVENT_KINDS))
+    data = {"entry_kinds": list(ENTRY_KINDS), "event_kinds": list(EVENT_KINDS),
+            "mapping": dict(EVENTKIND_TO_ENTRYKIND),
+            "emitted_event_kinds": emitted,
+            "active_event_kinds": emitted}  # back-compat alias
+    return _maybe_h_text(request, data, route_path="/insight/catalogue/kinds")
 
 
 # ── Storage / IPFS offload endpoints ──
@@ -4998,6 +6124,313 @@ async def insight_storage_recent(request: Request, limit: int = 30):
         return _maybe_h_text(request, {"events": out, "count": len(out)}, route_path="/insight/storage/recent")
     except Exception as e:
         return {"events": [], "count": 0, "error": str(e)}
+
+
+# ------------------------------------------------------------------------
+# Phase 1.2 — /insight/host/* endpoints
+# Smartphone-class host monitoring. Primary data source: netdata at :19999
+# (always-on per Phase 1.2). Probes fall through to Prom at :9090 only when
+# the Prom stack is on (off-default per Phase 1.2 — bash scripts/prom_on.sh).
+# Pattern: aiohttp inline client (mirrors main_service.py:4254 Ollama path).
+# First renderers in mindX to call remote HTTP endpoints.
+# ------------------------------------------------------------------------
+
+_NETDATA_LOCAL = "http://localhost:19999"
+_PROM_LOCAL = "http://localhost:9090"
+
+
+async def _netdata_query(path: str, params: dict | None = None, timeout: float = 5.0) -> dict:
+    import aiohttp
+    url = f"{_NETDATA_LOCAL}{path}"
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as s:
+            async with s.get(url, params=params) as r:
+                if r.status != 200:
+                    return {"_error": f"netdata HTTP {r.status}"}
+                return await r.json()
+    except Exception as e:
+        return {"_error": f"netdata unreachable: {type(e).__name__}: {e}"}
+
+
+async def _prom_local_query(query: str, timeout: float = 5.0) -> dict:
+    import aiohttp
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as s:
+            async with s.get(f"{_PROM_LOCAL}/api/v1/query", params={"query": query}) as r:
+                if r.status != 200:
+                    return {"_error": f"prom HTTP {r.status}"}
+                return await r.json()
+    except Exception as e:
+        return {"_error": f"prom unreachable: {type(e).__name__}: {e}"}
+
+
+@app.get("/insight/host/cpu", tags=["insight"], summary="CPU breakdown from netdata (last N seconds)")
+@_insight_safe
+async def insight_host_cpu(request: Request, points: int = 60):
+    nd = await _netdata_query("/api/v1/data", {"chart": "system.cpu", "points": str(points), "after": f"-{points}", "format": "json"})
+    if nd.get("_error"):
+        import psutil
+        return _maybe_h_text(request, {
+            "source": "psutil_fallback",
+            "netdata_error": nd["_error"],
+            "cpu_percent": psutil.cpu_percent(interval=0.5, percpu=False),
+            "cpu_percent_per_core": psutil.cpu_percent(interval=0.5, percpu=True),
+            "load_avg": list(psutil.getloadavg()),
+        }, route_path="/insight/host/cpu")
+    return _maybe_h_text(request, {
+        "source": "netdata",
+        "chart": "system.cpu",
+        "labels": nd.get("labels", []),
+        "data": nd.get("data", [])[:points],
+        "view_update_every": nd.get("view_update_every"),
+    }, route_path="/insight/host/cpu")
+
+
+@app.get("/insight/host/memory", tags=["insight"], summary="Memory + swap breakdown from netdata")
+@_insight_safe
+async def insight_host_memory(request: Request, points: int = 60):
+    ram = await _netdata_query("/api/v1/data", {"chart": "system.ram", "points": str(points), "after": f"-{points}", "format": "json"})
+    swap = await _netdata_query("/api/v1/data", {"chart": "system.swap", "points": str(points), "after": f"-{points}", "format": "json"})
+    if ram.get("_error") and swap.get("_error"):
+        import psutil
+        vm = psutil.virtual_memory()
+        sm = psutil.swap_memory()
+        return _maybe_h_text(request, {
+            "source": "psutil_fallback",
+            "netdata_error": ram.get("_error") or swap.get("_error"),
+            "ram_total_mb": vm.total / (1 << 20),
+            "ram_used_mb": vm.used / (1 << 20),
+            "ram_available_mb": vm.available / (1 << 20),
+            "ram_percent": vm.percent,
+            "swap_total_mb": sm.total / (1 << 20),
+            "swap_used_mb": sm.used / (1 << 20),
+            "swap_percent": sm.percent,
+        }, route_path="/insight/host/memory")
+    return _maybe_h_text(request, {
+        "source": "netdata",
+        "ram": {"labels": ram.get("labels", []), "data": ram.get("data", [])[:points]},
+        "swap": {"labels": swap.get("labels", []), "data": swap.get("data", [])[:points]},
+    }, route_path="/insight/host/memory")
+
+
+@app.get("/insight/host/disk", tags=["insight"], summary="Disk usage + Prometheus TSDB size")
+@_insight_safe
+async def insight_host_disk(request: Request):
+    import shutil
+    import os
+    usage = shutil.disk_usage("/")
+    prom_data_dir = "/home/mindx/obs/prometheus_data"
+    prom_size = 0
+    if os.path.isdir(prom_data_dir):
+        for dirpath, _, fnames in os.walk(prom_data_dir):
+            for f in fnames:
+                try:
+                    prom_size += os.path.getsize(os.path.join(dirpath, f))
+                except OSError:
+                    pass
+    return _maybe_h_text(request, {
+        "root": {
+            "total_gb": usage.total / (1 << 30),
+            "used_gb": usage.used / (1 << 30),
+            "free_gb": usage.free / (1 << 30),
+            "percent": (usage.used / usage.total) * 100,
+        },
+        "prometheus_data_mb": prom_size / (1 << 20),
+        "prometheus_data_cap_gb": 4.0,
+    }, route_path="/insight/host/disk")
+
+
+@app.get("/insight/host/probes", tags=["insight"], summary="Blackbox probe status (requires Prom stack running)")
+@_insight_safe
+async def insight_host_probes(request: Request):
+    result = await _prom_local_query("probe_success")
+    if result.get("_error"):
+        return _maybe_h_text(request, {
+            "prom": "off",
+            "hint": "Prom stack is off-default in Phase 1.2. Run `bash scripts/prom_on.sh` to enable probe scraping.",
+            "error": result["_error"],
+        }, route_path="/insight/host/probes")
+    targets = []
+    for r in result.get("data", {}).get("result", []) or []:
+        targets.append({
+            "instance": r.get("metric", {}).get("instance", "?"),
+            "up": r.get("value", [None, "0"])[1] == "1",
+        })
+    return _maybe_h_text(request, {
+        "prom": "on",
+        "targets": targets,
+        "target_count": len(targets),
+        "up_count": sum(1 for t in targets if t["up"]),
+    }, route_path="/insight/host/probes")
+
+
+@app.get("/insight/host/htop", tags=["insight"], summary="htop-header-strip snapshot (per-core CPU + RAM segments + tasks/load/uptime)")
+@_insight_safe
+async def insight_host_htop(request: Request):
+    """One-shot snapshot in htop-header shape. Pure psutil; no netdata/Prom dependency."""
+    import psutil, time
+    cpu_per_core = psutil.cpu_percent(interval=0.2, percpu=True)
+    vm = psutil.virtual_memory()
+    sm = psutil.swap_memory()
+    boot_time = psutil.boot_time()
+
+    # Process statuses + thread/kthread counts in one walk
+    statuses = {"running": 0, "sleeping": 0, "stopped": 0, "zombie": 0, "other": 0}
+    threads_total = 0
+    kthreads = 0
+    for p in psutil.process_iter(["status", "num_threads", "ppid"]):
+        try:
+            s = (p.info.get("status") or "").lower()
+            if "run" in s:
+                statuses["running"] += 1
+            elif "sleep" in s:
+                statuses["sleeping"] += 1
+            elif "stop" in s:
+                statuses["stopped"] += 1
+            elif "zomb" in s:
+                statuses["zombie"] += 1
+            else:
+                statuses["other"] += 1
+            threads_total += p.info.get("num_threads") or 0
+            if p.info.get("ppid") == 2:
+                kthreads += 1
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+    return _maybe_h_text(request, {
+        "cpu_percent_per_core": cpu_per_core,
+        "load_avg": list(psutil.getloadavg()),
+        "ram": {
+            "total_mb": vm.total / (1 << 20),
+            "used_mb": vm.used / (1 << 20),
+            "available_mb": vm.available / (1 << 20),
+            "buffers_mb": getattr(vm, "buffers", 0) / (1 << 20),
+            "cached_mb": getattr(vm, "cached", 0) / (1 << 20),
+            "shared_mb": getattr(vm, "shared", 0) / (1 << 20),
+            "percent": vm.percent,
+        },
+        "swap": {
+            "total_mb": sm.total / (1 << 20),
+            "used_mb": sm.used / (1 << 20),
+            "percent": sm.percent,
+        },
+        "uptime_seconds": time.time() - boot_time,
+        "boot_time": boot_time,
+        "task_count": sum(statuses.values()),
+        "task_statuses": statuses,
+        "threads_total": threads_total,
+        "kthreads": kthreads,
+    }, route_path="/insight/host/htop")
+
+
+# ------------------------------------------------------------------------
+# DeltaVerse narrative substrate — recap stream + wallet/shadow-overlord admin
+# ------------------------------------------------------------------------
+
+@app.get("/insight/narrative/recent", tags=["insight"], summary="Last N narrative recap messages")
+@_insight_safe
+async def insight_narrative_recent(request: Request, limit: int = 30):
+    """Tail of data/logs/recaps.jsonl. NarratorAgent autonomous summaries
+    + operator-pinned recaps. Public; routed through ?h=true humanizer."""
+    from agents.narrator import get_narrator
+    recaps = get_narrator().read_recent(limit=max(1, min(limit, 200)))
+    return _maybe_h_text(
+        request,
+        {"recaps": recaps, "count": len(recaps)},
+        route_path="/insight/narrative/recent",
+    )
+
+
+@app.post("/admin/narrator/recap", tags=["admin"], summary="Operator-pinned recap (wallet-gated)")
+async def admin_narrator_recap(request: Request):
+    """Operator pin endpoint. Body: {body: str, span_seconds?: int}.
+
+    Auth: X-Session-Token header (wallet session) — required. Mirrors the
+    auth pattern used by /admin/cabinet/* + /vault/sign/*.
+    """
+    token = request.headers.get("X-Session-Token")
+    if not token:
+        return JSONResponse(status_code=401, content={
+            "code": "auth_required",
+            "detail": "X-Session-Token header required for operator-pin recap",
+        })
+    try:
+        vm = get_vault_manager()
+        session = vm.get_user_session(token)
+    except Exception as e:
+        return JSONResponse(status_code=503, content={"detail": f"vault unavailable: {e}"})
+    if not session:
+        return JSONResponse(status_code=401, content={
+            "code": "session_invalid",
+            "detail": "session token invalid or expired",
+        })
+
+    try:
+        body_json = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"detail": "JSON body required"})
+    body = (body_json or {}).get("body") or ""
+    if not isinstance(body, str) or not body.strip():
+        return JSONResponse(status_code=400, content={"detail": "body.body (str) required"})
+    span = int((body_json or {}).get("span_seconds") or 0)
+
+    wallet = session.get("wallet_address") or session.get("wallet") or "anonymous"
+    from agents.narrator import get_narrator
+    rec = await get_narrator().emit_recap(
+        body=body,
+        author=str(wallet),
+        source="operator",
+        span_seconds=span,
+    )
+    return {"ok": True, "recap": rec}
+
+
+@app.post("/admin/narrator/run-now", tags=["admin"], summary="Force narrator autonomous cycle (shadow-overlord)")
+async def admin_narrator_run_now(request: Request, hours: float = 1.0):
+    """Force the narrator to summarize last `hours` of catalogue now.
+
+    Auth: shadow-overlord JWT (Authorization: Bearer <jwt>). Reuses the
+    require_shadow_jwt dep from bankon_vault.shadow_overlord. High-impact
+    operation: emits both a narrative.recap event AND an
+    admin.shadow_overlord_action event for audit.
+    """
+    # Shadow-overlord JWT verification — inline to avoid Depends import order issues
+    auth_hdr = request.headers.get("Authorization", "")
+    if not auth_hdr.startswith("Bearer "):
+        return JSONResponse(status_code=401, content={
+            "code": "shadow_jwt_required",
+            "detail": "Authorization: Bearer <shadow-overlord-jwt> required",
+        })
+    try:
+        from mindx_backend_service.bankon_vault.shadow_overlord import verify_jwt as _verify_shadow_jwt
+        claims = _verify_shadow_jwt(auth_hdr[7:])
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": str(e.detail)})
+    except Exception as e:
+        return JSONResponse(status_code=503, content={"detail": f"shadow verifier unavailable: {e}"})
+
+    hours = max(0.1, min(float(hours or 1.0), 24.0))
+    from agents.narrator import get_narrator
+    rec = await get_narrator().run_autonomous_cycle(hours=hours)
+
+    # Audit — admin.shadow_overlord_action so the privileged trigger is recorded
+    try:
+        from agents.catalogue.events import emit_catalogue_event
+        await emit_catalogue_event(
+            kind="admin.shadow_overlord_action",
+            actor=claims.get("sub", "shadow-overlord"),
+            source_log="mindx_backend_service.main_service:/admin/narrator/run-now",
+            payload={
+                "action": "narrator.run_now",
+                "hours": hours,
+                "recap_id": rec.get("recap_id"),
+                "jti": claims.get("jti"),
+            },
+        )
+    except Exception:
+        pass
+
+    return {"ok": True, "recap": rec, "hours": hours}
 
 
 @app.get("/insight/cost/summary", tags=["insight"], summary="Per-provider inference cost + token totals (windowed)")
@@ -5692,6 +7125,125 @@ async def storage_offload(req: OffloadRequest, request: Request):
     return serialize_run(run)
 
 
+# ── blockchain.agents: mint a mindX agent as an ERC-7857 iNFT ──
+# Spec: docs/blockchain/BLOCKCHAIN_AGENTS.md
+# dry_run=True (default) does wallet + persona + IPFS bundling but never
+# broadcasts. dry_run=False broadcasts the live mint and is admin-gated,
+# mirroring /storage/offload.
+
+class MintAgentRequest(BaseModel):
+    name: str
+    dry_run: bool = True
+    chain_id: int = 1337
+    list_price_wei: int = 0
+    avatar: bool = False
+    description: Optional[str] = None
+    rpc_url: Optional[str] = None
+
+
+@app.post("/blockchain/agentfactory/mint", tags=["blockchain"],
+          summary="Mint a mindX agent as an ERC-7857 iNFT (dry_run by default)")
+async def blockchain_agentfactory_mint(req: MintAgentRequest, request: Request):
+    if not req.dry_run:
+        # Live broadcast — require admin (shadow-overlord JWT)
+        await require_admin_access(request)
+    try:
+        from agents.blockchain import BlockchainAgentFactory
+    except Exception as imp_e:
+        raise HTTPException(status_code=503, detail=f"blockchain module unavailable: {imp_e}")
+    factory = await BlockchainAgentFactory.get_instance()
+    result = await factory.mint_agent(
+        req.name,
+        dry_run=req.dry_run,
+        chain_id=req.chain_id,
+        list_price_wei=req.list_price_wei,
+        avatar=req.avatar,
+        description=req.description,
+        rpc_url=req.rpc_url,
+    )
+    if result.get("status") == "error":
+        raise HTTPException(status_code=400, detail=result.get("error", "mint failed"))
+    return result
+
+
+# ── Multi-chain DEPLOYER (agents/deployer) ──
+# Wallet-authorized, per-chain-isolated, two-step deploy of .sol (Foundry) and
+# Algorand (ARC56) contracts. Spec: docs/services/contract_deployment_as_a_service.md
+# The UI wallet signs a challenge to AUTHORIZE (not to sign the deploy tx); the
+# backend verifies + checks dojo tier, then deploys with a vault-scoped per-chain
+# key. Mainnet/two-step confirm is admin-gated (mirrors /storage/offload).
+
+class DeployIntentPayload(BaseModel):
+    wallet_address: str
+    signature: str
+    message: str
+    manifest_path: str
+    chain: Optional[str] = None  # None = all stages in the manifest
+
+
+class DeployConfirmPayload(BaseModel):
+    wallet_address: str
+    signature: str
+    message: str
+
+
+@app.post("/deployer/intent", tags=["deployer"],
+          summary="Wallet-authorized deploy intent (preflight + estimate, 5-min expiry, no broadcast)")
+async def deployer_intent(payload: DeployIntentPayload):
+    try:
+        from agents.deployer import DeployerError, DeployerService
+    except Exception as imp_e:
+        raise HTTPException(status_code=503, detail=f"deployer module unavailable: {imp_e}")
+    svc = await DeployerService.get_instance()
+    try:
+        return await svc.create_intent(
+            wallet_address=payload.wallet_address, signature=payload.signature,
+            message=payload.message, manifest_path=payload.manifest_path, chain=payload.chain)
+    except DeployerError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/deployer/confirm/{intent_id}", tags=["deployer"],
+          summary="Execute a deploy intent (operator-gated when mainnet / two-step)")
+async def deployer_confirm(intent_id: str, payload: DeployConfirmPayload, request: Request):
+    try:
+        from agents.deployer import DeployerError, DeployerService
+    except Exception as imp_e:
+        raise HTTPException(status_code=503, detail=f"deployer module unavailable: {imp_e}")
+    svc = await DeployerService.get_instance()
+    intent = svc.load_intent(intent_id)
+    if intent is None:
+        raise HTTPException(status_code=404, detail="intent not found")
+    # Re-verify the signer matches the intent's deployer-of-record
+    ver = svc._verify_signature(payload.wallet_address, payload.message, payload.signature)
+    if not getattr(ver, "is_valid", False) or ver.recovered_address.lower() != str(intent["deployer_of_record"]).lower():
+        raise HTTPException(status_code=403, detail="signature does not match intent deployer-of-record")
+    if intent.get("requires_operator_confirm"):
+        await require_admin_access(request)
+    try:
+        return await svc.execute_intent(intent_id)
+    except DeployerError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+
+@app.get("/deployer/intents/{intent_id}", tags=["deployer"], summary="Get a deploy intent's status")
+async def deployer_get_intent(intent_id: str):
+    from agents.deployer import DeployerService
+    svc = await DeployerService.get_instance()
+    intent = svc.load_intent(intent_id)
+    if intent is None:
+        raise HTTPException(status_code=404, detail="intent not found")
+    return intent
+
+
+@app.get("/deployer/deployments/{chain_id}", tags=["deployer"], summary="Read deployment records for a chain id")
+async def deployer_records(chain_id: int):
+    from agents.deployer.records import read_chain_records
+    return {"chain_id": chain_id, "records": read_chain_records(chain_id)}
+
+
 # ── Thesis Evidence: scientific proof endpoints ──
 
 @app.get("/thesis", response_class=_DashResponse, tags=["thesis"], include_in_schema=False)
@@ -5732,15 +7284,99 @@ async def thesis_summary():
     return {"summary": "\n".join(lines), "claims": {k: v["verdict"] for k, v in evidence.get("claims", {}).items()}}
 
 
-@app.get("/diagnostics/live", tags=["diagnostics"])
-async def diagnostics_live_endpoint():
-    global _diag_last_probe, _diag_cache, _diag_cache_ts
+def _diag_read_sync():
+    """All synchronous diagnostics file I/O (beliefs, Gödel JSONL, agent registry,
+    vault, runtime log, workspace count) gathered in ONE function so the caller can
+    run it in a worker thread via asyncio.to_thread — keeping the FastAPI event loop
+    free to serve while disk reads + JSON parsing happen off-loop. This is what stops
+    the diagnostics refresh from blocking serving under CPU load (the 'flapping')."""
+    out = {"beliefs_count": 0, "beliefs_sample": [], "godel": [], "agents": [],
+           "vault": {}, "logs": [], "workspaces": 0}
+    # beliefs
+    try:
+        bp = PROJECT_ROOT / "data" / "memory" / "beliefs.json"
+        if bp.exists():
+            bd = json.loads(bp.read_text())
+            out["beliefs_count"] = len(bd)
+            for k, v in list(bd.items())[:8]:
+                val = v.get("value", "")
+                if isinstance(val, str) and len(val) > 50: val = val[:50] + "..."
+                out["beliefs_sample"].append({"key": k, "value": val})
+    except Exception as e: logger.debug(f"Diagnostics: beliefs read failed: {e}")
+    # workspaces
+    try:
+        wd = PROJECT_ROOT / "data" / "memory" / "agent_workspaces"
+        out["workspaces"] = sum(1 for d_ in wd.iterdir() if d_.is_dir()) if wd.exists() else 0
+    except Exception: pass
+    # godel
+    try:
+        gp = PROJECT_ROOT / "data" / "logs" / "godel_choices.jsonl"
+        if gp.exists():
+            lines = [l for l in gp.read_text().strip().split("\n") if l.strip()]
+            for l in lines[-10:]:
+                try:
+                    g = json.loads(l)
+                    out["godel"].append({"timestamp": g.get("timestamp_utc", g.get("timestamp","")), "agent": g.get("source_agent","?"), "type": g.get("choice_type",""), "chosen": str(g.get("chosen_option", g.get("chosen","")))[:100], "rationale": str(g.get("rationale",""))[:80], "outcome": str(g.get("outcome",""))[:40]})
+                except Exception: pass
+            out["godel"].reverse()
+    except Exception as e: logger.debug(f"Diagnostics: godel choices read failed: {e}")
+    # agent registry + tiers
+    try:
+        rp = PROJECT_ROOT / "data" / "identity" / "production_registry.json"
+        amp = PROJECT_ROOT / "daio" / "agents" / "agent_map.json"
+        agent_tiers = {}
+        if amp.exists():
+            for aid, ad in json.loads(amp.read_text()).get("agents", {}).items():
+                agent_tiers[aid] = ad.get("verification_tier", 0)
+        if rp.exists():
+            for a in json.loads(rp.read_text()).get("agents", []):
+                eid = a["entity_id"]
+                out["agents"].append({"entity_id": eid, "address": a["address"], "role": a.get("role",""), "verification_tier": agent_tiers.get(eid, 1)})
+    except Exception as e: logger.debug(f"Diagnostics: agent registry read failed: {e}")
+    # vault
+    try:
+        from mindx_backend_service.bankon_vault.vault import BankonVault
+        vi = BankonVault().info(); vi.pop("vault_dir", None); out["vault"] = vi
+    except Exception as e: logger.debug(f"Diagnostics: vault info failed: {e}")
+    # logs (tail of runtime log, redacted)
+    try:
+        lp = PROJECT_ROOT / "data" / "logs" / "mindx_runtime.log"
+        if lp.exists():
+            for l in lp.read_text().strip().split("\n")[-20:]:
+                if "API_KEY" in l or "private_key" in l.lower() or "WALLET_PK" in l: continue
+                out["logs"].append(l[:250])
+            out["logs"].reverse()
+    except Exception as e: logger.debug(f"Diagnostics: log read failed: {e}")
+    return out
+
+
+def _diag_stm_fallback_sync():
+    """Filesystem STM count — only used when pgvector is down. rglob over the STM
+    tree (tens of GB) MUST run in a worker thread, never on the event loop."""
+    stm = 0; stm_by_agent = {}
+    try:
+        stm_path = PROJECT_ROOT / "data" / "memory" / "stm"
+        if stm_path.exists():
+            from collections import defaultdict as _ddict
+            _counts = _ddict(int)
+            for f in stm_path.rglob("*.memory.json"):
+                parts = f.relative_to(stm_path).parts
+                if parts:
+                    _counts[parts[0]] += 1
+                    stm += 1
+            stm_by_agent = dict(sorted(_counts.items(), key=lambda x: -x[1]))
+    except Exception:
+        pass
+    return stm, stm_by_agent
+
+
+async def _diag_compute():
+    """Heavy diagnostics gather — run from the endpoint (cold cache only) or a
+    background refresher, so the endpoint never blocks on it under CPU load.
+    All synchronous file I/O is offloaded to a worker thread (_diag_read_sync) so the
+    event loop stays free to serve cached responses even mid-refresh."""
+    global _diag_last_probe, _diag_cache, _diag_cache_ts, _diag_last_godel, _diag_last_database
     now = time.time()
-
-    # Serve cached response if fresh (prevents worker exhaustion from 6s polling)
-    if _diag_cache and (now - _diag_cache_ts) < _DIAG_CACHE_TTL:
-        return _diag_cache
-
     up_s = int(now - _diag_start)
     d, r = divmod(up_s, 86400); h, r = divmod(r, 3600); m, _ = divmod(r, 60)
     uptime = f"{d}d {h}h {m}m" if d else f"{h}h {m}m"
@@ -5780,18 +7416,21 @@ async def diagnostics_live_endpoint():
         asyncio.create_task(_bg_probe())
         asyncio.create_task(_heartbeat_query_local_model())
 
-    # beliefs
-    bp = PROJECT_ROOT / "data" / "memory" / "beliefs.json"
-    bc, bs = 0, []
-    try:
-        if bp.exists():
-            bd = json.loads(bp.read_text())
-            bc = len(bd)
-            for k, v in list(bd.items())[:8]:
-                val = v.get("value", "")
-                if isinstance(val, str) and len(val) > 50: val = val[:50] + "..."
-                bs.append({"key": k, "value": val})
-    except Exception as e: logger.debug(f"Diagnostics: beliefs read failed: {e}")
+    # ── All synchronous file I/O offloaded to a worker thread (never blocks the
+    #    event loop, which is what kept serving responsive mid-refresh) ──
+    _sync = await asyncio.to_thread(_diag_read_sync)
+    bc, bs = _sync["beliefs_count"], _sync["beliefs_sample"]
+    wsp = _sync["workspaces"]
+    godel = _sync["godel"]
+    agents = _sync["agents"]
+    vault = _sync["vault"]
+    logs = _sync["logs"]
+    # Gödel last-good: a degraded read (e.g. right after restart) must not zero the
+    # audit-trail panel; keep the previous non-empty list until a fresh one lands.
+    if godel:
+        _diag_last_godel = godel
+    elif _diag_last_godel:
+        godel = _diag_last_godel
     # stm count — try pgvector first, fall back to filesystem
     stm = 0
     stm_by_agent = {}
@@ -5803,52 +7442,17 @@ async def diagnostics_live_endpoint():
         db_health = await _safe_await(_mpg.health_check(), default={})
     except Exception:
         pass
-    # Filesystem fallback if DB returned nothing
+    # Retain last-good: a slow health query returns {} and would blank the Memory &
+    # Knowledge + Storage panels. Keep the previous connected health until a fresh
+    # connected one lands (only overwrite when we actually got a connected reading).
+    if db_health.get("status") == "connected":
+        _diag_last_database = db_health
+    elif _diag_last_database:
+        db_health = _diag_last_database
+    # Filesystem fallback if DB returned nothing — rglob over the (huge) STM tree
+    # runs in a worker thread so it can never block the event loop.
     if stm == 0:
-        try:
-            stm_path = PROJECT_ROOT / "data" / "memory" / "stm"
-            if stm_path.exists():
-                from collections import defaultdict as _ddict
-                _counts = _ddict(int)
-                for f in stm_path.rglob("*.memory.json"):
-                    parts = f.relative_to(stm_path).parts
-                    if parts:
-                        _counts[parts[0]] += 1
-                        stm += 1
-                stm_by_agent = dict(sorted(_counts.items(), key=lambda x: -x[1]))
-        except Exception:
-            pass
-    wsp = sum(1 for d_ in (PROJECT_ROOT / "data" / "memory" / "agent_workspaces").iterdir() if d_.is_dir()) if (PROJECT_ROOT / "data" / "memory" / "agent_workspaces").exists() else 0
-    # godel
-    gp = PROJECT_ROOT / "data" / "logs" / "godel_choices.jsonl"
-    godel = []
-    try:
-        if gp.exists():
-            lines = [l for l in gp.read_text().strip().split("\n") if l.strip()]
-            for l in lines[-10:]:
-                try:
-                    g = json.loads(l)
-                    godel.append({"timestamp": g.get("timestamp_utc", g.get("timestamp","")), "agent": g.get("source_agent","?"), "type": g.get("choice_type",""), "chosen": str(g.get("chosen_option", g.get("chosen","")))[:100], "rationale": str(g.get("rationale",""))[:80], "outcome": str(g.get("outcome",""))[:40]})
-                except Exception: pass
-            godel.reverse()
-    except Exception as e: logger.debug(f"Diagnostics: godel choices read failed: {e}")
-    # registry
-    rp = PROJECT_ROOT / "data" / "identity" / "production_registry.json"
-    amp = PROJECT_ROOT / "daio" / "agents" / "agent_map.json"
-    agents = []
-    agent_tiers = {}
-    try:
-        if amp.exists():
-            am = json.loads(amp.read_text())
-            for aid, ad in am.get("agents", {}).items():
-                agent_tiers[aid] = ad.get("verification_tier", 0)
-    except Exception as e: logger.debug(f"Diagnostics: agent map read failed: {e}")
-    try:
-        if rp.exists():
-            for a in json.loads(rp.read_text()).get("agents", []):
-                eid = a["entity_id"]
-                agents.append({"entity_id": eid, "address": a["address"], "role": a.get("role",""), "verification_tier": agent_tiers.get(eid, 1)})
-    except Exception as e: logger.debug(f"Diagnostics: agent registry read failed: {e}")
+        stm, stm_by_agent = await asyncio.to_thread(_diag_stm_fallback_sync)
     # inference (use cached summary — probe runs async above)
     inf = {"total": 0, "available": 0, "sources": {}}
     try:
@@ -5857,23 +7461,7 @@ async def diagnostics_live_endpoint():
         s = disc.status_summary()
         inf = {"total": s.get("total_sources",0), "available": s.get("available",0), "local_inference": s.get("local_inference",False), "cloud_inference": s.get("cloud_inference",False), "sources": s.get("sources",{})}
     except Exception as e: logger.debug(f"Diagnostics: inference status failed: {e}")
-    # vault
-    vault = {}
-    try:
-        from mindx_backend_service.bankon_vault.vault import BankonVault
-        v = BankonVault(); vault = v.info(); vault.pop("vault_dir", None)
-    except Exception as e: logger.debug(f"Diagnostics: vault info failed: {e}")
-    # logs
-    lp = PROJECT_ROOT / "data" / "logs" / "mindx_runtime.log"
-    logs = []
-    try:
-        if lp.exists():
-            all_lines = lp.read_text().strip().split("\n")
-            for l in all_lines[-20:]:
-                if "API_KEY" in l or "private_key" in l.lower() or "WALLET_PK" in l: continue
-                logs.append(l[:250])
-            logs.reverse()
-    except Exception as e: logger.debug(f"Diagnostics: log read failed: {e}")
+    # (vault + recent logs now come from _diag_read_sync, off the event loop)
     # Load dojo and boardroom data
     dojo_data = []
     try:
@@ -5891,8 +7479,10 @@ async def diagnostics_live_endpoint():
             br_data = br.get_recent_sessions(5)
     except Exception as e: logger.debug(f"Diagnostics: boardroom data failed: {e}")
 
-    # Disk usage breakdown (async — never blocks event loop)
-    disk_detail = await _safe_await(_disk_usage_detail(), timeout_s=6.0, default={})
+    # Disk usage breakdown (async — never blocks event loop).
+    # 5-min cache inside _disk_usage_detail means cache hits return instantly;
+    # 2s ceiling keeps cold-path tail bounded even if `du` is slow on first run.
+    disk_detail = await _safe_await(_disk_usage_detail(), timeout_s=2.0, default={})
 
     # Actions
     actions_data = []
@@ -5901,6 +7491,14 @@ async def diagnostics_live_endpoint():
         actions_data = await _safe_await(_mpg2.get_recent_actions(limit=10), default=[])
     except Exception:
         pass
+    # Retain last-good: a transient pgvector stall under CPU load returns [] and
+    # would zero the "Recent Actions" panel. Keep the previous non-empty result
+    # until a fresh one lands, so the panel stays populated through serving stalls.
+    global _diag_last_actions
+    if actions_data:
+        _diag_last_actions = actions_data
+    elif _diag_last_actions:
+        actions_data = _diag_last_actions
 
     # RAGE embed stats
     rage_stats = {"docs": 0, "memories": 0}
@@ -6016,11 +7614,52 @@ async def diagnostics_live_endpoint():
     except Exception:
         pass
 
+    # Inference budget metabolism — per-provider live rate-limit headroom so the
+    # dashboard can show the organism breathing (cloud/router deplete, local
+    # rises, windows refill).
+    try:
+        from llm.inference_budget import snapshot as _budget_snapshot
+        response["inference_budget"] = _budget_snapshot()
+    except Exception:
+        pass
+
     # Cache response for subsequent polls
     _diag_cache = response
     _diag_cache_ts = time.time()
-
     return response
+
+
+_diag_refreshing = False
+
+
+async def _diag_bg_refresh():
+    global _diag_refreshing
+    try:
+        await _diag_compute()
+    except Exception:
+        pass
+    finally:
+        _diag_refreshing = False
+
+
+@app.get("/diagnostics/live", tags=["diagnostics"])
+async def diagnostics_live_endpoint():
+    """Always serve the cached snapshot; refresh it in the BACKGROUND when stale,
+    so the page never blocks on the heavy gather under CPU saturation. The
+    dashboard's freshness badge shows how old the data is. Only the very first
+    (cold-cache) call computes inline."""
+    global _diag_refreshing
+    now = time.time()
+    # Kick a background recompute whenever the cache is cold OR stale — but never
+    # await it (the gather can take 90s on a CPU-saturated 2-core box). The
+    # endpoint returns instantly: the cache if we have one, else a tiny warming
+    # placeholder. The next poll (6s later) gets the freshly computed snapshot.
+    if (not _diag_cache or (now - _diag_cache_ts) >= _DIAG_CACHE_TTL) and not _diag_refreshing:
+        _diag_refreshing = True
+        asyncio.create_task(_diag_bg_refresh())
+    if _diag_cache:
+        return _diag_cache
+    return {"warming_up": True, "uptime_seconds": int(now - _diag_start)}
 
 # Include bankon ("I do not understand") router
 from mindx_backend_service.bankon import bankon_router
@@ -6048,6 +7687,29 @@ try:
     logger.info("Shadow-overlord admin tier mounted at /admin/shadow/*, /admin/cabinet/*, /vault/sign/*")
 except Exception as _shadow_import_err:
     logger.warning(f"Shadow-overlord routes not loaded: {_shadow_import_err}")
+
+# Overlord/overseer model (@openagents/overlord mirror) — additive, gated by
+# MINDX_OVERLORD_ENABLED. public/member/overseer/overlord from signature +
+# holdings + chronos tenure. Destructive ops stay on the shadow gate above.
+try:
+    from mindx_backend_service.overlord import overlord_router
+    app.include_router(overlord_router)
+    logger.info("Overlord model mounted at /overlord/* (enabled=%s)",
+                os.environ.get("MINDX_OVERLORD_ENABLED", "0"))
+except Exception as _overlord_import_err:
+    logger.warning(f"Overlord routes not loaded: {_overlord_import_err}")
+
+# DeltaVerse REALM — the identity-aware participant fabric. Additive, gated by
+# MINDX_DELTAVERSE_ENABLED. /deltaverse/* (recognize, story, weave, bubblerooms,
+# wish) + the overlord-controlled /realm surface. The Cypherian Weaver weaves
+# participant interaction into the changing story. Never alters existing gates.
+try:
+    from mindx_backend_service.deltaverse import deltaverse_router
+    app.include_router(deltaverse_router)
+    logger.info("DeltaVerse REALM mounted at /deltaverse/* + /realm (enabled=%s)",
+                os.environ.get("MINDX_DELTAVERSE_ENABLED", "0"))
+except Exception as _deltaverse_import_err:
+    logger.warning(f"DeltaVerse routes not loaded: {_deltaverse_import_err}")
 
 # Public, wallet-authorized publish to rage.pythai.net (WordPress).
 # /publish/rage/challenge → /publish/rage/authorize — see agents/wordpress_agent/publish_auth.py.
@@ -6212,6 +7874,15 @@ async def startup_event():
         except Exception as schema_e:
             logger.warning(f"init_offload_schema failed: {schema_e}")
 
+        # Knowledge Catalogue Phase 1 read-model schema (idempotent).
+        # docs/KNOWLEDGE_CATALOGUE.md — catalogue_entries + catalogue_state.
+        try:
+            from agents import memory_pgvector
+            ok = await memory_pgvector.init_catalogue_schema()
+            logger.info(f"Catalogue schema init: {'ok' if ok else 'skipped (pg unavailable)'}")
+        except Exception as schema_e:
+            logger.warning(f"init_catalogue_schema failed: {schema_e}")
+
         # Run startup_agent.initialize_system() as a background task so it can
         # coordinate the full startup sequence and notify mindXagent (Ollama models, terminal log, etc.)
         try:
@@ -6306,7 +7977,7 @@ async def startup_event():
             await asyncio.sleep(60)  # Short warmup so a restart produces a dream within a minute
             dreamer = None
             try:
-                dreamer = MachineDreamCycle(memory_agent=memory_agent, days_back=180)
+                dreamer = MachineDreamCycle(memory_agent=memory_agent, days_back=180, coordinator=coordinator_instance)
                 feed.emit("memory", "machine_dreaming", "loop_started",
                           f"Dream loop online (interval={CONSOLIDATION_INTERVAL_HOURS}h)",
                           detail={"interval_hours": CONSOLIDATION_INTERVAL_HOURS}, agent_tier=2)
@@ -6319,7 +7990,7 @@ async def startup_event():
                     # Re-attempt init on next cycle rather than dying.
                     await asyncio.sleep(300)
                     try:
-                        dreamer = MachineDreamCycle(memory_agent=memory_agent, days_back=180)
+                        dreamer = MachineDreamCycle(memory_agent=memory_agent, days_back=180, coordinator=coordinator_instance)
                         feed.emit("memory", "machine_dreaming", "loop_recovered",
                                   "Dreamer re-initialized", agent_tier=2)
                     except Exception as re_e:
@@ -6399,6 +8070,25 @@ async def startup_event():
                                 stored = await _mpge.embed_and_store_doc(f.stem, text)
                                 if stored:
                                     logger.info(f"Auto-embedded new doc: {f.stem} ({stored} chunks)")
+                        # Reference corpus (gated subtrees): keep embeddings
+                        # current so new research drops become retrievable by
+                        # mindX without an operator run. doc_name = relative
+                        # path so public surfaces can filter on prefix.
+                        # (scripts/ingest_reference_docs.py additionally
+                        # writes the memory records + handles PDFs.)
+                        try:
+                            from utils.reference_corpus import iter_reference_docs as _iter_ref
+                            for _rel, _rf in _iter_ref(_PR / "docs"):
+                                if not _rel.endswith(".md"):
+                                    continue
+                                _dn = _rel[:-3]
+                                if _dn in existing:
+                                    continue
+                                stored = await _mpge.embed_and_store_doc(_dn, _rf.read_text(encoding="utf-8", errors="replace"))
+                                if stored:
+                                    logger.info(f"Auto-embedded reference doc: {_dn} ({stored} chunks)")
+                        except Exception as _ref_e:
+                            logger.debug(f"reference-corpus auto-embed skipped: {_ref_e}")
                         # Embed memories without embeddings (batch of 20)
                         rows = await pool.fetch("SELECT memory_id, content FROM memories WHERE embedding IS NULL LIMIT 20")
                         for row in rows:
@@ -6470,6 +8160,35 @@ async def startup_event():
             except Exception as ml_err:
                 logger.warning(f"MastermindAgent autonomous loop failed to start: {ml_err}")
 
+        # Knowledge Catalogue projector — folds the catalogue event stream into
+        # the Postgres read-model incrementally (cheap: resumes from a byte-offset
+        # watermark each tick). Also fills embeddings deferred by --no-embed
+        # backfills, under the ResourceGovernor gate. Disable with
+        # MINDX_CATALOGUE_PROJECT_INTERVAL_S=0.
+        async def _periodic_catalogue_projector():
+            interval = int(os.getenv("MINDX_CATALOGUE_PROJECT_INTERVAL_S", "300"))
+            if interval <= 0:
+                logger.info("Catalogue projector loop disabled (interval<=0)")
+                return
+            from agents.catalogue.projector import CatalogueProjector
+            proj = CatalogueProjector()
+            await asyncio.sleep(45)  # let boot settle before first tick
+            while True:
+                try:
+                    run = await proj.run(max_events=2000, embed=True)
+                    if run.entries_upserted or run.embeds_done:
+                        logger.info(
+                            "catalogue projector: +%d entries, %d embedded, %d deferred (offset=%d)",
+                            run.entries_upserted, run.embeds_done, run.embeds_deferred,
+                            run.final_offset)
+                    # Top up embeddings for older rows left NULL by a --no-embed backfill.
+                    swept = await proj.embed_sweep(limit=120)
+                    if swept:
+                        logger.info("catalogue projector: embed sweep +%d", swept)
+                except Exception:
+                    logger.warning("catalogue projector loop error", exc_info=True)
+                await asyncio.sleep(interval)
+
         asyncio.create_task(_auto_start_autonomous())
         asyncio.create_task(_periodic_memory_promotion())
         asyncio.create_task(_periodic_dream_cycle())
@@ -6477,26 +8196,99 @@ async def startup_event():
         asyncio.create_task(_periodic_author())
         asyncio.create_task(_periodic_embedding())
         asyncio.create_task(_periodic_health_audit())
+        asyncio.create_task(_periodic_catalogue_projector())
         asyncio.create_task(_start_mastermind_loop())
 
+        # Milestone recognizer — coordinator subscriber that classifies
+        # publication.published / bug.crushed / sea.campaign.concluded /
+        # dreaming.improved events into BeliefSystem milestone:* entries.
+        # Recognition is observational + independent of AGInt's lifecycle
+        # (AGInt is constructed on-demand for directives, not at boot).
+        # See agents/core/milestone_recognition.py for classifier rules.
+        try:
+            from agents.core.milestone_recognition import MilestoneRecognizer
+            from agents.core.belief_system import BeliefSystem as _BS
+            _milestone_recognizer = MilestoneRecognizer(
+                coordinator=coordinator_instance,
+                belief_system=_BS(),
+                actor="milestone_recognizer",
+            )
+            app.state.milestone_recognizer = _milestone_recognizer
+            logger.info(
+                "MilestoneRecognizer subscribed to %s (categories: %s)",
+                _milestone_recognizer.health()["subscribed_topics"],
+                _milestone_recognizer.health()["categories"],
+            )
+        except Exception as mr_err:
+            logger.exception(f"MilestoneRecognizer failed to start: {mr_err}")
+
         # Publication orchestrator — improvement-event-driven publishing
-        # to rage.pythai.net. Watches SEA campaign SUCCESS + full-moon
-        # dream cycles; debounced 30 min ± 40 % jitter; 6 h hard rate
-        # limit; persistent ledger at data/governance/published_triggers.json.
-        # See agents/publication_orchestrator.py + docs/publications/README.md
-        # for the contract. Defensive — failures inside the watchers are
-        # logged and the loop continues.
+        # to rage.pythai.net. Two trigger paths:
+        #   * direct callbacks via coordinator pub/sub
+        #     (sea.campaign.concluded, dream.report.written) — same-tick;
+        #   * file-polling watchers — resilient fallback ≤60s.
+        # Hybrid status: SEA→publish (public milestones),
+        # dreams→draft (reviewable). Env-overridable via
+        # MINDX_PUBLICATION_{SEA,DREAM}_STATUS.
+        # Debounced 30 min ± 40 % jitter; 6 h hard rate limit;
+        # persistent ledger at data/governance/published_triggers.json.
+        # Tasks anchored on app.state.background_tasks to prevent silent GC.
         try:
             from agents.publication_orchestrator import PublicationOrchestrator
-            _pub_orchestrator = PublicationOrchestrator(author_agent=author)
-            asyncio.create_task(_pub_orchestrator.watch_sea())
-            asyncio.create_task(_pub_orchestrator.watch_dreams())
+            from agents.author_agent import AuthorAgent
+            # AuthorAgent is a singleton — get-or-construct here so the
+            # orchestrator has a real reference. The nested _periodic_author
+            # task will reuse the same instance via get_instance().
+            _author_for_pub = await AuthorAgent.get_instance()
+            # Hand AuthorAgent a coordinator handle so _full_moon_publish can
+            # emit book.edition.published + journal.lunar.digest.ready events
+            # the orchestrator subscribes to. Post-construction attribute
+            # assignment avoids touching the singleton's get_instance() contract.
+            _author_for_pub.coordinator = coordinator_instance
+            _pub_orchestrator = PublicationOrchestrator(
+                author_agent=_author_for_pub,
+                coordinator=coordinator_instance,
+            )
+            if not hasattr(app.state, "background_tasks"):
+                app.state.background_tasks = []
+            app.state.background_tasks.append(
+                asyncio.create_task(_pub_orchestrator.watch_sea())
+            )
+            app.state.background_tasks.append(
+                asyncio.create_task(_pub_orchestrator.watch_dreams())
+            )
+            # github.awareness milestone watcher (carson branch) — anchored on
+            # background_tasks like the others to prevent silent GC.
+            app.state.background_tasks.append(
+                asyncio.create_task(_pub_orchestrator.watch_github())
+            )
+            # Daily "mindX as a protocol" essay cadence — orthogonal to the
+            # milestone triggers (exempt from MIN_GAP, advance_clock=False, so
+            # it never deters a milestone publish). Self-disables when
+            # MINDX_PROTOCOL_SERIES_ENABLED=0. Frequency/duration/status are
+            # owned by AuthorAgent's settable schedule (x402-gateable service).
+            app.state.background_tasks.append(
+                asyncio.create_task(_pub_orchestrator.watch_protocol_series())
+            )
+            app.state.publication_orchestrator = _pub_orchestrator
+
             logger.info(
                 "PublicationOrchestrator started "
-                "(watching SEA campaign history + full-moon dreams)"
+                "(watching SEA campaign history + full-moon dreams + github.awareness)"
+            )
+            logger.info(
+                "PublicationOrchestrator state: "
+                f"ledger={_pub_orchestrator.ledger_path} (exists={_pub_orchestrator.ledger_path.exists()}); "
+                f"sea_history={_pub_orchestrator.sea_history_path} (exists={_pub_orchestrator.sea_history_path.exists()}); "
+                f"dream_dir={_pub_orchestrator.dream_dir} "
+                f"(exists={_pub_orchestrator.dream_dir.exists()}, "
+                f"reports={len(list(_pub_orchestrator.dream_dir.glob('*_dream_report.json'))) if _pub_orchestrator.dream_dir.exists() else 0}); "
+                f"sea_status_default={_pub_orchestrator._sea_status}; "
+                f"dream_status_default={_pub_orchestrator._dream_status}; "
+                f"coordinator_wired={_pub_orchestrator.coordinator is not None}"
             )
         except Exception as pub_err:
-            logger.warning(
+            logger.exception(
                 f"PublicationOrchestrator failed to start: {pub_err}"
             )
 
@@ -7622,15 +9414,17 @@ async def action_efficiency():
 @app.get("/diagnostics/export", tags=["diagnostics"], summary="Full diagnostics snapshot as JSON download")
 async def diagnostics_export():
     from starlette.responses import Response
-    data = await diagnostics_live_endpoint()
+    data = _diag_cache or await _diag_compute()
     return Response(json.dumps(data, indent=2, default=str), media_type="application/json", headers={"Content-Disposition": "attachment; filename=mindx_diagnostics.json"})
 
 # RAGE Embed — pgvector-backed semantic search (branded as RAGE)
 @app.get("/api/rage/embed", tags=["rage-embed"], summary="RAGE embed: semantic search over docs via pgvector")
-async def rage_embed_search(query: str, top_k: int = 5):
+async def rage_embed_search(query: str, request: Request, top_k: int = 5):
     try:
         from agents import memory_pgvector as _mpx
-        docs = await _mpx.semantic_search_docs(query, top_k=top_k)
+        from utils.reference_corpus import PRIVATE_DOC_PREFIXES as _ref_prefixes
+        _exclude = None if await _reference_access_ok(request) else list(_ref_prefixes)
+        docs = await _mpx.semantic_search_docs(query, top_k=top_k, exclude_doc_prefixes=_exclude)
         mems = await _mpx.semantic_search_memories(query, top_k=top_k)
         return {"query": query, "docs": docs, "memories": mems}
     except Exception as e:
@@ -7647,14 +9441,17 @@ async def rage_embed_stats():
         return {"error": str(e)}
 
 @app.post("/chat/docs", tags=["chat"], summary="Ask a question about mindX documentation (RAG)")
-async def chat_with_docs(question: str):
-    """Semantic search over embedded docs, then answer with local model."""
+async def chat_with_docs(question: str, request: Request):
+    """Semantic search over embedded docs, then answer with local model.
+    Gated reference-corpus docs are excluded for unauthenticated callers."""
     try:
         from agents import memory_pgvector as _mpg
+        from utils.reference_corpus import PRIVATE_DOC_PREFIXES as _ref_prefixes
         import aiohttp as _cha
 
-        # 1. Retrieve relevant doc chunks
-        chunks = await _mpg.semantic_search_docs(question, top_k=5)
+        # 1. Retrieve relevant doc chunks (private corpus only with a session)
+        _exclude = None if await _reference_access_ok(request) else list(_ref_prefixes)
+        chunks = await _mpg.semantic_search_docs(question, top_k=5, exclude_doc_prefixes=_exclude)
         if not chunks:
             return {"answer": "No relevant documentation found. Docs may not be embedded yet.", "sources": []}
 
@@ -9781,6 +11578,21 @@ async def trigger_book_publish():
         raise HTTPException(status_code=500, detail=f"Book publish failed: {str(e)}")
 
 
+@app.post("/admin/regenerate-readme", tags=["admin"],
+          summary="Regenerate README.md from canonical docs (AuthorAgent)")
+async def regenerate_readme(dry_run: bool = True, _wallet: str = Depends(require_admin_access)):
+    """Have AuthorAgent surmise the repo README from the canonical docs, in mindX's
+    own first-person voice. `dry_run=true` (default) returns the rendered README
+    without writing; `dry_run=false` writes README.md. Admin-gated."""
+    try:
+        from agents.author_agent import AuthorAgent
+        aa = await AuthorAgent.get_instance()
+        res = aa.generate_readme(write=not dry_run)
+        return {"status": "preview" if dry_run else "written", **res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"README regeneration failed: {str(e)}")
+
+
 class PublishToRageRequest(BaseModel):
     """Body for POST /admin/publish-to-rage. Provide exactly one content source."""
     title: str = Field(..., min_length=1)
@@ -9828,6 +11640,204 @@ async def publish_to_rage(req: PublishToRageRequest, _wallet: str = Depends(requ
     if result is None:
         raise HTTPException(status_code=502, detail="wordpress-agent unreachable or rejected the post; see logs")
     return {"status": "ok", "wordpress": result}
+
+
+# ── Publishing-frequency-as-a-service (x402-gateable) ───────────────
+# AuthorAgent owns a settable schedule for the daily "mindX as a protocol"
+# series. GET is public-readable diagnostics; POST is the setter — admin
+# today, and the seam the x402 paywall gates so a paying agent can buy a
+# publishing cadence (frequency + duration + status). Setting the schedule
+# never touches the milestone/SEA/dream triggers; the series is orthogonal.
+
+class PublishingFrequencyRequest(BaseModel):
+    """Body for POST /admin/publishing/schedule. All fields optional —
+    only provided ones change."""
+    interval_days: Optional[int] = Field(default=None, ge=1, description="Cadence: 1=daily, 7=weekly, …")
+    max_publications: Optional[int] = Field(default=None, ge=0, description="Hard cap on essays in this run (0/None = open)")
+    days: Optional[int] = Field(default=None, ge=1, description="Convenience: cap = ceil(days / interval_days)")
+    start_date: Optional[str] = Field(default=None, description="ISO YYYY-MM-DD anchor for the run")
+    hour_utc: Optional[int] = Field(default=None, ge=0, le=23, description="Earliest UTC hour to publish each due day")
+    status: Optional[str] = Field(default=None, description="'draft' or 'publish'")
+    enabled: Optional[bool] = Field(default=None, description="Master on/off for the series cadence")
+    style: Optional[str] = Field(default=None, description="Register: public | essay | phd | global (spans the spectrum)")
+    length: Optional[str] = Field(default=None, description="Length setting: preset (brief~800 | standard~1500 | feature~2400 | deep~3200 | pillar~3800) OR a custom word count ('2500'). Calibrated to contemporary article sizing.")
+    graphics: Optional[str] = Field(default=None, description="artist.agent mode: choose | create | both | none")
+    self_referential: Optional[str] = Field(default=None, description="Self-linking intensity to docs.html/rage.pythai.net: tasteful | balanced | promotional | blatant (max-SEO + self-glorification)")
+    ideology: Optional[str] = Field(default=None, description="Value-frame lens (exploration): cypherpunk | solarpunk | accelerationist | humanist | libertarian | cooperative | none")
+    narrative: Optional[str] = Field(default=None, description="Telling voice (exploration): first_person | newspaperman | noir | mythic | academic | manifesto")
+
+
+@app.get("/insight/publications/schedule", summary="Read the protocol-series publishing schedule", tags=["insight"])
+async def get_publishing_schedule():
+    """Public diagnostics: the current frequency-as-a-service schedule for
+    the daily 'mindX as a protocol' series, plus today's publish plan."""
+    try:
+        from agents.author_agent import AuthorAgent
+        author = await AuthorAgent.get_instance()
+        sched = author.get_publishing_schedule()
+        plan = author.protocol_publish_plan()
+        return {"status": "ok", "schedule": sched.get("protocol_series"), "today": plan}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"get_publishing_schedule failed: {e}")
+
+
+@app.post("/admin/publishing/schedule", summary="Set protocol-series publishing frequency (x402-gateable)", tags=["admin"])
+async def set_publishing_schedule(
+    req: PublishingFrequencyRequest,
+    request: Request,
+    _wallet: str = Depends(require_admin_access),
+):
+    """Set how often / for how long mindX publishes the protocol series.
+
+    This is the x402 frequency-as-a-service seam: today it is admin-gated;
+    when the x402 paywall finalizes, the same setter is reachable by a paying
+    agent and ``updated_by`` records the payer (e.g. ``x402:0x…``). The
+    x402 payment header, when present, is captured for attribution.
+    """
+    # Capture an x402 payer for attribution if the middleware annotated the
+    # request (forward-compatible; absent today → plain operator).
+    payer = (
+        request.headers.get("X-Payment-Payer")
+        or request.headers.get("X-402-Payer")
+        or getattr(request.state, "x402_payer", None)
+    )
+    updated_by = f"x402:{payer}" if payer else f"operator:{_wallet[:10]}"
+    try:
+        from agents.author_agent import AuthorAgent
+        author = await AuthorAgent.get_instance()
+        sched = author.set_publishing_frequency(
+            interval_days=req.interval_days,
+            max_publications=req.max_publications,
+            days=req.days,
+            start_date=req.start_date,
+            hour_utc=req.hour_utc,
+            status=req.status,
+            enabled=req.enabled,
+            style=req.style,
+            length=req.length,
+            graphics=req.graphics,
+            self_referential=req.self_referential,
+            ideology=req.ideology,
+            narrative=req.narrative,
+            updated_by=updated_by,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"set_publishing_frequency failed: {e}")
+    return {"status": "ok", "schedule": sched.get("protocol_series"),
+            "today": author.protocol_publish_plan()}
+
+
+# ── Speech from the throne (verifiable chain of command) ───────────
+# The board issues a statement that is published with a signed chain of custody
+# (throne → endorsing soldiers → author → editor → artist → wordpress). Anyone
+# can re-verify the chain by recovering each link's signer — no trust required.
+
+class ThroneSpeechRequest(BaseModel):
+    """Body for POST /admin/throne/speak."""
+    statement: str = Field(..., description="The board's statement (plain text; blank lines split paragraphs)")
+    title: str = Field(default="A Speech from the Throne", description="Headline")
+    dek: Optional[str] = Field(default=None, description="Optional sub-headline / excerpt")
+    endorsers: Optional[List[str]] = Field(default=None, description="Soldier agent_ids that co-sign (e.g. ciso_security, cro_risk)")
+    status: str = Field(default="publish", description="'draft' or 'publish'")
+    slug: Optional[str] = Field(default=None, description="Optional WordPress slug")
+    illustrate: bool = Field(default=True, description="Have artist.agent render original art")
+
+
+class ProvenanceVerifyRequest(BaseModel):
+    """Body for POST /verify/provenance — a serialized provenance chain dict, or
+    the full HTML of a published post to extract the embedded chain from."""
+    chain: Optional[Dict[str, Any]] = Field(default=None, description="The provenance chain JSON")
+    html: Optional[str] = Field(default=None, description="Published post HTML (chain auto-extracted)")
+
+
+@app.post("/admin/throne/speak", summary="Issue a board speech from the throne (signed chain of command)", tags=["admin"])
+async def throne_speak(req: ThroneSpeechRequest, request: Request,
+                       _wallet: str = Depends(require_admin_access)):
+    """Compose + publish a board statement with an end-to-end verifiable chain of
+    custody. Each seat (CEO, endorsing soldiers, author, editor, artist,
+    wordpress) signs its own link with its wallet."""
+    try:
+        from agents.author_agent import AuthorAgent
+        author = await AuthorAgent.get_instance()
+        result = await author.publish_speech_from_throne(
+            req.statement, title=req.title, dek=req.dek, endorsers=req.endorsers,
+            status=req.status, slug=req.slug, illustrate=req.illustrate)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"throne_speak failed: {e}")
+    if result is None:
+        raise HTTPException(status_code=502, detail="publish failed (wordpress.agent down?)")
+    return {"status": "ok", "published": result}
+
+
+@app.post("/verify/provenance", summary="Verify a speech-from-the-throne chain of command", tags=["insight"])
+async def verify_provenance(req: ProvenanceVerifyRequest):
+    """Public: re-verify a provenance chain by recovering every link's signer and
+    confirming the hash linkage + registered identities. Pass either the chain
+    JSON or the published post HTML."""
+    try:
+        from agents import provenance_chain as pc
+        chain = req.chain
+        if chain is None and req.html:
+            chain = pc.extract_chain_from_html(req.html)
+        if not isinstance(chain, dict) or not chain.get("links"):
+            raise HTTPException(status_code=400, detail="no chain found (provide 'chain' or 'html')")
+        return {"status": "ok", "report": pc.verify_chain(chain)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"verify_provenance failed: {e}")
+
+
+# ── Bug-crushed milestone trigger ──────────────────────────────────
+# Operator-callable endpoint that fires a 'bug.crushed' coordinator event
+# (security/dependency batch closed). AGInt's milestone recognizer picks it
+# up, classifies, and — if it meets the major threshold (>=5 alerts, OR 1+
+# critical, OR 3+ high) — composes a milestone article via AuthorAgent.
+
+class BugCrushedRequest(BaseModel):
+    """Body for POST /admin/recognize/bug-crushed."""
+    pr_number: Optional[int] = Field(default=None, description="GitHub PR number, if any")
+    alert_count: int = Field(..., ge=0, description="Total security alerts closed in this batch")
+    severities: Dict[str, int] = Field(
+        default_factory=dict,
+        description="Severity breakdown, e.g. {\"critical\": 1, \"high\": 11, \"moderate\": 12, \"low\": 1}",
+    )
+    summary: Optional[str] = Field(default=None, description="One-line summary (for the rage article if it autopublishes)")
+
+
+@app.post(
+    "/admin/recognize/bug-crushed",
+    summary="Fire a bug.crushed coordinator event for milestone recognition",
+    tags=["admin"],
+)
+async def recognize_bug_crushed(
+    req: BugCrushedRequest,
+    _wallet: str = Depends(require_admin_access),
+):
+    """Operator-callable trigger for the 'bug.crushed' milestone category.
+    AGInt's recognizer classifies + persists + (if major) autopublishes via
+    the existing PublicationOrchestrator chain.
+
+    Use after merging a security-batch PR. Idempotent on (pr_number, batch).
+    """
+    coord = getattr(app.state, "coordinator", None) or getattr(app.state, "coordinator_instance", None)
+    payload = req.model_dump()
+    if coord is None:
+        # Fall back: try to import the coordinator singleton.
+        try:
+            from agents.orchestration.coordinator_agent import get_coordinator_agent_mindx_async
+            coord = await get_coordinator_agent_mindx_async()
+        except Exception as e:
+            raise HTTPException(status_code=503, detail=f"coordinator not reachable: {e}")
+    if coord is None:
+        raise HTTPException(status_code=503, detail="coordinator not constructed at startup")
+    try:
+        await coord.publish_event("bug.crushed", payload)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"publish_event failed: {e}")
+    return {"status": "ok", "event": "bug.crushed", "payload": payload}
 
 
 @app.get("/core/agent-activity", summary="Get agent activity")
@@ -10844,6 +12854,129 @@ async def update_mindxagent_ollama_settings(payload: MindXagentOllamaSettingsPay
         raise
     except Exception as e:
         logger.error(f"Error updating Ollama settings: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- /v1/config/fallback-model ---------------------------------------------
+# Runtime swap for the per-provider default ("fallback") model. Lets the
+# mindXtrain training loop publish a freshly fine-tuned checkpoint and then
+# point production at it without a source edit. See
+# /home/hacker/Desktop/mindXtrain/HANDOFF.md for the producer side.
+
+class FallbackModelPayload(BaseModel):
+    """Payload for PATCH /v1/config/fallback-model."""
+
+    provider: str = Field(
+        default="ollama",
+        description="LLM provider whose default_model should be swapped (ollama, vllm, ...).",
+        min_length=1,
+        max_length=32,
+    )
+    model: str = Field(
+        ...,
+        description="New default model identifier (e.g. 'qwen3:1.7b' or 'pythai/mindx-fallback-qwen3-1.5b').",
+        min_length=1,
+        max_length=256,
+    )
+
+    @field_validator("provider")
+    @classmethod
+    def _provider_known(cls, v: str) -> str:
+        models_dir = PROJECT_ROOT / "models"
+        if not (models_dir / f"{v}.yaml").exists():
+            raise ValueError(f"unknown provider {v!r}; no models/{v}.yaml present")
+        return v
+
+
+def _write_fallback_override(provider: str, model: str) -> Path:
+    """Mutate `models/<provider>.yaml` so the new default_model survives Config reload.
+
+    Why YAML, not JSON: `utils.config.Config._load_model_capability_configs`
+    runs AFTER `_load_config_files`, so any JSON override under
+    `llm.<provider>.default_model` is clobbered by the corresponding
+    `default_model:` field in models/<provider>.yaml. The YAML *is* the
+    source of truth for the per-provider default. We update it in place
+    via an atomic rename, preserving the rest of the file.
+
+    Returns the path written.
+    """
+    import yaml as _yaml  # local import; module-level yaml shadowed elsewhere
+
+    yaml_path = PROJECT_ROOT / "models" / f"{provider}.yaml"
+    if not yaml_path.exists():
+        raise FileNotFoundError(f"models/{provider}.yaml not found; refusing to fabricate it")
+
+    with yaml_path.open("r", encoding="utf-8") as fh:
+        data = _yaml.safe_load(fh) or {}
+
+    data["default_model"] = model
+
+    tmp_path = yaml_path.with_suffix(".yaml.tmp")
+    with tmp_path.open("w", encoding="utf-8") as fh:
+        _yaml.safe_dump(data, fh, sort_keys=False, default_flow_style=False)
+    tmp_path.replace(yaml_path)
+    return yaml_path
+
+
+@app.patch(
+    "/v1/config/fallback-model",
+    summary="Swap the per-provider default (fallback) model at runtime",
+    tags=["config"],
+)
+async def patch_fallback_model(payload: FallbackModelPayload = Body(...)):
+    """Atomically rewrite the mindxtrain fallback override + reload Config.
+
+    Returns `previous` and `current` so the caller (mindXtrain's publish
+    step, or an operator) can confirm the swap. Subsequent LLM handler
+    creations resolve the new default via `llm.<provider>.default_model`.
+    """
+    try:
+        from utils.config import Config
+
+        config_key = f"llm.{payload.provider}.default_model"
+        previous = Config().get(config_key)
+
+        target = _write_fallback_override(payload.provider, payload.model)
+
+        # Reload singleton so the new override is merged on next .get()
+        Config.reset_instance()
+        Config()
+        current = Config().get(config_key)
+
+        logger.info(
+            f"Fallback model swap: provider={payload.provider} "
+            f"{previous!r} -> {current!r} (written to {target})"
+        )
+        return {
+            "success": True,
+            "provider": payload.provider,
+            "previous": previous,
+            "current": current,
+            "config_file": str(target.relative_to(PROJECT_ROOT)),
+            "note": "Subsequent LLM handler creations resolve via llm.<provider>.default_model.",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error swapping fallback model: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get(
+    "/v1/config/fallback-model",
+    summary="Read the current per-provider default (fallback) model",
+    tags=["config"],
+)
+async def get_fallback_model(provider: str = "ollama"):
+    """Return the current `llm.<provider>.default_model`."""
+    try:
+        from utils.config import Config
+        return {
+            "provider": provider,
+            "default_model": Config().get(f"llm.{provider}.default_model"),
+        }
+    except Exception as e:
+        logger.error(f"Error reading fallback model: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -44,6 +44,7 @@ and can be lifted by any agent stack.
 | Module | Repo path | What it does |
 |---|---|---|
 | **Cabinet** | `mindx_backend_service/bankon_vault/cabinet.py` + `cabinet.html` | Composes M2 + M4 + M8 + BANKON Vault. Provisions 1 CEO + 7 Counsellors per company; vault signs on agents' behalf without leaking keys. Shadow-overlord ECDSA gate |
+| **Overlord** (`@openagents/overlord`) | `openagents/overlord/` | Agnostic overlord/overseer login + privilege hierarchy (TypeScript, pure viem). public vs privileged with per-role levels; identity by signature (ECDSA + ERC-1271); privilege from on-chain holdings whose blockchain tenure is chronos-verified (`/v1/oracle/time`); overlord-only destructive capabilities. Consumed by **both mindX (canonical consumer) and bankoneth**; bridges onto the boardroom/dojo six-tier shape. **Not independently published — ships via mindX.** |
 
 ### Sibling modules
 

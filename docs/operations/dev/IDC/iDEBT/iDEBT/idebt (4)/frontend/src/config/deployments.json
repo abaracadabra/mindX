@@ -1,0 +1,15 @@
+{
+  "_comment": "Populate each chain after running Deploy.s.sol + Configure.s.sol. Keys are EIP-155 chain ids as strings.",
+  "1":        {},
+  "10":       {},
+  "137":      {},
+  "1101":     {},
+  "42161":    {},
+  "8453":     {},
+  "56":       {},
+  "43114":    {},
+  "324":      {},
+  "250":      {},
+  "5042002":  {},
+  "11155111": {}
+}

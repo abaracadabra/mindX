@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mindX reference — gated corpus</title>
+<meta name="description" content="mindX reference corpus: gated catalogue of internal research and source material not linked from the public documentation hub.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#040609">
+<link rel="icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<style>
+:root{
+  --bg:#040609;--surface:rgba(10,14,20,.88);--surface2:rgba(16,20,28,.7);
+  --green:#56d364;--blue:#79c0ff;--violet:#d2a8ff;--amber:#e3b341;--red:#f85149;
+  --text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--border:rgba(88,166,255,.08);
+  --mono:'JetBrains Mono','SF Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.55}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.hdr{position:sticky;top:0;z-index:50;padding:0 20px;min-height:48px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(8,12,20,.96),rgba(4,6,9,.94));backdrop-filter:blur(24px);border-bottom:1px solid rgba(121,192,255,.1)}
+.hdr-brand{font-family:var(--mono);font-size:18px;font-weight:700;letter-spacing:2px}
+.hdr-brand b{color:var(--blue)}
+.hdr-mid{display:flex;gap:4px;flex-wrap:wrap;margin-left:16px}
+.hdr-mid a{color:#d0d7de;font-size:12px;padding:4px 10px;border-radius:4px;font-family:var(--mono)}
+.hdr-mid a:hover{background:rgba(121,192,255,.1);color:#f0f6fc}
+.wrap{max-width:1100px;margin:0 auto;padding:20px}
+h1{font-size:22px;margin-bottom:4px;font-family:var(--mono);letter-spacing:1px}
+.sub{color:var(--text2);font-size:13px;margin-bottom:20px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px}
+.badge{display:inline-block;font-family:var(--mono);font-size:9px;padding:1px 6px;border-radius:3px;letter-spacing:.5px;vertical-align:1px}
+.badge.priv{color:var(--amber);border:1px solid rgba(227,179,65,.35)}
+.badge.emb{color:var(--green);border:1px solid rgba(86,211,100,.35)}
+.badge.ext{color:var(--text3);border:1px solid rgba(110,118,129,.35)}
+details{margin-bottom:10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px}
+summary{cursor:pointer;padding:10px 14px;font-family:var(--mono);font-size:13px;color:var(--violet)}
+summary .cnt{color:var(--text3);font-weight:400;font-size:11px}
+details ul{list-style:none;padding:4px 14px 12px 26px}
+details li{padding:3px 0;font-size:12.5px}
+details li .meta{color:var(--text3);font-size:10.5px;font-family:var(--mono);margin-left:6px}
+#denied{display:none;text-align:center;padding:48px 16px}
+#denied h2{color:var(--red);font-family:var(--mono);letter-spacing:2px;margin-bottom:12px}
+#denied p{color:var(--text2);max-width:560px;margin:8px auto}
+.tokbox{margin-top:18px}
+.tokbox input{background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 10px;width:320px;max-width:80vw}
+.tokbox button{background:rgba(121,192,255,.12);border:1px solid rgba(121,192,255,.3);border-radius:4px;color:var(--blue);font-family:var(--mono);font-size:12px;padding:8px 14px;cursor:pointer;margin-left:6px}
+#loading{color:var(--text3);font-family:var(--mono);font-size:12px;padding:24px;text-align:center}
+.note{font-size:11.5px;color:var(--text3);margin-top:14px;border-left:2px solid rgba(227,179,65,.35);padding-left:10px}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <span class="hdr-brand">mind<b>X</b> <span style="font-size:11px;color:var(--amber);letter-spacing:1px">REFERENCE</span></span>
+  <div class="hdr-mid">
+    <a href="/">dashboard</a><a href="/docs.html">docs</a><a href="/feedback.html">feedback</a><a href="/agentic.html">agentic</a><a href="/login">login</a>
+  </div>
+</div>
+<div class="wrap">
+  <h1>reference corpus</h1>
+  <div class="sub">Internal source material — every file under <code>docs/</code> the public
+    <a href="/docs.html">documentation hub</a> does not link. Ingested into mindX memory
+    (pgvector + RAGE) for the system's own use; not published until AuthorAgent rewrites
+    it for the public surface. <span class="badge priv">PRIVATE</span> = gated subtree,
+    <span class="badge emb">EMBEDDED</span> = in the semantic index.</div>
+
+  <div id="loading">authenticating&hellip;</div>
+
+  <div id="denied">
+    <h2>ACCESS DENIED</h2>
+    <p>This catalogue requires a mindX session. <a href="/login?from=/reference">Sign in with a wallet</a>,
+       or paste a session token / API key below.</p>
+    <div class="tokbox">
+      <input id="tok-input" type="password" placeholder="session token or API key" autocomplete="off">
+      <button onclick="saveToken()">unlock</button>
+    </div>
+  </div>
+
+  <div id="catalog" style="display:none">
+    <div class="card" id="summary-card"></div>
+    <div id="groups"></div>
+    <div class="note">Files open via authenticated fetch (token travels in the
+      <code>X-Session-Token</code> header, never in the URL) — nothing leaks into browser
+      history or server access logs. The repository is private pending security audits;
+      this gate is a real boundary.</div>
+  </div>
+</div>
+
+<script>
+const TOKEN_KEY = 'mindx_session_token';   // same key /login stores
+function getToken(){ try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } }
+function saveToken(){
+  const v = document.getElementById('tok-input').value.trim();
+  if (!v) return;
+  try { localStorage.setItem(TOKEN_KEY, v); } catch {}
+  load();
+}
+function encPath(relpath){ return relpath.split('/').map(encodeURIComponent).join('/'); }
+function esc(s){ const d = document.createElement('span'); d.textContent = s; return d.innerHTML; }
+
+async function load(){
+  const tok = getToken();
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('denied').style.display = 'none';
+  document.getElementById('catalog').style.display = 'none';
+  let res;
+  try {
+    res = await fetch('/reference/catalog', { headers: tok ? {'X-Session-Token': tok} : {} });
+  } catch { res = null; }
+  document.getElementById('loading').style.display = 'none';
+  if (!res || res.status === 401){
+    // session token didn't pass — maybe it's an API key; retry as Bearer
+    if (tok && res && res.status === 401){
+      try {
+        const r2 = await fetch('/reference/catalog', { headers: {'Authorization': 'Bearer ' + tok} });
+        if (r2.ok) return render(await r2.json(), tok, true);
+      } catch {}
+    }
+    document.getElementById('denied').style.display = 'block';
+    return;
+  }
+  if (!res.ok){ document.getElementById('denied').style.display = 'block'; return; }
+  render(await res.json(), tok, false);
+}
+
+// Open a gated file WITHOUT putting the token in the URL: fetch with the
+// auth header, hand the browser a same-origin blob. Keeps tokens out of
+// history and server access logs — the repo is private pending audits, so
+// this gate is a real secrecy boundary.
+async function openFile(relpath, tok, isBearer){
+  const headers = isBearer ? {'Authorization': 'Bearer ' + tok} : {'X-Session-Token': tok};
+  try {
+    const res = await fetch('/reference/file/' + encPath(relpath), { headers });
+    if (!res.ok){ alert('Access denied (' + res.status + ') — session may have expired.'); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (e) { alert('Fetch failed: ' + e); }
+}
+
+function render(data, tok, isBearer){
+  document.getElementById('catalog').style.display = 'block';
+  document.getElementById('summary-card').innerHTML =
+    '<b style="font-family:var(--mono)">' + data.total + '</b> unlinked files &middot; ' +
+    '<span style="color:var(--green);font-family:var(--mono)">' + data.embedded_count + '</span> embedded in pgvector &middot; ' +
+    'private subtrees: ' + data.private_prefixes.map(p => '<code>' + esc(p) + '</code>').join(' ');
+  const groupsEl = document.getElementById('groups');
+  groupsEl.innerHTML = '';
+  for (const [folder, items] of Object.entries(data.groups)){
+    const anyPriv = items.some(i => i.private);
+    const det = document.createElement('details');
+    if (anyPriv) det.setAttribute('open', '');
+    det.innerHTML = '<summary>' + esc(folder) + '/ <span class="cnt">(' + items.length + ' files)</span>' +
+      (anyPriv ? ' <span class="badge priv">PRIVATE</span>' : '') + '</summary>';
+    const ul = document.createElement('ul');
+    for (const it of items){
+      const li = document.createElement('li');
+      li.innerHTML =
+        '<a href="#" data-rel="' + esc(it.relpath) + '">' + esc(it.name) + '</a>' +
+        (it.title ? ' <span style="color:var(--text2);font-size:11px">— ' + esc(it.title) + '</span>' : '') +
+        '<span class="meta">' + it.size_kb + 'KB &middot; ' + it.mtime + '</span>' +
+        (it.embedded ? ' <span class="badge emb">EMBEDDED</span>' : '') +
+        (!['md'].includes(it.ext) ? ' <span class="badge ext">' + esc(it.ext.toUpperCase()) + '</span>' : '');
+      li.querySelector('a').addEventListener('click', (ev) => {
+        ev.preventDefault();
+        openFile(it.relpath, tok, isBearer);
+      });
+      ul.appendChild(li);
+    }
+    det.appendChild(ul);
+    groupsEl.appendChild(det);
+  }
+}
+load();
+</script>
+</body>
+</html>

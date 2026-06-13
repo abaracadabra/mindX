@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+# Defense-in-depth for Apache/Hostinger hosts: never serve secrets or proxy source from
+# this folder over HTTP. (The canonical secret lives OUTSIDE the web root in the bankoneth
+# root .bankonchains.env; this only guards against a stray copy.) The .mjs/.php proxies are
+# RUN as processes, not served as static files.
+<FilesMatch "(^\.|\.env$|\.env\.|\.key$|\.secret$|cmc-proxy\.(mjs|php))">
+  Require all denied
+</FilesMatch>
+# Block dotfiles generally.
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>

@@ -1,0 +1,25 @@
+{
+  "note": "AllChain CAIP-2 map for the BANKON dApps (agenticplace.pythai.net/allchain.html convention). EVM = eip155:<chainId>; Algorand uses the GoPlausible full-genesis-hash form.",
+  "chains": [
+    { "label": "Ethereum",              "caip2": "eip155:1",        "chainId": 1,        "role": "ENS L1 / Unified Bridge anchor" },
+    { "label": "Base",                  "caip2": "eip155:8453",     "chainId": 8453,     "role": "EVM USDC settlement" },
+    { "label": "Optimism",              "caip2": "eip155:10",       "chainId": 10,       "role": "L2" },
+    { "label": "Arbitrum One",          "caip2": "eip155:42161",    "chainId": 42161,    "role": "L2 / USDC" },
+    { "label": "Polygon",               "caip2": "eip155:137",      "chainId": 137,      "role": "NeuralNode / USDC" },
+    { "label": "0G Aristotle Mainnet",  "caip2": "eip155:16661",    "chainId": 16661,    "role": "iNFT (ERC-7857) primary" },
+    { "label": "0G Galileo Testnet",    "caip2": "eip155:16601",    "chainId": 16601,    "role": "iNFT preflight" },
+    { "label": "Arc Testnet (Circle)",  "caip2": "eip155:5042002",  "chainId": 5042002,  "role": "USDC-gas mirror settlement" },
+    { "label": "Algorand Mainnet",      "caip2": "algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=", "role": "x402-avm / NFD / DAIO constitutional" },
+    { "label": "Algorand Testnet",      "caip2": "algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=", "role": "x402 preflight" }
+  ],
+  "assets": {
+    "usdc": {
+      "ethereum": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "base": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "arbitrum": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+      "polygon": "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+      "arc-testnet": "0x3600000000000000000000000000000000000000",
+      "algorand-asa": 31566704
+    }
+  }
+}

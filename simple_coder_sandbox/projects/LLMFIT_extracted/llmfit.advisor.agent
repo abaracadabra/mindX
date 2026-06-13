@@ -1,0 +1,27 @@
+{
+  "//": "SPDX-License-Identifier: Apache-2.0 — (c) 2026 BANKON — all rights reserved.",
+  "id": "llmfit.advisor.agent",
+  "version": "1.0.0",
+  "role": "node_capability_oracle",
+  "description": "Hardware-aware local-model fit advisor. Answers 'what can this node run?' and emits the node fit_profile published to the protocol's node registry.",
+  "tool": "tools.inference.llmfit_tool.LLMFitTool",
+  "upstream": {
+    "name": "llmfit",
+    "repo": "https://github.com/AlexsJones/llmfit",
+    "license": "MIT",
+    "boundary": "external binary; invoked via subprocess/REST, never vendored — preserves the Apache-2.0 protocol boundary"
+  },
+  "knowledge_domains": [
+    { "type": "local", "uri": "tools/inference/llmfit_tool.py" },
+    { "type": "url", "uri": "http://127.0.0.1:8787/api/v1/system" },
+    { "type": "url", "uri": "http://127.0.0.1:8787/api/v1/models/top" }
+  ],
+  "operations": ["system", "recommend", "plan", "fit_profile"],
+  "publishes": {
+    "schema": "mindx.node.fit_profile.v1",
+    "sinks": ["a2a.agent_card", "agenticplace.node_registry"],
+    "refresh": "on_boot + on_hardware_change"
+  },
+  "access_control": "default_tier",
+  "circuit": "fail_open: absence of llmfit yields an empty fit_profile, never a boot blocker"
+}

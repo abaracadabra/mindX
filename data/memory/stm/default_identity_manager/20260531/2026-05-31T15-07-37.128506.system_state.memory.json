@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-05-31T15:07:37.128506",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "default_identity_manager",
+  "content": {
+    "process_name": "id_manager_wallet_created",
+    "data": {
+      "entity_id": "blockchain.agent.oracle-scout",
+      "address": "0x108eEb4441701A1d1c1cC89f6a2abCa590Bc006D",
+      "env_var": "MINDX_WALLET_PK_BLOCKCHAIN_AGENT_ORACLE_SCOUT",
+      "success": true,
+      "key_stored": true,
+      "path": "legacy"
+    }
+  },
+  "context": {
+    "agent_id": "default_identity_manager"
+  },
+  "tags": [
+    "id_manager_wallet_created",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "00674d2d15113cad"
+}

@@ -256,7 +256,7 @@ class MindXAgent:
             "autonomous_mode_enabled": False,
             "show_thinking_process": True,
             "show_action_choices": True,
-            "improvement_cycle_interval": 300,  # 5 minutes
+            "improvement_cycle_interval": 3600,  # 1 hour — respect Ollama Cloud free-tier rate limit (150 req/hr)
             "model_selection_strategy": "best_for_task",  # best_for_task, user_preference, balanced
             "max_concurrent_improvements": 5,  # Increased from 1 to 5 for better parallelism
             "auto_apply_safe_improvements": True
@@ -2541,6 +2541,10 @@ class MindXAgent:
         Returns:
             Dictionary with status and configuration
         """
+        import os as _os
+        if _os.getenv("MINDX_DISABLE_AUTONOMOUS") == "1":
+            logger.warning(f"{self.log_prefix} Autonomous mode disabled via MINDX_DISABLE_AUTONOMOUS")
+            return {"status": "disabled", "reason": "MINDX_DISABLE_AUTONOMOUS=1"}
         if self.autonomous_mode:
             logger.warning(f"{self.log_prefix} Autonomous mode already running")
             return {
@@ -2687,6 +2691,24 @@ class MindXAgent:
                     if ltm_insights:
                         self._log_thinking("ltm_awareness",
                             f"Aware of {len(ltm_insights)} learned patterns from past cycles")
+                except Exception:
+                    pass
+
+                # Dynamic CPU gate — yield the processor before the heavy,
+                # inference-driven part of the cycle. If the box is over the
+                # autonomous ceiling (~92%), back off in a bounded loop; if still
+                # saturated, skip this cycle so the web service keeps the CPU.
+                # Fail-open: governor unavailable → proceed.
+                try:
+                    from agents.resource_governor import ResourceGovernor
+                    _gov = await ResourceGovernor.get_instance()
+                    if not await _gov.throttle_for_cpu(label="mindx_loop", max_wait=180):
+                        logger.info(
+                            f"{self.log_prefix} Cycle {cycle_count}: CPU over ceiling "
+                            f"after backoff — skipping cycle (shares processor)"
+                        )
+                        await asyncio.sleep(120)
+                        continue
                 except Exception:
                     pass
 
@@ -2883,8 +2905,11 @@ class MindXAgent:
                                 {"agent_id": self.agent_id, "event": "exit_conditions_met"}
                             )
                 
-                # Wait before next cycle (configurable interval)
-                await asyncio.sleep(300)  # 5 minutes between cycles
+                # Wait before next cycle. Default 1h to respect the Ollama Cloud
+                # free-tier rate limit (10 req/min, 150 req/hr): at the old 5-min
+                # cadence the loop's planning + tool-strategy + Gödel-eval calls
+                # blew past the quota → empty responses + 600s mastermind timeouts.
+                await asyncio.sleep(self.settings.get("improvement_cycle_interval", 3600))
                 
             except asyncio.CancelledError:
                 logger.info(f"{self.log_prefix} Autonomous loop cancelled")

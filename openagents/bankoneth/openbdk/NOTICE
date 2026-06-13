@@ -1,0 +1,35 @@
+openBDK — NOTICE
+================
+
+openBDK is the open Blockchain/Bridge Deployment Kit. Author: Professor Codephreak.
+
+LICENSING (per component)
+-------------------------
+- Smart contracts & SDK code in this `openbdk/` tree, and the DeltaVerse
+  `neuralnode/` contracts:                          MIT  (Professor Codephreak).
+  The bridge trio inherits canonical patterns from Polygon Labs' Stake-the-Bridge
+  / usdc-lxly work (also MIT/Apache lineage).
+- Alpine-Linux-based BDK INFRASTRUCTURE components (the Kurtosis-CDK devnet
+  orchestration at github.com/lair3 — bdk5/bdk6, NOT vendored here): GPL, per
+  their upstream. Keep these under their own GPL LICENSE; do not let GPL infra
+  and MIT contracts share a license file.
+- macOS / BSD platform targets of the Tauri deployer:  BSD.
+
+The deployer ships as a Tauri (multi-device) application — keys live on the user's
+device; the OWNER holds the private key and the software does not.
+
+GPLv3 HOMAGE — TOMB and the GNU project
+---------------------------------------
+The DeltaVerse `TombRegistry` (encrypted vaults) and openBDK's custody discipline
+stand on the shoulders of the GNU project and **Tomb — the Crypto Undertaker**
+(https://www.dyne.org/software/tomb/), the GPLv3 file-encryption tool by dyne.org.
+We pay our respects to the Free Software Foundation and the GNU team: free software
+is the soil this grows in. Where openBDK vendors or derives from GPLv3 code, that
+code remains GPLv3 and is credited here.
+
+SECURITY POSTURE — OpenBSD
+--------------------------
+openBDK takes a "proper security posture" seriously. We point operators to OpenBSD
+(https://www.openbsd.org/) — secure by default, made in Canada (Theo de Raadt,
+Calgary, Alberta) — as the recommended host for relayers, validators, and key
+custody. Puffy, fly free. 🐡

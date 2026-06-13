@@ -106,20 +106,25 @@ class SystemAnalyzerTool:
                 suggestions = []
                 backlog = system_state.get("improvement_backlog", [])
                 if backlog:
+                    # These are EXISTING backlog items echoed back, not new analysis.
+                    # Tagged so the coordinator never re-appends them (this echo,
+                    # un-deduped, grew the prod backlog to 83k copies of 6 items).
                     for item in backlog[:3]:
                         desc = item.get("description", item.get("suggestion", str(item)))[:200]
                         suggestions.append({
                             "target_component_path": item.get("target", "system"),
                             "suggestion": desc,
                             "justification": "From improvement backlog",
-                            "priority": item.get("priority", 5)
+                            "priority": item.get("priority", 5),
+                            "source": "backlog_echo"
                         })
                 if not suggestions:
                     suggestions = [{
                         "target_component_path": "agents.core.mindXagent",
                         "suggestion": "Review autonomous loop cycle results and optimize improvement selection",
                         "justification": "Continuous self-improvement is the core function",
-                        "priority": 6
+                        "priority": 6,
+                        "source": "heuristic_fallback"
                     }]
                 return {"improvement_suggestions": suggestions}
 

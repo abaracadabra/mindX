@@ -1,0 +1,27 @@
+{
+  "name": "openagents-lit-template",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lit 3 + Vite + TypeScript template for openagents/ dApp kit. Webview-twin: same src/ runs in browser AND Tauri.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "dependencies": {
+    "lit": "^3.2.0",
+    "@openagents/wallet": "workspace:*",
+    "@openagents/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0",
+    "typescript": "^5.5.0",
+    "vite": "^5.4.0"
+  }
+}

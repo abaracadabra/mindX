@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  chains.xml — the deployer's chain registry (blockchain isolation targets).
+
+  Each <chain> is an isolated deployment target. The deployer requires the wallet
+  to be ON the selected chain before LAUNCH (it offers wallet_switchEthereumChain),
+  and records deployments per chain so addresses never cross chains. `marketRef` is
+  the chainmarketcap key for "innerstanding" (live fee/market context) — a hook the
+  UI can render alongside the chain.
+
+  Standard EVM connections for the iNFT + DAIO stack: 0G, ETH, Base, ARC. GLMR
+  (Moonbeam) is included because it is almost free and ideal for cross-chain games
+  (the DeltaVerse rooms). Algorand is NOT here — it is a separate modular tool
+  (see deployer/algorand/), since it is not EVM.
+
+  (c) BANKON all rights preserved.
+-->
+<chains default="anvil">
+
+  <chain id="zerog"    name="0G Galileo"  chainId="16601" symbol="0G"   kind="evm"
+         rpc="https://evmrpc-testnet.0g.ai" explorer="https://chainscan-galileo.0g.ai"
+         marketRef="0g" note="iNFT (ERC-7857) home · 0G storage + compute"/>
+
+  <chain id="ethereum" name="Ethereum"    chainId="1"     symbol="ETH"  kind="evm" mainnet="true"
+         rpc="https://eth.llamarpc.com" explorer="https://etherscan.io"
+         marketRef="ethereum" note="L1 settlement · iNFT + DAIO anchor · bankon.eth claim"/>
+
+  <chain id="sepolia"  name="Sepolia"     chainId="11155111" symbol="ETH" kind="evm"
+         rpc="https://ethereum-sepolia-rpc.publicnode.com" explorer="https://sepolia.etherscan.io"
+         marketRef="ethereum" note="ENS testnet · subdomain.bankon.eth rehearsal (ALLOW_TESTNET)"/>
+
+  <chain id="base"     name="Base"        chainId="8453"  symbol="ETH"  kind="evm" mainnet="true"
+         rpc="https://mainnet.base.org" explorer="https://basescan.org"
+         marketRef="base" note="USDC + x402 · cheap L2 · gas-as-a-service reservoir"/>
+
+  <chain id="base-sepolia" name="Base Sepolia" chainId="84532" symbol="ETH" kind="evm"
+         rpc="https://sepolia.base.org" explorer="https://sepolia.basescan.org"
+         marketRef="base" note="Base testnet · cp2048 + x402 rehearsal"/>
+
+  <chain id="arc"      name="Circle ARC (testnet)" chainId="5042002" symbol="USDC" kind="evm"
+         rpc="" explorer=""
+         marketRef="usd-coin" note="USDC-native settlement · ARC testnet 5042002 (set RPC in wallet)"/>
+
+  <chain id="moonbeam" name="Moonbeam"    chainId="1284"  symbol="GLMR" kind="evm" mainnet="true"
+         rpc="https://rpc.api.moonbeam.network" explorer="https://moonscan.io"
+         marketRef="moonbeam" note="GLMR — almost free · ideal for cross-chain games (DeltaVerse rooms)"/>
+
+  <chain id="polygon"  name="Polygon"     chainId="137"   symbol="POL"  kind="evm" mainnet="true"
+         rpc="https://polygon-rpc.com" explorer="https://polygonscan.com"
+         marketRef="polygon-ecosystem-token" note="DeltaVerse NeuralNode suite"/>
+
+  <chain id="anvil"    name="Anvil (local)" chainId="31337" symbol="ETH" kind="evm"
+         rpc="http://127.0.0.1:8545" explorer=""
+         marketRef="" note="local test chain"/>
+
+</chains>

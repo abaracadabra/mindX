@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  algorand.xml — the Algorand "solution" (ARC-56 apps, by topic).
+
+  The non-EVM sibling of ../index.xml. Each <app> points at an ARC-56 appspec
+  (the AVM equivalent of a Foundry artifact). DEPLOY arms an ApplicationCreateTxn
+  built from the appspec; LAUNCH signs it (non-custodial) grouped atomically with
+  the deployment fee payment to mindX/AgenticPlace; RETURN reports the app id +
+  app address + txid.
+
+  Seeded with the two apps that have been blocking (see project memory): BONA FIDE
+  on Algorand (privilege from reputation) and DAIO governance. Build the appspecs
+  (e.g. AlgoKit) then point `appspec` at them — until then DEPLOY reports "no appspec".
+
+  `fee` is the deploy-service fee to mindX/AgenticPlace, paid in microAlgos, grouped
+  atomically with the create so it settles iff the app deploys. Set `recipient` to
+  the AgenticPlace Algorand treasury before MainNet.
+
+  (c) BANKON all rights preserved.
+-->
+<solution name="bankon-algorand" version="1" default-network="localnet">
+
+  <networks>
+    <network id="localnet" algod="http://localhost:4001" token="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" note="sandbox / AlgoKit LocalNet"/>
+    <network id="testnet"  algod="https://testnet-api.algonode.cloud" token="" note="free public testnet"/>
+    <network id="mainnet"  algod="https://mainnet-api.algonode.cloud" token="" note="airgap-sign for MainNet"/>
+  </networks>
+
+  <fee recipient="" microalgos="0" service="deploy.app"
+       note="grouped PaymentTxn → AgenticPlace Algorand treasury; set recipient before MainNet"/>
+
+  <app id="dojo-bonafide" name="DojoBonaFide"
+       summary="BONA FIDE personhood + reputation on Algorand — privilege earned from reputation, with clawback containment (no kill switch).">
+    <appspec src="artifacts/DojoBonaFide.arc56.json"/>
+    <privilege service="bonafide.attest" tier="2"/>
+  </app>
+
+  <app id="daio-governance" name="DaioGovernance"
+       summary="DAIO governance on Algorand — the on-chain constitutional layer the dojo reputation reports into.">
+    <appspec src="artifacts/DaioGovernance.arc56.json"/>
+    <privilege service="daio.govern" tier="3"/>
+  </app>
+
+</solution>

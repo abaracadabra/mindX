@@ -462,9 +462,9 @@ class AutonomousAuditCoordinator:
                     "campaign_id": schedule.campaign_id
                 }
                 
-                # Add to coordinator backlog
-                self.coordinator_agent.improvement_backlog.append(backlog_item)
-                backlog_items_created += 1
+                # Add to coordinator backlog (fingerprint-deduped)
+                if self.coordinator_agent.add_backlog_item(backlog_item):
+                    backlog_items_created += 1
             
             # Save updated backlog
             if backlog_items_created > 0:

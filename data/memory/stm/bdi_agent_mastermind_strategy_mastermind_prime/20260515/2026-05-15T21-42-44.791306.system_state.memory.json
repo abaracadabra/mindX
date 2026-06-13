@@ -1,0 +1,79 @@
+{
+  "timestamp": "2026-05-15T21:42:44.791306",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_deliberation",
+    "data": {
+      "selected_goal": {
+        "id": "c9ae52dc",
+        "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+        "priority": 1,
+        "status": "pending",
+        "added_at": 1778906377.9318936,
+        "is_primary": true
+      },
+      "full_desire_queue": [
+        {
+          "id": "c9ae52dc",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778906377.9318936,
+          "is_primary": true
+        },
+        {
+          "id": "01c29e06",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778906436.8424482,
+          "is_primary": true
+        },
+        {
+          "id": "ddc8cd3e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778906467.832927,
+          "is_primary": true
+        },
+        {
+          "id": "b48e7afd",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778906499.3538115,
+          "is_primary": true
+        },
+        {
+          "id": "10f28ffe",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778906533.8001492,
+          "is_primary": true
+        },
+        {
+          "id": "71bf41ff",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778906564.7901742,
+          "is_primary": true
+        }
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+    "run_id": "bc4c0fc6"
+  },
+  "tags": [
+    "bdi_deliberation",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "4ed4a4731a50ad73"
+}

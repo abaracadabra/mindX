@@ -1,0 +1,27 @@
+{
+  "name": "@deltaverse/keepers",
+  "version": "1.0.0",
+  "description": "Off-chain keeper bots for the DELTAVERSE Debt Inheritance Protocol",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start:pyth": "ENABLE_SUB_INDEX=false ENABLE_FEE_ROUTER=false ENABLE_LIQUIDATOR=false tsx src/index.ts",
+    "start:liquidator": "ENABLE_PYTH=false ENABLE_SUB_INDEX=false ENABLE_FEE_ROUTER=false tsx src/index.ts"
+  },
+  "dependencies": {
+    "viem": "^2.21.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^20.14.0"
+  }
+}

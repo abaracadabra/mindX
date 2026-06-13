@@ -10924,5 +10924,23 @@
       }
     },
     "timestamp": 1778695914.0140803
+  },
+  {
+    "campaign_run_id": "sea_audit_driven_2a7b95bc",
+    "agent_id": "strategic_evolution_agent",
+    "overall_campaign_status": "FAILURE",
+    "final_message": "Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'",
+    "campaign_data": {
+      "audit_results": {
+        "audit_scope": "system",
+        "timestamp": 1778728859.3422215,
+        "findings": [],
+        "metrics": {},
+        "recommendations": [],
+        "success": true,
+        "improvement_suggestions": []
+      }
+    },
+    "timestamp": 1778729071.1768172
   }
 ]

@@ -446,6 +446,20 @@
       _messageCadence: 2400, // system message interval (ms)
     };
 
+    // ── Narrative perception channel (DeltaVerse v4.2 addition) ──
+    // Recap pulses arrive from /activity/stream (room='narrative') or
+    // /insight/narrative/recent. Each pulse is a wave through the substrate:
+    // XP gain, distort lift, custom 'dv:narrative' event for page-level renderers.
+    // mindX's narrative voice — operator pins + agent.narrator summaries.
+    this.narrative = {
+      lastPulse: null,     // {ts, author, source, body}
+      recentCount: 0,      // rolling count since session start
+      intensity: 0,        // 0..1, fades over ~30s after each pulse
+      lastSource: null,    // "narrator" | "operator" — dominant since session start
+      _operatorPins: 0,
+      _narratorRecaps: 0,
+    };
+
     // ── Perception telemetry buffer (for backend sync) ──
     this._telemetryBuffer = [];
     this._telemetryMaxLen = 200;
@@ -604,6 +618,47 @@
   };
 
   // ── Perception synthesis: contextual messages from live state ──
+
+  // ── Narrative pulse — DeltaVerse v4.2 ──
+  // Page calls dv.pulseNarrative({ts, author, source, body}) when a recap
+  // arrives. Substrate lifts XP + distort + dispatches dv:narrative event.
+  DeltaVerse.prototype.pulseNarrative = function(payload) {
+    if (!payload || typeof payload !== 'object') return;
+    var self = this;
+    var src = String(payload.source || 'narrator').toLowerCase();
+    self.narrative.lastPulse = payload;
+    self.narrative.recentCount++;
+    self.narrative.intensity = 1.0;
+    self.narrative.lastSource = src;
+    if (src === 'operator') self.narrative._operatorPins++;
+    else self.narrative._narratorRecaps++;
+
+    // Decay schedule — three falloff steps over 30s
+    setTimeout(function(){ self.narrative.intensity *= 0.5; }, 5000);
+    setTimeout(function(){ self.narrative.intensity *= 0.5; }, 15000);
+    setTimeout(function(){ self.narrative.intensity = 0; }, 30000);
+
+    // XP — operator pins are higher-signal than narrator summaries
+    if (self.profile) {
+      var xp = (src === 'operator') ? 5 : 2;
+      self.profile.xp = (self.profile.xp || 0) + xp;
+      try { self._save && self._save(); } catch(e) {}
+    }
+
+    // Distort lift — narrative pulses raise the field without jarring motion
+    if (self.distort) {
+      self.distort.active = true;
+      self.distort.strength = Math.min(1, (self.distort.strength || 0) + 0.3);
+      self.distort.linger = (self.distort.linger || 0) + 5000;
+    }
+
+    // Custom event for page-level renderers (e.g. netstat refreshNarrative())
+    try {
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('dv:narrative', { detail: payload }));
+      }
+    } catch (e) {}
+  };
 
   DeltaVerse.prototype.synthesizePerception = function() {
     var candidates = [];
@@ -1617,7 +1672,7 @@
   DeltaVerse.ARCHETYPES = ARCHETYPES;
   DeltaVerse.PERCEPTIONS = PERCEPTIONS;
   DeltaVerse.TIME_PHASES = TIME_PHASES;
-  DeltaVerse.VERSION = '4.1';
+  DeltaVerse.VERSION = '4.2';  // +narrative perception channel (recap pulses)
 
   // ── Export ──
 

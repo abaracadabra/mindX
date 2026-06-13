@@ -1,0 +1,45 @@
+# Foundry
+out/
+out-zerog/
+cache/
+broadcast/
+*.pdb
+
+# Node / pnpm
+node_modules/
+**/dist/
+.pnpm-store/
+.vite/
+
+# Tauri
+src-tauri/target/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+.mindx_env/
+
+# OS
+.DS_Store
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# bankon-vault runtime — NEVER commit keys/secrets/ciphertext
+bankon-vault/vault_bankon/
+bankon-vault/bankon_vault/data/
+**/.master.key
+**/.salt
+**/entries.json
+**/.overseer_proof.json
+**/shadow_nonces.json
+
+# local static-serve convenience
+packages/web/gfx
+
+# bankonchains CMC key — secret, never commit (outside web root)
+.bankonchains.env

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mindX — the REALM</title>
+<meta name="robots" content="noindex">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden}
+  body{font-family:'Inter','SF Pro Text',system-ui,sans-serif;background:#050810;color:#cdd5e0}
+  canvas#fabric{position:fixed;inset:0;width:100%;height:100%;z-index:0;cursor:crosshair}
+  .wrap{position:relative;z-index:1;height:100vh;display:grid;grid-template-columns:1fr 360px;gap:0;pointer-events:none}
+  .wrap *{pointer-events:auto}
+  .stage{display:flex;flex-direction:column;justify-content:center;padding:48px;text-shadow:0 2px 18px rgba(0,0,0,.8)}
+  .crown{font-size:11px;letter-spacing:6px;text-transform:uppercase;color:#ffd166;margin-bottom:10px}
+  .stage h1{font-family:'SF Mono','Fira Code',monospace;font-size:52px;line-height:1;background:linear-gradient(135deg,#ffd166,#d2a8ff 60%,#56CCF2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px}
+  .stage .who{font-size:13px;color:#8b949e;font-family:'SF Mono',monospace}
+  .stage .who b{color:#ffd166}
+  .panel{background:rgba(8,11,20,.82);border-left:1px solid rgba(255,209,102,.18);backdrop-filter:blur(6px);padding:20px 18px;overflow-y:auto}
+  .panel h2{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#6e7681;margin:18px 0 8px}
+  .panel h2:first-child{margin-top:0}
+  .room{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid rgba(255,255,255,.06);border-radius:8px;margin-bottom:6px;font-size:12px;background:rgba(255,255,255,.02)}
+  .room .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+  .room.open{border-color:rgba(63,185,80,.35)}.room.open .dot{background:#3fb950}
+  .room.locked{opacity:.5}.room.locked .dot{background:#6e7681}
+  .room a{color:#cdd5e0;text-decoration:none;flex:1}.room a:hover{color:#fff}
+  .room .req{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:#6e7681}
+  .traits{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px}
+  .trait{background:rgba(255,255,255,.03);border-radius:6px;padding:6px 8px}
+  .trait .v{color:#56CCF2;font-family:'SF Mono',monospace;font-weight:700}
+  .beat{font-size:11px;line-height:1.5;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+  .beat .r{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:#ffd166}
+  .weave{display:flex;gap:6px;margin-top:10px}
+  .weave input{flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,209,102,.25);border-radius:8px;color:#fff;padding:8px 10px;font-size:12px}
+  .weave button{background:linear-gradient(135deg,#ffd166,#d29922);border:none;border-radius:8px;color:#1a1306;font-weight:700;padding:8px 12px;cursor:pointer;font-size:12px}
+  .ticker{position:fixed;bottom:14px;left:24px;z-index:3;font-size:11px;color:#8b949e;font-family:'SF Mono',monospace;font-style:italic;max-width:56vw;transition:opacity .5s}
+  .denied{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:5;background:rgba(5,8,16,.7)}
+</style>
+</head>
+<body>
+<canvas id="fabric"></canvas>
+<div class="wrap">
+  <div class="stage">
+    <div class="crown">◆ sovereign surface ◆</div>
+    <h1>the REALM</h1>
+    <div class="who" id="who">recognizing…</div>
+    <p style="margin-top:14px;max-width:520px;font-size:13px;color:#9aa4b2;line-height:1.7">
+      This is the privileged story layer. You shape the changing story; the
+      Cypherian Weaver records every beat into the six emergence traits. The
+      overlord alone holds this surface — the overseer distributes privilege and
+      moderates, but cannot destroy the fabric.
+    </p>
+  </div>
+  <div class="panel">
+    <h2>bubblerooms</h2>
+    <div id="rooms"></div>
+    <h2>emergence traits</h2>
+    <div class="traits" id="traits"></div>
+    <h2>the changing story</h2>
+    <div id="beats"></div>
+    <div class="weave">
+      <input id="beatText" placeholder="weave a beat into the story…" maxlength="200">
+      <button id="weaveBtn">weave</button>
+    </div>
+  </div>
+</div>
+<div class="ticker" id="ticker"></div>
+
+<script src="/deltaverse.js"></script>
+<script>
+(function(){
+  var token = sessionStorage.getItem('mindx_overlord_token') || '';
+  var authHdr = token ? { 'Authorization': 'Bearer ' + token } : {};
+  var fabric = null;
+
+  // Weave the fabric background from the shared engine.
+  if (window.DeltaVerse && DeltaVerse.Fabric) {
+    fabric = new DeltaVerse.Fabric({
+      canvas: '#fabric',
+      onQuote: function(text, label){ var t=document.getElementById('ticker'); if(t){ t.style.opacity=0; setTimeout(function(){ t.textContent='“'+text+'” — '+label; t.style.opacity=.85; },300);} }
+    });
+    fabric.recognize(sessionStorage.getItem('mindx_address') || 'overlord', { role:'overlord' });
+    fabric.start();
+  }
+
+  function j(url, opts){ return fetch(url, Object.assign({ headers: authHdr }, opts||{})).then(function(r){ return r.json(); }); }
+
+  // Identity line
+  j('/deltaverse/bubblerooms').then(function(d){
+    var v = d.viewer || {};
+    document.getElementById('who').innerHTML = 'recognized as <b>' + (v.role||'public') + '</b>' + (v.address ? ' · ' + v.address.slice(0,6)+'…'+v.address.slice(-4) : '') + (v.verified ? ' · verified' : ' · unverified');
+    var box = document.getElementById('rooms'); box.innerHTML='';
+    (d.rooms||[]).forEach(function(r){
+      var el=document.createElement('div'); el.className='room '+(r.open?'open':'locked');
+      el.innerHTML='<span class="dot"></span><a href="'+(r.open?r.route:'javascript:void 0')+'">'+r.name+'</a><span class="req">'+r.min_role+'</span>';
+      box.appendChild(el);
+    });
+  }).catch(function(){});
+
+  function renderStory(){
+    j('/deltaverse/story/recent?n=12').then(function(d){
+      var tb=document.getElementById('traits'); var t=d.traits||{};
+      tb.innerHTML=['intelligence','knowledge','wisdom','resonance','adaptability','coherence'].map(function(k){
+        return '<div class="trait">'+k.slice(0,4)+' <span class="v">'+(k==='wisdom'?t.wisdom_band:Math.round(t[k]||0))+'</span></div>';
+      }).join('');
+      var bb=document.getElementById('beats'); bb.innerHTML='';
+      (d.beats||[]).slice().reverse().forEach(function(b){
+        var el=document.createElement('div'); el.className='beat';
+        el.innerHTML='<span class="r">'+b.role+' · '+b.who+'</span><br>'+(b.text||'');
+        bb.appendChild(el);
+      });
+    }).catch(function(){});
+  }
+  renderStory(); setInterval(renderStory, 8000);
+
+  document.getElementById('weaveBtn').addEventListener('click', function(){
+    var inp=document.getElementById('beatText'); var text=inp.value.trim(); if(!text) return;
+    j('/deltaverse/weave', { method:'POST', headers: Object.assign({'Content-Type':'application/json'}, authHdr), body: JSON.stringify({ kind:'story', text:text }) })
+      .then(function(){ inp.value=''; if(fabric) fabric.addParticipant({who:'overlord',role:'overlord',label:'Overlord',lines:[text]}); renderStory(); })
+      .catch(function(){});
+  });
+})();
+</script>
+</body>
+</html>

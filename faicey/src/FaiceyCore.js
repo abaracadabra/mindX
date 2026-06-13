@@ -12,7 +12,11 @@
  * Organizations: github.com/agenticplace, github.com/cryptoagi, github.com/Professor-Codephreak
  */
 
-import * as THREE from 'three';
+// three.js resolves to the in-repo vendored source (facerig/vendor/three, copied into
+// static/vendor by scripts/sync-engine.mjs) via the "#three" subpath import in package.json.
+// No CDN, no dependency on node_modules/three. The canonical wireframe renderer lives in
+// facerig/src/lib/faicey and is served to the browser as static/vendor/faicey-engine.js.
+import * as THREE from '#three';
 import * as d3 from 'd3';
 import AudioMotionAnalyzer from 'audiomotion-analyzer';
 import Meyda from 'meyda';

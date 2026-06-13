@@ -67,3 +67,23 @@ def slug_is_openrouter_resolvable(slug: str) -> bool:
 def slug_is_routable(slug: str) -> bool:
     """True iff the slug can be routed to ANY working handler today."""
     return slug_is_ollama_resolvable(slug) or slug_is_openrouter_resolvable(slug)
+
+
+def slug_budget_headroom(slug: str) -> float:
+    """0..1 rate-limit budget remaining for this slug's provider tier.
+
+    classify_slug already maps a slug to its tier (openrouter / ollama_cloud /
+    ollama_local); local is unlimited (->1.0). Fail-open: 1.0 on any error so the
+    budget can deprioritise but never block a slug. Used by the self-aware
+    selector to route inference toward tiers that still have headroom.
+    """
+    try:
+        from llm.inference_budget import headroom as _h
+        cls = classify_slug(slug)
+        if cls == "openrouter":
+            return _h("openrouter")
+        if cls == "ollama_cloud":
+            return _h("ollama_cloud")
+        return 1.0  # ollama_local / unknown -- unlimited
+    except Exception:
+        return 1.0

@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mindX netstat — VPS vitals</title>
+<meta name="description" content="mindX VPS diagnostics single pane: host vitals, blackbox probes, stuck loops, recent dreams, storage offload, improvement summary, inference cost. Smartphone-class. Auto-refreshes every 5-60s.">
+<meta name="theme-color" content="#040609">
+<link rel="canonical" href="https://mindx.pythai.net/netstat">
+<meta property="og:title" content="mindX netstat — VPS vitals">
+<meta property="og:description" content="Single-pane diagnostics: cpu/mem/disk · probes · stuck loops · dreams · storage · cost · netdata link-out.">
+<meta property="og:image" content="https://mindx.pythai.net/favicon-32.png">
+<link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=DM+Sans:wght@400;500;700&display=swap" as="style" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=DM+Sans:wght@400;500;700&display=swap"></noscript>
+<style>
+:root{
+  --bg:#040609;--surface:rgba(10,14,20,.88);--surface2:rgba(16,20,28,.7);
+  --green:#56d364;--blue:#79c0ff;--violet:#d2a8ff;--amber:#e3b341;--red:#f85149;
+  --text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--border:rgba(88,166,255,.08);
+  --font:'DM Sans',system-ui,sans-serif;--mono:'JetBrains Mono','SF Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.55;overflow-x:hidden}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* Header */
+.hdr{position:sticky;top:0;z-index:50;padding:0 20px;min-height:48px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(8,12,20,.96),rgba(4,6,9,.94));backdrop-filter:blur(24px);border-bottom:1px solid rgba(121,192,255,.1);box-shadow:0 2px 12px rgba(0,0,0,.4)}
+.hdr-brand{font-family:var(--mono);font-size:18px;font-weight:700;letter-spacing:2px;color:#f0f6fc}
+.hdr-brand b{color:var(--blue)}
+.hdr-brand span{color:var(--text3);font-size:12px;letter-spacing:1px;margin-left:8px}
+.hdr-mid{display:flex;gap:4px;flex-wrap:wrap;margin-left:16px}
+.hdr-mid a{color:#d0d7de;font-size:12px;padding:4px 10px;border-radius:4px;font-family:var(--mono)}
+.hdr-mid a:hover{background:rgba(121,192,255,.1);color:#f0f6fc}
+.hdr-right{display:flex;align-items:center;gap:8px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2s ease-in-out infinite}
+.live-dot.off{background:var(--amber);box-shadow:0 0 10px var(--amber)}
+@keyframes pulse{0%,100%{opacity:.4;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
+.live-badge{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:4px;background:rgba(86,211,100,.12);color:var(--green);border:1px solid rgba(86,211,100,.25);letter-spacing:.5px;font-weight:600}
+
+/* Wrap + sections */
+.wrap{max-width:980px;margin:0 auto;padding:24px 20px 80px}
+.intro{padding:18px 20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:24px}
+.intro h1{font-family:var(--mono);font-size:22px;letter-spacing:2px;font-weight:700;margin-bottom:8px;color:#f0f6fc}
+.intro h1 em{color:var(--violet);font-style:normal}
+.intro p{color:var(--text2);font-size:13px;max-width:760px}
+.intro code{font-family:var(--mono);font-size:12px;color:var(--blue);background:rgba(121,192,255,.08);padding:1px 6px;border-radius:3px}
+.intro .actions{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+.btn{font-family:var(--mono);font-size:11px;letter-spacing:1px;padding:6px 12px;border-radius:4px;border:1px solid var(--border);background:rgba(16,20,28,.5);color:var(--text);cursor:pointer;text-transform:uppercase;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:rgba(121,192,255,.1);border-color:rgba(121,192,255,.3);text-decoration:none}
+.btn.primary{color:var(--blue);border-color:rgba(121,192,255,.3)}
+.btn.netdata{color:var(--green);border-color:rgba(86,211,100,.3)}
+.btn.netdata.off{color:var(--amber);border-color:rgba(227,179,65,.3)}
+
+section{margin:28px 0 32px}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;flex-wrap:wrap;gap:6px}
+.sec-head h2{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:2px;color:var(--blue);text-transform:uppercase}
+.sec-head .sub{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.sec-head .pill{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:3px;background:rgba(121,192,255,.08);color:var(--blue);border:1px solid rgba(121,192,255,.15);margin-left:6px}
+.sec-head .pill.warn{background:rgba(248,81,73,.1);color:var(--red);border-color:rgba(248,81,73,.25)}
+.sec-head .pill.ok{background:rgba(86,211,100,.1);color:var(--green);border-color:rgba(86,211,100,.25)}
+.sec-head .pill.amber{background:rgba(227,179,65,.1);color:var(--amber);border-color:rgba(227,179,65,.25)}
+.sec-desc{font-family:var(--mono);font-size:11px;color:var(--text3);margin:-2px 0 12px 0;line-height:1.55;max-width:760px}
+.sec-desc code{font-family:var(--mono);font-size:10.5px;color:var(--blue);background:rgba(121,192,255,.06);padding:0 4px;border-radius:3px}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px}
+.empty{color:var(--text3);font-family:var(--mono);font-size:12px;text-align:center;padding:20px;font-style:italic}
+.warn{color:var(--red)}
+.amber{color:var(--amber)}
+.ok{color:var(--green)}
+.muted{color:var(--text3)}
+
+/* Vitals grid */
+.vitals{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.vital{padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px}
+.vital .lbl{font-family:var(--mono);font-size:9.5px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase}
+.vital .val{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--text);margin-top:2px;line-height:1.2}
+.vital .sub2{font-family:var(--mono);font-size:10.5px;color:var(--text3);margin-top:3px}
+.vital.green .val{color:var(--green)}
+.vital.amber .val{color:var(--amber)}
+.vital.red .val{color:var(--red)}
+
+/* Bar */
+.bar{position:relative;height:6px;border-radius:3px;background:rgba(255,255,255,.04);margin-top:6px;overflow:hidden}
+.bar > span{display:block;height:100%;background:var(--blue);transition:width .5s ease}
+.bar.green > span{background:var(--green)}
+.bar.amber > span{background:var(--amber)}
+.bar.red > span{background:var(--red)}
+
+/* Probes */
+.probe{display:grid;grid-template-columns:auto 1fr auto;gap:10px;padding:8px 10px;align-items:center;font-family:var(--mono);font-size:12px;border-bottom:1px solid rgba(255,255,255,.03)}
+.probe:last-child{border-bottom:none}
+.probe .state{padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.probe .state.up{background:rgba(86,211,100,.15);color:var(--green)}
+.probe .state.down{background:rgba(248,81,73,.18);color:var(--red)}
+.probe .target{color:var(--text);word-break:break-all}
+.probe-hint{font-family:var(--mono);font-size:11.5px;color:var(--amber);padding:10px;background:rgba(227,179,65,.06);border-radius:4px}
+.probe-hint code{color:var(--green);background:rgba(86,211,100,.06);padding:0 4px;border-radius:3px}
+
+/* Stuck loops */
+.loop{font-family:var(--mono);font-size:11.5px;padding:5px 0;color:var(--text2);border-bottom:1px solid rgba(255,255,255,.03)}
+.loop:last-child{border-bottom:none}
+.loop b{color:var(--red);margin-right:6px}
+.loop .stp{color:var(--text3)}
+
+/* Dreams */
+.dream-row{display:grid;grid-template-columns:90px 1fr auto auto;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.03);font-family:var(--mono);font-size:11.5px;align-items:center}
+.dream-row:last-child{border-bottom:none}
+.dream-row .ts{color:var(--text3)}
+.dream-row .name{color:var(--text)}
+.dream-row .stm{color:var(--green)}
+.dream-row .ltm{color:var(--blue)}
+
+/* Storage offload chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:6px 10px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);font-family:var(--mono);font-size:11.5px;color:var(--text2)}
+.chip b{color:var(--text);margin-left:6px}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11.5px}
+th{background:rgba(121,192,255,.04);color:var(--blue);font-weight:600;padding:7px 9px;text-align:left;border-bottom:1px solid var(--border);font-size:10.5px;letter-spacing:.5px;text-transform:uppercase}
+td{padding:6px 9px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text2);vertical-align:top}
+td b{color:var(--text)}
+.tnum{font-variant-numeric:tabular-nums;text-align:right}
+
+/* Footer */
+.foot{margin-top:48px;padding:18px 0;border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text3);text-align:center}
+.foot a{color:var(--text2)}
+
+/* Narrative — recap stream */
+.narrative-list{display:flex;flex-direction:column;gap:6px;font-family:var(--mono)}
+.narrative-row{padding:10px 12px;border-left:2px solid var(--violet);background:rgba(210,168,255,.04);font-size:12px;line-height:1.55;animation:row-in .5s ease-out}
+.narrative-row.from-narrator{border-left-color:var(--blue);background:rgba(121,192,255,.04)}
+.narrative-row.from-operator{border-left-color:var(--green);background:rgba(86,211,100,.04)}
+.narrative-row .head{display:flex;justify-content:space-between;font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:5px;flex-wrap:wrap;gap:6px}
+.narrative-row .head .src{font-weight:700;color:var(--violet)}
+.narrative-row.from-narrator .head .src{color:var(--blue)}
+.narrative-row.from-operator .head .src{color:var(--green)}
+.narrative-row .body{color:var(--text);white-space:pre-wrap;word-break:break-word}
+.narrative-row .body::before{content:'※ ';color:var(--violet);font-weight:700}
+.narrative-row.from-narrator .body::before{color:var(--blue)}
+.narrative-row.from-operator .body::before{color:var(--green)}
+.activity-row .room.narrative{background:rgba(210,168,255,.18);color:var(--violet)}
+
+/* Activity stream */
+.activity-list{max-height:280px;overflow-y:auto;font-family:var(--mono);font-size:11.5px}
+.activity-row{display:grid;grid-template-columns:62px 130px 90px 1fr;gap:8px;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.03);animation:row-in .4s ease-out}
+.activity-row:hover{background:rgba(121,192,255,.03)}
+.activity-row .ts{color:var(--text3);font-size:10.5px;font-variant-numeric:tabular-nums}
+.activity-row .ag{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.activity-row .room{font-size:9.5px;letter-spacing:.5px;text-transform:uppercase;padding:1px 6px;border-radius:3px;text-align:center;align-self:center;font-weight:700}
+.activity-row .room.thinking{background:rgba(121,192,255,.12);color:var(--blue)}
+.activity-row .room.improvement{background:rgba(86,211,100,.12);color:var(--green)}
+.activity-row .room.godel{background:rgba(210,168,255,.12);color:var(--violet)}
+.activity-row .room.boardroom{background:rgba(227,179,65,.12);color:var(--amber)}
+.activity-row .room.memory{background:rgba(121,192,255,.08);color:var(--text2)}
+.activity-row .room.dojo,.activity-row .room.inference,.activity-row .room.system{background:rgba(255,255,255,.04);color:var(--text3)}
+.activity-row .ct{color:var(--text);word-break:break-word}
+@keyframes row-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.live-dot.beat{animation:dot-beat .35s ease-out}
+@keyframes dot-beat{0%{transform:scale(1)}40%{transform:scale(1.6);box-shadow:0 0 18px var(--green)}100%{transform:scale(1)}}
+
+/* /core agent interactions */
+.iact-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;font-family:var(--mono);font-size:11.5px}
+@media (max-width:600px){.iact-grid{grid-template-columns:1fr}}
+.iact-section h3{font-family:var(--mono);font-size:10.5px;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin-bottom:6px}
+.iact-row{display:grid;grid-template-columns:1fr auto;gap:8px;padding:4px 6px;border-bottom:1px solid rgba(255,255,255,.03);align-items:center}
+.iact-row b{color:var(--text)}
+.iact-row .w{color:var(--violet);font-weight:600;font-variant-numeric:tabular-nums}
+
+/* htop-top */
+.htop-grid{display:grid;grid-template-columns:1fr 280px;gap:18px;font-family:var(--mono);font-size:12px;line-height:1.5}
+@media (max-width:600px){.htop-grid{grid-template-columns:1fr}}
+.htop-bars{display:flex;flex-direction:column;gap:4px}
+.htop-row{display:grid;grid-template-columns:32px 1fr 88px;gap:8px;align-items:center}
+.htop-row .lbl{color:var(--text3);font-size:10.5px;text-align:right;font-weight:600}
+.htop-row .pct{color:var(--text);text-align:right;font-size:11px}
+.htop-bar{position:relative;height:10px;background:rgba(255,255,255,.04);border-radius:2px;overflow:hidden;display:flex}
+.htop-bar > span{display:block;height:100%}
+.htop-bar .seg-used{background:var(--green)}
+.htop-bar .seg-buff{background:var(--blue);opacity:.7}
+.htop-bar .seg-cache{background:var(--amber);opacity:.55}
+.htop-bar.cpu-low > span{background:var(--green)}
+.htop-bar.cpu-mid > span{background:var(--amber)}
+.htop-bar.cpu-high > span{background:var(--red)}
+.htop-meta{display:flex;flex-direction:column;gap:6px;font-size:11px}
+.htop-meta .htop-line{display:grid;grid-template-columns:80px 1fr;gap:8px;align-items:baseline}
+.htop-meta .htop-line b{color:var(--text)}
+.htop-meta .htop-line .lbl{color:var(--text3);font-size:10.5px;letter-spacing:.5px;text-transform:uppercase}
+.htop-legend{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:8px;display:flex;gap:14px;flex-wrap:wrap}
+.htop-legend span{display:inline-flex;align-items:center;gap:5px}
+.htop-legend i{display:inline-block;width:10px;height:8px;border-radius:1px}
+
+/* Mobile */
+@media (max-width:600px){
+  .wrap{padding:16px 12px 60px}
+  .intro{padding:14px}
+  .intro h1{font-size:18px}
+  .hdr{padding:0 12px}
+  .hdr-mid{display:none}
+  .sec-head h2{font-size:12px}
+  .vital .val{font-size:18px}
+  .dream-row{grid-template-columns:80px 1fr auto}
+  .dream-row .ltm{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-brand">mind<b>X</b> · <span>netstat</span></div>
+  <div class="hdr-mid">
+    <a href="/">/</a>
+    <a href="/feedback.html">/feedback</a>
+    <a href="/netstat" style="color:var(--green)">/netstat</a>
+    <a href="/docs">/docs</a>
+  </div>
+  <div class="hdr-right">
+    <span class="live-dot" id="liveDot"></span>
+    <span class="live-badge" id="liveBadge">LIVE</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="intro">
+    <h1>net<em>stat</em></h1>
+    <p>Single-pane VPS vitals. Smartphone-class diagnostics — what's happening on the box right now. Auto-refreshes every 5–60s per section. Sources: <code>/insight/host/*</code> (Phase 1.2), <code>/insight/stuck_loops</code>, <code>/insight/dreams/recent</code>, <code>/insight/storage/status</code>, <code>/insight/improvement/summary</code>, <code>/insight/cost/summary</code>. For deep real-time charts → <a href="https://netdata.pythai.net">netdata</a>. For agent-cognition view → <a href="/feedback.html">feedback</a>.</p>
+    <div class="actions">
+      <a class="btn netdata" id="netdataBtn" href="https://netdata.pythai.net" target="_blank" rel="noopener">↗ open netdata</a>
+      <a class="btn" href="/feedback.html">→ feedback</a>
+      <a class="btn" href="/docs">api docs</a>
+    </div>
+  </div>
+
+  <!-- 0.0 NARRATIVE — recap stream from agent.narrator + operator pins -->
+  <section id="sec-narrative">
+    <div class="sec-head">
+      <h2>※ narrative <span id="narrativePill" class="pill">loading…</span></h2>
+      <span class="sub">/insight/narrative/recent · 60s + live pulse via DeltaVerse</span>
+    </div>
+    <p class="sec-desc">mindX's voice. Operator-pinned recaps (wallet-signed, green) and autonomous narrator summaries (blue) of the catalogue's last hour. New recaps pulse the DeltaVerse substrate.</p>
+    <div id="narrativeCard" class="card"><div class="empty">loading…</div></div>
+  </section>
+
+  <!-- 0. HTOP HEADER STRIP (top of page, htop-style) -->
+  <section id="sec-htop">
+    <div class="sec-head">
+      <h2>htop <span id="htopPill" class="pill">loading…</span></h2>
+      <span class="sub">/insight/host/htop · 2s · psutil-direct</span>
+    </div>
+    <p class="sec-desc">Per-core CPU + memory segments (used/buffers/cached) + swap + tasks/load/uptime, refreshed every 2s. Pure psutil — no netdata or Prom dependency.</p>
+    <div id="htopCard" class="card"><div class="empty">loading…</div></div>
+  </section>
+
+  <!-- 0.5 LIVE ACTIVITY — SSE from /activity/stream -->
+  <section id="sec-activity">
+    <div class="sec-head">
+      <h2>activity <span id="activityPill" class="pill">connecting…</span></h2>
+      <span class="sub">/activity/stream · SSE · live</span>
+    </div>
+    <p class="sec-desc">Real-time event stream — every think / improvement / gödel choice / boardroom decision / memory write / dream pulse / agent interact. Tier-colored. Live SSE; reconnects on drop.</p>
+    <div id="activityCard" class="card">
+      <div id="activityList" class="activity-list"><div class="empty">connecting…</div></div>
+    </div>
+  </section>
+
+  <!-- 1. HOST VITALS -->
+  <section id="sec-host">
+    <div class="sec-head">
+      <h2>host vitals <span id="hostPill" class="pill">loading…</span></h2>
+      <span class="sub">/insight/host/{cpu,memory,disk} · 5s</span>
+    </div>
+    <p class="sec-desc">CPU / RAM / swap / disk from netdata when running, psutil fallback otherwise. Prometheus TSDB capped at 4 GB per Phase 1.1 retention.</p>
+    <div id="hostCard" class="card"><div class="empty">loading…</div></div>
+  </section>
+
+  <!-- 2. PROBES -->
+  <section id="sec-probes">
+    <div class="sec-head">
+      <h2>probes <span id="probesPill" class="pill">loading…</span></h2>
+      <span class="sub">/insight/host/probes · 15s</span>
+    </div>
+    <p class="sec-desc">Blackbox HTTPS probe results for the four pythai.net services. Requires Prom stack on (off-default in Phase 1.2 — run <code>bash scripts/prom_on.sh</code>).</p>
+    <div id="probesCard" class="card"><div class="empty">loading…</div></div>
+  </section>
+
+  <!-- 3. STUCK LOOPS -->
+  <section id="sec-loops">
+    <div class="sec-head">
+      <h2>stuck loops <span id="loopsPill" class="pill">loading…</span></h2>
+      <span class="sub">/insight/stuck_loops?window=900&amp;min_repeats=5 · 30s</span>
+    </div>
+    <p class="sec-desc">Repeating (agent, step) tuples in the last 15 minutes — flags real-time when the autonomous loop has wedged.</p>
+    <div id="loopsCard" class="card"><div class="empty">loading…</div></div>
+  </section>
+
+  <!-- 4. RECENT DREAMS -->
+  <section id="sec-dreams">
+    <div class="sec-head">
+      <h2>dream cycles <span id="dreamsPill" class="pill">loading…</span></h2>
+      <span class="sub">/insight/dreams/recent?limit=5 · 60s</span>
+    </div>
+    <p class="sec-desc">Last 5 memory consolidation cycles. Green = STM bytes freed; blue = LTM bytes grown.</p>
+    <div id="dreamsCard" class="card"><div class="empty">loading…</div></div>
+  </section>
+
+  <!-- 4.5 /core AGENT INTERACTIONS -->
+  <section id="sec-interactions">
+    <div class="sec-head">
+      <h2>agent interactions <span id="interactionsPill" class="pill">loading…</span></h2>
+      <span class="sub">/insight/interactions/recent?window=3600 · 30s</span>
+    </div>
+    <p class="sec-desc">/core call edges between agents in the last hour — who's talking to whom, how often. Aggregated from <code>data/memory/agent_workspaces/*/process_trace.jsonl</code>.</p>
+    <div id="interactionsCard" class="card"><div class="empty">loading…</div></div>
+  </section>
+
+  <!-- 5. STORAGE OFFLOAD -->
+  <section id="sec-storage">
+    <div class="sec-head">
+      <h2>storage <span id="storagePill" class="pill">loading…</span></h2>
+      <span class="sub">/insight/storage/status · 60s</span>
+    </div>
+    <p class="sec-desc">Memory offload counts — local STM vs IPFS-pinned vs THOT-anchored vs chain-anchored.</p>
+    <div id="storageCard" class="card"><div class="empty">loading…</div></div>
+  </section>
+
+  <!-- 6. IMPROVEMENT -->
+  <section id="sec-improvement">
+    <div class="sec-head">
+      <h2>improvement (24h) <span id="impPill" class="pill">loading…</span></h2>
+      <span class="sub">/insight/improvement/summary?window=24h · 60s</span>
+    </div>
+    <p class="sec-desc">SEA campaign success rate + coverage over the last 24 hours.</p>
+    <div id="impCard" class="card"><div class="empty">loading…</div></div>
+  </section>
+
+  <!-- 7. COST -->
+  <section id="sec-cost">
+    <div class="sec-head">
+      <h2>inference cost (24h) <span id="costPill" class="pill">loading…</span></h2>
+      <span class="sub">/insight/cost/summary?window=24h · 60s</span>
+    </div>
+    <p class="sec-desc">Per-provider token + USD totals. Local Ollama runs at $0; cloud providers tallied via rate-limited ledger.</p>
+    <div id="costCard" class="card"><div class="empty">loading…</div></div>
+  </section>
+
+  <div class="foot">
+    /netstat · public · auto-refresh · POSIX-clean ·
+    <a href="/feedback.html">feedback</a> ·
+    <a href="/feedback.txt">feedback.txt</a> ·
+    <a href="https://netdata.pythai.net">netdata</a> ·
+    plan: <code style="font-size:10.5px">~/.claude/plans/breezy-strolling-anchor.md</code>
+  </div>
+</div>
+
+<!-- DeltaVerse Engine — the fabric of the mindX participant experience.
+     Recap pulses lift the substrate via dv.pulseNarrative(). v4.2+ exposes
+     dv.narrative perception channel; the activity-stream bridge calls it
+     when room='narrative' events arrive. -->
+<script src="/static/deltaverse.js"></script>
+<script>
+  try {
+    if (typeof DeltaVerse !== 'undefined' && !window.dv) {
+      window.dv = new DeltaVerse({});  // headless — no target/canvas; substrate only
+      if (typeof window.dv.start === 'function') window.dv.start();
+    }
+  } catch (e) { /* graceful — page works without substrate */ }
+</script>
+
+<script>
+// ============================================================
+// Helpers copied from feedback.html:556-894 (verbatim where applicable)
+// ============================================================
+const $ = (id) => document.getElementById(id);
+const escapeHtml = (s) => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const truncate = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n) + '…' : s; };
+const n = (v) => typeof v === 'number' ? v : 0;
+
+const Human = {
+  bytes(n) {
+    n = Number(n);
+    if (!isFinite(n) || n == null) return '—';
+    const u = ['B','KB','MB','GB','TB','PB']; let i = 0;
+    while (Math.abs(n) >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+    return (i === 0 ? n : n.toFixed(n < 10 ? 2 : 1)) + ' ' + u[i];
+  },
+  count(n) {
+    n = Number(n);
+    if (!isFinite(n)) return '—';
+    if (Math.abs(n) < 1000) return String(n);
+    if (Math.abs(n) < 1e6)  return (n/1e3).toFixed(n < 1e4 ? 2 : 1) + 'k';
+    if (Math.abs(n) < 1e9)  return (n/1e6).toFixed(1) + 'M';
+    return (n/1e9).toFixed(1) + 'B';
+  },
+  duration(s) {
+    s = parseFloat(s);
+    if (!isFinite(s)) return '—';
+    if (s < 1)    return Math.round(s * 1000) + 'ms';
+    if (s < 60)   return s.toFixed(1) + 's';
+    if (s < 3600) return Math.floor(s/60) + 'm ' + Math.round(s%60) + 's';
+    if (s < 86400) return Math.floor(s/3600) + 'h ' + Math.round((s%3600)/60) + 'm';
+    return Math.floor(s/86400) + 'd ' + Math.round((s%86400)/3600) + 'h';
+  },
+  pct(v, total) {
+    if (!isFinite(v) || !isFinite(total) || total === 0) return '—';
+    return (v / total * 100).toFixed(0) + '%';
+  },
+};
+
+const relAgo = (ts) => {
+  if (ts == null) return '?';
+  const ms = (typeof ts === 'number' ? (ts > 1e12 ? ts : ts * 1000) : Date.parse(ts));
+  if (!isFinite(ms)) return '?';
+  let s = (Date.now() - ms) / 1000;
+  if (s < 0) s = 0;  // server-clock-skew guard (pastOnly default)
+  if (s < 60) return Math.max(1, Math.round(s)) + 's';
+  if (s < 3600) return Math.round(s / 60) + 'm';
+  if (s < 86400) return Math.round(s / 3600) + 'h';
+  return Math.round(s / 86400) + 'd';
+};
+
+function setPill(id, text, cls) {
+  const el = $(id); if (!el) return;
+  el.textContent = text;
+  el.className = 'pill' + (cls ? ' ' + cls : '');
+}
+
+async function fetchJSON(url, timeoutMs = 5000) {
+  const ctl = new AbortController();
+  const tid = setTimeout(() => ctl.abort(), timeoutMs);
+  try {
+    const r = await fetch(url, { signal: ctl.signal, headers: { 'Accept': 'application/json' } });
+    if (!r.ok) return { _httpError: r.status, _httpStatus: r.statusText };
+    return await r.json();
+  } catch (e) {
+    return { _fetchError: String(e && e.message || e) };
+  } finally {
+    clearTimeout(tid);
+  }
+}
+
+function unavailable(box, d) {
+  const why = d && (d._httpError ? ('HTTP ' + d._httpError) : (d._fetchError || (d.error || 'unavailable')));
+  box.innerHTML = '<div class="empty">unavailable — ' + escapeHtml(why) + '</div>';
+}
+
+// ============================================================
+// 0.0 NARRATIVE — recap stream (DeltaVerse narrative perception channel)
+// ============================================================
+async function refreshNarrative() {
+  const d = await fetchJSON('/insight/narrative/recent?limit=10');
+  const card = $('narrativeCard');
+  if (d._httpError || d._fetchError) { unavailable(card, d); setPill('narrativePill', 'err', 'warn'); return; }
+  const recaps = d.recaps || [];
+  if (recaps.length === 0) {
+    setPill('narrativePill', 'quiet', 'amber');
+    card.innerHTML = '<div class="empty">no recaps yet — narrator summarizes recent catalogue activity on demand. Operators pin via POST /admin/narrator/recap (wallet-signed). Shadow-overlord forces an autonomous cycle via /admin/narrator/run-now.</div>';
+    return;
+  }
+  setPill('narrativePill', recaps.length + ' recent', 'ok');
+  card.innerHTML = '<div class="narrative-list">' + recaps.slice(0, 10).map(r => {
+    const src = (r.source || 'narrator').toLowerCase();
+    const author = escapeHtml(r.author || '?');
+    const body = escapeHtml(r.body || '');
+    const span = Human.duration(r.span_seconds || 0);
+    return `<div class="narrative-row from-${escapeHtml(src)}">
+      <div class="head">
+        <span><span class="src">${escapeHtml(src)}</span> · ${author}</span>
+        <span>${escapeHtml(relAgo(r.ts))} ago · span ${escapeHtml(span)}</span>
+      </div>
+      <div class="body">${body}</div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+// Refetch shortly after each DeltaVerse narrative pulse (page already loaded
+// substrate via static/deltaverse.js; the activity-stream bridge fires
+// dv.pulseNarrative which dispatches the 'dv:narrative' window event).
+if (typeof window !== 'undefined') {
+  window.addEventListener('dv:narrative', () => {
+    setTimeout(refreshNarrative, 500);
+  });
+}
+
+// ============================================================
+// 0.5 ACTIVITY — SSE live feed
+// ============================================================
+let _activityCount = 0;
+let _activityES = null;
+
+function renderActivityRow(ev) {
+  const ts = fmtTs(ev.timestamp);
+  const room = (ev.room || 'system').toLowerCase();
+  const agent = escapeHtml(truncate(ev.agent || '?', 16));
+  const content = escapeHtml(truncate(ev.content || ev.type || '', 200));
+  const color = ev.tier_color || 'var(--text)';
+  return `<div class="activity-row" data-id="${escapeHtml(ev.id||'')}">
+    <span class="ts">${escapeHtml(ts)}</span>
+    <span class="ag" style="color:${escapeHtml(color)}">${agent}</span>
+    <span class="room ${room}">${escapeHtml(room)}</span>
+    <span class="ct">${content}</span>
+  </div>`;
+}
+
+function appendActivity(ev) {
+  const list = $('activityList');
+  if (!list) return;
+  const empty = list.querySelector('.empty');
+  if (empty) list.innerHTML = '';
+  list.insertAdjacentHTML('afterbegin', renderActivityRow(ev));
+  while (list.children.length > 30) list.removeChild(list.lastChild);
+  // Pulse the header live dot
+  const dot = $('liveDot');
+  if (dot) {
+    dot.classList.remove('beat');
+    void dot.offsetWidth;  // force reflow to restart animation
+    dot.classList.add('beat');
+  }
+  _activityCount++;
+  setPill('activityPill', _activityCount + ' live', 'ok');
+  // Narrative bridge — when a narrative.recap arrives via the activity SSE,
+  // raise it into the DeltaVerse substrate so dv.narrative.intensity lifts.
+  const room = (ev.room || '').toLowerCase();
+  if (room === 'narrative' && typeof window !== 'undefined' && window.dv && window.dv.pulseNarrative) {
+    try { window.dv.pulseNarrative(ev.detail || ev); } catch (e) {}
+  }
+}
+
+async function refreshActivityInitial() {
+  const d = await fetchJSON('/activity/recent?limit=30');
+  if (d._httpError || d._fetchError) {
+    unavailable($('activityList'), d);
+    setPill('activityPill', 'down', 'warn');
+    return;
+  }
+  const events = d.events || [];
+  $('activityList').innerHTML = events.length
+    ? events.map(renderActivityRow).join('')
+    : '<div class="empty">buffer empty — waiting for first event</div>';
+  _activityCount = events.length;
+  setPill('activityPill', _activityCount + ' live', 'ok');
+}
+
+function startActivityStream() {
+  if (_activityES) { try { _activityES.close(); } catch (e) {} }
+  try {
+    _activityES = new EventSource('/activity/stream');
+  } catch (e) {
+    setPill('activityPill', 'no SSE', 'warn');
+    return;
+  }
+  _activityES.addEventListener('activity', (e) => {
+    try { appendActivity(JSON.parse(e.data)); } catch (err) {}
+  });
+  _activityES.onerror = () => {
+    setPill('activityPill', 'reconnect…', 'amber');
+    try { _activityES.close(); } catch (e) {}
+    setTimeout(startActivityStream, 4000);
+  };
+  _activityES.onopen = () => setPill('activityPill', 'live', 'ok');
+}
+
+// ============================================================
+// 0. HTOP — per-core CPU + memory segments + tasks/load/uptime
+// ============================================================
+async function refreshHtop() {
+  const d = await fetchJSON('/insight/host/htop');
+  const card = $('htopCard');
+  if (d._httpError || d._fetchError) { unavailable(card, d); setPill('htopPill', 'err', 'warn'); return; }
+
+  const cores = d.cpu_percent_per_core || [];
+  const ram = d.ram || {};
+  const sw = d.swap || {};
+  const stat = d.task_statuses || {};
+
+  const maxCpu = cores.length ? Math.max(...cores) : 0;
+  const ramPct = ram.percent || 0;
+  const peak = Math.max(maxCpu, ramPct);
+  const cls = peak > 90 ? 'warn' : (peak > 75 ? 'amber' : 'ok');
+  setPill('htopPill', `${cores.length}c · ${ramPct.toFixed(0)}% ram`, cls);
+
+  function cpuBar(idx, pct) {
+    const bcls = pct > 80 ? 'cpu-high' : (pct > 50 ? 'cpu-mid' : 'cpu-low');
+    return `<div class="htop-row">
+      <span class="lbl">${idx}</span>
+      <div class="htop-bar ${bcls}"><span style="width:${pct.toFixed(1)}%"></span></div>
+      <span class="pct">${pct.toFixed(1)}%</span>
+    </div>`;
+  }
+
+  // Memory bar: segmented [used | buffers | cached | free]
+  const total = ram.total_mb || 1;
+  const buf = ram.buffers_mb || 0;
+  const cac = ram.cached_mb || 0;
+  const usedNet = Math.max(0, (ram.used_mb || 0) - buf - cac);
+  const pUsed = (usedNet / total) * 100;
+  const pBuf  = (buf / total) * 100;
+  const pCac  = (cac / total) * 100;
+  const memBar = `<div class="htop-row">
+    <span class="lbl">Mem</span>
+    <div class="htop-bar">
+      <span class="seg-used" style="width:${pUsed.toFixed(1)}%"></span>
+      <span class="seg-buff" style="width:${pBuf.toFixed(1)}%"></span>
+      <span class="seg-cache" style="width:${pCac.toFixed(1)}%"></span>
+    </div>
+    <span class="pct">${(usedNet/1024).toFixed(1)}/${(total/1024).toFixed(1)}G</span>
+  </div>`;
+
+  const swTotal = sw.total_mb || 1;
+  const swPct = (sw.used_mb || 0) / swTotal * 100;
+  const swCls = swPct > 50 ? 'cpu-high' : (swPct > 20 ? 'cpu-mid' : 'cpu-low');
+  const swBar = `<div class="htop-row">
+    <span class="lbl">Swp</span>
+    <div class="htop-bar ${swCls}"><span style="width:${swPct.toFixed(1)}%"></span></div>
+    <span class="pct">${((sw.used_mb||0)/1024).toFixed(2)}/${(swTotal/1024).toFixed(1)}G</span>
+  </div>`;
+
+  // Right-side metadata: tasks / load / uptime
+  const upS = d.uptime_seconds || 0;
+  const days = Math.floor(upS / 86400);
+  const hrs = Math.floor((upS % 86400) / 3600);
+  const mins = Math.floor((upS % 3600) / 60);
+  const secs = Math.floor(upS % 60);
+  const upStr = days
+    ? `${days}d ${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`
+    : `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+  const la = d.load_avg || [0,0,0];
+  const zombFlag = stat.zombie ? ` · <b style="color:var(--red)">${stat.zombie} zomb</b>` : '';
+  const meta = `<div class="htop-meta">
+    <div class="htop-line"><span class="lbl">Tasks</span><span><b>${d.task_count||0}</b> · ${d.threads_total||0} thr (${d.kthreads||0} kthr) · <b>${stat.running||0}</b> running${zombFlag}</span></div>
+    <div class="htop-line"><span class="lbl">Load</span><span><b>${la[0].toFixed(2)}</b>  ${la[1].toFixed(2)}  ${la[2].toFixed(2)}</span></div>
+    <div class="htop-line"><span class="lbl">Uptime</span><span>${escapeHtml(upStr)}</span></div>
+  </div>`;
+
+  const legend = `<div class="htop-legend">
+    <span><i style="background:var(--green)"></i> used</span>
+    <span><i style="background:var(--blue);opacity:.7"></i> buffers</span>
+    <span><i style="background:var(--amber);opacity:.55"></i> cached</span>
+  </div>`;
+
+  card.innerHTML = `<div class="htop-grid">
+    <div class="htop-bars">
+      ${cores.map((c, i) => cpuBar(i+1, c)).join('')}
+      ${memBar}
+      ${swBar}
+      ${legend}
+    </div>
+    ${meta}
+  </div>`;
+}
+
+// ============================================================
+// 1. Host vitals — combine /insight/host/{cpu,memory,disk}
+// ============================================================
+async function refreshHost() {
+  const [cpu, mem, disk] = await Promise.all([
+    fetchJSON('/insight/host/cpu?points=10'),
+    fetchJSON('/insight/host/memory?points=10'),
+    fetchJSON('/insight/host/disk'),
+  ]);
+  const card = $('hostCard');
+
+  if ((cpu._httpError || cpu._fetchError) && (mem._httpError || mem._fetchError) && (disk._httpError || disk._fetchError)) {
+    unavailable(card, cpu); setPill('hostPill', 'down', 'warn'); return;
+  }
+
+  // CPU summary
+  let cpuPct = null, cpuSrc = '?';
+  if (cpu.source === 'psutil_fallback') {
+    cpuPct = cpu.cpu_percent;
+    cpuSrc = 'psutil';
+  } else if (cpu.source === 'netdata' && cpu.data && cpu.data.length) {
+    const latest = cpu.data[cpu.data.length - 1];
+    if (Array.isArray(latest) && latest.length > 1) {
+      cpuPct = latest.slice(1).reduce((a, b) => a + (Number(b) || 0), 0);
+    }
+    cpuSrc = 'netdata';
+  }
+
+  // Memory summary
+  let ramUsed = null, ramTotal = null, ramPct = null, swapUsed = null, swapPct = null, memSrc = '?';
+  if (mem.source === 'psutil_fallback') {
+    ramTotal = mem.ram_total_mb; ramUsed = mem.ram_used_mb; ramPct = mem.ram_percent;
+    swapUsed = mem.swap_used_mb; swapPct = mem.swap_percent;
+    memSrc = 'psutil';
+  } else if (mem.source === 'netdata' && mem.ram && mem.ram.data && mem.ram.data.length) {
+    // netdata system.ram row: [ts, free_mb, used_mb, cached_mb, buffers_mb] approx
+    const r = mem.ram.data[mem.ram.data.length - 1];
+    if (Array.isArray(r) && r.length > 1) {
+      const vals = r.slice(1).map(Number);
+      const total = vals.reduce((a, b) => a + b, 0);
+      // crude: used = total - free; depends on netdata schema, accept approximation
+      ramTotal = total;
+      ramUsed = total - (vals[0] || 0);
+      ramPct = total > 0 ? (ramUsed / total * 100) : 0;
+    }
+    memSrc = 'netdata';
+  }
+
+  // Disk
+  const r = disk.root || {};
+
+  // Header pill
+  const overallPct = Math.max(cpuPct || 0, ramPct || 0, r.percent || 0);
+  const cls = overallPct > 90 ? 'warn' : (overallPct > 75 ? 'amber' : 'ok');
+  setPill('hostPill', cpuSrc + '/' + memSrc, cls);
+
+  // Render
+  function vital(lbl, val, sub2, cls2) {
+    cls2 = cls2 || '';
+    return `<div class="vital ${cls2}"><div class="lbl">${escapeHtml(lbl)}</div>
+      <div class="val">${escapeHtml(val)}</div>
+      ${sub2 ? '<div class="sub2">' + escapeHtml(sub2) + '</div>' : ''}</div>`;
+  }
+  function vitalBar(lbl, valTxt, pct, sub2, barCls) {
+    const p = Math.min(100, Math.max(0, Number(pct) || 0));
+    const cls = barCls || (p > 90 ? 'red' : (p > 75 ? 'amber' : 'green'));
+    return `<div class="vital"><div class="lbl">${escapeHtml(lbl)}</div>
+      <div class="val">${escapeHtml(valTxt)}</div>
+      <div class="bar ${cls}"><span style="width:${p}%"></span></div>
+      ${sub2 ? '<div class="sub2">' + escapeHtml(sub2) + '</div>' : ''}</div>`;
+  }
+
+  const out = ['<div class="vitals">'];
+  if (cpuPct != null) {
+    out.push(vitalBar('CPU', cpuPct.toFixed(0) + '%', cpuPct, cpuSrc));
+  }
+  if (ramPct != null) {
+    out.push(vitalBar('RAM', ramPct.toFixed(0) + '%',
+      ramPct,
+      (Human.bytes((ramUsed || 0) * 1024 * 1024) + ' / ' + Human.bytes((ramTotal || 0) * 1024 * 1024))));
+  }
+  if (swapPct != null) {
+    out.push(vitalBar('SWAP', swapPct.toFixed(0) + '%', swapPct,
+      Human.bytes((swapUsed || 0) * 1024 * 1024) + ' used'));
+  }
+  if (r.percent != null) {
+    out.push(vitalBar('DISK /', Math.round(r.percent) + '%', r.percent,
+      (r.used_gb || 0).toFixed(1) + ' / ' + (r.total_gb || 0).toFixed(1) + ' GB · free ' + (r.free_gb || 0).toFixed(1) + ' GB'));
+  }
+  if (disk.prometheus_data_mb != null) {
+    const promPct = disk.prometheus_data_cap_gb ? (disk.prometheus_data_mb / (disk.prometheus_data_cap_gb * 1024) * 100) : 0;
+    out.push(vitalBar('TSDB',
+      Human.bytes(disk.prometheus_data_mb * 1024 * 1024),
+      promPct,
+      'cap ' + (disk.prometheus_data_cap_gb || 4) + ' GB'));
+  }
+  out.push('</div>');
+  card.innerHTML = out.join('');
+}
+
+// ============================================================
+// 2. Probes
+// ============================================================
+async function refreshProbes() {
+  const d = await fetchJSON('/insight/host/probes');
+  const card = $('probesCard');
+
+  if (d._httpError || d._fetchError) { unavailable(card, d); setPill('probesPill', 'err', 'warn'); return; }
+
+  if (d.prom === 'off') {
+    setPill('probesPill', 'prom off', 'amber');
+    card.innerHTML = `<div class="probe-hint">
+      <b>Prom stack is off-default in Phase 1.2.</b><br>
+      Run <code>bash scripts/prom_on.sh</code> on the VPS to enable blackbox probe scraping.
+      Once on, this section will show live up/down status for mindx.pythai.net, agenticplace.pythai.net, bankon.pythai.net, rage.pythai.net.
+    </div>`;
+    return;
+  }
+
+  const targets = d.targets || [];
+  const up = d.up_count || 0;
+  const total = d.target_count || targets.length;
+  setPill('probesPill', up + '/' + total + ' up', up === total ? 'ok' : (up === 0 ? 'warn' : 'amber'));
+
+  if (!targets.length) {
+    card.innerHTML = '<div class="empty">no probe targets</div>';
+    return;
+  }
+
+  card.innerHTML = targets.map(t => {
+    const stateCls = t.up ? 'up' : 'down';
+    const stateTxt = t.up ? 'UP' : 'DOWN';
+    return `<div class="probe">
+      <span class="state ${stateCls}">${stateTxt}</span>
+      <span class="target">${escapeHtml(t.instance || '?')}</span>
+      <span class="muted">${t.up ? 'reachable' : 'unreachable'}</span>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// 3. Stuck loops
+// ============================================================
+async function refreshLoops() {
+  const d = await fetchJSON('/insight/stuck_loops?window=900&min_repeats=5');
+  const card = $('loopsCard');
+
+  if (d._httpError || d._fetchError || d.fallback) { unavailable(card, d); setPill('loopsPill', 'err', 'warn'); return; }
+
+  const loops = d.loops || d.items || d.results || [];
+  if (!Array.isArray(loops) || loops.length === 0) {
+    setPill('loopsPill', '✓ clear', 'ok');
+    card.innerHTML = '<div class="empty" style="color:var(--green)">✓ no stuck loops in last 15 min — autonomous flow is healthy</div>';
+    return;
+  }
+
+  setPill('loopsPill', loops.length + ' stuck', 'warn');
+  card.innerHTML = loops.slice(0, 10).map(l => {
+    const agent = l.agent || l.agent_id || '?';
+    const step  = l.step  || l.step_name || '?';
+    const cnt   = l.count || l.repeats || l.n || 0;
+    return `<div class="loop"><b>×${cnt}</b> ${escapeHtml(agent)} <span class="stp">→ ${escapeHtml(step)}</span></div>`;
+  }).join('');
+}
+
+// ============================================================
+// 4. Recent dreams
+// ============================================================
+async function refreshDreams() {
+  const d = await fetchJSON('/insight/dreams/recent?limit=5');
+  const card = $('dreamsCard');
+
+  if (d._httpError || d._fetchError || d.fallback) { unavailable(card, d); setPill('dreamsPill', 'err', 'warn'); return; }
+
+  const cycles = (d.dreams || []).slice(0, 5);
+  const lastAge = d.last_dream_age_seconds;
+
+  if (cycles.length === 0) {
+    setPill('dreamsPill', 'empty', 'amber');
+    card.innerHTML = '<div class="empty">no dream cycles yet — first cycle fires once consolidation triggers fill</div>';
+    return;
+  }
+
+  const ageLabel = lastAge != null ? Math.round(lastAge) + 's ago' : 'recent';
+  setPill('dreamsPill', 'last ' + ageLabel, 'ok');
+
+  card.innerHTML = cycles.map(c => {
+    const tsLabel = relAgo(c.timestamp);
+    const diag    = c.diagnostic || {};
+    const stm     = diag.stm_bytes_freed || 0;
+    const ltm     = diag.ltm_bytes_growth || 0;
+    const agents  = c.agents_dreamed || 0;
+    const insights= c.insights_generated || 0;
+    const promoted= c.memories_promoted_to_ltm || 0;
+    return `<div class="dream-row">
+      <span class="ts">${escapeHtml(tsLabel)} ago</span>
+      <span class="name"><b>${agents}</b> agents · <b>${insights}</b> insights · <b>${promoted}</b>→LTM</span>
+      <span class="${stm > 0 ? 'stm' : 'muted'}">stm −${Human.bytes(stm)}</span>
+      <span class="${ltm > 0 ? 'ltm' : 'muted'}">ltm +${Human.bytes(ltm)}</span>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// 4.5. /core agent interactions
+// ============================================================
+async function refreshInteractions() {
+  const d = await fetchJSON('/insight/interactions/recent?window=3600');
+  const card = $('interactionsCard');
+  if (d._httpError || d._fetchError) { unavailable(card, d); setPill('interactionsPill', 'err', 'warn'); return; }
+
+  const nodes = (d.nodes || []).slice(0, 12);
+  const edges = (d.edges || []).slice(0, 12);
+  const active = (d.active_agents || []).length;
+
+  if (nodes.length === 0 && edges.length === 0) {
+    setPill('interactionsPill', 'quiet', 'amber');
+    card.innerHTML = '<div class="empty">no /core agent interactions in last hour — autonomous loops may be paused</div>';
+    return;
+  }
+
+  setPill('interactionsPill', active + ' active · ' + edges.length + ' edges', 'ok');
+
+  const nodeRows = nodes.length
+    ? nodes.map(n => `<div class="iact-row"><span><b>${escapeHtml(n.id)}</b></span><span class="w">${n.events||0}</span></div>`).join('')
+    : '<div class="empty" style="padding:6px">no active agents</div>';
+
+  const edgeRows = edges.length
+    ? edges.map(e => `<div class="iact-row"><span><b>${escapeHtml(e.source)}</b> → <b>${escapeHtml(e.target)}</b></span><span class="w">×${e.weight||1}</span></div>`).join('')
+    : `<div class="empty" style="padding:6px">edges inferred from process_data.target_agent — none in this window</div>`;
+
+  card.innerHTML = `<div class="iact-grid">
+    <div class="iact-section">
+      <h3>active agents (events/hr)</h3>
+      ${nodeRows}
+    </div>
+    <div class="iact-section">
+      <h3>call edges (source → target)</h3>
+      ${edgeRows}
+    </div>
+  </div>`;
+}
+
+// ============================================================
+// 5. Storage offload
+// ============================================================
+async function refreshStorage() {
+  const d = await fetchJSON('/insight/storage/status');
+  const card = $('storageCard');
+
+  if (d._httpError || d._fetchError) { unavailable(card, d); setPill('storagePill', 'err', 'warn'); return; }
+
+  const local = n(d.local), ipfs = n(d.ipfs), thot = n(d.thot), anchored = n(d.anchored);
+  const total = local + ipfs + thot + anchored;
+  setPill('storagePill', Human.count(total) + ' bundles', total > 0 ? 'ok' : 'amber');
+
+  if (total === 0) {
+    card.innerHTML = `<div class="chips" style="margin-bottom:8px">
+      <div class="chip">local <b>0</b></div>
+      <div class="chip">IPFS <b>0</b></div>
+      <div class="chip">THOT <b>0</b></div>
+      <div class="chip">anchored <b>0</b></div>
+    </div>
+    <div class="empty" style="padding:6px">no offloads yet — Phase 8 of dream cycle triggers every 8h when STM ≥14d aged and ≥10 MB. Quiet boxes show zeros.</div>`;
+    return;
+  }
+
+  card.innerHTML = `<div class="chips">
+    <div class="chip">local <b>${Human.count(local)}</b></div>
+    <div class="chip">IPFS <b>${Human.count(ipfs)}</b></div>
+    <div class="chip">THOT <b>${Human.count(thot)}</b></div>
+    <div class="chip">anchored <b>${Human.count(anchored)}</b></div>
+  </div>`;
+}
+
+// ============================================================
+// 6. Improvement summary
+// ============================================================
+async function refreshImprovement() {
+  const d = await fetchJSON('/insight/improvement/summary?window=24h');
+  const card = $('impCard');
+
+  if (d._httpError || d._fetchError || d.fallback) { unavailable(card, d); setPill('impPill', 'err', 'warn'); return; }
+
+  const ok    = n(d.ok || d.success || 0);
+  const total = n(d.total || d.runs || (ok + n(d.fail || 0)));
+  const rate  = total > 0 ? (ok / total * 100) : 0;
+  const cov   = n(d.coverage || d.coverage_pct || 0);
+
+  setPill('impPill', Math.round(rate) + '% ok', rate > 50 ? 'ok' : (rate > 10 ? 'amber' : 'warn'));
+
+  if (total === 0) {
+    setPill('impPill', 'idle', 'amber');
+    card.innerHTML = '<div class="empty">no SEA campaigns in window — autonomous improvement loop may be paused, or healthy with nothing to fix</div>';
+    return;
+  }
+
+  const cls = rate > 50 ? 'green' : (rate > 10 ? 'amber' : 'red');
+  card.innerHTML = `<div class="vitals">
+    <div class="vital ${cls}"><div class="lbl">success rate</div><div class="val">${rate.toFixed(0)}%</div>
+      <div class="sub2">${ok} / ${total} runs</div></div>
+    <div class="vital"><div class="lbl">coverage</div><div class="val">${cov.toFixed(0)}%</div>
+      <div class="sub2">tools/agents touched</div></div>
+    <div class="vital"><div class="lbl">runs (24h)</div><div class="val">${Human.count(total)}</div>
+      <div class="sub2">window 24h</div></div>
+  </div>`;
+}
+
+// ============================================================
+// 7. Inference cost
+// ============================================================
+async function refreshCost() {
+  const d = await fetchJSON('/insight/cost/summary?window=24h');
+  const card = $('costCard');
+
+  if (d._httpError || d._fetchError || d.fallback) { unavailable(card, d); setPill('costPill', 'err', 'warn'); return; }
+
+  const providers = d.providers || d.by_provider || d.summary || {};
+  const totalUsd = Number(d.total_usd || d.usd_total || 0);
+  const totalTokens = Number(d.total_tokens || d.tokens_total || 0);
+
+  setPill('costPill', '$' + totalUsd.toFixed(2), totalUsd < 0.5 ? 'ok' : (totalUsd < 5 ? 'amber' : 'warn'));
+
+  let rows = '';
+  const entries = Object.entries(providers);
+  if (entries.length === 0 && totalUsd === 0 && totalTokens === 0) {
+    setPill('costPill', 'no cost', 'ok');
+    card.innerHTML = '<div class="empty">no cloud-LLM calls in window — local Ollama runs at $0, no spend recorded</div>';
+    return;
+  }
+  if (entries.length === 0) {
+    rows = '<tr><td colspan="4" class="muted" style="text-align:center;padding:14px">no provider activity in window</td></tr>';
+  } else {
+    for (const [name, info] of entries) {
+      const usd = Number(info.usd || info.cost_usd || 0);
+      const tok = Number(info.tokens || info.total_tokens || 0);
+      const calls = Number(info.calls || info.count || 0);
+      rows += `<tr>
+        <td><b>${escapeHtml(name)}</b></td>
+        <td class="tnum">${Human.count(calls)}</td>
+        <td class="tnum">${Human.count(tok)}</td>
+        <td class="tnum">$${usd.toFixed(4)}</td>
+      </tr>`;
+    }
+  }
+  card.innerHTML = `<table>
+    <thead><tr><th>provider</th><th class="tnum">calls</th><th class="tnum">tokens</th><th class="tnum">usd</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr style="border-top:2px solid var(--border)">
+      <td><b>total</b></td>
+      <td></td>
+      <td class="tnum"><b>${Human.count(totalTokens)}</b></td>
+      <td class="tnum"><b>$${totalUsd.toFixed(4)}</b></td>
+    </tr></tfoot>
+  </table>`;
+}
+
+// ============================================================
+// netdata reachability button (status pill + auto-update)
+// ============================================================
+async function refreshNetdata() {
+  const btn = $('netdataBtn');
+  if (!btn) return;
+  try {
+    // No CORS available cross-subdomain; use a no-cors HEAD for liveness ping.
+    // If it fails the catch will mark it off; if it succeeds we mark on.
+    await fetch('https://netdata.pythai.net/api/v1/info', { method: 'GET', mode: 'no-cors', cache: 'no-store' });
+    btn.classList.remove('off');
+    btn.classList.add('netdata');
+    btn.textContent = '↗ open netdata';
+  } catch (e) {
+    btn.classList.add('off');
+    btn.textContent = '⊗ netdata (down)';
+  }
+}
+
+// ============================================================
+// Refresh schedule + first-paint
+// ============================================================
+function startTimers() {
+  refreshNarrative();   setInterval(refreshNarrative,    60_000);
+  refreshActivityInitial();
+  startActivityStream();
+  refreshHtop();        setInterval(refreshHtop,         2_000);
+  refreshHost();        setInterval(refreshHost,         5_000);
+  refreshInteractions();setInterval(refreshInteractions, 30_000);
+  refreshProbes();      setInterval(refreshProbes,      15_000);
+  refreshLoops();       setInterval(refreshLoops,       30_000);
+  refreshDreams();      setInterval(refreshDreams,      60_000);
+  refreshStorage();     setInterval(refreshStorage,     60_000);
+  refreshImprovement(); setInterval(refreshImprovement, 60_000);
+  refreshCost();        setInterval(refreshCost,        60_000);
+  refreshNetdata();     setInterval(refreshNetdata,     30_000);
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startTimers);
+} else {
+  startTimers();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "recommend": true,
+  "recipe": "mindx_fallback_qwen3_1_5b_cpu_smoke",
+  "reason": "bootstrap: 11 dream reports available and the local fallback has not been trained from them yet",
+  "decided_by": "strategic_evolution_agent",
+  "ts": 1779259316.3825834,
+  "ttl_s": 3600,
+  "corpus_size": 11
+}

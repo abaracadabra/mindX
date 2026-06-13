@@ -1,0 +1,49 @@
+[Unit]
+Description=netdata — mindX always-on monitoring (Phase 1.2)
+After=network-online.target obs-network.service
+Wants=network-online.target obs-network.service
+
+[Container]
+Image=docker.io/netdata/netdata:v2.5.0
+ContainerName=netdata
+AutoUpdate=registry
+Network=obs.network
+HostName=mindx-vps
+PublishPort=127.0.0.1:19999:19999
+
+# Mount our minimal config over the defaults — disable cloud, 1d retention, 127.0.0.1 bind
+Volume=%h/obs/netdata_config/netdata.conf:/etc/netdata/netdata.conf:Z,ro
+Volume=%h/obs/netdata_config/python.d.conf:/etc/netdata/python.d.conf:Z,ro
+
+# Persistent state (dbengine retention, lib state, cache)
+Volume=%h/obs/netdata_data/lib:/var/lib/netdata:Z
+Volume=%h/obs/netdata_data/cache:/var/cache/netdata:Z
+
+# Read-only host views required for accurate metrics from inside the container
+Volume=/etc/passwd:/host/etc/passwd:ro
+Volume=/etc/group:/host/etc/group:ro
+Volume=/proc:/host/proc:ro
+Volume=/sys:/host/sys:ro
+Volume=/etc/os-release:/host/etc/os-release:ro
+
+Environment=DOCKER_HOST=/var/run/docker.sock
+Environment=NETDATA_DISABLE_CLOUD=1
+Environment=PGID=999
+
+# Capabilities needed for some plugins (cgroup walking)
+AddCapability=SYS_PTRACE
+AddCapability=SYS_ADMIN
+NoNewPrivileges=false
+
+LogDriver=journald
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=300
+MemoryMax=256M
+CPUQuota=15%
+OOMScoreAdjust=400
+
+[Install]
+WantedBy=default.target

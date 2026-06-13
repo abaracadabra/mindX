@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>bankon iNFT — ERC-7857 intelligence NFT (0G)</title>
+<link rel="stylesheet" href="./inft.css" />
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <h1>bankon iNFT</h1>
+    <div class="tag">ERC-7857 intelligent NFT · 0G chain · mint · authorize · clone · bind bankon.eth + BANKON vault</div>
+  </header>
+
+  <div class="connect-bar">
+    <button id="walletBtn"><span id="walletBtnLabel">Connect Wallet</span></button>
+    <span id="acctChip" class="chip" hidden></span>
+    <span id="chainChip" class="chip" hidden></span>
+    <span class="spacer"></span>
+    <button id="addChainBtn" hidden>Add 0G Galileo</button>
+    <a href="./bankoneth.html"><button>← bankon.eth</button></a>
+  </div>
+
+  <nav class="tabs">
+    <button data-tab="presets" class="active">iNFT actions</button>
+    <button data-tab="explorer">Full ABI explorer</button>
+  </nav>
+
+  <main id="view"></main>
+
+  <div class="crosslink muted">
+    Separate page + <code>iNFTabi.js</code> because iNFT_7857 lives on 0G, not Ethereum.
+    Prototype build (.js).
+  </div>
+</div>
+
+<script type="module">
+import { ethers } from "./vendor/ethers.min.js";
+import * as F from "./bankon-forms.js";
+import { INFT_ABI, INFT_PRESETS, INFT_ADDRESS, ZEROG_CHAINS } from "./iNFTabi.js";
+
+// ── State ──────────────────────────────────────────────────────────────────
+let detectedWallets = [], walletsReady = false;
+let provider = null, browserProvider = null, connectedAddress = null, connectedChainId = null;
+let activeTab = "presets";
+const DEFAULT_CHAIN = 16601;
+
+// ── Wallet (EIP-6963 + legacy) — same pattern as bankoneth.html ─────────────
+function setupEIP6963() {
+  return new Promise((resolve) => {
+    detectedWallets = [];
+    window.addEventListener("eip6963:announceProvider", (e) => {
+      const { info, provider: p } = e.detail;
+      if (!detectedWallets.some((w) => w.uuid === info.uuid))
+        detectedWallets.push({ name: info.name, provider: p, id: (info.rdns || info.name || "").toLowerCase(), uuid: info.uuid });
+    });
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+    setTimeout(() => { walletsReady = true; resolve(); }, 350);
+  });
+}
+function pickProvider() {
+  const pool = detectedWallets.length ? detectedWallets : (window.ethereum ? [{ name: "Injected", provider: window.ethereum, id: "injected" }] : []);
+  if (!pool.length) return null;
+  const mm = pool.find((w) => w.id.includes("metamask"));
+  return (mm || pool[0]).provider;
+}
+async function connectWallet() {
+  if (connectedAddress) return disconnect();
+  if (!walletsReady) await setupEIP6963();
+  provider = pickProvider();
+  if (!provider) { toast("Install MetaMask or a compatible EVM wallet.", "err"); return; }
+  setLabel("Connecting…");
+  try {
+    const accts = await provider.request({ method: "eth_requestAccounts" });
+    connectedAddress = accts[0];
+    connectedChainId = parseInt(await provider.request({ method: "eth_chainId" }), 16);
+    browserProvider = new ethers.BrowserProvider(provider);
+    provider.on?.("accountsChanged", (a) => { if (!a.length) return disconnect(); connectedAddress = a[0]; refreshUI(); render(); });
+    provider.on?.("chainChanged", (c) => { connectedChainId = parseInt(c, 16); browserProvider = new ethers.BrowserProvider(provider); refreshUI(); render(); });
+    refreshUI(); render();
+  } catch (e) { setLabel("Connect Wallet"); if (e?.code !== 4001) toast("Connect failed: " + (e?.message || e), "err"); }
+}
+async function disconnect() {
+  try { await provider?.request({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] }); } catch {}
+  connectedAddress = null; connectedChainId = null; browserProvider = null; refreshUI(); render();
+}
+async function addZeroG() {
+  if (!provider) { await connectWallet(); if (!provider) return; }
+  const c = ZEROG_CHAINS[DEFAULT_CHAIN];
+  try {
+    await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: c.hex }] });
+  } catch (e) {
+    if (e?.code === 4902) {
+      await provider.request({ method: "wallet_addEthereumChain", params: [{
+        chainId: c.hex, chainName: c.name, nativeCurrency: { name: c.symbol, symbol: c.symbol, decimals: 18 },
+        rpcUrls: [c.rpc], blockExplorerUrls: [c.explorer],
+      }] });
+    } else { toast("Switch failed: " + (e?.message || e), "err"); }
+  }
+}
+function setLabel(t) { document.getElementById("walletBtnLabel").textContent = t; }
+function refreshUI() {
+  const btn = document.getElementById("walletBtn"), acct = document.getElementById("acctChip"),
+    chain = document.getElementById("chainChip"), add = document.getElementById("addChainBtn");
+  if (connectedAddress) {
+    btn.classList.add("connected"); setLabel(connectedAddress.slice(0, 6) + "…" + connectedAddress.slice(-4));
+    acct.hidden = false; acct.textContent = "🟢 connected"; chain.hidden = false; add.hidden = false;
+    const z = ZEROG_CHAINS[connectedChainId];
+    chain.textContent = z ? z.name : `chain ${connectedChainId} (not 0G)`;
+    chain.className = "chip " + (z ? "live" : "warn");
+  } else { btn.classList.remove("connected"); setLabel("Connect Wallet"); acct.hidden = chain.hidden = add.hidden = true; }
+}
+
+// ── DOM helper ───────────────────────────────────────────────────────────────
+function el(tag, opts = {}, kids = []) {
+  const e = document.createElement(tag);
+  if (opts.cls) e.className = opts.cls;
+  if (opts.html != null) e.innerHTML = opts.html;
+  if (opts.text != null) e.textContent = opts.text;
+  if (opts.attrs) for (const [k, v] of Object.entries(opts.attrs)) e.setAttribute(k, v);
+  if (opts.on) for (const [k, v] of Object.entries(opts.on)) e.addEventListener(k, v);
+  for (const k of [].concat(kids)) e.appendChild(typeof k === "string" ? document.createTextNode(k) : k);
+  return e;
+}
+const view = () => document.getElementById("view");
+function render() { activeTab === "presets" ? renderPresets() : renderExplorer(); }
+
+function inftAddress() {
+  const a = INFT_ADDRESS[connectedChainId];
+  if (!a || a === F.constants.ZERO_ADDR) throw new Error(`iNFT_7857 not deployed on ${ZEROG_CHAINS[connectedChainId]?.name || "this chain"} yet — fill INFT_ADDRESS in iNFTabi.js after DeployZeroG.s.sol.`);
+  return a;
+}
+
+function renderPresets() {
+  const root = view(); root.innerHTML = "";
+  if (!connectedAddress) root.appendChild(el("div", { cls: "note", html: "Connect a wallet and switch to 0G to submit. Forms fill regardless." }));
+  const grid = el("div", { cls: "grid" });
+  for (const p of INFT_PRESETS) grid.appendChild(el("div", { cls: "card click", on: { click: () => openPreset(p) } }, [
+    el("h3", { text: p.title }), el("div", { cls: "sub", text: p.subtitle || "" }),
+  ]));
+  root.appendChild(grid);
+}
+
+function openPreset(p) {
+  const root = view(); root.innerHTML = "";
+  root.appendChild(el("button", { cls: "back", text: "← all actions", on: { click: renderPresets } }));
+  root.appendChild(el("h2", { text: p.title }));
+  if (p.note) root.appendChild(el("div", { cls: "note", text: p.note }));
+  const inputs = {};
+  for (const f of p.fields) {
+    const wrap = el("label", { cls: "field" }, [el("span", { cls: "lbl", html: `${f.label || f.name} <code>${f.type}</code>${f.optional ? " · optional" : ""}` })]);
+    const inp = el("input", { attrs: { type: "text", placeholder: f.placeholder || (f.default ?? "") } });
+    if (f.fill === "account" && connectedAddress) inp.value = connectedAddress;
+    else if (f.default !== undefined) inp.value = f.default;
+    wrap.appendChild(inp); inputs[f.name] = inp; root.appendChild(wrap);
+  }
+  const out = el("div");
+  const btn = el("button", { cls: "primary", text: p.mode === "read" ? "Query" : "Submit transaction" });
+  btn.addEventListener("click", () => runPreset(p, inputs, out, btn));
+  root.appendChild(el("div", { cls: "row" }, [btn]));
+  root.appendChild(out);
+}
+
+async function runPreset(p, inputs, out, btn) {
+  out.className = "result"; out.textContent = "…";
+  try {
+    const values = {}; for (const [k, i] of Object.entries(inputs)) values[k] = i.value;
+    const address = inftAddress();
+    const args = F.buildPresetArgs(p, values, { ethers, account: connectedAddress });
+    if (p.mode === "read") {
+      const r = await F.readContract({ provider: browserProvider, address, abi: INFT_ABI, fn: p.fn, args, ethers });
+      out.className = "result ok"; out.textContent = stringify(r); return;
+    }
+    if (!connectedAddress) throw new Error("connect a wallet first");
+    if (!ZEROG_CHAINS[connectedChainId]) throw new Error("switch to a 0G chain first (Add 0G Galileo)");
+    btn.disabled = true; out.textContent = "awaiting signature…";
+    const signer = await browserProvider.getSigner();
+    const tx = await F.writeContract({ signer, address, abi: INFT_ABI, fn: p.fn, args, value: p.payable ? 0n : undefined, ethers });
+    out.textContent = "sent: " + tx.hash + "\nwaiting…"; const r = await tx.wait();
+    out.className = "result ok"; out.textContent = `✅ block ${r.blockNumber}\n${tx.hash}`;
+  } catch (e) { out.className = "result err"; out.textContent = "✗ " + (e?.shortMessage || e?.message || String(e)); }
+  finally { btn.disabled = false; }
+}
+
+// ── Generic explorer over the full iNFT ABI ──────────────────────────────────
+function renderExplorer() {
+  const root = view(); root.innerHTML = "";
+  root.appendChild(el("div", { cls: "note", html: `Full iNFT_7857 ABI (${INFT_ABI.filter(x => x.type === "function").length} functions). Reads query instantly; writes prompt your wallet.` }));
+  let address;
+  try { address = inftAddress(); }
+  catch (e) {
+    root.appendChild(el("div", { cls: "result err", text: e.message }));
+    root.appendChild(el("div", { cls: "note", html: "You can still browse the ABI below; submitting needs a deployed address." }));
+    address = F.constants.ZERO_ADDR;
+  }
+  const { reads, writes } = F.categorizeAbi(INFT_ABI);
+  root.appendChild(el("h3", { text: `Read (${reads.length})` }));
+  for (const fn of reads) root.appendChild(fnCard(fn, address, false));
+  root.appendChild(el("h3", { text: `Write (${writes.length})` }));
+  for (const fn of writes) root.appendChild(fnCard(fn, address, true));
+}
+
+function fnCard(fn, address, isWrite) {
+  const payable = fn.stateMutability === "payable";
+  const card = el("div", { cls: "fn" });
+  card.appendChild(el("div", { cls: "sig", html: `${F.signatureOf(fn)} <span class="pill ${isWrite ? "write" : "read"}">${fn.stateMutability}</span>${payable ? '<span class="pill payable">payable</span>' : ""}` }));
+  const inputs = [];
+  for (const i of fn.inputs) {
+    const w = el("label", { cls: "field" }, [el("span", { cls: "lbl", html: `${i.name || "arg"} <code>${i.type}</code>` })]);
+    const inp = el("input", { attrs: { type: "text", placeholder: i.type } });
+    w.appendChild(inp); card.appendChild(w); inputs.push(inp);
+  }
+  let valueInput = null;
+  if (payable) {
+    const w = el("label", { cls: "field" }, [el("span", { cls: "lbl", html: "value <code>0G</code>" })]);
+    valueInput = el("input", { attrs: { type: "text", placeholder: "0.0" } }); w.appendChild(valueInput); card.appendChild(w);
+  }
+  const out = el("div");
+  const btn = el("button", { cls: isWrite ? "primary" : "", text: isWrite ? "Write" : "Query" });
+  btn.addEventListener("click", async () => {
+    out.className = "result"; out.textContent = "…";
+    try {
+      const args = fn.inputs.map((i, idx) => F.coerceArg(i.type, inputs[idx].value));
+      if (!isWrite) {
+        if (!browserProvider) throw new Error("connect a wallet first");
+        const r = await F.readContract({ provider: browserProvider, address, abi: INFT_ABI, fn: fn.name, args, ethers });
+        out.className = "result ok"; out.textContent = stringify(r);
+      } else {
+        if (!connectedAddress) throw new Error("connect a wallet first");
+        const signer = await browserProvider.getSigner();
+        const value = valueInput && valueInput.value ? ethers.parseEther(valueInput.value) : undefined;
+        btn.disabled = true;
+        const tx = await F.writeContract({ signer, address, abi: INFT_ABI, fn: fn.name, args, value, ethers });
+        out.textContent = "sent: " + tx.hash + "\nwaiting…"; const r = await tx.wait();
+        out.className = "result ok"; out.textContent = `✅ block ${r.blockNumber}\n${tx.hash}`;
+      }
+    } catch (e) { out.className = "result err"; out.textContent = "✗ " + (e?.shortMessage || e?.message || String(e)); }
+    finally { btn.disabled = false; }
+  });
+  card.appendChild(el("div", { cls: "row" }, [btn])); card.appendChild(out);
+  return card;
+}
+
+// ── utils ────────────────────────────────────────────────────────────────────
+function stringify(r) {
+  if (typeof r === "bigint") return r.toString();
+  if (Array.isArray(r)) return r.map(stringify).join("\n");
+  if (r && typeof r === "object") { try { return JSON.stringify(r, (_, v) => (typeof v === "bigint" ? v.toString() : v), 2); } catch { return String(r); } }
+  return String(r);
+}
+let toastTimer = null;
+function toast(msg, kind = "") {
+  clearTimeout(toastTimer); document.querySelector(".toast")?.remove();
+  const t = el("div", { cls: "toast " + kind, text: msg }); document.body.appendChild(t);
+  toastTimer = setTimeout(() => t.remove(), 5000);
+}
+
+// ── wire-up ───────────────────────────────────────────────────────────────────
+document.getElementById("walletBtn").addEventListener("click", connectWallet);
+document.getElementById("addChainBtn").addEventListener("click", addZeroG);
+for (const b of document.querySelectorAll("nav.tabs button")) b.addEventListener("click", () => {
+  activeTab = b.dataset.tab;
+  for (const x of document.querySelectorAll("nav.tabs button")) x.classList.toggle("active", x === b);
+  render();
+});
+(async function boot() { setupEIP6963(); refreshUI(); render(); })();
+</script>
+</body>
+</html>

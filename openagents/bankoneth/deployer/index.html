@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<!--
+  index.html — the deployer's protective layer (client folder entry).
+
+  Nothing deploys until a wallet is connected: the public key is the identity, and
+  the identity is what receives the privilege. The deployable contracts are read
+  from index.xml (the "solution"); access is extended from that index. Two events —
+  DEPLOY arms, LAUNCH fires from value (token or signature) — then RETURN shows the
+  transaction the blockchain returns.
+
+  Always open source · client-side · no external dependencies in the trust path.
+  (c) BANKON all rights preserved.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BANKON Deployer</title>
+<style>
+  :root{--bg:#06070b;--panel:rgba(12,16,24,.7);--line:rgba(121,192,255,.12);--text:#e6edf3;--dim:#6b7480;--accent:#8b5cf6;--gold:#ffd166;--green:#3fb950;--red:#ff5b5b;--mono:ui-monospace,'SFMono-Regular',Menlo,monospace}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:
+      radial-gradient(circle at 30% 10%,rgba(139,92,246,.16),transparent 45%),
+      radial-gradient(circle at 80% 90%,rgba(86,204,242,.08),transparent 50%),var(--bg);
+      color:var(--text);min-height:100vh;line-height:1.5}
+  .wrap{max-width:1040px;margin:0 auto;padding:28px 20px 60px;position:relative;z-index:1}
+  /* DeltaVerse fabric — the changing story, woven behind the deployer */
+  #dv-fabric{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+  .id .dvrole{font-weight:700;text-transform:lowercase}
+  .id .dvrole.overlord{color:var(--gold)} .id .dvrole.member{color:#2dd4bf}
+  .id .dvrole.public{color:var(--dim)}
+  .flow .step.handoff b{color:#3fb950}
+  #dv-ticker{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:2;font-family:var(--mono);font-size:10px;font-style:italic;color:var(--dim);max-width:80vw;text-align:center;transition:opacity .5s}
+  header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+  .brand{font-family:var(--mono);font-weight:700;font-size:20px;letter-spacing:2px}
+  .brand b{color:var(--accent)}
+  .id{font-family:var(--mono);font-size:12px;color:var(--dim);display:flex;align-items:center;gap:8px}
+  .dot{width:9px;height:9px;border-radius:50%;background:#444;display:inline-block}
+  .dot.ok{background:var(--green);box-shadow:0 0 10px rgba(63,185,80,.5)}
+  button{font-family:inherit;cursor:pointer;border-radius:999px;border:none;font-weight:600;letter-spacing:.4px;transition:transform .15s,box-shadow .15s,opacity .15s}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .btn-connect{padding:10px 22px;background:linear-gradient(135deg,var(--accent),#5c2dc4);color:#fff;font-size:.95rem}
+  .btn-connect:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(139,92,246,.4)}
+  .lede{color:var(--dim);font-size:13px;font-family:var(--mono);margin-bottom:18px}
+  .lede b{color:var(--text)}
+  .flow{display:flex;gap:10px;align-items:center;font-family:var(--mono);font-size:11px;color:var(--dim);margin-bottom:20px;flex-wrap:wrap}
+  .flow .step{padding:4px 10px;border:1px solid var(--line);border-radius:999px}
+  .flow .step b{color:var(--gold)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;backdrop-filter:blur(10px)}
+  .card.armed{border-color:rgba(255,209,102,.5);box-shadow:0 0 22px rgba(255,209,102,.12)}
+  .ctitle{font-family:var(--mono);font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .vk{font-size:9px;text-transform:uppercase;letter-spacing:.5px;padding:2px 7px;border-radius:999px}
+  .vk-signature{background:rgba(139,92,246,.18);color:#c9a0ff}
+  .vk-token{background:rgba(255,209,102,.16);color:var(--gold)}
+  .priv{font-size:10px;color:var(--dim);font-family:var(--mono)}
+  .csum{color:var(--dim);font-size:12px;margin:6px 0 10px}
+  .deployed{font-family:var(--mono);font-size:10px;color:var(--green);margin-bottom:8px;word-break:break-all}
+  .cactions{display:flex;gap:8px}
+  .btn-deploy{flex:1;padding:9px;background:rgba(86,204,242,.12);color:#79c0ff;border:1px solid rgba(86,204,242,.25);font-size:.82rem}
+  .btn-deploy:hover:not(:disabled){background:rgba(86,204,242,.2)}
+  .btn-launch{flex:1;padding:9px;background:linear-gradient(135deg,var(--gold),#e0a800);color:#1a1300;font-size:.82rem}
+  .btn-launch:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 18px rgba(255,209,102,.3)}
+  .empty{color:var(--dim);font-family:var(--mono);font-size:12px;padding:18px}
+  h2{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin:26px 0 10px}
+  #return{font-family:var(--mono);font-size:11px;background:rgba(5,8,14,.6);border:1px solid var(--line);border-radius:10px;padding:12px 14px;max-height:320px;overflow:auto}
+  .rline{padding:3px 0;border-bottom:1px solid rgba(8,11,16,.4);word-break:break-all}
+  .rline.ok{color:var(--green)}.rline.err{color:var(--red)}.rline.warn{color:var(--gold)}
+  .hl{color:var(--gold)}.dim{color:var(--dim)}
+  .gate{text-align:center;padding:30px;color:var(--dim);font-family:var(--mono);font-size:13px}
+  footer{margin-top:30px;font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center}
+  footer a{color:#79c0ff;text-decoration:none}
+  /* chain isolation bar */
+  .chainbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .chain{padding:6px 12px;background:rgba(12,16,24,.7);border:1px solid var(--line);color:var(--dim);font-family:var(--mono);font-size:11px;border-radius:999px}
+  .chain:hover{color:var(--text)}
+  .chain.sel{border-color:var(--accent);color:#c9a0ff;box-shadow:0 0 14px rgba(139,92,246,.2)}
+  .chain .csym{color:var(--dim);font-size:9px}
+  .chain .onchain{color:var(--green)}
+  .feebar{font-family:var(--mono);font-size:10px;color:var(--dim);margin-bottom:18px}
+  .feebar b{color:var(--gold)}
+  /* bundles + stages */
+  .bundle{margin:0 0 22px}
+  .bhdr{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px;font-family:var(--mono)}
+  .bname{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#79c0ff}
+  .bmeta{font-size:10px;color:var(--dim)}
+  .btn-bundle{padding:6px 14px;background:rgba(139,92,246,.16);color:#c9a0ff;border:1px solid rgba(139,92,246,.3);font-size:.74rem;margin-left:auto}
+  .btn-bundle:hover:not(:disabled){background:rgba(139,92,246,.26)}
+  .bhdr .btn-launch{padding:6px 14px;font-size:.74rem;flex:none}
+  .stage{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:rgba(86,204,242,.15);color:#79c0ff;font-size:10px;font-family:var(--mono)}
+</style>
+</head>
+<body>
+<canvas id="dv-fabric"></canvas>
+<div id="dv-ticker"></div>
+<div class="wrap">
+  <header>
+    <span class="brand">BANKON <b>Deployer</b></span>
+    <div style="display:flex;align-items:center;gap:14px">
+      <span class="id" id="identity"><span class="dot"></span> not connected</span>
+      <button class="btn-connect" onclick="Deployer.connect()">Connect Wallet</button>
+    </div>
+  </header>
+
+  <p class="lede">A simpler-than-Remix, client-side deployer. Your <b>public key is the
+    identity</b> that receives the privilege. Contracts come from the
+    <b>index.xml</b> solution.</p>
+
+  <div class="flow">
+    <span class="step"><b>DEPLOY</b> arm</span> →
+    <span class="step"><b>LAUNCH</b> fire from value (token / signature)</span> →
+    <span class="step handoff"><b>HANDOFF</b> → bankon.eth</span> →
+    <span class="step"><b>RETURN</b> blockchain tx</span>
+  </div>
+
+  <h2>Chain — isolation target (toggle · ALL cycles every chain)</h2>
+  <div class="chainbar" id="chains"></div>
+  <div class="feebar" id="feebar"></div>
+
+  <h2>Solution — topic bundles · stages</h2>
+  <div id="contracts"><div class="empty">connect a wallet to load the solution</div></div>
+
+  <h2>Return — blockchain transactions</h2>
+  <div id="return"><div class="rline dim">deploy output appears here</div></div>
+
+  <footer>
+    always open source · client-side · keys never leave your device ·
+    <a href="https://github.com/agenticplace" target="_blank" rel="noopener">github.com/agenticplace</a> ·
+    &copy; BANKON all rights preserved
+    <br/>
+    <a class="puffy" href="https://www.openbsd.org/" target="_blank" rel="noopener"
+       title="Download OpenBSD from headquarters — secure by default, made in Canada">
+      <span class="puffy-fish" aria-hidden="true">🐡</span>
+      Secured by <b>OpenBSD</b> — proper security posture, made in Canada 🇨🇦
+    </a>
+    <span class="overlord-note">OWNER holds the key; the software does not — OVERLORD signature handoff</span>
+  </footer>
+  <style>
+    footer .puffy { display:inline-flex; align-items:center; gap:.4em; margin-top:.6em;
+      padding:.35em .7em; border:1px solid #2a3; border-radius:999px; color:#9fe6a0;
+      text-decoration:none; font-size:.85em; background:rgba(40,90,40,.15); }
+    footer .puffy:hover { background:rgba(40,120,40,.28); }
+    footer .puffy-fish { font-size:1.25em; }
+    footer .overlord-note { display:block; margin-top:.5em; opacity:.7; font-size:.8em; }
+    .vk-create2 { background:rgba(120,90,200,.22); color:#c9b6ff; border:1px solid #5a4a9a; }
+    .chain .mainnet { color:#ff9a6b; font-size:.78em; margin-left:.2em; }
+    #identity .warn { color:#ffcf6b; }
+    #identity .hl { color:#9fe6a0; }
+    .bpin { font-size:.78em; opacity:.7; margin:0 .5em; }
+    .exportrow { margin-top:1em; text-align:right; }
+  </style>
+</div>
+<script src="deltaverse.js"></script>
+<script src="deployer.js"></script>
+<script src="deltaverse-deployer.js"></script>
+</body>
+</html>

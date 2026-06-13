@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+# mindx-stat — text-mode dashboard for mindX VPS observability
+# No Grafana required. Pure shell + curl to local Prometheus over loopback.
+#
+# Usage:
+#   mindx-stat top       — top processes by RSS
+#   mindx-stat disk      — disk usage + Prometheus TSDB size
+#   mindx-stat probes    — blackbox probe status for all 5 pythai.net targets
+#   mindx-stat alerts    — currently-firing Prometheus alerts
+#   mindx-stat all       — all of the above (designed for `watch -n 5 mindx-stat all`)
+#   mindx-stat netdata   — print the netdata UI URL + local API status
+#   mindx-stat help      — this help
+set -euo pipefail
+
+PROM_LOCAL="${PROM_LOCAL:-http://localhost:9090}"
+PROMETHEUS_DATA="${PROMETHEUS_DATA:-/home/mindx/obs/prometheus_data}"
+SUBCMD="${1:-help}"
+
+# ANSI when stdout is a TTY (so watch -n still works without garbage codes via watch -c)
+if [ -t 1 ]; then
+    B='\033[1m'; D='\033[2m'; G='\033[32m'; R='\033[31m'; Y='\033[33m'; N='\033[0m'
+else
+    B=''; D=''; G=''; R=''; Y=''; N=''
+fi
+
+hdr() { printf "${B}== %s ==${N}\n" "$1"; }
+err() { printf "${R}%s${N}\n" "$1"; }
+
+cmd_top() {
+    hdr "TOP — processes by RSS (head -10)"
+    if command -v ps >/dev/null 2>&1; then
+        ps -eo pid,user,pcpu,pmem,rss,comm --sort=-rss | awk '
+            NR==1 { printf "%6s  %-12s  %5s  %5s  %8s  %s\n", $1, $2, $3, $4, "RSS_MB", $6 }
+            NR>1 && NR<=11 { printf "%6d  %-12s  %5s  %5s  %8.1f  %s\n", $1, $2, $3, $4, $5/1024, $6 }
+        '
+    else
+        err "ps not available"
+    fi
+}
+
+cmd_disk() {
+    hdr "DISK — root + Prometheus TSDB"
+    df -h / | awk 'NR==2 { printf "  /         total=%s  used=%s  avail=%s  pct=%s\n", $2, $3, $4, $5 }'
+    if [ -d "$PROMETHEUS_DATA" ]; then
+        size=$(du -sh "$PROMETHEUS_DATA" 2>/dev/null | awk '{print $1}')
+        printf "  TSDB      %s  (cap 4 GB per Phase 1.1 retention)\n" "$size"
+    else
+        printf "  TSDB      not found at %s (Prometheus not deployed?)\n" "$PROMETHEUS_DATA"
+    fi
+    echo
+    free -h | awk 'NR<=2 { print "  " $0 }'
+    if command -v swapon >/dev/null 2>&1; then
+        swapon --show=NAME,SIZE,USED --noheadings | awk '{ printf "  swap      %-12s  size=%s  used=%s\n", $1, $2, $3 }'
+    fi
+}
+
+cmd_probes() {
+    hdr "PROBES — blackbox http_2xx status"
+    if ! out=$(curl -fsS --max-time 5 "$PROM_LOCAL/api/v1/query?query=probe_success" 2>&1); then
+        err "  Prometheus unreachable at $PROM_LOCAL ($out)"
+        return 0
+    fi
+    if ! command -v jq >/dev/null 2>&1; then
+        err "  jq required for probe parsing — apt install jq"
+        return 0
+    fi
+    echo "$out" | jq -r '
+        .data.result[]? |
+        "  \(if (.value[1]|tonumber)==1 then "UP  " else "DOWN" end)  \(.metric.instance)"
+    ' | while read -r line; do
+        if echo "$line" | grep -q "UP  "; then
+            printf "${G}%s${N}\n" "$line"
+        else
+            printf "${R}%s${N}\n" "$line"
+        fi
+    done
+}
+
+cmd_alerts() {
+    hdr "ALERTS — currently firing"
+    if ! out=$(curl -fsS --max-time 5 "$PROM_LOCAL/api/v1/alerts" 2>&1); then
+        err "  Prometheus unreachable at $PROM_LOCAL"
+        return 0
+    fi
+    if ! command -v jq >/dev/null 2>&1; then
+        err "  jq required"
+        return 0
+    fi
+    count=$(echo "$out" | jq '[.data.alerts[]? | select(.state=="firing")] | length')
+    if [ "${count:-0}" = "0" ]; then
+        printf "${G}  no active alerts${N}\n"
+    else
+        echo "$out" | jq -r '
+            .data.alerts[]? | select(.state=="firing") |
+            "  \(.labels.severity // "?")  \(.labels.alertname)  \(.annotations.summary // "")"
+        ' | while read -r line; do
+            printf "${Y}%s${N}\n" "$line"
+        done
+    fi
+}
+
+cmd_netdata() {
+    hdr "NETDATA — daily monitoring UI"
+    NETDATA_LOCAL="${NETDATA_LOCAL:-http://localhost:19999}"
+    echo "  UI:    https://netdata.pythai.net (Basic Auth)"
+    echo "  Local: $NETDATA_LOCAL"
+    if out=$(curl -fsS --max-time 3 "$NETDATA_LOCAL/api/v1/info" 2>&1); then
+        if command -v jq >/dev/null 2>&1; then
+            ver=$(echo "$out" | jq -r '.version // "?"')
+            uid=$(echo "$out" | jq -r '.mirrored_hosts[0] // .machine_guid // "?"')
+            printf "${G}  state: UP${N}   version=%s   host=%s\n" "$ver" "$uid"
+        else
+            printf "${G}  state: UP${N}   (install jq for version detail)\n"
+        fi
+    else
+        printf "${R}  state: DOWN${N}   bash scripts/netdata_on.sh\n"
+    fi
+}
+
+cmd_all() {
+    cmd_top; echo
+    cmd_disk; echo
+    cmd_probes; echo
+    cmd_alerts; echo
+    cmd_netdata
+}
+
+cmd_help() {
+    sed -n '2,12p' "$0" | sed 's/^# \?//'
+}
+
+case "$SUBCMD" in
+    top)     cmd_top ;;
+    disk)    cmd_disk ;;
+    probes)  cmd_probes ;;
+    alerts)  cmd_alerts ;;
+    netdata) cmd_netdata ;;
+    all)     cmd_all ;;
+    help|-h|--help) cmd_help ;;
+    *)
+        err "unknown subcommand: $SUBCMD"
+        cmd_help
+        exit 1
+        ;;
+esac

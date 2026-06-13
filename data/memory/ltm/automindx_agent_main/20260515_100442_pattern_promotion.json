@@ -1,0 +1,30 @@
+{
+  "agent_id": "automindx_agent_main",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 11,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Top processes: automindx_get_persona(11)",
+      "Peak activity hour: 19:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 11
+        },
+        "process_distribution": {
+          "automindx_get_persona": 11
+        },
+        "total_memories": 11,
+        "timestamp": "2026-05-15T10:04:42.244412"
+      }
+    ]
+  },
+  "promoted_at": "2026-05-15T10:04:42.244424",
+  "promotion_criteria": {
+    "pattern_threshold": 3,
+    "days_analyzed": 7
+  }
+}

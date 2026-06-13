@@ -1,0 +1,17 @@
+{
+  "name": "@bankoneth/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-contained, framework-free bankon.eth dApp (subdomain minter + generic ABI explorer) and a separate ERC-7857 iNFT page. Prototype build — no bundler required to run.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "abis": "node ../../script/export-abis.mjs",
+    "serve": "python3 -m http.server 8788",
+    "dev": "python3 -m http.server 8788"
+  },
+  "comments": {
+    "run": "From packages/web/: `npm run abis` (after `forge build`) then `npm run serve` and open http://localhost:8788/bankoneth.html (or /inft.html).",
+    "deploy": "Static files — copy bankoneth.html, inft.html, inft.css, bankon-forms.js, iNFTabi.js, vendor/ and public/ to bankon.pythai.net / agenticplace.pythai.net."
+  }
+}

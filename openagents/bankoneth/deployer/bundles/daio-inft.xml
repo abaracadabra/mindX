@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  bundle: daio-inft — the iNFT + DAIO core stack.
+
+  Standard EVM targets: 0G (ERC-7857 iNFT home), Ethereum, Base, ARC. DEPLOY BUNDLE
+  arms these in stage order; LAUNCH fires them. `from="deployed:<id>"` chains the
+  dependents. NOTE: verify each constructor against its ABI before mainnet — the
+  args below are the common admin/owner pattern and may need adjusting per contract.
+  Artifact paths are relative to the deployer page; run `forge build` in daio/contracts
+  first (out/ is gitignored). This bundle is the seed of a topic that expands to the
+  full daio/contracts set (242 .sol) — add <contract> rows here.
+-->
+<bundle name="daio-inft" chains="zerog,ethereum,base,arc">
+
+  <contract id="agent-registry" name="AgentRegistry" stage="1"
+            summary="ERC-8004 agent registry — the on-chain identity root for iNFT agents.">
+    <abi src="../../../daio/contracts/out/AgentRegistry.sol/AgentRegistry.json"/>
+    <bytecode src="../../../daio/contracts/out/AgentRegistry.sol/AgentRegistry.json"/>
+    <constructor><arg name="admin" type="address" from="wallet"/></constructor>
+    <value kind="signature"/>
+    <privilege service="inft.register" tier="2"/>
+  </contract>
+
+  <contract id="inft-7857" name="iNFT_7857" stage="2"
+            summary="ERC-7857 intelligent NFT — the canonical mindX agent-as-iNFT.">
+    <abi src="../../../daio/contracts/out/iNFT_7857.sol/iNFT_7857.json"/>
+    <bytecode src="../../../daio/contracts/out/iNFT_7857.sol/iNFT_7857.json"/>
+    <constructor><arg name="admin" type="address" from="wallet"/></constructor>
+    <value kind="signature"/>
+    <privilege service="inft.mint" tier="2"/>
+  </contract>
+
+  <contract id="inft-factory" name="IntelligentNFTFactory" stage="3"
+            summary="Factory that mints intelligent NFTs against the registry + iNFT.">
+    <abi src="../../../daio/contracts/out/IntelligentNFTFactory.sol/IntelligentNFTFactory.json"/>
+    <bytecode src="../../../daio/contracts/out/IntelligentNFTFactory.sol/IntelligentNFTFactory.json"/>
+    <constructor><arg name="admin" type="address" from="wallet"/></constructor>
+    <value kind="signature"/>
+    <privilege service="inft.factory" tier="3"/>
+  </contract>
+
+  <contract id="daio-core" name="DAIO_Core" stage="4"
+            summary="DAIO governance core — the constitutional layer the iNFTs report into.">
+    <abi src="../../../daio/contracts/out/DAIO_Core.sol/DAIO_Core.json"/>
+    <bytecode src="../../../daio/contracts/out/DAIO_Core.sol/DAIO_Core.json"/>
+    <constructor><arg name="admin" type="address" from="wallet"/></constructor>
+    <value kind="signature"/>
+    <privilege service="daio.govern" tier="3"/>
+  </contract>
+
+</bundle>

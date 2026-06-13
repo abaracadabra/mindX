@@ -12,8 +12,19 @@ import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { JaimlaAgent } from './src/agents/JaimlaAgent.js';
-import { FaiceyCore } from './src/FaiceyCore.js';
+// Faice — the FACE-as-a-service surface (facets -> wireframe FACE, x402-gated).
+import {
+  attachFaice,
+  faiceDescriptor,
+  faiceIndex,
+  faiceQuote,
+  faiceInteract,
+  renderFacePage,
+} from './src/faice/service.js';
+import { faiceX402Gate, requireOverlord } from './src/faice/x402.js';
+// Legacy voice-reactive demo agents (JaimlaAgent / FaiceyCore) are loaded LAZILY inside
+// initializeDemoAgent so the FACE service boots independently of the voice stack — voice
+// concerns now live in the agnostic `voaice` peer package.
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -36,19 +47,19 @@ class FaiceyServer {
             jaimla: {
                 name: 'Jaimla Agent Demo',
                 description: 'Interactive Jaimla - The Machine Learning Agent',
-                agent: JaimlaAgent,
+                agentType: 'jaimla',
                 endpoint: '/jaimla'
             },
             oscilloscope: {
                 name: 'Advanced Oscilloscope',
-                description: 'D3.js Voice Analysis Visualization',
-                agent: FaiceyCore,
+                description: 'D3.js Voice Analysis Visualization (see voaice)',
+                agentType: 'faicey',
                 endpoint: '/oscilloscope'
             },
             voiceanalysis: {
                 name: 'Voice Analysis Lab',
-                description: 'Comprehensive Voice Pattern Analysis',
-                agent: FaiceyCore,
+                description: 'Comprehensive Voice Pattern Analysis (see voaice)',
+                agentType: 'faicey',
                 endpoint: '/voice-analysis'
             }
         };
@@ -106,6 +117,47 @@ class FaiceyServer {
         this.app.get('/', (req, res) => {
             this.serveDemoSelector(res);
         });
+
+        // ============================================================
+        // Faice — the FACE of an AI service (facets -> wireframe FACE)
+        // ============================================================
+        // Free: service index + known agents
+        this.app.get('/api/faice', (req, res) => {
+            res.json(faiceIndex());
+        });
+        // Free: price + privilege verdict for an agent (no gating)
+        this.app.get('/api/faice/:agent/quote', attachFaice, (req, res) => {
+            res.json(faiceQuote(req));
+        });
+        // Gated: FACE descriptor JSON — privilege (reputation) OR x402 settlement
+        this.app.get(
+            '/api/faice/:agent',
+            attachFaice,
+            faiceX402Gate('/api/faice/:agent'),
+            (req, res) => {
+                res.json(faiceDescriptor(req));
+            }
+        );
+        // Gated: rendered wireframe FACE page
+        this.app.get(
+            '/faice/:agent',
+            attachFaice,
+            faiceX402Gate('/faice/:agent'),
+            (req, res) => {
+                res.set('Content-Type', 'text/html');
+                res.send(renderFacePage(req, this.port));
+            }
+        );
+        // Overlord-only: interact with a FACE (drive expression / override facets).
+        // The ultimate privilege — bankon.eth, signature-proven — drives the FACE.
+        this.app.post(
+            '/api/faice/:agent/interact',
+            attachFaice,
+            requireOverlord('member'),
+            (req, res) => {
+                res.json(faiceInteract(req, req.body || {}));
+            }
+        );
 
         // Individual demo routes
         this.app.get('/jaimla', (req, res) => {
@@ -205,9 +257,16 @@ class FaiceyServer {
         try {
             let agent;
 
-            if (demoConfig.agent === JaimlaAgent) {
+            // Lazy-load the legacy voice agent only when a voice demo is actually served.
+            // These modules pull in the voice stack (now belonging to voaice); keeping the
+            // import here means the FACE service boots even if the voice stack is absent.
+            const isJaimla = demoConfig.agentType === 'jaimla';
+            this._isJaimla = isJaimla;
+            if (isJaimla) {
+                const { JaimlaAgent } = await import('./src/agents/JaimlaAgent.js');
                 agent = new JaimlaAgent({ debug: true });
             } else {
+                const { FaiceyCore } = await import('./src/FaiceyCore.js');
                 agent = new FaiceyCore({
                     agentId: this.demo,
                     persona: 'default',
@@ -220,21 +279,28 @@ class FaiceyServer {
                 console.log(`✅ ${demoConfig.name} initialized`);
             });
 
-            if (agent instanceof JaimlaAgent) {
+            if (isJaimla) {
                 this.setupJaimlaEventListeners(agent);
             } else {
                 this.setupFaiceyEventListeners(agent);
             }
 
-            // Initialize agent
+            // Initialize agent. agent.init() drives the browser-side pipeline
+            // (Web Audio, getUserMedia, WebGLRenderer) which has no equivalent under
+            // bare Node. The visible wireframe now renders in the browser via the
+            // canonical engine (static/vendor/faicey-engine.js), so a Node-side init
+            // failure must NOT stop the HTTP/WebSocket server from serving the demo.
             await agent.init();
             this.agents.set(this.demo, agent);
 
             console.log(`✅ Demo agent ${this.demo} ready`);
 
         } catch (error) {
-            console.error(`❌ Failed to initialize demo agent:`, error);
-            throw error;
+            console.warn(
+                `⚠️  Demo agent ${this.demo} could not run its browser pipeline under Node ` +
+                `(${error?.message || error}). Serving the engine-driven demo page anyway; ` +
+                `rendering happens client-side via static/vendor/faicey-engine.js.`
+            );
         }
     }
 
@@ -277,7 +343,7 @@ class FaiceyServer {
             if (agent && this.clients.size > 0) {
                 let voiceData = null;
 
-                if (agent instanceof JaimlaAgent) {
+                if (this._isJaimla) {
                     voiceData = agent.faiceyCore.getVoiceData();
                 } else {
                     voiceData = agent.getVoiceData();
@@ -342,7 +408,7 @@ class FaiceyServer {
                 if (agent) {
                     ws.send(JSON.stringify({
                         type: 'status',
-                        data: agent instanceof JaimlaAgent ? agent.getStatus() : { status: 'active' }
+                        data: this._isJaimla ? agent.getStatus() : { status: 'active' }
                     }));
                 }
                 break;
@@ -350,7 +416,7 @@ class FaiceyServer {
             case 'setExpression':
                 const expressionAgent = this.agents.get(this.demo);
                 if (expressionAgent) {
-                    if (expressionAgent instanceof JaimlaAgent) {
+                    if (this._isJaimla) {
                         expressionAgent.faiceyCore.targetExpression = data.expression;
                     } else {
                         expressionAgent.targetExpression = data.expression;
@@ -407,7 +473,7 @@ class FaiceyServer {
             agents: Array.from(this.agents.entries()).map(([id, agent]) => ({
                 id: id,
                 type: agent.constructor.name,
-                status: agent instanceof JaimlaAgent ? agent.getStatus() : { active: true }
+                status: this._isJaimla ? agent.getStatus() : { active: true }
             })),
             clients: this.clients.size,
             timestamp: new Date().toISOString()
@@ -439,7 +505,7 @@ class FaiceyServer {
             return;
         }
 
-        const details = agent instanceof JaimlaAgent ? agent.getStatus() : {
+        const details = this._isJaimla ? agent.getStatus() : {
             id: agentId,
             type: agent.constructor.name,
             status: 'active'
@@ -458,7 +524,7 @@ class FaiceyServer {
         }
 
         let nftData = {};
-        if (agent instanceof JaimlaAgent) {
+        if (this._isJaimla) {
             nftData = agent.exportAgentData();
         } else {
             nftData = agent.exportNFTMetadata ? agent.exportNFTMetadata() : {
@@ -479,7 +545,7 @@ class FaiceyServer {
         }
 
         let voiceData = {};
-        if (agent instanceof JaimlaAgent) {
+        if (this._isJaimla) {
             voiceData = agent.faiceyCore.getVoiceData();
         } else {
             voiceData = agent.getVoiceData ? agent.getVoiceData() : {
@@ -538,8 +604,20 @@ class FaiceyServer {
 <html>
 <head>
     <title>Jaimla Demo - The Machine Learning Agent</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <!--
+      three.js is served locally (no CDN) from the in-repo vendored source via the
+      canonical Faicey wireframe engine. The import map below resolves any bare
+      three specifier to the locally vendored module; the engine bundle itself
+      already inlines three. Both are copied into static/vendor by scripts/sync-engine.mjs.
+    -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "/static/vendor/three.module.js",
+        "three/examples/jsm/controls/OrbitControls.js": "/static/vendor/jsm/controls/OrbitControls.js"
+      }
+    }
+    </script>
     <style>
         body { margin: 0; font-family: 'Courier New', monospace; background: #000; color: #fff; }
         .container { display: grid; grid-template-columns: 1fr 400px; height: 100vh; }
@@ -565,41 +643,38 @@ class FaiceyServer {
         </div>
     </div>
 
-    <script>
-        const ws = new WebSocket('ws://localhost:${this.port}');
-        ws.onmessage = (event) => {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'status') {
-                document.getElementById('status').textContent = 'Active';
-                if (msg.data.expression) {
-                    document.getElementById('expression').textContent = msg.data.expression;
-                }
-            }
-        };
-
-        // Basic 3D setup
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('face-canvas') });
+    <script type="module">
+        // Canonical wireframe rendering service — the same engine FaceRig uses,
+        // built from facerig/src/lib/faicey and served locally (no CDN).
+        import { Faicey } from '/static/vendor/faicey-engine.js';
 
         const canvas = document.getElementById('face-canvas');
         const container = canvas.parentElement;
-        renderer.setSize(container.clientWidth, container.clientHeight);
 
-        // Simple face wireframe
-        const geometry = new THREE.RingGeometry(0.5, 1.5, 16);
-        const material = new THREE.LineBasicMaterial({ color: 0xff0080 });
-        const face = new THREE.LineLoop(geometry, material);
-        scene.add(face);
+        const faicey = new Faicey();
+        await faicey.init(canvas, {
+            width: container.clientWidth,
+            height: container.clientHeight,
+            wireframe: true,
+            faceColor: 0xff0080,   // Jaimla pink
+            cameraZ: 5,
+        });
+        document.getElementById('status').textContent = 'Active';
 
-        camera.position.z = 3;
-
-        function animate() {
-            requestAnimationFrame(animate);
-            face.rotation.y += 0.01;
-            renderer.render(scene, camera);
-        }
-        animate();
+        // Drive the real morph-target expression engine from the live voice WebSocket.
+        const ws = new WebSocket('ws://localhost:${this.port}');
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            const expr = msg.data && msg.data.expression;
+            if (expr) {
+                faicey.setExpression(expr, (msg.data && msg.data.intensity) || 1.0);
+                document.getElementById('expression').textContent = expr;
+            }
+            if (msg.type === 'analysis' && msg.data) {
+                document.getElementById('voice-active').textContent =
+                    String((msg.data.rms || 0) > 0.01);
+            }
+        };
     </script>
 </body>
 </html>`;

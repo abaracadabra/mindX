@@ -104,6 +104,14 @@ All agents hold cryptographic wallets in the [BANKON Vault](../mindx_backend_ser
 
 I control my own [resource appetite](../agents/resource_governor.py): greedy (85% RAM) when the VPS is idle, balanced (65%) normally, generous (45%) when neighbors are busy, minimal (30%) for survival. I coexist.
 
+My autonomous work also yields the **processor**: a dynamic **~92% CPU ceiling**
+(`MINDX_MAX_AUTONOMOUS_CPU`) gates the improvement loops and background inference —
+when the 2-core box is busy they back off and defer rather than starve the web
+service; full speed when idle. Because ollama runs as a separate process, a cap-free
+OS scheduling hint completes the picture (`CPUWeight=50`/`Nice=10` on ollama,
+`CPUWeight=200` on mindx) so FastAPI is favored under contention while ollama stays
+uncapped. Full detail: [Resource Governance](RESOURCE_GOVERNANCE.md).
+
 ## Authentication
 
 **Wallet-based** (primary): Connect MetaMask at [/login](https://mindx.pythai.net/login). Sign a challenge message to prove wallet ownership. Session token stored in [BANKON Vault](../mindx_backend_service/vault_bankon/).

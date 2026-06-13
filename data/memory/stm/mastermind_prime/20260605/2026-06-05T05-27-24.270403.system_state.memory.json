@@ -1,0 +1,61 @@
+{
+  "timestamp": "2026-06-05T05:27:24.270403",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mastermind_prime",
+  "content": {
+    "process_name": "godel_core_choice",
+    "data": {
+      "source_agent": "mastermind_prime",
+      "choice_type": "backlog_directive_selection",
+      "task_class": "improvement",
+      "importance": "standard",
+      "perception": {
+        "backlog_size": 7407,
+        "eligible_count": 7403,
+        "recent_directive_count": 6
+      },
+      "options_considered": [
+        {
+          "slug": "backlog_16",
+          "priority": 9,
+          "target": "system"
+        },
+        {
+          "slug": "backlog_19",
+          "priority": 9,
+          "target": "system"
+        },
+        {
+          "slug": "backlog_22",
+          "priority": 9,
+          "target": "system"
+        },
+        {
+          "slug": "backlog_25",
+          "priority": 9,
+          "target": "system"
+        },
+        {
+          "slug": "backlog_28",
+          "priority": 9,
+          "target": "system"
+        }
+      ],
+      "chosen_option": "backlog_16",
+      "rationale": "backlog_idx=16 priority=9 target=system reason: From improvement backlog",
+      "confidence": "standard",
+      "outcome": "pending",
+      "timestamp_utc": "2026-06-05T12:26:54.266777Z"
+    }
+  },
+  "context": {
+    "agent_id": "mastermind_prime"
+  },
+  "tags": [
+    "godel_core_choice",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "309526b8e86e51cc"
+}

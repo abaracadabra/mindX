@@ -468,7 +468,7 @@ class InsightAggregator:
         # or '... Cycle Exception:' (errored). Read that message first and
         # only fall back to overall_campaign_status when message is absent.
         def bucket(slice_: List[Dict[str, Any]]) -> Dict[str, int]:
-            counts = {"total": len(slice_), "succeeded": 0, "running": 0, "failed": 0, "errored": 0}
+            counts = {"total": len(slice_), "succeeded": 0, "running": 0, "incomplete": 0, "failed": 0, "errored": 0}
             for c in slice_:
                 status = str(c.get("overall_campaign_status", "")).upper()
                 msg = str(c.get("final_bdi_message", ""))
@@ -479,12 +479,17 @@ class InsightAggregator:
                 # Errored: BDI cycle hit an unhandled exception (NoneType, etc.)
                 elif "CYCLE EXCEPTION" in msg_upper:
                     counts["errored"] += 1
-                # Failed: explicit FAILED_PLANNING / FAILED_EXECUTION / FAILED_RECOVERY / FAILED.
-                elif "FAILED" in msg_upper:
+                # Failed: explicit FAILED_PLANNING / FAILED_EXECUTION / FAILED_RECOVERY / FAILED / TIMED_OUT.
+                elif "FAILED" in msg_upper or "TIMED_OUT" in msg_upper or status == "TIMED_OUT":
                     counts["failed"] += 1
-                # Running/maxed: the BDI loop ran out of cycles cleanly. NOT a
-                # crash — semantically distinct from the FAILED states above.
-                elif "RUNNING" in msg_upper or status in ("IN_PROGRESS", "RUNNING"):
+                # Incomplete: BDI ran out of cycles cleanly without a terminal
+                # state. New records say MAX_CYCLES_REACHED; legacy records said
+                # "BDI run RUNNING" (same condition, mislabeled — they were never
+                # actually in flight). Distinct from running below.
+                elif "MAX_CYCLES_REACHED" in msg_upper or status == "MAX_CYCLES_REACHED" or "RUNNING" in msg_upper:
+                    counts["incomplete"] += 1
+                # Running: genuinely in flight (status only, no terminal message).
+                elif status in ("IN_PROGRESS", "RUNNING"):
                     counts["running"] += 1
                 else:
                     # Truly unknown — fall back to FAILURE_OR_INCOMPLETE bucket.
@@ -555,7 +560,11 @@ class InsightAggregator:
                 "matched_in_backlog": matched_in_backlog,
                 # Back-compat field — older clients (dashboard.html) read this name.
                 "attempted": distinct,
-                "coverage_ratio": round(distinct / backlog_count, 4) if backlog_count else 0.0,
+                # 6-decimal precision so movement is visible at the early stage
+                # when distinct_directives is small relative to the 81K backlog.
+                # 2/81971 = 0.0000244 — at 4 decimals this read as 0.0; at 6 it
+                # reads as 0.000024 → 0.0024% on the tile, which IS movement.
+                "coverage_ratio": round(distinct / backlog_count, 6) if backlog_count else 0.0,
             }
 
         return summary

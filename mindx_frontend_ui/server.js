@@ -24,9 +24,21 @@ app.get('/shadow-overlord', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'shadow-overlord.html'));
 });
 
+// Route /overlord-login → overlord-login.html — the overlord/overseer model login
+// (public/member/overseer/overlord; uses @openagents/overlord bundle + /overlord/* API).
+// Replaces shadow-overlord once MINDX_OVERLORD_ENABLED is cut over.
+app.get('/overlord-login', (req, res) => {
+  res.sendFile(path.resolve(__dirname, 'overlord-login.html'));
+});
+
 // Route /app to app.html (protected - client-side auth check)
 app.get('/app', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'app.html'));
+});
+
+// Route /music to music.html — Music 4 Robots 2 Dance 2 in-app player demo
+app.get('/music', (req, res) => {
+  res.sendFile(path.resolve(__dirname, 'music.html'));
 });
 
 // Route root to login page

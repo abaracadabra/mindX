@@ -60,6 +60,56 @@
       "method": "GET",
       "path": "/healthz",
       "description": "Verify connectivity and authentication against the configured WordPress site."
+    },
+    {
+      "name": "post.get",
+      "method": "GET",
+      "path": "/post/{post_id}",
+      "description": "Read a single post back from WordPress to CONFIRM a publication (authoritative status/link/slug). AuthorAgent calls this after publishing.",
+      "outputs": { "id": "integer", "status": "string", "link": "string", "slug": "string", "title": "object", "date_gmt": "string", "modified_gmt": "string", "excerpt": "object" }
+    },
+    {
+      "name": "catalogue",
+      "method": "GET",
+      "path": "/catalogue",
+      "description": "Complete index catalogue of ALL publishings on the target (rage.pythai.net): host, counts-by-status, newest-first post records. Optional ?statuses= comma list (default: all statuses incl. drafts/private, requires auth).",
+      "inputs": { "statuses": { "type": "string", "required": false, "description": "Comma list e.g. 'publish,draft'." } },
+      "outputs": { "host": "string", "generated_gmt": "string", "counts": "object", "posts": "array" }
+    },
+    {
+      "name": "llms.txt",
+      "method": "GET",
+      "path": "/llms.txt",
+      "description": "Render a deterministic llms.txt ingestion map from the live catalogue (published posts only), per llmstxt.org. The canonical /llms.txt on rage.pythai.net is served by the host plugin; this is the catalogue-derived candidate for diff/handoff.",
+      "outputs": { "_": "text/plain llms.txt body" }
+    },
+    {
+      "name": "llms.txt.report",
+      "method": "GET",
+      "path": "/llms.txt/report",
+      "description": "Full llms.txt interaction: catalogue + rendered candidate + fetch of the live /llms.txt + diff (missing_from_live / stale_in_live / in_sync).",
+      "outputs": { "host": "string", "catalogue": "object", "llms_txt_rendered": "string", "llms_txt_live": "object", "diff": "object" }
+    },
+    {
+      "name": "soundcloud.embed",
+      "method": "POST",
+      "path": "/soundcloud/embed",
+      "description": "Render SoundCloud audio embed HTML (player iframe + attribution div) for a track or playlist/set, per the SoundCloud WordPress embed flow (help.soundcloud.com/hc/en-us/articles/115003448667). Pure — no auth, no network. Supply one of: album (known key 'takit'|'music4robots2dance2'), playlist_id, track_id, or permalink. Returns the HTML blob ready to drop into post content; the music4robots2dance2 WP plugin and AuthorAgent both consume it.",
+      "inputs": {
+        "album": { "type": "string", "required": false, "description": "Known album key: 'takit' (takeitownit) or 'music4robots2dance2'." },
+        "playlist_id": { "type": "string", "required": false },
+        "track_id": { "type": "string", "required": false },
+        "permalink": { "type": "string", "required": false, "description": "Public soundcloud.com URL." },
+        "color": { "type": "string", "default": "ff5500" },
+        "height": { "type": "integer", "required": false },
+        "visual": { "type": "boolean", "default": false },
+        "auto_play": { "type": "boolean", "default": false },
+        "author_name": { "type": "string", "required": false },
+        "author_url": { "type": "string", "required": false },
+        "title": { "type": "string", "required": false },
+        "title_url": { "type": "string", "required": false }
+      },
+      "outputs": { "_": "text/html embed blob (iframe + attribution div)" }
     }
   ],
   "deployment": {

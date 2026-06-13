@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-06-05T11:26:09.471301",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_planning_start",
+    "data": {
+      "goal_id": "9145c9ea",
+      "goal_description": "Implement the following evolution: Install Ollama and pull required models for local AI inference [target: system, priority: 8, source: coordinator_auto_execute]"
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+    "run_id": "1b214c20"
+  },
+  "tags": [
+    "bdi_planning_start",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "531de17f7c889034"
+}

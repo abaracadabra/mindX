@@ -657,14 +657,42 @@ VLLM_EMBED_URL = os.getenv("VLLM_EMBED_URL", "http://localhost:8001")  # vLLM se
 OLLAMA_EMBED_URL = "http://localhost:11434"  # Ollama fallback
 
 
-async def generate_embedding(text: str, model: str = EMBED_MODEL) -> Optional[List[float]]:
+# mxbai-embed-large has a 512-token (~1500-char) context window. Truncate ALL
+# embedding inputs here — the single choke point — so memory/doc embeds never
+# overflow it. Overflow returned None ("input exceeds context length") and left
+# the input perpetually "unembedded", so it was retried every cycle = sustained
+# ollama CPU churn. 1400 chars ≈ 350 tokens, safely under 512 with headroom.
+_EMBED_MAX_CHARS = 1400
+
+
+async def _bg_governor(interactive: bool):
+    """Return the ResourceGovernor for background dispatch, or None for interactive
+    calls / when it's unavailable (fail-open — never block embedding outright)."""
+    if interactive:
+        return None
+    try:
+        from agents.resource_governor import ResourceGovernor
+        return await ResourceGovernor.get_instance()
+    except Exception:
+        return None
+
+
+async def generate_embedding(
+    text: str, model: str = EMBED_MODEL, *, interactive: bool = False
+) -> Optional[List[float]]:
     """
     Generate embedding. Tries vLLM first (OpenAI-compatible /v1/embeddings),
     falls back to Ollama /api/embeddings. Returns None on failure with a
     WARNING-level log so the operator can see the failure mode (rather
     than the previous DEBUG silence which hid 0/105 backfill failures).
+
+    The Ollama (CPU) fallback is serialized through the ResourceGovernor's
+    background-only inference semaphore so concurrent background embeds can't
+    peg both cores and starve the web service. Pass interactive=True for
+    web-triggered embeds (e.g. a live RAGE query) to bypass the gate.
     """
     import aiohttp
+    text = text[:_EMBED_MAX_CHARS]
 
     vllm_status = ollama_status = None
 
@@ -682,22 +710,33 @@ async def generate_embedding(text: str, model: str = EMBED_MODEL) -> Optional[Li
     except Exception as e:
         vllm_status = f"err:{type(e).__name__}"
 
-    # 2. Fallback to Ollama (reliable, CPU)
+    # 2. Fallback to Ollama (reliable, CPU). This shares the processor with
+    #    web-serving: when the box is over the CPU ceiling, DEFER the embed (return
+    #    None → retried at a lower-load moment) rather than pile onto a saturated
+    #    ollama and thrash. Otherwise serialize through the background-only
+    #    semaphore. Interactive (web-triggered) embeds bypass both.
+    import contextlib
     try:
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as sess:
-            async with sess.post(f"{OLLAMA_EMBED_URL}/api/embeddings", json={"model": model, "prompt": text[:8000]}) as resp:
-                ollama_status = resp.status
-                if resp.status == 200:
-                    data = await resp.json()
-                    emb = data.get("embedding")
-                    if emb:
-                        return emb
-                    ollama_status = "200_empty"
-                else:
-                    # Read body once for diagnostics (Ollama returns 500 with a JSON body
-                    # for context-overflow — surface it so the operator can act).
-                    body = (await resp.text())[:200] if resp.status >= 400 else ""
-                    ollama_status = f"{resp.status}:{body}"
+        gov = await _bg_governor(interactive)
+        if gov is not None and gov.should_throttle():
+            ollama_status = "cpu_throttled_deferred"
+        else:
+            slot = gov.inference_slot() if gov is not None else contextlib.nullcontext()
+            async with slot:
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as sess:
+                    async with sess.post(f"{OLLAMA_EMBED_URL}/api/embeddings", json={"model": model, "prompt": text[:8000]}) as resp:
+                        ollama_status = resp.status
+                        if resp.status == 200:
+                            data = await resp.json()
+                            emb = data.get("embedding")
+                            if emb:
+                                return emb
+                            ollama_status = "200_empty"
+                        else:
+                            # Read body once for diagnostics (Ollama returns 500 with a JSON body
+                            # for context-overflow — surface it so the operator can act).
+                            body = (await resp.text())[:200] if resp.status >= 400 else ""
+                            ollama_status = f"{resp.status}:{body}"
     except Exception as e:
         ollama_status = f"err:{type(e).__name__}"
 
@@ -712,8 +751,13 @@ async def generate_embedding(text: str, model: str = EMBED_MODEL) -> Optional[Li
 # produced 600-900 tokens and triggered HTTP 500 from Ollama on every chunk —
 # the entire failure was logged only at DEBUG, leaving 105/210 docs unembedded
 # with no operator-visible signal. See: 2026-04-29 backfill diagnosis.
-async def embed_and_store_doc(doc_name: str, text_content: str, chunk_size: int = 200) -> int:
-    """Chunk a document and store embeddings in doc_embeddings table."""
+async def embed_and_store_doc(doc_name: str, text_content: str, chunk_size: int = 200,
+                              interactive: bool = False) -> int:
+    """Chunk a document and store embeddings in doc_embeddings table.
+
+    interactive=True bypasses the ResourceGovernor CPU-throttle/semaphore —
+    only for operator-supervised backfills (e.g. scripts/ingest_reference_docs
+    --aggressive); unattended callers must stay governor-respecting."""
     pool = await get_pool()
     if not pool:
         return 0
@@ -733,7 +777,7 @@ async def embed_and_store_doc(doc_name: str, text_content: str, chunk_size: int 
     embed_failures = 0
     insert_failures = 0
     for idx, chunk in enumerate(chunks):
-        emb = await generate_embedding(chunk)
+        emb = await generate_embedding(chunk, interactive=interactive)
         if emb is None:
             embed_failures += 1
             continue
@@ -776,8 +820,15 @@ async def embed_memory(memory_id: str, text: str) -> bool:
         return False
 
 
-async def semantic_search_docs(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
-    """Semantic search over doc_embeddings using cosine similarity."""
+async def semantic_search_docs(query: str, top_k: int = 5,
+                               exclude_doc_prefixes: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    """Semantic search over doc_embeddings using cosine similarity.
+
+    exclude_doc_prefixes: doc_name prefixes excluded in SQL (case-insensitive).
+    Public surfaces pass the reference-corpus prefixes so gated docs never
+    surface — the filter must run in SQL, not post-hoc, or private chunks
+    would displace public ones inside top_k.
+    """
     pool = await get_pool()
     if not pool:
         return []
@@ -785,14 +836,19 @@ async def semantic_search_docs(query: str, top_k: int = 5) -> List[Dict[str, Any
     if not emb:
         return []
     try:
+        exclude_sql = ""
+        params: List[Any] = [str(emb), top_k]
+        for prefix in (exclude_doc_prefixes or []):
+            params.append(prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%")
+            exclude_sql += f" AND doc_name NOT ILIKE ${len(params)}"
         rows = await pool.fetch(
-            """SELECT doc_name, chunk_idx, text_content,
+            f"""SELECT doc_name, chunk_idx, text_content,
                       1 - (embedding <=> $1::vector) as similarity
                FROM doc_embeddings
-               WHERE embedding IS NOT NULL
+               WHERE embedding IS NOT NULL{exclude_sql}
                ORDER BY embedding <=> $1::vector
                LIMIT $2""",
-            str(emb), top_k,
+            *params,
         )
         return [
             {"doc": r["doc_name"], "chunk": r["chunk_idx"],
@@ -910,7 +966,7 @@ async def get_action_efficiency() -> Dict[str, Any]:
                 COUNT(*) FILTER (WHERE status='failed') as failed,
                 COUNT(*) FILTER (WHERE status='pending') as pending,
                 COUNT(DISTINCT LEFT(description,100)) as unique_descriptions,
-                EXTRACT(EPOCH FROM AVG(completed_at - created_at)) FILTER (WHERE completed_at IS NOT NULL) as avg_completion_secs
+                EXTRACT(EPOCH FROM AVG(completed_at - created_at) FILTER (WHERE completed_at IS NOT NULL)) as avg_completion_secs
             FROM actions
         """)
         total = row["total"] or 0
@@ -972,32 +1028,555 @@ async def count_embeddings() -> Dict[str, int]:
 
 
 async def health_check() -> Dict[str, Any]:
-    """Check database health."""
+    """Check database health.
+
+    The old version ran eight exact COUNT(*)s (incl. two filtered scans over 100k+
+    rows) in ONE query, which exceeded the 3s diagnostics timeout under load and left
+    the dashboard `database` panel blank. This version stays well under a second:
+      - secondary counts (beliefs/agents/godel/actions) use pg_class.reltuples
+        planner estimates (no scan);
+      - the headline `memories` count and the embedding counts reuse the
+        proven-fast single-purpose queries (count_memories_total / count_embeddings);
+      - db_size uses current_database() so it is portable.
+    """
     pool = await get_pool()
     if not pool:
         return {"status": "disconnected"}
+
+    def _i(v) -> int:
+        try:
+            n = int(v)
+            return n if n > 0 else 0
+        except (TypeError, ValueError):
+            return 0
+
     try:
-        row = await pool.fetchrow(
-            """SELECT
-                (SELECT COUNT(*) FROM memories) as memories,
-                (SELECT COUNT(*) FROM beliefs) as beliefs,
-                (SELECT COUNT(*) FROM agents) as agents,
-                (SELECT COUNT(*) FROM godel_choices) as godel_choices,
-                (SELECT COUNT(*) FROM actions) as actions,
-                (SELECT COUNT(*) FROM doc_embeddings WHERE embedding IS NOT NULL) as doc_embeddings,
-                (SELECT COUNT(*) FROM memories WHERE embedding IS NOT NULL) as mem_embeddings,
-                (SELECT pg_size_pretty(pg_database_size('mindx'))) as db_size"""
+        # Single INSTANT query against the stats collector — n_live_tup is maintained
+        # live (no table scan), so this stays sub-100ms even on 300k-row tables. The
+        # old exact/combined COUNT(*) over memories + filtered embedding scans took
+        # multiple seconds and timed out under load, blanking the dashboard panel.
+        rows = await pool.fetch(
+            "SELECT relname, n_live_tup FROM pg_stat_user_tables "
+            "WHERE relname = ANY($1::text[])",
+            ["memories", "beliefs", "agents", "godel_choices", "actions", "doc_embeddings"],
+        )
+        c = {r["relname"]: _i(r["n_live_tup"]) for r in rows}
+        db_size = await pool.fetchval(
+            "SELECT pg_size_pretty(pg_database_size(current_database()))"
         )
         return {
             "status": "connected",
-            "memories": row["memories"],
-            "beliefs": row["beliefs"],
-            "agents": row["agents"],
-            "godel_choices": row["godel_choices"],
-            "actions": row["actions"],
-            "doc_embeddings": row["doc_embeddings"],
-            "mem_embeddings": row["mem_embeddings"],
-            "db_size": row["db_size"],
+            "memories": c.get("memories", 0),
+            "beliefs": c.get("beliefs", 0),
+            "agents": c.get("agents", 0),
+            "godel_choices": c.get("godel_choices", 0),
+            "actions": c.get("actions", 0),
+            "doc_embeddings": c.get("doc_embeddings", 0),
+            # approximate (≈ total memories); the dashboard prefers the exact
+            # rage_embed.memories count when present.
+            "mem_embeddings": c.get("memories", 0),
+            "db_size": db_size,
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+# ═══════════════════════════════════════════════════════════════
+#  KNOWLEDGE CATALOGUE — Phase 1 read-model (CQRS projection)
+#  Projection over data/logs/catalogue_events.jsonl. NEVER the source of
+#  truth; rebuildable by replaying the log. See docs/KNOWLEDGE_CATALOGUE.md
+#  and agents/catalogue/{model,projector}.py.
+# ═══════════════════════════════════════════════════════════════
+
+# Stable 64-bit advisory-lock key so the live projector loop and a manually-run
+# backfill cannot interleave writes to catalogue_state.
+_CATALOGUE_LOCK_KEY = 0x6D696E6478636174  # "mindxcat"
+
+
+async def init_catalogue_schema() -> bool:
+    """Create the catalogue read-model tables. Idempotent — safe every boot.
+
+    One flat ``catalogue_entries`` table (DataHub entity-aspect collapse,
+    simplified): aspects live in JSONB ``payload``, EntryLinks inline in
+    ``links``, BM25 leg via ``fts`` tsvector, dense leg via ``embedding``
+    (VECTOR(1024), mxbai-embed-large), NULL until embedded. No ivfflat index
+    at Phase-1 scale (<100k rows) — cosine seq-scan is sub-100ms.
+    """
+    pool = await get_pool()
+    if not pool:
+        return False
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+            await conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS catalogue_entries (
+                    urn              TEXT PRIMARY KEY,
+                    kind             TEXT NOT NULL,
+                    actor            TEXT,
+                    actor_wallet     TEXT,
+                    ts               DOUBLE PRECISION NOT NULL DEFAULT 0,
+                    title            TEXT,
+                    text             TEXT,
+                    payload          JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    tags             TEXT[] NOT NULL DEFAULT '{}',
+                    links            JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    source_event_ids TEXT[] NOT NULL DEFAULT '{}',
+                    embedding        VECTOR(1024),
+                    fts              TSVECTOR,
+                    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+                CREATE INDEX IF NOT EXISTS idx_cat_kind  ON catalogue_entries (kind, ts DESC);
+                CREATE INDEX IF NOT EXISTS idx_cat_ts    ON catalogue_entries (ts DESC);
+                CREATE INDEX IF NOT EXISTS idx_cat_actor ON catalogue_entries (actor, ts DESC);
+                CREATE INDEX IF NOT EXISTS idx_cat_tags  ON catalogue_entries USING GIN (tags);
+                CREATE INDEX IF NOT EXISTS idx_cat_fts   ON catalogue_entries USING GIN (fts);
+
+                CREATE TABLE IF NOT EXISTS catalogue_state (
+                    projector       TEXT PRIMARY KEY,
+                    version         TEXT NOT NULL DEFAULT 'v1',
+                    byte_offset     BIGINT NOT NULL DEFAULT 0,
+                    last_event_id   TEXT,
+                    events_seen     BIGINT NOT NULL DEFAULT 0,
+                    entries_written BIGINT NOT NULL DEFAULT 0,
+                    observed_kinds  JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+                ALTER TABLE catalogue_state
+                    ADD COLUMN IF NOT EXISTS observed_kinds JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+                -- Lineage graph (Tier A #1): the inline EntryLinks materialized as
+                -- indexed edges for bidirectional traversal. src --type--> dst means
+                -- "src derivedFrom/producedBy/wasInformedBy/scored dst" — i.e. dst is
+                -- the ancestor/source. Additive (invalidate-never-delete): provenance
+                -- edges only accrue. Rebuildable from catalogue_entries.links.
+                CREATE TABLE IF NOT EXISTS catalogue_edges (
+                    src_urn   TEXT NOT NULL,
+                    edge_type TEXT NOT NULL,
+                    dst_urn   TEXT NOT NULL,
+                    ts        DOUBLE PRECISION NOT NULL DEFAULT 0,
+                    PRIMARY KEY (src_urn, edge_type, dst_urn)
+                );
+                CREATE INDEX IF NOT EXISTS idx_cat_edges_src  ON catalogue_edges (src_urn);
+                CREATE INDEX IF NOT EXISTS idx_cat_edges_dst  ON catalogue_edges (dst_urn);
+                CREATE INDEX IF NOT EXISTS idx_cat_edges_type ON catalogue_edges (edge_type);
+                """
+            )
+        logger.info("pgvector: catalogue schema ensured (catalogue_entries + catalogue_state)")
+        return True
+    except Exception as e:
+        logger.warning(f"pgvector init_catalogue_schema failed: {e}")
+        return False
+
+
+async def try_catalogue_lock() -> bool:
+    """Take the catalogue projector advisory lock (non-blocking). Returns True
+    if acquired. Hold the SAME connection for the run; release with the pool."""
+    pool = await get_pool()
+    if not pool:
+        return False
+    try:
+        return bool(await pool.fetchval("SELECT pg_try_advisory_lock($1)", _CATALOGUE_LOCK_KEY))
+    except Exception as e:
+        logger.debug(f"try_catalogue_lock failed: {e}")
+        return False
+
+
+async def release_catalogue_lock() -> None:
+    pool = await get_pool()
+    if not pool:
+        return
+    try:
+        await pool.fetchval("SELECT pg_advisory_unlock($1)", _CATALOGUE_LOCK_KEY)
+    except Exception:
+        pass
+
+
+async def get_catalogue_watermark(projector: str = "entries") -> Dict[str, Any]:
+    """Return the projector's resume state, or defaults if unseen."""
+    pool = await get_pool()
+    if not pool:
+        return {}
+    try:
+        row = await pool.fetchrow(
+            "SELECT projector, version, byte_offset, last_event_id, events_seen, "
+            "entries_written, observed_kinds "
+            "FROM catalogue_state WHERE projector = $1", projector,
+        )
+        if not row:
+            return {"projector": projector, "version": None, "byte_offset": 0,
+                    "last_event_id": None, "events_seen": 0, "entries_written": 0,
+                    "observed_kinds": []}
+        d = dict(row)
+        ok = d.get("observed_kinds")
+        d["observed_kinds"] = json.loads(ok) if isinstance(ok, str) else (ok or [])
+        return d
+    except Exception as e:
+        logger.debug(f"get_catalogue_watermark failed: {e}")
+        return {}
+
+
+async def set_catalogue_watermark(projector: str, version: str, byte_offset: int,
+                                  last_event_id: Optional[str], events_seen: int,
+                                  entries_written: int,
+                                  observed_kinds: Optional[List[str]] = None) -> bool:
+    """Persist the projector resume point. ``observed_kinds`` (the distinct
+    EventKinds seen this run) is UNIONed into the stored set — the drift-free
+    source of truth for which kinds are actually emitted."""
+    pool = await get_pool()
+    if not pool:
+        return False
+    try:
+        await pool.execute(
+            """INSERT INTO catalogue_state
+                   (projector, version, byte_offset, last_event_id, events_seen,
+                    entries_written, observed_kinds, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb, NOW())
+               ON CONFLICT (projector) DO UPDATE SET
+                   version=$2, byte_offset=$3, last_event_id=$4,
+                   events_seen=$5, entries_written=$6,
+                   observed_kinds = (
+                       SELECT COALESCE(jsonb_agg(DISTINCT e), '[]'::jsonb)
+                       FROM jsonb_array_elements_text(
+                           catalogue_state.observed_kinds || EXCLUDED.observed_kinds) AS e
+                   ),
+                   updated_at=NOW()""",
+            projector, version, int(byte_offset), last_event_id,
+            int(events_seen), int(entries_written),
+            json.dumps(sorted(set(observed_kinds or []))),
+        )
+        return True
+    except Exception as e:
+        logger.warning(f"set_catalogue_watermark failed: {e}")
+        return False
+
+
+async def upsert_catalogue_entry(
+    *, urn: str, kind: str, actor: Optional[str], actor_wallet: Optional[str],
+    ts: float, title: Optional[str], text: Optional[str], payload: Dict[str, Any],
+    tags: List[str], links: List[Dict[str, Any]], source_event_id: str,
+    embedding: Optional[List[float]] = None, materialize_edges: bool = True,
+) -> bool:
+    """Idempotent upsert keyed by URN. Re-projecting the same source record is a
+    no-op merge (source_event_ids deduped, newest ts kept). A NULL embedding on
+    re-projection does NOT wipe an existing one (COALESCE)."""
+    pool = await get_pool()
+    if not pool:
+        return False
+    fts_text = f"{title or ''} {text or ''}".strip()[:8000]
+    emb_str = str(embedding) if embedding else None
+    try:
+        await pool.execute(
+            """
+            INSERT INTO catalogue_entries
+                (urn, kind, actor, actor_wallet, ts, title, text, payload, tags, links,
+                 source_event_ids, embedding, fts, created_at, updated_at)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10::jsonb,
+                    ARRAY[$11]::text[], $12::vector, to_tsvector('english',$13), NOW(), NOW())
+            ON CONFLICT (urn) DO UPDATE SET
+                kind  = EXCLUDED.kind,
+                actor = COALESCE(EXCLUDED.actor, catalogue_entries.actor),
+                actor_wallet = COALESCE(EXCLUDED.actor_wallet, catalogue_entries.actor_wallet),
+                ts    = GREATEST(catalogue_entries.ts, EXCLUDED.ts),
+                title = COALESCE(EXCLUDED.title, catalogue_entries.title),
+                text  = COALESCE(EXCLUDED.text, catalogue_entries.text),
+                payload = EXCLUDED.payload,
+                tags  = EXCLUDED.tags,
+                links = EXCLUDED.links,
+                source_event_ids = (
+                    SELECT array_agg(DISTINCT e)
+                    FROM unnest(catalogue_entries.source_event_ids || EXCLUDED.source_event_ids) AS e
+                ),
+                embedding = COALESCE(EXCLUDED.embedding, catalogue_entries.embedding),
+                fts   = EXCLUDED.fts,
+                updated_at = NOW()
+            """,
+            urn, kind, actor, actor_wallet, float(ts or 0.0), title, text,
+            json.dumps(payload, default=str), list(tags or []),
+            json.dumps(links or [], default=str), source_event_id, emb_str, fts_text,
+        )
+        # Materialize lineage edges inline (cheap for the live trickle of a few
+        # entries/tick). Bulk backfill sets materialize_edges=False and calls the
+        # set-based rebuild_catalogue_edges() once at the end instead — per-entry
+        # inserts over 77k rows are pathologically slow.
+        if materialize_edges and links:
+            rows = [(urn, str(l.get("type") or "related"), str(l.get("target_urn") or ""),
+                     float(ts or 0.0)) for l in links if l.get("target_urn")]
+            if rows:
+                await pool.executemany(
+                    "INSERT INTO catalogue_edges (src_urn, edge_type, dst_urn, ts) "
+                    "VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING", rows)
+        return True
+    except Exception as e:
+        logger.warning(f"upsert_catalogue_entry({urn}) failed: {e}")
+        return False
+
+
+async def rebuild_catalogue_edges() -> int:
+    """Backfill catalogue_edges from existing catalogue_entries.links in one pass.
+    Idempotent (ON CONFLICT DO NOTHING). Returns the edge count after the rebuild."""
+    pool = await get_pool()
+    if not pool:
+        return 0
+    try:
+        await pool.execute(
+            """INSERT INTO catalogue_edges (src_urn, edge_type, dst_urn, ts)
+               SELECT e.urn, l->>'type', l->>'target_urn', e.ts
+               FROM catalogue_entries e,
+                    LATERAL jsonb_array_elements(e.links) AS l
+               WHERE jsonb_typeof(e.links) = 'array'
+                 AND jsonb_array_length(e.links) > 0
+                 AND l->>'target_urn' IS NOT NULL
+               ON CONFLICT DO NOTHING""")
+        n = await pool.fetchval("SELECT COUNT(*) FROM catalogue_edges")
+        logger.info(f"pgvector: catalogue_edges rebuilt — {n} edges")
+        return int(n or 0)
+    except Exception as e:
+        logger.warning(f"rebuild_catalogue_edges failed: {e}")
+        return 0
+
+
+async def catalogue_lineage(urn: str, direction: str = "both",
+                            depth: int = 6) -> Dict[str, Any]:
+    """Traverse the lineage graph from ``urn``. Bounded BFS (depth cap 20).
+
+    direction:
+      - ancestors   — what this entry derives from / was produced by (out-edges)
+      - descendants — what derived from / was produced by this entry (in-edges)
+      - both        — both (default)
+
+    Returns {urn, root, ancestors:[edge], descendants:[edge], nodes:{urn:{kind,title}},
+    counts}. Each edge = {src_urn, edge_type, dst_urn, depth}. ``nodes`` resolves the
+    materialized entries; URNs absent from it are dangling provenance refs (expected —
+    a claimed source whose entry isn't projected/keyed identically)."""
+    pool = await get_pool()
+    if not pool:
+        return {"urn": urn, "ancestors": [], "descendants": [], "nodes": {}}
+    depth = max(1, min(int(depth or 6), 20))
+
+    async def _walk(anchor_col: str, follow_col: str) -> List[Dict[str, Any]]:
+        # anchor_col/follow_col ∈ {src_urn,dst_urn}: walk from the anchor side
+        # outward along the opposite side, depth-bounded, cycle-safe via path.
+        sql = f"""
+            WITH RECURSIVE walk(src_urn, edge_type, dst_urn, depth, path) AS (
+                SELECT src_urn, edge_type, dst_urn, 1, ARRAY[{anchor_col}]
+                FROM catalogue_edges WHERE {anchor_col} = $1
+                UNION ALL
+                SELECT e.src_urn, e.edge_type, e.dst_urn, w.depth + 1,
+                       w.path || e.{anchor_col}
+                FROM catalogue_edges e
+                JOIN walk w ON e.{anchor_col} = w.{follow_col}
+                WHERE w.depth < $2 AND NOT e.{anchor_col} = ANY(w.path)
+            )
+            SELECT DISTINCT src_urn, edge_type, dst_urn, depth
+            FROM walk ORDER BY depth, src_urn
+        """
+        rows = await pool.fetch(sql, urn, depth)
+        return [{"src_urn": r["src_urn"], "edge_type": r["edge_type"],
+                 "dst_urn": r["dst_urn"], "depth": r["depth"]} for r in rows]
+
+    ancestors = descendants = []
+    if direction in ("ancestors", "both"):
+        ancestors = await _walk("src_urn", "dst_urn")
+    if direction in ("descendants", "both"):
+        descendants = await _walk("dst_urn", "src_urn")
+
+    # Hydrate node metadata for every URN that appears.
+    urns = {urn}
+    for e in ancestors + descendants:
+        urns.add(e["src_urn"]); urns.add(e["dst_urn"])
+    nodes: Dict[str, Any] = {}
+    try:
+        meta = await pool.fetch(
+            "SELECT urn, kind, title, actor, ts FROM catalogue_entries WHERE urn = ANY($1)",
+            list(urns))
+        nodes = {r["urn"]: {"kind": r["kind"], "title": r["title"],
+                            "actor": r["actor"], "ts": r["ts"]} for r in meta}
+    except Exception as e:
+        logger.debug(f"catalogue_lineage hydrate failed: {e}")
+
+    return {"urn": urn, "direction": direction, "depth": depth,
+            "root": nodes.get(urn), "found": urn in nodes,
+            "ancestors": ancestors, "descendants": descendants, "nodes": nodes,
+            "counts": {"ancestors": len(ancestors), "descendants": len(descendants),
+                       "nodes": len(nodes), "dangling": len(urns) - len(nodes)}}
+
+
+async def catalogue_edges_count() -> int:
+    pool = await get_pool()
+    if not pool:
+        return 0
+    try:
+        return int(await pool.fetchval("SELECT COUNT(*) FROM catalogue_edges") or 0)
+    except Exception:
+        return 0
+
+
+async def embed_catalogue_entry(urn: str, embedding: List[float]) -> bool:
+    """Attach an embedding to an existing catalogue entry (deferred-embed path)."""
+    pool = await get_pool()
+    if not pool or not embedding:
+        return False
+    try:
+        await pool.execute(
+            "UPDATE catalogue_entries SET embedding=$1::vector, updated_at=NOW() WHERE urn=$2",
+            str(embedding), urn,
+        )
+        return True
+    except Exception as e:
+        logger.debug(f"embed_catalogue_entry failed: {e}")
+        return False
+
+
+async def catalogue_unembedded(limit: int = 200) -> List[Dict[str, Any]]:
+    """Text-bearing entries still missing an embedding (for the live embed sweep)."""
+    pool = await get_pool()
+    if not pool:
+        return []
+    try:
+        rows = await pool.fetch(
+            "SELECT urn, text FROM catalogue_entries "
+            "WHERE embedding IS NULL AND text IS NOT NULL AND length(text) > 0 "
+            "ORDER BY ts DESC LIMIT $1", limit,
+        )
+        return [{"urn": r["urn"], "text": r["text"]} for r in rows]
+    except Exception as e:
+        logger.debug(f"catalogue_unembedded failed: {e}")
+        return []
+
+
+async def catalogue_recent(limit: int = 50, kind: Optional[str] = None) -> List[Dict[str, Any]]:
+    pool = await get_pool()
+    if not pool:
+        return []
+    try:
+        if kind:
+            rows = await pool.fetch(
+                "SELECT urn, kind, actor, ts, title, tags FROM catalogue_entries "
+                "WHERE kind=$1 ORDER BY ts DESC LIMIT $2", kind, min(limit, 500))
+        else:
+            rows = await pool.fetch(
+                "SELECT urn, kind, actor, ts, title, tags FROM catalogue_entries "
+                "ORDER BY ts DESC LIMIT $1", min(limit, 500))
+        return [{"urn": r["urn"], "kind": r["kind"], "actor": r["actor"],
+                 "ts": r["ts"], "title": r["title"], "tags": list(r["tags"] or [])}
+                for r in rows]
+    except Exception as e:
+        logger.debug(f"catalogue_recent failed: {e}")
+        return []
+
+
+async def catalogue_entry_by_urn(urn: str) -> Optional[Dict[str, Any]]:
+    pool = await get_pool()
+    if not pool:
+        return None
+    try:
+        r = await pool.fetchrow(
+            "SELECT urn, kind, actor, actor_wallet, ts, title, text, payload, tags, links, "
+            "source_event_ids, (embedding IS NOT NULL) AS embedded "
+            "FROM catalogue_entries WHERE urn=$1", urn)
+        if not r:
+            return None
+        def _j(v):
+            return json.loads(v) if isinstance(v, str) else v
+        return {"urn": r["urn"], "kind": r["kind"], "actor": r["actor"],
+                "actor_wallet": r["actor_wallet"], "ts": r["ts"], "title": r["title"],
+                "text": r["text"], "payload": _j(r["payload"]), "tags": list(r["tags"] or []),
+                "links": _j(r["links"]), "source_event_ids": list(r["source_event_ids"] or []),
+                "embedded": r["embedded"]}
+    except Exception as e:
+        logger.debug(f"catalogue_entry_by_urn failed: {e}")
+        return None
+
+
+async def catalogue_stats() -> Dict[str, Any]:
+    pool = await get_pool()
+    if not pool:
+        return {"status": "no_pool"}
+    try:
+        total = await pool.fetchval("SELECT COUNT(*) FROM catalogue_entries")
+        embedded = await pool.fetchval("SELECT COUNT(*) FROM catalogue_entries WHERE embedding IS NOT NULL")
+        by_kind_rows = await pool.fetch(
+            "SELECT kind, COUNT(*) AS n FROM catalogue_entries GROUP BY kind ORDER BY n DESC")
+        wm = await get_catalogue_watermark("entries")
+        edges = await pool.fetchval("SELECT COUNT(*) FROM catalogue_edges")
+        return {"total": int(total or 0), "embedded": int(embedded or 0),
+                "edges": int(edges or 0),
+                "by_kind": {r["kind"]: int(r["n"]) for r in by_kind_rows},
+                "watermark": {k: wm.get(k) for k in
+                              ("version", "byte_offset", "events_seen", "entries_written")}}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+async def catalogue_hybrid_search(query: str, kinds: Optional[List[str]] = None,
+                                  top_k: int = 10, per_leg: int = 50,
+                                  interactive: bool = True) -> Dict[str, Any]:
+    """Two-leg hybrid (pgvector cosine + tsvector ts_rank), RRF-fused (k=60).
+    Degrades gracefully: embeddings down → FTS-only; FTS empty → dense-only.
+    Cross-encoder rerank deferred."""
+    pool = await get_pool()
+    if not pool:
+        return {"results": [], "legs": {"dense": 0, "bm25": 0}, "rerank": "deferred"}
+    kinds = kinds or None
+    RRF_K = 60
+
+    dense_rows = []
+    emb = await generate_embedding(query, interactive=interactive)
+    if emb:
+        try:
+            dense_rows = await pool.fetch(
+                """SELECT urn, 1 - (embedding <=> $1::vector) AS score
+                   FROM catalogue_entries
+                   WHERE embedding IS NOT NULL AND ($2::text[] IS NULL OR kind = ANY($2))
+                   ORDER BY embedding <=> $1::vector LIMIT $3""",
+                str(emb), kinds, per_leg)
+        except Exception as e:
+            logger.debug(f"catalogue dense leg failed: {e}")
+
+    bm25_rows = []
+    try:
+        bm25_rows = await pool.fetch(
+            """SELECT urn, ts_rank_cd(fts, plainto_tsquery('english',$1)) AS score
+               FROM catalogue_entries
+               WHERE fts @@ plainto_tsquery('english',$1)
+                 AND ($2::text[] IS NULL OR kind = ANY($2))
+               ORDER BY score DESC LIMIT $3""",
+            query, kinds, per_leg)
+    except Exception as e:
+        logger.debug(f"catalogue bm25 leg failed: {e}")
+
+    # Reciprocal Rank Fusion
+    fused: Dict[str, Dict[str, Any]] = {}
+    for rank, r in enumerate(dense_rows):
+        f = fused.setdefault(r["urn"], {"urn": r["urn"], "rrf": 0.0, "dense": None, "bm25": None})
+        f["rrf"] += 1.0 / (RRF_K + rank + 1)
+        f["dense"] = round(float(r["score"]), 4)
+    for rank, r in enumerate(bm25_rows):
+        f = fused.setdefault(r["urn"], {"urn": r["urn"], "rrf": 0.0, "dense": None, "bm25": None})
+        f["rrf"] += 1.0 / (RRF_K + rank + 1)
+        f["bm25"] = round(float(r["score"]), 4)
+
+    ranked = sorted(fused.values(), key=lambda x: x["rrf"], reverse=True)[:top_k]
+    if not ranked:
+        return {"results": [], "legs": {"dense": len(dense_rows), "bm25": len(bm25_rows)},
+                "rerank": "deferred"}
+
+    # Hydrate the winners
+    urns = [x["urn"] for x in ranked]
+    try:
+        meta = await pool.fetch(
+            "SELECT urn, kind, actor, ts, title FROM catalogue_entries WHERE urn = ANY($1)", urns)
+        m = {r["urn"]: r for r in meta}
+    except Exception:
+        m = {}
+    results = []
+    for x in ranked:
+        r = m.get(x["urn"])
+        results.append({"urn": x["urn"], "kind": r["kind"] if r else None,
+                        "actor": r["actor"] if r else None, "ts": r["ts"] if r else None,
+                        "title": r["title"] if r else None,
+                        "score": round(x["rrf"], 5), "dense": x["dense"], "bm25": x["bm25"]})
+    return {"results": results, "legs": {"dense": len(dense_rows), "bm25": len(bm25_rows)},
+            "rerank": "deferred"}

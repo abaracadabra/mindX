@@ -1,0 +1,79 @@
+# DELTAVERSE Debt Inheritance Protocol — Mythril Configuration
+#
+# Mythril is a symbolic execution tool that analyzes compiled EVM bytecode
+# to find vulnerabilities by actually constructing input values that would
+# trigger bugs. It is slower than Slither but more rigorous for certain
+# classes of issues.
+#
+# Run with:
+#   myth analyze src/DebtInheritanceProtocol.sol --solc-json mythril.solc.json
+#
+# Or against the compiled artifacts via Foundry:
+#   forge build --extra-output evm.bytecode
+#   myth analyze out/DebtInheritanceProtocol.sol/DebtInheritanceProtocol.json
+
+# Analysis depth. Higher values find more bugs but take exponentially
+# longer to run. 12 is a reasonable default for contracts of this size.
+# The capstone contract's expressThesis function has 4 nested calls, so
+# a depth of 12 gives some headroom for Mythril to explore multi-step
+# interactions.
+max_depth: 12
+
+# Transaction count for symbolic exploration. Mythril will try sequences
+# of up to this many transactions to find states that violate assertions.
+# Three is enough to catch most reentrancy and state-corruption bugs
+# without blowing up the search space.
+transaction_count: 3
+
+# Per-contract analysis timeout in seconds. Without this, Mythril can
+# run indefinitely on complex contracts. 600 seconds (10 minutes) per
+# contract is a good balance for this codebase.
+execution_timeout: 600
+
+# Detection modules to enable. The default set is appropriate for
+# DeFi code. These cover: integer overflow, reentrancy, uninitialized
+# storage, delegate call issues, arbitrary jumps, and exception handling.
+modules:
+  - arbitrary_jump
+  - arbitrary_write
+  - delegatecall
+  - dependence_on_predictable_vars
+  - deprecated_ops
+  - ether_thief
+  - exceptions
+  - external_calls
+  - integer
+  - multiple_sends
+  - suicide
+  - state_change_external_calls
+  - unchecked_retval
+  - user_assertions
+
+# Output format. Markdown is human-readable for ad-hoc runs; JSON is
+# better for CI pipelines that parse results programmatically.
+output: markdown
+
+# Paths to analyze. We exclude OpenZeppelin dependencies because they
+# are independently audited and Mythril would flag false positives on
+# their battle-tested patterns.
+ignore_paths:
+  - lib/
+  - test/
+  - node_modules/
+
+# Solidity compiler configuration. Must match foundry.toml for bytecode
+# consistency.
+solc_version: 0.8.24
+optimizer_enabled: true
+optimizer_runs: 1000
+via_ir: true
+
+# Contracts to prioritize for analysis. Mythril will analyze all
+# contracts in the source by default, but we list the critical ones
+# here so that a time-budgeted run focuses on them first.
+priority_contracts:
+  - DebtInheritanceProtocol
+  - DeltaVerseDebtOracle
+  - PerpetualEngine
+  - CrossCollateralVault
+  - RWAToken

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<!--
+  admin.html — the bankon.eth admin deployment console.
+
+  Extends the canonical deployer protocol (index.html + deployer.js) with the
+  capabilities of the previous go-LIVE page, for the bankon.eth admin:
+    • PREVIEW — predicted CREATE2 addresses + per-stage gas before any broadcast
+      (keccak.js, admin-only; the core deploy path stays keccak-free).
+    • RETURN  — explorer tx/address links (deployer.js feedback).
+    • ADMIN   — post-deploy operations on the DEPLOYED contracts (set vault signer,
+      set price oracle / reputation gate, pause, webhook, buyback threshold).
+  LAUNCH/DEPLOY/ADMIN are gated to the wallet that controls bankon.eth on mainnet.
+  Always open source · client-side. (c) BANKON all rights preserved.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>BANKON — bankon.eth admin deployment console</title>
+<style>
+  :root { --bg:#070b07; --fg:#cfeccf; --dim:#7fae7f; --hl:#9fe6a0; --acc:#5a4a9a; --card:#0d140d; --line:#1c2a1c; --warn:#ffcf6b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.55 ui-monospace,Menlo,Consolas,monospace; }
+  a { color:var(--hl); } .wrap { max-width:1080px; margin:0 auto; padding:1.5rem 1.25rem 4rem; }
+  header { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; }
+  .brand { font-size:1.1rem; } .brand b { color:var(--hl); }
+  h2 { font-size:1.05rem; margin:1.8rem 0 .7rem; border-bottom:1px solid var(--line); padding-bottom:.35rem; }
+  .id { font-size:.85rem; } .id .dot { display:inline-block; width:.6em; height:.6em; border-radius:50%; background:#444; margin-right:.3em; } .id .dot.ok { background:#3a3; }
+  .id .warn { color:var(--warn); } .id .hl { color:var(--hl); }
+  button { font:inherit; cursor:pointer; border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:8px; padding:.5em .9em; }
+  button:hover { filter:brightness(1.25); } button:disabled { opacity:.4; cursor:not-allowed; }
+  .btn-connect { border-color:#2a6a2a; color:var(--hl); } .btn-go { border-color:var(--acc); color:#c9b6ff; }
+  .chainbar, .feebar { margin:.5rem 0; display:flex; gap:.4rem; flex-wrap:wrap; }
+  .feebar { font-size:.82rem; color:var(--dim); display:block; }
+  .chain { font-size:.82rem; } .chain.sel { border-color:var(--hl); color:var(--hl); } .chain .csym { opacity:.6; }
+  .chain .mainnet { color:#ff9a6b; } .chain .onchain { color:#3a3; }
+  .row { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin:.6rem 0; }
+  .bundle { border:1px solid var(--line); border-radius:10px; padding:.8rem; margin:.6rem 0; background:var(--card); }
+  .bhdr { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; } .bname { color:var(--hl); font-weight:bold; } .bmeta,.bpin { font-size:.78rem; opacity:.7; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:.6rem; margin-top:.6rem; }
+  .card { border:1px solid var(--line); border-radius:8px; padding:.6rem; } .card.armed { border-color:var(--hl); }
+  .ctitle { display:flex; align-items:center; gap:.35rem; flex-wrap:wrap; } .stage { background:#1c2a1c; border-radius:4px; padding:0 .4em; font-size:.78em; }
+  .csum { font-size:.8rem; color:var(--dim); margin:.25rem 0; } .deployed { font-size:.75rem; color:var(--hl); word-break:break-all; }
+  .vk { font-size:.72em; padding:.1em .4em; border-radius:4px; margin-left:.2em; border:1px solid var(--line); }
+  .vk-create2 { background:rgba(120,90,200,.22); color:#c9b6ff; border-color:#5a4a9a; }
+  .cactions { display:flex; gap:.35rem; margin-top:.4rem; }
+  #return { border:1px solid var(--line); border-radius:8px; padding:.6rem; min-height:3rem; max-height:32rem; overflow:auto; background:#060906; }
+  .rline { padding:.15rem 0; font-size:.82rem; border-bottom:1px solid #10180f; } .rline.ok b { color:var(--hl); } .rline.err { color:#ff8b6b; } .rline.warn { color:var(--warn); } .rline.dim { opacity:.6; }
+  .hl { color:var(--hl); }
+  table.plan { width:100%; border-collapse:collapse; font-size:.78rem; margin:.3rem 0; } table.plan th,table.plan td { border:1px solid var(--line); padding:.25em .4em; text-align:left; } table.plan b { color:var(--hl); }
+  .action { border:1px solid var(--line); border-radius:8px; padding:.7rem; background:var(--card); }
+  .action h4 { margin:0 0 .2rem; color:var(--hl); font-size:.92rem; } .action p { margin:0 0 .5rem; font-size:.78rem; color:var(--dim); }
+  .action input { width:100%; margin:.2rem 0; padding:.4em; background:#060906; border:1px solid var(--line); color:var(--fg); border-radius:5px; font:inherit; font-size:.8rem; }
+  .action .tgt { font-size:.72rem; color:var(--dim); }
+  footer { margin-top:2.5rem; color:var(--dim); font-size:.8rem; border-top:1px solid var(--line); padding-top:.8rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="brand">BANKON <b>·eth admin</b> · deployment console</span>
+    <div class="row">
+      <span class="id" id="identity"><span class="dot"></span> not connected</span>
+      <button class="btn-connect" onclick="Deployer.connect()">Connect bankon.eth wallet</button>
+    </div>
+  </header>
+
+  <h2>Chain — isolation target (ALL cycles every chain)</h2>
+  <div class="chainbar" id="chains"></div>
+  <div class="feebar" id="feebar"></div>
+
+  <h2>Solution — DEPLOY (arm) → PREVIEW (plan) → LAUNCH (fire) → RETURN</h2>
+  <div class="row">
+    <button class="btn-go" onclick="Deployer.preview()" title="predicted addresses + gas, no broadcast">PREVIEW PLAN</button>
+    <button onclick="Deployer.exportDeployments()">EXPORT deployments JSON</button>
+    <button onclick="renderRegistry()">refresh registry</button>
+  </div>
+  <div id="contracts"><div class="dim">connect a wallet to load the solution</div></div>
+
+  <h2>Return — blockchain transactions (explorer links)</h2>
+  <div id="return"><div class="rline dim">deploy / preview / admin output appears here</div></div>
+
+  <h2>Admin operations — on the deployed contracts (bankon.eth only)</h2>
+  <div class="grid" id="admin"><div class="dim">loading admin actions…</div></div>
+
+  <h2>Deployed registry — this chain (localStorage)</h2>
+  <div id="registry"><div class="dim">connect + select a chain, then “refresh registry”.</div></div>
+
+  <footer>
+    bankon.eth is the only admin · keys never leave your device · CREATE2 = same address every chain ·
+    <a href="../packages/web/bankon.html">bankon.pythai.net</a> · <a href="index.html">basic deployer</a> ·
+    &copy; BANKON all rights preserved
+  </footer>
+</div>
+
+<!-- keccak FIRST (admin-only address prediction), then the shared engine. -->
+<script src="keccak.js"></script>
+<script src="deployer.js"></script>
+<script>
+  // ── admin operations panel (data-driven from admin-actions.json) ──
+  async function renderAdmin() {
+    const el = document.getElementById("admin");
+    let actions = (window.Deployer && Deployer.state.adminActions) || [];
+    if (!actions.length) { try { actions = await (await fetch("admin-actions.json")).json(); } catch (e) { actions = []; } }
+    if (!actions.length) { el.innerHTML = '<div class="dim">no admin actions found (run export-abis.mjs).</div>'; return; }
+    el.innerHTML = actions.map((a) => {
+      const inputs = a.args.filter((g) => g.source === "input").map((g) =>
+        `<input id="adm_${a.id}_${g.name}" placeholder="${g.placeholder || (g.name + " (" + g.type + ")")}"/>`).join("");
+      return `<div class="action">
+        <h4>${a.label}</h4><p>${a.blurb || ""}</p>
+        <div class="tgt">${a.contract}.${a.fn}()</div>
+        ${inputs}
+        <input id="adm_${a.id}_target" placeholder="target address (blank = use deployed ${a.contract})"/>
+        <button onclick="runAdmin('${a.id}')" style="margin-top:.4rem">RUN</button>
+      </div>`;
+    }).join("");
+  }
+  function runAdmin(id) {
+    const a = (Deployer.state.adminActions || []).find((x) => x.id === id); if (!a) return;
+    const inputs = {};
+    for (const g of a.args) if (g.source === "input") inputs[g.name] = (document.getElementById(`adm_${id}_${g.name}`).value || "").trim();
+    const target = (document.getElementById(`adm_${id}_target`).value || "").trim() || undefined;
+    Deployer.runAdminAction(id, inputs, target);
+  }
+  function renderRegistry() {
+    const el = document.getElementById("registry");
+    const cid = Deployer.state.chain && Deployer.state.chain.chainId;
+    if (!cid) { el.innerHTML = '<div class="dim">select a single chain.</div>'; return; }
+    let store = {}; try { store = JSON.parse(localStorage.getItem(`bankon.deploy.${cid}`) || "{}"); } catch (e) {}
+    const rows = Object.entries(store);
+    el.innerHTML = rows.length
+      ? `<table class="plan"><tr><th>contract</th><th>address</th></tr>${rows.map(([k, v]) => `<tr><td>${k}</td><td><b>${v}</b></td></tr>`).join("")}</table>`
+      : `<div class="dim">no deployments recorded on chain ${cid} yet.</div>`;
+  }
+  document.addEventListener("DOMContentLoaded", () => setTimeout(renderAdmin, 300));
+</script>
+</body>
+</html>

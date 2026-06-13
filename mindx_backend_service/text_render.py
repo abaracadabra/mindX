@@ -257,6 +257,24 @@ def render_storage_recent(d: dict) -> str:
     )
 
 
+def render_memory_recent(d: dict) -> str:
+    """Logs → Memories — recent memory.write events from the catalogue."""
+    rows = d.get("events") or []
+    if not rows:
+        return "(no memory writes in the catalogue yet)\n"
+    IMP = {1: "CRIT", 2: "HIGH", 3: "MED ", 4: "LOW "}
+    out = [f"logs → memories  ·  {len(rows)} most recent  ·  source: {d.get('source','catalogue')}"]
+    out.append("─" * 80)
+    for e in rows:
+        ts = human_rel_ts(e.get("ts"))
+        actor = (e.get("actor") or "?")[:32]
+        mtype = (e.get("memory_type") or "memory")[:18]
+        imp = IMP.get(e.get("importance"), str(e.get("importance") or "?"))
+        src = (e.get("source_log") or "").split("/")[-1][:36]
+        out.append(f"  {ts:>8}  {imp}  {actor:<32}  {mtype:<18}  {src}")
+    return "\n".join(out) + "\n"
+
+
 def render_dreams_recent(d: dict) -> str:
     rows = d.get("dreams") or []
     return render_table(
@@ -822,6 +840,7 @@ def render_improvement_summary(d: dict) -> str:
             f"total={human_count(b.get('total', 0))} "
             f"ok={human_count(b.get('succeeded', 0))} "
             f"fail={human_count(b.get('failed', 0))} "
+            f"incomplete={human_count(b.get('incomplete', 0))} "
             f"running={human_count(b.get('running', 0))}"
         )
     out = render_kv(
@@ -1079,6 +1098,162 @@ def render_cost_recent(d: dict) -> str:
     )
 
 
+# ------------------------------------------------------------------------
+# Phase 1.2 — /insight/host/* renderers (netdata-primary, psutil fallback).
+# ------------------------------------------------------------------------
+
+def render_host_cpu(d: dict) -> str:
+    if d.get("source") == "psutil_fallback":
+        return render_kv({
+            "source":              d["source"],
+            "netdata":             d.get("netdata_error", "?"),
+            "cpu_percent":         f"{d.get('cpu_percent', 0):.1f}%",
+            "per_core":            ", ".join(f"{x:.0f}%" for x in (d.get("cpu_percent_per_core") or [])),
+            "load_1m_5m_15m":      ", ".join(f"{x:.2f}" for x in (d.get("load_avg") or [])),
+        })
+    labels = d.get("labels") or []
+    data = d.get("data") or []
+    n = len(data)
+    if not data:
+        return f"source: netdata\nchart : system.cpu\nno data\n"
+    latest = data[-1] if data else []
+    return render_kv({
+        "source":         d.get("source", "netdata"),
+        "chart":          d.get("chart", "system.cpu"),
+        "samples":        n,
+        "labels":         ", ".join(labels[1:]) if len(labels) > 1 else "?",
+        "latest_at_t":    latest[0] if latest else "?",
+        "latest_values":  ", ".join(f"{v:.1f}" for v in latest[1:]) if len(latest) > 1 else "?",
+        "interval_s":     d.get("view_update_every", "?"),
+    })
+
+
+def render_host_memory(d: dict) -> str:
+    if d.get("source") == "psutil_fallback":
+        return render_kv({
+            "source":          d["source"],
+            "netdata":         d.get("netdata_error", "?"),
+            "ram_total":       f"{d.get('ram_total_mb', 0):.0f} MB",
+            "ram_used":        f"{d.get('ram_used_mb', 0):.0f} MB  ({d.get('ram_percent', 0):.0f}%)",
+            "ram_available":   f"{d.get('ram_available_mb', 0):.0f} MB",
+            "swap_total":      f"{d.get('swap_total_mb', 0):.0f} MB",
+            "swap_used":       f"{d.get('swap_used_mb', 0):.0f} MB  ({d.get('swap_percent', 0):.0f}%)",
+        })
+    ram = d.get("ram", {})
+    swap = d.get("swap", {})
+    ram_data = ram.get("data") or []
+    swap_data = swap.get("data") or []
+    out = ["source: netdata", ""]
+    if ram_data:
+        latest = ram_data[-1]
+        out.append("RAM (latest):")
+        for i, lbl in enumerate(ram.get("labels", [])[1:], start=1):
+            if i < len(latest):
+                out.append(f"  {lbl:15s}  {latest[i]:.0f}")
+    out.append("")
+    if swap_data:
+        latest = swap_data[-1]
+        out.append("SWAP (latest):")
+        for i, lbl in enumerate(swap.get("labels", [])[1:], start=1):
+            if i < len(latest):
+                out.append(f"  {lbl:15s}  {latest[i]:.0f}")
+    return "\n".join(out) + "\n"
+
+
+def render_host_disk(d: dict) -> str:
+    r = d.get("root", {})
+    return render_kv({
+        "root_total":         f"{r.get('total_gb', 0):.1f} GB",
+        "root_used":          f"{r.get('used_gb', 0):.1f} GB  ({r.get('percent', 0):.0f}%)",
+        "root_free":          f"{r.get('free_gb', 0):.1f} GB",
+        "prom_tsdb_size":     f"{d.get('prometheus_data_mb', 0):.1f} MB",
+        "prom_tsdb_cap":      f"{d.get('prometheus_data_cap_gb', 4):.1f} GB  (Phase 1.1 retention)",
+    })
+
+
+def render_narrative_recent(d: dict) -> str:
+    """※-prefixed plaintext recap stream (top 10) for ?h=true clients."""
+    import time as _t
+    items = d.get("recaps") or []
+    if not items:
+        return "  no narrative recaps yet\n"
+    now = _t.time()
+    lines: list[str] = []
+    for r in items[:10]:
+        ts = float(r.get("ts") or 0)
+        delta = max(0.0, now - ts)
+        if delta < 60:
+            ago = f"{int(delta)}s ago"
+        elif delta < 3600:
+            ago = f"{int(delta/60)}m ago"
+        elif delta < 86400:
+            ago = f"{int(delta/3600)}h ago"
+        else:
+            ago = f"{int(delta/86400)}d ago"
+        src = (r.get("source") or "?")[:9].ljust(9)
+        author = (r.get("author") or "?")[:24]
+        body = (r.get("body") or "").strip().split("\n")[0][:200]
+        lines.append(f"  ※ {ago:>10}  [{src}] {author}")
+        lines.append(f"      {body}")
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def render_host_htop(d: dict) -> str:
+    """htop-header-style plaintext for ?h=true clients."""
+    cores = d.get("cpu_percent_per_core") or []
+    ram = d.get("ram", {})
+    sw = d.get("swap", {})
+    stat = d.get("task_statuses", {})
+    width = 30
+
+    def bar(pct: float) -> str:
+        pct = max(0.0, min(100.0, float(pct or 0)))
+        n = int((pct / 100) * width)
+        return "[" + "|" * n + " " * (width - n) + "]"
+
+    lines: list[str] = []
+    for i, c in enumerate(cores, start=1):
+        lines.append(f"  {i:>2}  {bar(c)}  {c:5.1f}%")
+    used = ram.get("used_mb", 0) or 0
+    total = ram.get("total_mb", 0) or 1
+    lines.append(f"  Mem  {bar((used/total)*100)}  {used/1024:.1f}G / {total/1024:.1f}G")
+    su = sw.get("used_mb", 0) or 0
+    st = sw.get("total_mb", 0) or 1
+    lines.append(f"  Swp  {bar((su/st)*100)}  {su/1024:.2f}G / {st/1024:.1f}G")
+    lines.append("")
+    lines.append(f"  Tasks      {d.get('task_count', 0)}, {d.get('threads_total', 0)} thr ({d.get('kthreads', 0)} kthr); {stat.get('running', 0)} running")
+    la = d.get("load_avg") or [0, 0, 0]
+    lines.append(f"  Load avg   {la[0]:.2f}  {la[1]:.2f}  {la[2]:.2f}")
+    up_s = int(d.get("uptime_seconds") or 0)
+    days, rem = divmod(up_s, 86400)
+    hrs, rem = divmod(rem, 3600)
+    mins, secs = divmod(rem, 60)
+    up_str = f"{days}d {hrs:02d}:{mins:02d}:{secs:02d}" if days else f"{hrs:02d}:{mins:02d}:{secs:02d}"
+    lines.append(f"  Uptime     {up_str}")
+    return "\n".join(lines) + "\n"
+
+
+def render_host_probes(d: dict) -> str:
+    if d.get("prom") == "off":
+        return render_kv({
+            "prom":   "off (Phase 1.2 default)",
+            "hint":   d.get("hint", "bash scripts/prom_on.sh"),
+            "error":  d.get("error", "?"),
+        })
+    targets = d.get("targets") or []
+    lines = [
+        f"prom        : on",
+        f"target_count: {d.get('target_count', 0)}",
+        f"up_count    : {d.get('up_count', 0)}",
+        "",
+    ]
+    for t in targets:
+        state = "UP  " if t.get("up") else "DOWN"
+        lines.append(f"  {state}  {t.get('instance', '?')}")
+    return "\n".join(lines) + "\n"
+
+
 def render_eval_health(d: dict) -> str:
     in_p = d.get("in_process") or {}
     on_d = d.get("on_disk") or {}
@@ -1228,12 +1403,231 @@ def render_agentic_activity(d: dict) -> str:
     )
 
 
+# ── Knowledge Catalogue (Phase 1 read-model) renderers ──
+
+def render_catalogue_recent(d: dict) -> str:
+    rows = d.get("entries") or []
+    if not rows:
+        return f"(no catalogue entries for kind={d.get('kind_filter','all')})\n"
+    head = f"catalogue · {d.get('count',0)} entries · kind={d.get('kind_filter','all')}\n\n"
+    return head + render_table(
+        rows,
+        [
+            ("when",  "ts",    human_rel_ts),
+            ("kind",  "kind",  None),
+            ("title", "title", lambda v: (v or "")[:54]),
+            ("actor", "actor", lambda v: human_hash(v, 18)),
+            ("tags",  "tags",  lambda v: ",".join(v[:3]) if isinstance(v, list) else ""),
+        ],
+        max_col=58,
+    )
+
+
+def render_catalogue_search(d: dict) -> str:
+    rows = d.get("results") or []
+    legs = d.get("legs") or {}
+    head = (f"query: {d.get('query','')}\n"
+            f"{d.get('count',0)} results · legs dense={legs.get('dense',0)} "
+            f"bm25={legs.get('bm25',0)} · rerank={d.get('rerank','deferred')}\n\n")
+    if not rows:
+        return head + "(no results)\n"
+    return head + render_table(
+        rows,
+        [
+            ("score", "score", lambda v: f"{float(v):.4f}" if v is not None else "—"),
+            ("d",     "dense", lambda v: f"{float(v):.2f}" if v is not None else "·"),
+            ("bm25",  "bm25",  lambda v: f"{float(v):.2f}" if v is not None else "·"),
+            ("kind",  "kind",  None),
+            ("title", "title", lambda v: (v or "")[:50]),
+        ],
+        max_col=54,
+    )
+
+
+def render_catalogue_entry(d: dict) -> str:
+    if not d.get("found", True) or d.get("urn") is None:
+        return f"entry not found: {d.get('urn','?')}\n"
+    out = render_kv(
+        {
+            "urn": d.get("urn"), "kind": d.get("kind"), "actor": d.get("actor"),
+            "when": human_ts_with_rel(d.get("ts")), "embedded": d.get("embedded"),
+            "title": d.get("title"),
+        },
+        {"actor": lambda v: human_hash(v, 30)},
+    )
+    text = (d.get("text") or "").strip()
+    if text:
+        out += "\n\ntext:\n  " + text[:600].replace("\n", "\n  ")
+    links = d.get("links") or []
+    if links:
+        out += "\n\nlinks:\n" + "\n".join(
+            f"  {l.get('type','?')} → {l.get('target_urn','?')}" for l in links[:12])
+    sids = d.get("source_event_ids") or []
+    if sids:
+        out += f"\n\nsource events: {len(sids)} ({', '.join(sids[:3])}…)"
+    return out + "\n"
+
+
+def render_catalogue_stats(d: dict) -> str:
+    if d.get("status") in ("no_pool", "error"):
+        return f"catalogue: {d.get('status')} {d.get('error','')}\n"
+    wm = d.get("watermark") or {}
+    out = render_kv({
+        "total entries": human_count(d.get("total", 0)),
+        "embedded": f"{human_count(d.get('embedded',0))} "
+                    f"({100*d.get('embedded',0)//max(d.get('total',1),1)}%)",
+        "lineage edges": human_count(d.get("edges", 0)),
+        "wm offset": human_bytes(wm.get("byte_offset", 0)),
+        "events seen": human_count(wm.get("events_seen", 0)),
+        "version": wm.get("version"),
+    })
+    bk = d.get("by_kind") or {}
+    if bk:
+        out += "\n\nby kind:\n" + render_table(
+            [{"kind": k, "n": n} for k, n in bk.items()],
+            [("kind", "kind", None), ("count", "n", human_count)])
+    return out
+
+
+def render_catalogue_kinds(d: dict) -> str:
+    emitted = set(d.get("emitted_event_kinds") or d.get("active_event_kinds") or [])
+    mapping = d.get("mapping") or {}
+    out = (f"entry kinds ({len(d.get('entry_kinds',[]))}): "
+           f"{', '.join(d.get('entry_kinds', []))}\n\n"
+           f"event kinds ({len(d.get('event_kinds',[]))}, "
+           f"{len(emitted)} emitted in stream):\n\n")
+    return out + render_table(
+        [{"event": k, "entry": mapping.get(k, "?"),
+          "emitted": "•" if k in emitted else ""} for k in d.get("event_kinds", [])],
+        [("event_kind", "event", None), ("→ entry", "entry", None), ("emitted", "emitted", None)])
+
+
+def _lineage_rows(edges: list, nodes: dict, arrow: str, node_key: str) -> str:
+    # node_key = which endpoint of the edge is the "other" node to show:
+    #   ancestors walk out-edges (root=src) → show dst; descendants walk in-edges
+    #   (root=dst) → show src.
+    if not edges:
+        return "  (none)\n"
+    out = []
+    for e in edges:
+        urn = e.get(node_key, "")
+        nd = nodes.get(urn) or {}
+        label = (nd.get("title") or urn)[:48]
+        kind = nd.get("kind") or ("?" if urn not in nodes else "")
+        dangling = "" if urn in nodes else "  (dangling)"
+        out.append(f"  {'  ' * (e.get('depth',1)-1)}{arrow} [{e.get('edge_type','')}] "
+                   f"{kind}: {label}{dangling}")
+    return "\n".join(out) + "\n"
+
+
+def render_catalogue_lineage(d: dict) -> str:
+    urn = d.get("urn", "?")
+    root = d.get("root") or {}
+    c = d.get("counts") or {}
+    head = (f"lineage · {urn}\n"
+            f"root: {('%s — %s' % (root.get('kind'), (root.get('title') or '')[:50])) if root else '(not materialized)'}\n"
+            f"dir={d.get('direction')} depth={d.get('depth')} · "
+            f"{c.get('ancestors',0)} ancestors, {c.get('descendants',0)} descendants, "
+            f"{c.get('dangling',0)} dangling refs\n")
+    nodes = d.get("nodes") or {}
+    out = head
+    if d.get("direction") in ("ancestors", "both"):
+        out += "\nancestors (what this derives from / was produced by):\n"
+        out += _lineage_rows(d.get("ancestors") or [], nodes, "↑", "dst_urn")
+    if d.get("direction") in ("descendants", "both"):
+        out += "\ndescendants (what derived from / was produced by this):\n"
+        out += _lineage_rows(d.get("descendants") or [], nodes, "↓", "src_urn")
+    return out
+
+
+def render_self_diagnostic(d: dict) -> str:
+    """Plain-text form of /insight/self/diagnostic — the honest 'what is mindX
+    actually improving?' answer. Verdict first; substance before counters."""
+    v = d.get("verdict") or {}
+    out = "mindX self-diagnostic — what is actually being improved\n"
+    out += "─" * 60 + "\n"
+    out += (v.get("line") or "verdict unavailable") + "\n"
+    for ev in v.get("evidence") or []:
+        out += f"  · {ev}\n"
+
+    rc = d.get("real_changes") or {}
+    out += "\nreal changes (substance)\n"
+    for m in rc.get("milestones") or []:
+        out += f"  [milestone] {m.get('ts','?')}  {m.get('sha','')}  {m.get('subject','')}\n"
+    for p in rc.get("publications") or []:
+        out += f"  [published] {human_rel_ts(p.get('ts'))}  {p.get('note','')}\n"
+    for a in rc.get("adoptions") or []:
+        out += f"  [adopted]   {human_rel_ts(a.get('ts'))}  {a.get('package','?')} -> {a.get('decision','?')}\n"
+    for c in rc.get("code_change_events") or []:
+        out += f"  [{c.get('kind','?')}] {human_rel_ts(c.get('ts'))}  {c.get('detail','')}\n"
+    sia = rc.get("sia_diffs") or {}
+    out += f"  autonomous code diffs: {sia.get('count', 0)}"
+    out += f" — {sia['note']}\n" if sia.get("note") else "\n"
+
+    cons = d.get("consolidation") or {}
+    if cons:
+        out += "\nconsolidation (machine dreaming)\n"
+        out += render_kv({
+            "last_dream":    cons.get("last_dream_ts"),
+            "agents":        cons.get("agents_dreamed"),
+            "insights":      cons.get("insights"),
+            "ltm_promotions": cons.get("ltm_promotions"),
+            "cadence_ok":    cons.get("cadence_ok"),
+        })
+
+    ph = d.get("process_health") or {}
+    c7 = ph.get("campaigns_7d") or {}
+    bl = ph.get("backlog") or {}
+    out += "\nprocess health (truth, not theater)\n"
+    out += render_kv({
+        "campaigns_7d": (
+            f"total={c7.get('total',0)} ok={c7.get('succeeded',0)} fail={c7.get('failed',0)} "
+            f"timed_out={c7.get('timed_out',0)} max_cycles={c7.get('max_cycles_reached',0)} "
+            f"errored={c7.get('errored',0)}"
+        ),
+        "backlog": (
+            f"{human_count(bl.get('size',0))} items / {bl.get('unique',0)} unique "
+            f"(dup_factor {bl.get('dup_factor','?')}x"
+            + (", dedup live)" if bl.get("dedup_live") else ")")
+        ),
+        "stuck_loops": (ph.get("stuck_loops") or {}).get("count", 0),
+        "eval_gate": "open" if (ph.get("eval_gate") or {}).get("gate_open") else "closed/unknown",
+    })
+    for shape in ph.get("top_failure_shapes") or []:
+        out += f"  shape ×{shape.get('count',0)}: {shape.get('shape','')}\n"
+    for loop in ph.get("looped_directives") or []:
+        out += f"  LOOP ×{loop.get('count',0)}: {loop.get('directive','')}\n"
+        out += f"       diagnosis: {loop.get('diagnosis','')}\n"
+
+    si = d.get("self_interaction") or {}
+    edges = (si.get("matrix") or {}).get("edges") or []
+    if edges:
+        out += "\nself-interaction (who talks to whom)\n"
+        for e in edges[:12]:
+            out += f"  {e.get('from','?')} -> {e.get('to','?')}  ×{e.get('count',0)}  ({e.get('type','')})\n"
+    hb = si.get("heartbeat_sample") or []
+    if hb:
+        out += "\nheartbeat introspection (latest thoughts)\n"
+        for h in hb:
+            out += f"  [{h.get('model','?')}] {h.get('thought','')}\n"
+    out += "\nsee also: / (landing diagnostic) · /feedback.html · docs/SYSTEM_REVIEW_2026_06.md\n"
+    return out
+
+
 RENDERERS: dict[str, Callable[[dict], str]] = {
+    "/insight/self/diagnostic":     render_self_diagnostic,
+    "/insight/catalogue/recent":    render_catalogue_recent,
+    "/insight/catalogue/search":    render_catalogue_search,
+    "/insight/catalogue/entry":     render_catalogue_entry,
+    "/insight/catalogue/stats":     render_catalogue_stats,
+    "/insight/catalogue/kinds":     render_catalogue_kinds,
+    "/insight/catalogue/lineage":   render_catalogue_lineage,
     "/insight/storage/status":      render_storage_status,
     "/insight/storage/recent":      render_storage_recent,
     "/insight/cost/summary":        render_cost_summary,
     "/insight/cost/recent":         render_cost_recent,
     "/insight/dreams/recent":       render_dreams_recent,
+    "/insight/memory/recent":       render_memory_recent,
     "/insight/bdi/recent":          render_bdi_recent,
     "/insight/cognition":           render_cognition,
     "/insight/system":              render_system,
@@ -1254,12 +1648,17 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/stuck_loops":         render_stuck_loops,
     "/storage/eligible":            render_eligible,
     "/storage/anchor/health":       render_anchor_health,
+    "/insight/host/cpu":            render_host_cpu,
+    "/insight/host/memory":         render_host_memory,
+    "/insight/host/disk":           render_host_disk,
+    "/insight/host/probes":         render_host_probes,
+    "/insight/host/htop":           render_host_htop,
+    "/insight/narrative/recent":    render_narrative_recent,
     "/insight/eval/health":         render_eval_health,
     "/insight/publications/recent": render_publications_recent,
     "/insight/publications/summary": render_publications_summary,
     "/insight/publications/audit":  render_publications_audit,
     "/insight/agentic/activity":    render_agentic_activity,
-    "/insight/memory/recent":       render_memory_recent,
 }
 
 

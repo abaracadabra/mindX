@@ -1,0 +1,128 @@
+{
+  "timestamp": "2026-06-05T04:48:04.562405",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "startup_agent",
+  "content": {
+    "process_name": "system_startup_complete",
+    "data": {
+      "timestamp": 1780660084.5622962,
+      "duration": 63.73968839645386,
+      "steps": [
+        "load_registry",
+        "initialize_always_on",
+        "coordinate_sequence"
+      ],
+      "agents_initialized": [
+        "coordinator_agent",
+        "mindxagent",
+        "memory_agent"
+      ],
+      "sequence": [
+        {
+          "step": 1,
+          "name": "load_registry",
+          "status": "completed"
+        },
+        {
+          "step": 2,
+          "name": "initialize_core_agents",
+          "status": "completed"
+        },
+        {
+          "step": 3,
+          "name": "initialize_coordinator",
+          "status": "completed"
+        },
+        {
+          "step": 4,
+          "name": "initialize_memory",
+          "status": "completed"
+        },
+        {
+          "step": 5,
+          "name": "connect_ollama",
+          "status": "skipped"
+        },
+        {
+          "step": 6,
+          "name": "ready",
+          "status": "completed"
+        }
+      ],
+      "ollama_connection": {
+        "connected": false,
+        "reason": "cannot access local variable 'config_host' where it is not associated with a value",
+        "base_url": "http://localhost:11434"
+      },
+      "all_completed": true,
+      "before_state": {
+        "resource_snapshot": {
+          "timestamp": 1780660020.0390415,
+          "cpu_percent": 0.0,
+          "memory_percent": 75.7,
+          "memory_used": 4638564679,
+          "memory_total": 6120328396,
+          "disk_usage": {
+            "/": 93.13996077166561
+          },
+          "network_bytes_sent": 519307534,
+          "network_bytes_recv": 1160762588,
+          "process_count": 291,
+          "load_average": [
+            1.083984375,
+            2.08154296875,
+            3.482421875
+          ]
+        },
+        "performance_snapshot": null
+      },
+      "after_state": {
+        "resource_snapshot": {
+          "timestamp": 1780660083.048662,
+          "cpu_percent": 25.0,
+          "memory_percent": 77.5,
+          "memory_used": 4745938862,
+          "memory_total": 6120328396,
+          "disk_usage": {
+            "/": 93.14089980431639
+          },
+          "network_bytes_sent": 521904368,
+          "network_bytes_recv": 1161443374,
+          "process_count": 293,
+          "load_average": [
+            1.4111328125,
+            2.0234375,
+            3.36767578125
+          ]
+        },
+        "performance_snapshot": null,
+        "agents_registered": [
+          "coordinator_agent"
+        ],
+        "agents_active": [
+          "coordinator_agent"
+        ],
+        "tools_registered": []
+      },
+      "improvement_count": 0,
+      "rollback_count": 0,
+      "previous_state": {
+        "event_id": "startup_1780659967",
+        "timestamp": 1780659967.6529381,
+        "improvement_count": 0,
+        "rollback_count": 0
+      }
+    }
+  },
+  "context": {
+    "agent_id": "startup_agent",
+    "event": "startup_complete"
+  },
+  "tags": [
+    "system_startup_complete",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "0e5dc0a50b185b90"
+}

@@ -1,0 +1,20 @@
+# neuralnode — DeltaVerse NeuralNode room suite, self-contained sub-module of bankoneth.
+# Sourced from github.com/deltav-deltaverse/neuralnode, reconciled to the house
+# toolchain (solc 0.8.24, Cancun, via_ir, OZ v5). Reuses ../lib.
+[profile.default]
+src                    = "src"
+test                   = "test"
+script                 = "script"
+out                    = "out"
+libs                   = ["../lib"]
+auto_detect_remappings = false
+solc                   = "0.8.24"
+evm_version            = "cancun"
+optimizer              = true
+optimizer_runs         = 200
+via_ir                 = true
+fs_permissions         = [{ access = "read-write", path = "./" }]
+
+[rpc_endpoints]
+polygon  = "${POLYGON_RPC_URL}"
+moonbeam = "${MOONBEAM_RPC_URL}"

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+coverage/
+.DS_Store
+*.log
+
+# Tauri build artifacts (per-template)
+templates/*/src-tauri/target/
+reference/*/src-tauri/target/

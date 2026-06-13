@@ -41,30 +41,53 @@ class BlockchainAgent:
         self.test_mode = test_mode
         self.log_prefix = f"BlockchainAgent ({self.agent_id}):"
         
-        # Blockchain connection placeholder
+        # Blockchain factory delegate (agents.blockchain.BlockchainAgentFactory)
         self.connected = False
-        
+        self._factory = None
+
         # Archive history
         self.archive_history: List[Dict[str, Any]] = []
     
     async def initialize(self) -> bool:
         """
-        Initialize blockchain connection.
-        
+        Initialize the blockchain factory delegate.
+
+        Real on-chain work lives in the agnostic `agents.blockchain` module
+        (BlockchainAgentFactory); this orchestration agent is the public entry
+        point that mindX dispatches to.
+
         Returns:
             True if initialized successfully
         """
-        # TODO: Implement actual blockchain connection
-        logger.info(f"{self.log_prefix} Initializing blockchain connection (placeholder)")
-        
+        logger.info(f"{self.log_prefix} Initializing blockchain factory delegate")
+
         try:
-            # Placeholder for blockchain connection
-            # This would connect to Ethereum or other blockchain
+            from agents.blockchain import BlockchainAgentFactory
+
+            self._factory = await BlockchainAgentFactory.get_instance(config=self.config)
             self.connected = True
             return True
         except Exception as e:
-            logger.error(f"{self.log_prefix} Error initializing blockchain: {e}", exc_info=True)
+            logger.error(f"{self.log_prefix} Error initializing blockchain factory: {e}", exc_info=True)
             return False
+
+    async def mint_agent(self, name: str, *, dry_run: bool = True, **kwargs) -> Dict[str, Any]:
+        """
+        Mint a mindX agent as an ERC-7857 iNFT via the blockchain factory.
+
+        See agents/blockchain/agent_factory.py and
+        docs/blockchain/BLOCKCHAIN_AGENTS.md for the full pipeline.
+        """
+        if not self.connected:
+            await self.initialize()
+        result = await self._factory.mint_agent(name, dry_run=dry_run, **kwargs)
+        if self.memory_agent:
+            await self.memory_agent.log_process(
+                "blockchain_mint_agent",
+                {"timestamp": time.time(), "name": name, "dry_run": dry_run, "result": result},
+                {"agent_id": self.agent_id},
+            )
+        return result
     
     async def archive_agent(
         self,
@@ -89,34 +112,25 @@ class BlockchainAgent:
             await self.initialize()
         
         logger.info(f"{self.log_prefix} Archiving agent {agent_id} to blockchain")
-        
-        # Prepare archive data
-        archive_data = {
-            "entity_type": "agent",
-            "entity_id": agent_id,
-            "agent_data": agent_data,
-            "persona": persona,
-            "prompt": prompt,
-            "archived_at": time.time(),
-            "immutable": True
-        }
-        
+
         try:
-            # TODO: Implement actual blockchain archival
-            # This would create a transaction on the blockchain
-            
-            # Placeholder for blockchain transaction
-            tx_hash = f"0x{agent_id[:40]}_placeholder"
-            
+            # Real archival = mint the agent as an ERC-7857 iNFT via the factory.
+            # In test_mode we dry-run (no broadcast); otherwise mint live.
+            slug = "".join(c if (c.isalnum() or c in "-_") else "-" for c in agent_id).strip("-") or "agent"
+            mint = await self.mint_agent(slug, dry_run=self.test_mode)
+            tx_hash = (mint or {}).get("tx_hash") or (mint or {}).get("storageURI")
+
             result = {
-                "success": True,
+                "success": (mint or {}).get("status") in ("minted", "dry_run"),
                 "entity_type": "agent",
                 "entity_id": agent_id,
                 "transaction_hash": tx_hash,
+                "token_id": (mint or {}).get("tokenId"),
                 "immutable": True,
+                "mint": mint,
                 "archived_at": time.time()
             }
-            
+
             self.archive_history.append({
                 "timestamp": time.time(),
                 "entity_type": "agent",

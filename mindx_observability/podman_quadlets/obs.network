@@ -1,0 +1,7 @@
+[Unit]
+Description=mindX observability network
+
+[Network]
+NetworkName=obs
+Driver=bridge
+DisableDNS=false

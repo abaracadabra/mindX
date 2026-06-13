@@ -1,0 +1,5 @@
+packages:
+  - 'core/*'
+  - 'cli'
+  - 'templates/*'
+  - 'reference/*'

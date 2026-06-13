@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BANKON · ENS naming as a service</title>
+<link rel="stylesheet" href="./styled.css" />
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><span class="mark">BANKON</span><span class="eth">.eth</span>
+      <span class="tagline">Naming as a service · ERC-7857 + ERC-6551</span></div>
+    <span class="spacer"></span>
+    <a href="./index.html"><button class="ghost">← storefront</button></a>
+    <span class="row" data-conn></span>
+  </div>
+
+  <section class="hero">
+    <img class="crest" src="/gfx/THOTH.png" alt="naming" onerror="this.src='/gfx/bankonvault.png';this.onerror=null" />
+    <h1>Name anything. Give it a wallet.</h1>
+    <p class="sub">Mint a named agent <b>iNFT</b> (canonical ERC-7857) with its own <b>ERC-6551</b> token-bound
+      account, or name any contract <code>myapp.bankon.eth</code> — ENS naming as a service.</p>
+  </section>
+
+  <nav class="tabs">
+    <button data-tab="mint" class="active">Mint agent iNFT</button>
+    <button data-tab="tba">TBA wallet</button>
+    <button data-tab="name">Name a contract</button>
+    <button data-tab="explorer">7857 explorer</button>
+  </nav>
+  <main id="view"></main>
+  <div class="foot">Canonical EIP-7857 + ERC-6551 modular stack · contracts/inft7857/ · 0G Aristotle 16661 ready</div>
+</div>
+
+<script type="module" src="./webgl-bg.js"></script>
+<script type="module">
+import { BANKON, F, ethers, connect, topbar, whoami, toast, el, stringify } from "./app-common.js";
+
+const ERC6551_REGISTRY = "0x000000006551c19487814612e58FE06813775758";
+const BANKON_NODE = "0x79c178642317fc2d61d186f3b412440f06590d8314f126362d6a88929a6cbe1a";
+const view = () => document.getElementById("view");
+const show = (n, t, c = "") => { n.style.display = "block"; n.className = "result " + c; n.textContent = t; };
+let activeTab = "mint";
+
+async function ctx(key, abiName) {
+  if (!BANKON.deployments) BANKON.deployments = await F.loadDeployments(BANKON.PUBLIC_BASE, BANKON.chainId || 1);
+  const address = F.addressFor(BANKON.deployments, key);
+  if (!address) throw new Error(`${abiName} not deployed on this network yet (deploy contracts/inft7857/ via deploy_bankon_inft.s.sol).`);
+  return { address, abi: await F.loadAbi(BANKON.PUBLIC_BASE, abiName) };
+}
+function field(label, id, val = "", ph = "") {
+  return el("label", { cls: "field" }, [el("span", { cls: "lbl", html: label }), el("input", { attrs: { type: "text", id, value: val, placeholder: ph } })]);
+}
+const v = (id) => document.getElementById(id).value.trim();
+
+function render() {
+  const root = view(); root.innerHTML = "";
+  if (activeTab === "mint") return renderMint(root);
+  if (activeTab === "tba") return renderTba(root);
+  if (activeTab === "name") return renderName(root);
+  if (activeTab === "explorer") return renderExplorer(root);
+}
+
+// ── Mint a named agent iNFT (Mode A/B) ───────────────────────────────────────
+function renderMint(root) {
+  const p = el("div", { cls: "panel" });
+  p.append(el("h3", { text: "Mint a named agent iNFT" }),
+    el("div", { cls: "note", html: "Mints <code>label.bankon.eth</code> as a canonical ERC-7857 iNFT and derives its ERC-6551 wallet. Soulbound = unruggable agent identity. Requires an x402 facilitator receipt (the gate backend signs one)." }),
+    field("label <code>string</code>", "ml", "", "myagent"),
+    field("owner <code>address</code>", "mo", "", "0x… (defaults to you)"),
+    field("data description <code>string</code>", "md", "agent", ""),
+    field("content root <code>bytes32</code>", "mr", "0x" + "ab".repeat(32), ""));
+  const sel = el("select", { attrs: { id: "mmode" } });
+  for (const [val, t] of [["3", "Unified · soulbound (Mode A)"], ["1", "Unified · transferable"], ["4", "Parallel · soulbound (Mode B)"], ["2", "Parallel · transferable"]]) sel.appendChild(el("option", { text: t, attrs: { value: val } }));
+  p.append(el("label", { cls: "field" }, [el("span", { cls: "lbl", text: "mode" }), sel]));
+  const out = el("div", { cls: "result", attrs: { style: "display:none" } });
+  p.append(el("button", { cls: "primary", text: "Mint iNFT", on: { click: () => mint(out) } }), out);
+  root.append(p);
+}
+
+async function mint(out) {
+  show(out, "preparing…");
+  try {
+    const { address, abi } = await ctx("inftRegistrar", "bankon_inft_registrar");
+    const owner = v("mo") || BANKON.address;
+    const label = v("ml"); if (!label) throw new Error("enter a label");
+    const mode = Number(v("mmode"));
+    const expiry = BigInt(Math.floor(Date.now() / 1000) + 365 * 86400);
+    const iData = [[v("md") || "agent", v("mr")]];
+    // x402 facilitator receipt from the gate backend
+    show(out, "requesting x402 receipt from facilitator…");
+    const r = await fetch("/x402/settle", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ payer: owner, usd6: "5000000", resource: `${label}.bankon.eth`, chainId: BANKON.chainId }) });
+    if (!r.ok) throw new Error("facilitator: " + (await r.text()).slice(0, 120) + "  (run the gate backend with BANKON_X402_TRUST_REQUEST=1)");
+    const receipt = (await r.json()).receiptHash;
+    // NOTE: the registrar verifies an EIP-712 sig over (to,parentNode,label,mode,expiry,receipt) by x402Facilitator.
+    show(out, "minting (sign in wallet)…\nNOTE: registrar requires the facilitator's mint signature — wire it server-side for production.");
+    const signer = await BANKON.browserProvider.getSigner();
+    const tx = await F.writeContract({ signer, address, abi, fn: "mintWithX402", args: [owner, BANKON_NODE, label, mode, expiry, iData, receipt, "0x"], ethers });
+    const rc = await tx.wait();
+    show(out, `✅ ${label}.bankon.eth minted, block ${rc.blockNumber}`, "ok");
+  } catch (e) { show(out, "✗ " + (e.shortMessage || e.message), "err"); }
+}
+
+// ── ERC-6551 TBA wallet computer (live via canonical registry) ───────────────
+function renderTba(root) {
+  const p = el("div", { cls: "panel" });
+  p.append(el("h3", { text: "ERC-6551 token-bound account" }),
+    el("div", { cls: "note", html: "Every iNFT has a deterministic smart-contract wallet derived from (chainId, iNFT, tokenId). Computed live via the canonical registry <code>0x0000…5758</code>." }),
+    field("iNFT contract <code>address</code>", "ti", "", "deployed bankon_inft_subname"),
+    field("token id <code>uint256</code>", "tt", "1", ""),
+    field("TBA implementation <code>address</code>", "tm", "", "deployed bankon_tba_account"));
+  const out = el("div", { cls: "result", attrs: { style: "display:none" } });
+  p.append(el("button", { cls: "primary", text: "Compute TBA address", on: { click: () => computeTba(out) } }), out);
+  root.append(p);
+  // prefill from deployments if available
+  (async () => { try { if (!BANKON.deployments) BANKON.deployments = await F.loadDeployments(BANKON.PUBLIC_BASE, BANKON.chainId || 1);
+    const i = F.addressFor(BANKON.deployments, "inftUnified"); const m = F.addressFor(BANKON.deployments, "tbaImpl");
+    if (i) document.getElementById("ti").value = i; if (m) document.getElementById("tm").value = m; } catch {} })();
+}
+
+async function computeTba(out) {
+  show(out, "computing…");
+  try {
+    const prov = BANKON.browserProvider || ethers.getDefaultProvider();
+    const reg = new ethers.Contract(ERC6551_REGISTRY, ["function account(address,bytes32,uint256,address,uint256) view returns (address)"], prov);
+    const tba = await reg.account(v("tm"), "0x" + "0".repeat(64), BigInt(BANKON.chainId || 1), v("ti"), BigInt(v("tt")));
+    show(out, `TBA wallet: ${tba}\n(owner = live ownerOf(tokenId) on the iNFT)`, "ok");
+  } catch (e) { show(out, "✗ " + (e.shortMessage || e.message) + "\n(needs the canonical 6551 registry on this chain — use a mainnet RPC / fork)", "err"); }
+}
+
+// ── Name a contract (ENS-as-a-service) ───────────────────────────────────────
+function renderName(root) {
+  const p = el("div", { cls: "panel" });
+  p.append(el("h3", { text: "Name a custom contract" }),
+    el("div", { cls: "note", html: "Give any contract a human name <code>myapp.bankon.eth</code> by writing its forward address record on the BANKON resolver. (You must hold the subname; mint one on the storefront first.)" }),
+    field("name <code>*.bankon.eth</code>", "nn", "", "myapp.bankon.eth"),
+    field("contract <code>address</code>", "nc", "", "0x…"));
+  const out = el("div", { cls: "result", attrs: { style: "display:none" } });
+  p.append(el("button", { cls: "primary", text: "Set forward record", on: { click: () => nameContract(out) } }), out);
+  root.append(p);
+}
+
+async function nameContract(out) {
+  show(out, "awaiting signature…");
+  try {
+    const { address, abi } = await ctx("resolver", "BankonSubnameResolver");
+    const node = ethers.namehash(v("nn"));
+    const signer = await BANKON.browserProvider.getSigner();
+    const tx = await F.writeContract({ signer, address, abi, fn: "setAddr", args: [node, v("nc")], ethers });
+    const rc = await tx.wait();
+    show(out, `✅ ${v("nn")} → ${v("nc")} (block ${rc.blockNumber})`, "ok");
+  } catch (e) { show(out, "✗ " + (e.shortMessage || e.message), "err"); }
+}
+
+// ── Generic canonical-7857 explorer ──────────────────────────────────────────
+function renderExplorer(root) {
+  const p = el("div", { cls: "panel" });
+  p.append(el("div", { cls: "note", html: "Read/write the canonical iNFT (iTransfer / iClone / authorizeUsage / intelligentDataOf / verifier)." }));
+  const panels = el("div"); p.append(panels);
+  (async () => {
+    try {
+      const { address, abi } = await ctx("inftUnified", "bankon_inft_subname");
+      const { reads, writes } = F.categorizeAbi(abi);
+      panels.append(el("span", { cls: "bp5-tag chip", text: address }), el("h3", { text: `Read (${reads.length})` }));
+      for (const fn of reads) panels.append(fnCard(fn, abi, address, false));
+      panels.append(el("h3", { text: `Write (${writes.length})` }));
+      for (const fn of writes) panels.append(fnCard(fn, abi, address, true));
+    } catch (e) { panels.append(el("div", { cls: "result err", text: e.message })); }
+  })();
+  root.append(p);
+}
+
+function fnCard(fn, abi, address, isWrite) {
+  const card = el("div", { cls: "fn" });
+  card.append(el("div", { cls: "sig", text: F.signatureOf(fn) }));
+  const inputs = [];
+  for (const i of fn.inputs) { const w = el("label", { cls: "field" }, [el("span", { cls: "lbl", html: `${i.name || "arg"} <code>${i.type}</code>` })]); const inp = el("input", { attrs: { type: "text", placeholder: i.type } }); w.append(inp); card.append(w); inputs.push(inp); }
+  const out = el("div", { cls: "result", attrs: { style: "display:none" } });
+  const btn = el("button", { cls: isWrite ? "primary" : "", text: isWrite ? "Write" : "Query", on: { click: async () => {
+    show(out, "…");
+    try {
+      const args = fn.inputs.map((i, idx) => F.coerceArg(i.type, inputs[idx].value));
+      if (!isWrite) { const r = await F.readContract({ provider: BANKON.browserProvider, address, abi, fn: fn.name, args, ethers }); show(out, stringify(r), "ok"); }
+      else { const signer = await BANKON.browserProvider.getSigner(); const tx = await F.writeContract({ signer, address, abi, fn: fn.name, args, ethers }); const r = await tx.wait(); show(out, `✅ block ${r.blockNumber}\n${tx.hash}`, "ok"); }
+    } catch (e) { show(out, "✗ " + (e.shortMessage || e.message), "err"); }
+  } } });
+  card.append(el("div", { cls: "row" }, [btn]), out);
+  return card;
+}
+
+for (const b of document.querySelectorAll("nav.tabs button"))
+  b.addEventListener("click", () => { activeTab = b.dataset.tab; for (const x of document.querySelectorAll("nav.tabs button")) x.classList.toggle("active", x === b); render(); });
+
+(async function () { await whoami(); await connect().catch(() => {}); topbar(); render(); })();
+</script>
+</body>
+</html>

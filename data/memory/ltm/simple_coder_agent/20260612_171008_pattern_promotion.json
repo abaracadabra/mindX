@@ -1,0 +1,50 @@
+{
+  "agent_id": "simple_coder_agent",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 11,
+  "patterns": {
+    "success_patterns": [
+      {
+        "pattern": "success_rate_observed",
+        "success_rate": 1.0,
+        "success_count": 11,
+        "top_processes": [
+          "coding_learning",
+          "coding_learning",
+          "coding_learning",
+          "coding_learning",
+          "coding_learning",
+          "coding_learning",
+          "coding_learning",
+          "coding_learning",
+          "coding_learning",
+          "coding_learning"
+        ],
+        "timestamp": "2026-06-12T17:10:08.655220"
+      }
+    ],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Success rate: 100.0% (11 success, 0 failure)",
+      "Top processes: coding_learning(11)",
+      "Peak activity hour: 21:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 11
+        },
+        "process_distribution": {
+          "coding_learning": 11
+        },
+        "total_memories": 11,
+        "timestamp": "2026-06-12T17:10:08.655240"
+      }
+    ]
+  },
+  "promoted_at": "2026-06-12T17:10:08.655247",
+  "promotion_criteria": {
+    "pattern_threshold": 2,
+    "days_analyzed": 7
+  }
+}

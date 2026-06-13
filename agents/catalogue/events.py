@@ -52,9 +52,18 @@ EventKind = Literal[
     "marketing.tessera_attested",    # any soldier — per-action Tessera credential issuance
     "marketing.boardroom_routed",    # marketinga.agent — campaign routed through Boardroom; outcome + per-soldier votes
     "marketing.soldier_skill_executed",  # any soldier — per-soldier marketing skill ran post-vote
+    "narrative.recap",               # NarratorAgent autonomous summary OR operator-pinned recap (DeltaVerse narrative channel)
     "publication.attempted",         # PublicationOrchestrator picked a trigger and started the publish pipeline
     "publication.published",         # AuthorAgent.publish_to_rage returned post_id + url
     "publication.coalesced",         # publish suppressed by MIN_GAP_S rate limit
+    "bug.crushed",                   # operator/SEA/CI — security alert batch closed (severities + count in payload)
+    "dreaming.improved",             # machine_dreaming — code change OR statistical-outlier insight burst
+    "milestone.recognized",          # AGInt.milestone_recognition — system-state milestone recognized
+    "contract.deploy.intent",        # DeployerService — wallet-authorized deploy intent created (preflight, no broadcast)
+    "contract.deploy.confirmed",     # DeployerService — per-chain contract/app deploy broadcast + recorded
+    "deltaverse.gate.event",         # DeltaVerseGate — gate opened/opening/blocked/failed (wordpress.agent /gate)
+    "deltaverse.room.created",       # DeltaVerseGate — BubbleRoomV4.mintRoom confirmed (roomId)
+    "deltaverse.bubbleroom.spawned", # DeltaVerseGate — BubbleRoomSpawn.spawnFromRoom confirmed (emergenceId)
 ]
 
 EVENT_KINDS: tuple[str, ...] = tuple(EventKind.__args__)  # type: ignore[attr-defined]

@@ -40,6 +40,57 @@ from agents.core.belief_system import BeliefSystem
 
 logger = get_logger(__name__)
 
+
+# --- Backlog hygiene (pure helpers, unit-testable without agent init) ---------
+def backlog_fingerprint(item: Dict[str, Any]) -> str:
+    """Canonical identity of a backlog item: its suggestion text, case-folded.
+
+    Production accumulated 83,318 copies of 6 unique suggestions because the
+    SystemAnalyzer heuristic fallback echoed existing backlog items back as
+    "new" and append had no identity check. The fingerprint is what dedup,
+    cooldowns and loop-detection all key on.
+    """
+    text = (item.get("suggestion") or item.get("description") or "")
+    return text.strip().lower()[:200]
+
+
+def dedupe_backlog(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Collapse a backlog by fingerprint, preserving the most useful metadata:
+    max priority, any non-null status, earliest first_seen, latest last_seen,
+    and an occurrences count. Order of first appearance is kept."""
+    by_fp: Dict[str, Dict[str, Any]] = {}
+    order: List[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        fp = backlog_fingerprint(item)
+        if not fp:
+            continue
+        ts = item.get("last_seen") or item.get("added_at") or item.get("attempted_at")
+        if fp not in by_fp:
+            kept = dict(item)
+            kept["occurrences"] = int(item.get("occurrences") or 1)
+            kept.setdefault("first_seen", ts)
+            kept.setdefault("last_seen", ts)
+            by_fp[fp] = kept
+            order.append(fp)
+            continue
+        kept = by_fp[fp]
+        kept["occurrences"] += int(item.get("occurrences") or 1)
+        if (item.get("priority") or 0) > (kept.get("priority") or 0):
+            kept["priority"] = item["priority"]
+        if item.get("status") and not kept.get("status"):
+            kept["status"] = item["status"]
+            if item.get("attempted_at"):
+                kept["attempted_at"] = item["attempted_at"]
+        if ts:
+            if not kept.get("first_seen") or ts < kept["first_seen"]:
+                kept["first_seen"] = ts
+            if not kept.get("last_seen") or ts > kept["last_seen"]:
+                kept["last_seen"] = ts
+    return [by_fp[fp] for fp in order]
+
+
 # --- Core Data Structures ---
 
 class InteractionType(Enum):
@@ -246,20 +297,85 @@ class CoordinatorAgent:
         self.logger.info("Coordinator internal tool initialization complete (no tools to load).")
 
     def _load_backlog(self) -> List[Dict[str, Any]]:
+        # NOTE: runs from __init__ BEFORE self.logger is assigned — use the
+        # module-level logger here (the old self.logger.error in the exception
+        # path was a latent AttributeError for the same reason).
+        items: List[Dict[str, Any]] = []
         if self.improvement_backlog_file.exists():
             try:
                 with self.improvement_backlog_file.open("r", encoding="utf-8") as f:
-                    return json.load(f)
+                    items = json.load(f)
             except (json.JSONDecodeError, IOError) as e:
-                self.logger.error(f"Failed to load improvement backlog: {e}")
-        return []
+                logger.error(f"Failed to load improvement backlog: {e}")
+        # Self-healing dedup: production accumulated 83k+ copies of 6 suggestions
+        # (SystemAnalyzer heuristic fallback echoed existing backlog items back as
+        # "new" and this class appended them without a fingerprint check). A
+        # restart now collapses the file in place — no migration window needed.
+        deduped = dedupe_backlog(items)
+        if len(deduped) < len(items):
+            dup_factor = round(len(items) / max(1, len(deduped)), 1)
+            logger.warning(
+                f"backlog dedup: {len(items)} -> {len(deduped)} unique (dup_factor {dup_factor}x); rewriting file"
+            )
+            try:
+                with self.improvement_backlog_file.open("w", encoding="utf-8") as f:
+                    json.dump(deduped, f, indent=2)
+            except IOError as e:
+                logger.error(f"Failed to persist deduped backlog: {e}")
+        self._backlog_fingerprints = {backlog_fingerprint(i) for i in deduped}
+        return deduped
+
+    BACKLOG_MAX_ITEMS = 500
 
     def _save_backlog(self):
+        # Module-level logger — may be called via to_thread from agents that
+        # hold a coordinator reference constructed before logger assignment.
         try:
+            if len(self.improvement_backlog) > self.BACKLOG_MAX_ITEMS:
+                before = len(self.improvement_backlog)
+                self.improvement_backlog.sort(
+                    key=lambda i: (-(i.get("priority") or 0), -(i.get("last_seen") or i.get("added_at") or 0))
+                )
+                self.improvement_backlog = self.improvement_backlog[: self.BACKLOG_MAX_ITEMS]
+                self._backlog_fingerprints = {backlog_fingerprint(i) for i in self.improvement_backlog}
+                logger.warning(
+                    f"backlog capped: {before} -> {self.BACKLOG_MAX_ITEMS} (kept by priority desc, recency desc)"
+                )
             with self.improvement_backlog_file.open("w", encoding="utf-8") as f:
                 json.dump(self.improvement_backlog, f, indent=2)
         except IOError as e:
-            self.logger.error(f"Failed to save improvement backlog: {e}")
+            logger.error(f"Failed to save improvement backlog: {e}")
+
+    def add_backlog_item(self, item: Dict[str, Any]) -> bool:
+        """Fingerprint-deduped backlog append. Returns True if the item was new.
+
+        Echo items (the SystemAnalyzer heuristic re-suggesting what is already in
+        the backlog, tagged source=backlog_echo) are never appended — they are,
+        by construction, already present.
+        """
+        if item.get("source") == "backlog_echo":
+            return False
+        fp = backlog_fingerprint(item)
+        if not fp:
+            return False
+        now = time.time()
+        if not hasattr(self, "_backlog_fingerprints"):
+            self._backlog_fingerprints = {backlog_fingerprint(i) for i in self.improvement_backlog}
+        if fp in self._backlog_fingerprints:
+            for existing in self.improvement_backlog:
+                if backlog_fingerprint(existing) == fp:
+                    existing["occurrences"] = int(existing.get("occurrences") or 1) + 1
+                    existing["last_seen"] = now
+                    if (item.get("priority") or 0) > (existing.get("priority") or 0):
+                        existing["priority"] = item["priority"]
+                    break
+            return False
+        item.setdefault("first_seen", now)
+        item.setdefault("last_seen", now)
+        item.setdefault("occurrences", 1)
+        self.improvement_backlog.append(item)
+        self._backlog_fingerprints.add(fp)
+        return True
 
     async def _log_to_memory(self, memory_type: str, category: str, data: Dict[str, Any], metadata: Dict[str, Any] = None) -> Optional[Path]:
         """Log information to memory agent if available."""
@@ -573,32 +689,65 @@ class CoordinatorAgent:
             interaction.status = InteractionStatus.COMPLETED
             return
 
-        # Add suggestions to the backlog
-        for suggestion in suggestions:
-            self.improvement_backlog.append(suggestion)
+        # Add suggestions to the backlog (fingerprint-deduped; echoes never re-append)
+        added = sum(1 for suggestion in suggestions if self.add_backlog_item(suggestion))
         self._save_backlog()
-        self.logger.info(f"Saved {len(suggestions)} new improvement suggestions to the backlog.")
+        self.logger.info(
+            f"Backlog: {added} new of {len(suggestions)} suggestions "
+            f"({len(suggestions) - added} duplicates/echoes coalesced)."
+        )
 
         # --- AUTO-EXECUTE EVOLUTION ---
         # Take the highest priority suggestion and immediately try to implement it.
-        top_suggestion = suggestions[0] # Assuming the first one is the highest priority
-        directive = top_suggestion.get("description", "Implement the top improvement suggestion.")
-        
+        # Skip the stub-directive path that produced 0/100 successful campaigns
+        # for the seven days preceding 2026-05-24 — when the system_analyzer can't
+        # produce a usable description, defer to MastermindAgent's autonomous
+        # variation loop which selects from the 81K-item persisted backlog
+        # against real target_component_path + priority + justification fields.
+        top_suggestion = suggestions[0]  # Assuming the first one is the highest priority
+        raw_directive = top_suggestion.get("description") or top_suggestion.get("suggestion") or ""
+        _STUB_DIRECTIVES = {
+            "implement the top improvement suggestion.",
+            "implement the top improvement suggestion",
+        }
+        if (not raw_directive) or raw_directive.strip().lower() in _STUB_DIRECTIVES:
+            self.logger.info(
+                "Skipping coordinator auto-execute: top suggestion has no usable description "
+                "(stub directive avoided). Mastermind's autonomous loop will pick from backlog."
+            )
+            interaction.response = {
+                "status": "SUCCESS",
+                "message": f"Generated {len(suggestions)} suggestions; auto-execute deferred to Mastermind backlog loop.",
+            }
+            interaction.status = InteractionStatus.COMPLETED
+            await self.publish_event(
+                "component.improvement.success",
+                {"interaction_id": interaction.interaction_id, "metadata": interaction.metadata, "suggestions_generated": len(suggestions)},
+            )
+            if target_component and any(indicator in target_component for indicator in ["orchestration", "core", "agents", "tools", "learning", "evolution"]):
+                await self._check_and_backup_architectural_changes(target_component)
+            return
+
+        # Real directive — proceed with auto-execute, decorated with backlog context.
+        target = top_suggestion.get("target_component_path", "system")
+        priority = int(top_suggestion.get("priority", 5))
+        directive = f"{raw_directive.strip()} [target: {target}, priority: {priority}, source: coordinator_auto_execute]"[:500]
+
         self.logger.info(f"Attempting to auto-execute top improvement suggestion: {directive}")
 
         try:
             from agents.orchestration.mastermind_agent import MastermindAgent
             mastermind = await MastermindAgent.get_instance(coordinator_agent_instance=self)
-            
+
             # Run the evolution campaign in the background
             asyncio.create_task(mastermind.manage_mindx_evolution(top_level_directive=directive))
-            
+
             interaction.response = {"status": "SUCCESS", "message": f"Successfully generated {len(suggestions)} suggestions and initiated evolution campaign for the top suggestion: '{directive}'"}
             interaction.status = InteractionStatus.COMPLETED
         except Exception as e:
             self.logger.error(f"Failed to initiate auto-evolution campaign: {e}", exc_info=True)
             interaction.response = {"status": "PARTIAL_SUCCESS", "message": f"Generated {len(suggestions)} suggestions, but failed to start evolution campaign.", "error": str(e)}
-            interaction.status = InteractionStatus.COMPLETED # The analysis part was done.
+            interaction.status = InteractionStatus.COMPLETED  # The analysis part was done.
 
         await self.publish_event(
             "component.improvement.success",

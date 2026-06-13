@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-05-15T09:59:47.021936",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "mindxagent_identity_loaded",
+    "data": {
+      "source": "docs/INDEX.md",
+      "content": "# MindX Documentation Index\n\n## Comprehensive Documentation Index\n\nThis document provides a complete index of all documentation in the mindX system, organized by category and component type.\n\n**Last Updated**: 2026-04-27\n**Total Documentation Files**: 194+\n**CORE Documentation**: Complete 15-component analysis \u2705\n**Agent Documentation**: 34+\n**Tool Documentation**: 29+\n**DAIO Documentation**: 15 files covering 12 core + modular contracts \u2705\n**Production Ready**: \u2705 Enterprise-grade deployment and security documentation complete  \n\n---\n\n## \ud83c\udd95 Recent additions (2026-05-13)\n\n- **[HERMES_INTEGRATION.md](HERMES_INTEGRATION.md)** (NEW \u00b7 2026-05-13, Day-1 shipped) \u2014 first concrete absorption from the Hermes / OpenClaw research stack. `agents/skills/` ships the **SKILL.md** procedural-memory format (Hermes-compatible YAML frontmatter + Markdown body, plus the mindX BDI additions `intention_template` / `preconditions` / `postconditions`) over a `SkillStore` that runs every skill through a **screen-before-persist scanner** with five finding classes (`prompt_injection`, `destructive_command`, `data_exfiltration`, `size`, `missing_required`). Direct architectural answer to the **OpenClaw ClawHub-malware vector** (Koi Security 2026: 341 malicious entries in 2,857 ClawHub skills = 12 % rate, Lakera 2026: prompt-injection vectors in 4,310 audited skills) and the **Hermes ALLOW-ALL-defaults gap** (community audit: 4 Critical + 9 High in default config). Day-1 policy: DENY-ALL on any scanner block; warnings refused unless operator authors `created_by=\"human\"` AND `pinned=true`. Curator-class actors (the deferred MASTERMIND-scheduled cleanup job) can archive \u2014 never delete \u2014 and cannot touch human-authored or pinned skills. 15 tests pass CPU-only.\n- **[Hermes Agent Integration Patterns for mindX](operations/Hermes%20Agent%20Integration%20Patterns%20for%20mindX_%20Self-Improving%20Architecture%20Analysismd)** (NEW research \u00b7 2026-05-13) \u2014 494-line companion to the OpenClaw report. Decomposes Hermes v0.13.0 \"Tenacity\" (released 2026-05-07; 864 commits, 588 PRs, 295 contributors; overtook OpenClaw on OpenRouter daily token volume 224 B vs 186 B as of 2026-05-10 \u2014 first market signal that \"session-native\" architecture is a ceiling). Maps four importable primitives onto mindX without touching model weights: (1) skill-distillation loop, (2) bounded markdown + SQLite-FTS5 + pluggable dialectic memory stack, (3) Kanban heartbeat/zombie/hallucination-gate runtime, (4) DSPy + GEPA evolutionary optimizer. Ranked recommendations table at \u00a710. Cross-attribution with the [OpenClaw research](operations/openclaw_mindx_research.md) below.\n- **[openclaw_mindx_research.md](operations/openclaw_mindx_research.md)** (NEW research \u00b7 2026-05-12) \u2014 280-line OpenClaw + OpenClaw-RL architectural decomposition for mindX integration. **Five highest-leverage transfers**: SKILL.md format (now shipped), pluggable Context Engine pattern (v2026.3.7+ lossless-claw flagship), **hybrid vector+BM25 (70/30) Active Memory** over SQLite + sqlite-vec, plugin manifest-first validation with capability typing, and **OpenClaw-RL** (slime + SGLang + Megatron, Qwen3.5/3.6-aligned \u2014 direct upstream for mindXtrain v3.6). Security history dossier: ClawJacked CVE (Gateway loopback exemption brute-force), Koi Security audit (341 malicious skills), Lakera audit (prompt-injection in 4,310 skills), Anthropic April 2026 detection routing OpenClaw users to higher billing tier (50\u00d7 cost increase, \"do not bind mindX to any single LLM-provider's flat-rate subscription\"). Pre-mainnet safety stack: signed skill manifests via BANKON `bankon.eth` subnames, BONAFIDE Tessera on-chain provenance, capability-declared permissions, Unicode steganography detection (zero-width / RTL overrides), static prompt-injection scanning (shipped), Podman sandbox, trust-tier display on AgenticPlace (verified-publisher / community / unscanned).\n\n## \ud83c\udd95 Recent additions (2026-05-02)\n\n- **[X402.md](X402.md)** (NEW \u00b7 2026-05-02) \u2014 canonical doc for HTTP 402 micropayments on Algorand. Covers (1) the [x402.org](https://x402.org) spec, (2) Algorand DevRel's just-released [`@x402-avm/*`](https://github.com/algorand-devrel/x402-demo) v^2.6.1 packages (ISC, alpha, TestNet-only, hosted facilitator at `x402.goplausible.xyz`), (3) mindX's pre-standard adoption (EVM-only Base USDC + Tempo MPP via EIP-3009), (4) the **triple-rail convergence** plan (Base + Tempo + Algorand ASA in one `accepts[]` envelope), (5) wire format, (6) operator runbook + four BANKON Vault keys (`algorand_mnemonic`, `algorand_recipient_address`, `algorand_usdc_asa_id`, `x402_avm_facilitator_url`), (7) limitations & roadmap (the deferred `recordAvmReceipt()` extension to `BankonPaymentRouter.sol` for L1 audit parity). New code: [`tools/x402_avm_client.py`](../tools/x402_avm_client.py) (pure Python via `py-algorand-sdk`, mirrors `keeperhub_x402_client.py`), [`AgenticPlace/api/x402_avm.ts`](../AgenticPlace/api/x402_avm.ts) (wraps `@x402-avm/{fetch,hono,avm,",
+      "loaded_at": 1778864387.0219283,
+      "key_points": [
+        "MindX Agent is the meta-agent that understands all agents",
+        "Serves as execution mind of the G\u00f6del machine",
+        "Orchestrates self-improvement through SEA, BDI, Mastermind",
+        "Subservient to higher intelligence",
+        "Maintains comprehensive knowledge of all agents"
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent",
+    "source": "INDEX.md"
+  },
+  "tags": [
+    "mindxagent_identity_loaded",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "6d4f88b97f9b326a"
+}

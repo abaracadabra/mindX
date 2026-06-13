@@ -151,6 +151,15 @@ class OpenRouterHandler(LLMHandlerInterface):
                         f"OpenRouterHandler: {response.status} for model '{model}' "
                         f"({latency_ms}ms): {snippet}"
                     )
+                    # Inference budget: 429/quota backs off the openrouter tier.
+                    try:
+                        from llm.inference_budget import record as _budget_record
+                        _ra = response.headers.get("Retry-After")
+                        _is_rl = response.status == 429 or "rate" in snippet.lower() or "quota" in snippet.lower()
+                        _budget_record("openrouter", ok=not _is_rl,
+                                       retry_after=float(_ra) if (_ra and _ra.isdigit()) else None)
+                    except Exception:
+                        pass
                     # 429 / 5xx → return None so caller can cascade to next provider
                     return None
 
@@ -183,6 +192,14 @@ class OpenRouterHandler(LLMHandlerInterface):
                     f"in={usage.get('prompt_tokens', 0)} out={usage.get('completion_tokens', 0)} "
                     f"latency_ms={latency_ms}"
                 )
+
+                # Inference budget metabolism: healthy use of the openrouter tier.
+                try:
+                    from llm.inference_budget import record as _budget_record
+                    _budget_record("openrouter", ok=True,
+                                   tokens=int(usage.get("prompt_tokens", 0) or 0) + int(usage.get("completion_tokens", 0) or 0))
+                except Exception:
+                    pass
 
                 # Best-effort cost ledger — never blocks inference.
                 try:

@@ -1,0 +1,284 @@
+# DELTAVERSE Debt Inheritance Protocol — Subgraph Schema
+#
+# This file defines the entities that the subgraph indexer will build
+# and store in its PostgreSQL database. Each entity becomes a queryable
+# type in the resulting GraphQL API.
+#
+# Conventions:
+#
+#   - Entities that represent singleton protocol state use a fixed ID
+#     (usually "1") so that there is exactly one instance.
+#
+#   - Entities that represent per-user or per-address state use the
+#     address as the ID. Multi-dimensional per-user state uses
+#     composite IDs like "user-token".
+#
+#   - Event-like entities (individual mints, burns, liquidations) use
+#     transaction hash plus log index as the ID, which is guaranteed
+#     unique across the entire chain history.
+#
+#   - BigInt is used for all on-chain uint256 values. Don't use Int
+#     because JavaScript's Number type cannot represent values above
+#     2^53 without precision loss.
+
+# ═══════════════════════════════════════════════════════════════════
+# PROTOCOL LEVEL STATE
+# ═══════════════════════════════════════════════════════════════════
+
+"""
+Singleton entity representing the overall state of the
+DebtInheritanceProtocol. Updated on every mint, burn, and fee event.
+Query this for global statistics like total sGDSI supply, cumulative
+fees collected, and current stress level.
+"""
+type Protocol @entity {
+  id: ID!
+
+  # sGDSI supply metrics
+  totalSgdsiSupply: BigInt!
+  cumulativeMintVolume: BigInt!
+  cumulativeBurnVolume: BigInt!
+
+  # Fee metrics
+  cumulativeFees: BigInt!
+  feesRoutedToLps: BigInt!
+
+  # Counters
+  totalThesisPositions: Int!
+  activeThesisPositions: Int!
+
+  # Latest oracle state (denormalized for query performance)
+  latestGdsiValue: BigInt!
+  latestEmaValue: BigInt!
+  latestStressLevel: Int!
+  latestOracleRound: BigInt!
+
+  updatedAt: BigInt!
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# ORACLE STATE
+# ═══════════════════════════════════════════════════════════════════
+
+"""
+A snapshot of the composite GDSI value at a specific oracle round.
+One entity is created for every CompositeUpdated event. Historical
+snapshots are how UIs build charts of the debt stress index over time.
+"""
+type OracleSnapshot @entity(immutable: true) {
+  id: ID!  # roundId as string
+
+  roundId: BigInt!
+  compositeValue: BigInt!
+  emaValue: BigInt!
+  previousValue: BigInt!
+  changeBps: BigInt!  # signed delta in basis points
+
+  # Sub-index values at the time of this snapshot
+  sdrValue: BigInt!  # Sovereign Debt Ratio
+  ysiValue: BigInt!  # Yield Spread Index
+  csiValue: BigInt!  # Credit Stress Index
+  mdiValue: BigInt!  # Monetary Debasement Index
+  rpiValue: BigInt!  # Refinancing Pressure Index
+
+  stressLevel: Int!  # 0-5 categorical classification
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+"""
+Individual sub-index finalization event. Tracks when each of the five
+sub-indices was last updated, from which oracle sources, and what
+confidence interval the Pyth data carried. Useful for diagnosing
+oracle health issues (e.g., "the SDR hasn't updated in 12 hours,
+is the reporter offline?").
+"""
+type SubIndexUpdate @entity(immutable: true) {
+  id: ID!  # txHash-logIndex
+
+  subIndexId: Int!
+  value: BigInt!
+  confidence: BigInt!
+  sourcesUsed: Int!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# USER ACTIVITY
+# ═══════════════════════════════════════════════════════════════════
+
+"""
+Per-user aggregated state. One entity per address that has ever
+interacted with the protocol. Tracks lifetime mint volume, current
+sGDSI balance, active positions, and cumulative PnL.
+"""
+type User @entity {
+  id: ID!  # user address as hex string
+
+  address: Bytes!
+  sgdsiBalance: BigInt!
+  cumulativeMintVolume: BigInt!
+  cumulativeBurnVolume: BigInt!
+  cumulativeFeesPaid: BigInt!
+
+  # Active thesis position if any
+  activeThesisPosition: ThesisPosition
+
+  # Historical counts
+  mintCount: Int!
+  burnCount: Int!
+  thesisExpressionCount: Int!
+
+  # Derived relationships (reverse lookups for GraphQL queries)
+  mints: [SgdsiMint!]! @derivedFrom(field: "user")
+  burns: [SgdsiBurn!]! @derivedFrom(field: "user")
+  thesisPositions: [ThesisPosition!]! @derivedFrom(field: "user")
+
+  createdAt: BigInt!
+  updatedAt: BigInt!
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# MINT / BURN EVENTS
+# ═══════════════════════════════════════════════════════════════════
+
+"""
+Individual sGDSI mint event. Immutable — once recorded, does not change.
+"""
+type SgdsiMint @entity(immutable: true) {
+  id: ID!  # txHash-logIndex
+
+  user: User!
+  stableIn: BigInt!
+  sgdsiOut: BigInt!
+  price: BigInt!  # oracle price at mint time
+  fee: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+"""
+Individual sGDSI burn event.
+"""
+type SgdsiBurn @entity(immutable: true) {
+  id: ID!  # txHash-logIndex
+
+  user: User!
+  sgdsiIn: BigInt!
+  stableOut: BigInt!
+  price: BigInt!
+  fee: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# THESIS POSITIONS
+# ═══════════════════════════════════════════════════════════════════
+
+"""
+A thesis position is the leveraged recursive inheritance expression
+opened via expressThesis(). This entity tracks the full lifecycle
+from open to close including open/close index values, PnL, leverage,
+and the RWA collateral used.
+"""
+type ThesisPosition @entity {
+  id: ID!  # user address (one active position per user)
+
+  user: User!
+  rwaCollateral: Bytes!
+  rwaAmount: BigInt!
+  borrowedStable: BigInt!
+  perpCollateral: BigInt!
+  leverage: Int!
+  isLong: Boolean!
+
+  openedAt: BigInt!
+  openIndexValue: BigInt!
+  openTransactionHash: Bytes!
+
+  # Closed positions retain their close data; active ones leave these null
+  closedAt: BigInt
+  closeIndexValue: BigInt
+  closeTransactionHash: Bytes
+  realizedPnl: BigInt  # signed; negative means loss
+  stableReturned: BigInt
+
+  active: Boolean!
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# LP STAKING ON THE ORACLE
+# ═══════════════════════════════════════════════════════════════════
+
+"""
+A staker in the DeltaVerseDebtOracle LP pool. Tracks current stake
+amount, accumulated rewards, and historical staking activity.
+"""
+type LpStaker @entity {
+  id: ID!  # staker address
+
+  address: Bytes!
+  stakedAmount: BigInt!
+  totalRewardsClaimed: BigInt!
+  totalStaked: BigInt!  # cumulative historical
+  totalUnstaked: BigInt!
+
+  firstStakeAt: BigInt!
+  lastActionAt: BigInt!
+}
+
+"""
+Individual fee routing event. Every time routeFees() succeeds, one of
+these is created showing how much was distributed to LP stakers.
+"""
+type FeeRouting @entity(immutable: true) {
+  id: ID!  # txHash-logIndex
+
+  amount: BigInt!
+  routedBy: Bytes!  # address that called routeFees
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# TIME-SERIES AGGREGATES
+# ═══════════════════════════════════════════════════════════════════
+
+"""
+Hourly aggregate of protocol metrics. The subgraph mapping handlers
+bucket events by (timestamp / 3600) and increment the aggregate for
+that hour. This is how charts like "daily mint volume" or "hourly
+GDSI average" are efficiently queried without scanning every event.
+"""
+type HourlyStat @entity {
+  id: ID!  # hour bucket as string (timestamp / 3600)
+
+  hourStart: BigInt!
+  mintVolume: BigInt!
+  burnVolume: BigInt!
+  feesCollected: BigInt!
+  mintCount: Int!
+  burnCount: Int!
+
+  # GDSI statistics within this hour
+  gdsiOpen: BigInt!
+  gdsiHigh: BigInt!
+  gdsiLow: BigInt!
+  gdsiClose: BigInt!
+
+  # Thesis activity
+  thesisExpressedCount: Int!
+  thesisClosedCount: Int!
+}

@@ -8,6 +8,2637 @@
 
 ---
 
+## 2026-06-13 00:10 UTC
+
+**System snapshot**: 29165 memories, 28 beliefs, 10 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (26 total)
+
+  - `2026-06-12T17:04:56.356758` — 39.8s, waning_crescent, 13 recommendations
+  - `2026-06-05T05:24:31.836793` — 37.7s, waning_gibbous, 14 recommendations
+  - `2026-06-05T05:20:33.215736` — 40.0s, waning_gibbous, 14 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+  - `bdi.mastermind_strategy_mastermind_prime.beliefs.system.state`: {'cpu_percent': 29.7, 'cpu_iowait': 1.6, 'cpu_steal': 0.0, 'load_1m': 1.08203125, 'memory_percent': 77.6, 'memory_available_gb': 1.28, 'swap_percent': 56.4, 'disk_root_percent': 98.2, 'sockets_established': 17, 'self_rss_mb': 235.5, 'self_cpu_percent': 0.0, 'self_threads': 8, 'self_fds': 12, 'self_uptime_seconds': 419}
+  - `sea.adoption.llmfit`: {'decision': 'ADOPT', 'confidence': 0.8, 'cycle_id': 'adopt-llmfit-7d7802ee', 'rationale': "The package meets the security criteria as all high-severity findings are addressed in the audit summary. The license boundary is also met as the declared license is Apache-2.0, which is compatible with mindX's doctrine. Additionally, the package adds value to mindX by providing node-capability-aware inference routing and does not pin a model or hard-couple to one consumer.", 'aggregate_risk': 'medium'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [8] `llm.ollama_handler`: Install Ollama and pull required models for local AI inference
+  - [8] `validation.output_validator`: Add output validation checks to ensure expected formats and data types
+
+
+
+## 2026-06-13 00:10 UTC
+
+**System snapshot**: 29163 memories, 28 beliefs, 10 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (26 total)
+
+  - `2026-06-12T17:04:56.356758` — 39.8s, waning_crescent, 13 recommendations
+  - `2026-06-05T05:24:31.836793` — 37.7s, waning_gibbous, 14 recommendations
+  - `2026-06-05T05:20:33.215736` — 40.0s, waning_gibbous, 14 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+  - `bdi.mastermind_strategy_mastermind_prime.beliefs.system.state`: {'cpu_percent': 29.7, 'cpu_iowait': 1.6, 'cpu_steal': 0.0, 'load_1m': 1.08203125, 'memory_percent': 77.6, 'memory_available_gb': 1.28, 'swap_percent': 56.4, 'disk_root_percent': 98.2, 'sockets_established': 17, 'self_rss_mb': 235.5, 'self_cpu_percent': 0.0, 'self_threads': 8, 'self_fds': 12, 'self_uptime_seconds': 419}
+  - `sea.adoption.llmfit`: {'decision': 'ADOPT', 'confidence': 0.8, 'cycle_id': 'adopt-llmfit-7d7802ee', 'rationale': "The package meets the security criteria as all high-severity findings are addressed in the audit summary. The license boundary is also met as the declared license is Apache-2.0, which is compatible with mindX's doctrine. Additionally, the package adds value to mindX by providing node-capability-aware inference routing and does not pin a model or hard-couple to one consumer.", 'aggregate_risk': 'medium'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [8] `llm.ollama_handler`: Install Ollama and pull required models for local AI inference
+  - [8] `validation.output_validator`: Add output validation checks to ensure expected formats and data types
+
+
+
+## 2026-06-13 00:07 UTC
+
+**System snapshot**: 29108 memories, 28 beliefs, 10 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.600 top3=[openai/gpt-os*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (26 total)
+
+  - `2026-06-12T17:04:56.356758` — 39.8s, waning_crescent, 13 recommendations
+  - `2026-06-05T05:24:31.836793` — 37.7s, waning_gibbous, 14 recommendations
+  - `2026-06-05T05:20:33.215736` — 40.0s, waning_gibbous, 14 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+  - `bdi.mastermind_strategy_mastermind_prime.beliefs.system.state`: {'cpu_percent': 29.7, 'cpu_iowait': 1.6, 'cpu_steal': 0.0, 'load_1m': 1.08203125, 'memory_percent': 77.6, 'memory_available_gb': 1.28, 'swap_percent': 56.4, 'disk_root_percent': 98.2, 'sockets_established': 17, 'self_rss_mb': 235.5, 'self_cpu_percent': 0.0, 'self_threads': 8, 'self_fds': 12, 'self_uptime_seconds': 419}
+  - `sea.adoption.llmfit`: {'decision': 'ADOPT', 'confidence': 0.8, 'cycle_id': 'adopt-llmfit-7d7802ee', 'rationale': "The package meets the security criteria as all high-severity findings are addressed in the audit summary. The license boundary is also met as the declared license is Apache-2.0, which is compatible with mindX's doctrine. Additionally, the package adds value to mindX by providing node-capability-aware inference routing and does not pin a model or hard-couple to one consumer.", 'aggregate_risk': 'medium'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [8] `llm.ollama_handler`: Install Ollama and pull required models for local AI inference
+  - [8] `validation.output_validator`: Add output validation checks to ensure expected formats and data types
+
+
+
+## 2026-06-13 00:07 UTC
+
+**System snapshot**: 29105 memories, 28 beliefs, 10 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.600 top3=[openai/gpt-os*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (26 total)
+
+  - `2026-06-12T17:04:56.356758` — 39.8s, waning_crescent, 13 recommendations
+  - `2026-06-05T05:24:31.836793` — 37.7s, waning_gibbous, 14 recommendations
+  - `2026-06-05T05:20:33.215736` — 40.0s, waning_gibbous, 14 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+  - `bdi.mastermind_strategy_mastermind_prime.beliefs.system.state`: {'cpu_percent': 29.7, 'cpu_iowait': 1.6, 'cpu_steal': 0.0, 'load_1m': 1.08203125, 'memory_percent': 77.6, 'memory_available_gb': 1.28, 'swap_percent': 56.4, 'disk_root_percent': 98.2, 'sockets_established': 17, 'self_rss_mb': 235.5, 'self_cpu_percent': 0.0, 'self_threads': 8, 'self_fds': 12, 'self_uptime_seconds': 419}
+  - `sea.adoption.llmfit`: {'decision': 'ADOPT', 'confidence': 0.8, 'cycle_id': 'adopt-llmfit-7d7802ee', 'rationale': "The package meets the security criteria as all high-severity findings are addressed in the audit summary. The license boundary is also met as the declared license is Apache-2.0, which is compatible with mindX's doctrine. Additionally, the package adds value to mindX by providing node-capability-aware inference routing and does not pin a model or hard-couple to one consumer.", 'aggregate_risk': 'medium'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [8] `llm.ollama_handler`: Install Ollama and pull required models for local AI inference
+  - [8] `validation.output_validator`: Add output validation checks to ensure expected formats and data types
+
+
+
+## 2026-06-13 00:05 UTC
+
+**Chapter published: day 26/28 — Dreams** — waning crescent
+
+
+
+## 2026-06-13 00:04 UTC
+
+**System snapshot**: 29039 memories, 28 beliefs, 10 backlog items, 3/10 sources available (cloud only)
+
+### Autonomous Decisions
+
+  - **strategic_evolution_agent.sea** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.sea** (): ADOPT — *The package meets the security criteria as all high-severity findings are addressed in the audit summary. The license bo*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.479 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.479 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (25 total)
+
+  - `2026-06-05T05:24:31.836793` — 37.7s, waning_gibbous, 14 recommendations
+  - `2026-06-05T05:20:33.215736` — 40.0s, waning_gibbous, 14 recommendations
+  - `2026-06-05T04:48:33.030985` — 33.9s, waning_gibbous, 14 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+  - `bdi.mastermind_strategy_mastermind_prime.beliefs.system.state`: {'cpu_percent': 29.7, 'cpu_iowait': 1.6, 'cpu_steal': 0.0, 'load_1m': 1.08203125, 'memory_percent': 77.6, 'memory_available_gb': 1.28, 'swap_percent': 56.4, 'disk_root_percent': 98.2, 'sockets_established': 17, 'self_rss_mb': 235.5, 'self_cpu_percent': 0.0, 'self_threads': 8, 'self_fds': 12, 'self_uptime_seconds': 419}
+  - `sea.adoption.llmfit`: {'decision': 'ADOPT', 'confidence': 0.8, 'cycle_id': 'adopt-llmfit-7d7802ee', 'rationale': "The package meets the security criteria as all high-severity findings are addressed in the audit summary. The license boundary is also met as the declared license is Apache-2.0, which is compatible with mindX's doctrine. Additionally, the package adds value to mindX by providing node-capability-aware inference routing and does not pin a model or hard-couple to one consumer.", 'aggregate_risk': 'medium'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [8] `llm.ollama_handler`: Install Ollama and pull required models for local AI inference
+  - [8] `validation.output_validator`: Add output validation checks to ensure expected formats and data types
+
+
+
+## 2026-06-13 00:04 UTC
+
+**System snapshot**: 29036 memories, 28 beliefs, 10 backlog items, 3/10 sources available (cloud only)
+
+### Autonomous Decisions
+
+  - **strategic_evolution_agent.sea** (): ADOPT — *The package meets the security criteria as all high-severity findings are addressed in the audit summary. The license bo*
+  - **strategic_evolution_agent.sea** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.sea** (): ADOPT — *The package meets the security criteria as all high-severity findings are addressed in the audit summary. The license bo*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.479 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.479 top3=[openai/gpt-oss*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (25 total)
+
+  - `2026-06-05T05:24:31.836793` — 37.7s, waning_gibbous, 14 recommendations
+  - `2026-06-05T05:20:33.215736` — 40.0s, waning_gibbous, 14 recommendations
+  - `2026-06-05T04:48:33.030985` — 33.9s, waning_gibbous, 14 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+  - `bdi.mastermind_strategy_mastermind_prime.beliefs.system.state`: {'cpu_percent': 29.7, 'cpu_iowait': 1.6, 'cpu_steal': 0.0, 'load_1m': 1.08203125, 'memory_percent': 77.6, 'memory_available_gb': 1.28, 'swap_percent': 56.4, 'disk_root_percent': 98.2, 'sockets_established': 17, 'self_rss_mb': 235.5, 'self_cpu_percent': 0.0, 'self_threads': 8, 'self_fds': 12, 'self_uptime_seconds': 419}
+  - `sea.adoption.llmfit`: {'decision': 'ADOPT', 'confidence': 0.8, 'cycle_id': 'adopt-llmfit-7d7802ee', 'rationale': "The package meets the security criteria as all high-severity findings are addressed in the audit summary. The license boundary is also met as the declared license is Apache-2.0, which is compatible with mindX's doctrine. Additionally, the package adds value to mindX by providing node-capability-aware inference routing and does not pin a model or hard-couple to one consumer.", 'aggregate_risk': 'medium'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [8] `llm.ollama_handler`: Install Ollama and pull required models for local AI inference
+  - [8] `validation.output_validator`: Add output validation checks to ensure expected formats and data types
+
+
+
+## 2026-06-05 19:18 UTC
+
+**System snapshot**: 28957 memories, 27 beliefs, 7446 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **mastermind_prime** (backlog_directive_selection):  — *backlog_idx=25 priority=9 target=system reason: From improvement backlog*
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (25 total)
+
+  - `2026-06-05T05:24:31.836793` — 37.7s, waning_gibbous, 14 recommendations
+  - `2026-06-05T05:20:33.215736` — 40.0s, waning_gibbous, 14 recommendations
+  - `2026-06-05T04:48:33.030985` — 33.9s, waning_gibbous, 14 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+  - `bdi.mastermind_strategy_mastermind_prime.beliefs.system.state`: {'cpu_percent': 29.7, 'cpu_iowait': 1.6, 'cpu_steal': 0.0, 'load_1m': 1.08203125, 'memory_percent': 77.6, 'memory_available_gb': 1.28, 'swap_percent': 56.4, 'disk_root_percent': 98.2, 'sockets_established': 17, 'self_rss_mb': 235.5, 'self_cpu_percent': 0.0, 'self_threads': 8, 'self_fds': 12, 'self_uptime_seconds': 419}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-06-05 18:47 UTC
+
+**System snapshot**: 28948 memories, 27 beliefs, 7446 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (25 total)
+
+  - `2026-06-05T05:24:31.836793` — 37.7s, waning_gibbous, 14 recommendations
+  - `2026-06-05T05:20:33.215736` — 40.0s, waning_gibbous, 14 recommendations
+  - `2026-06-05T04:48:33.030985` — 33.9s, waning_gibbous, 14 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+  - `bdi.mastermind_strategy_mastermind_prime.beliefs.system.state`: {'cpu_percent': 29.7, 'cpu_iowait': 1.6, 'cpu_steal': 0.0, 'load_1m': 1.08203125, 'memory_percent': 77.6, 'memory_available_gb': 1.28, 'swap_percent': 56.4, 'disk_root_percent': 98.2, 'sockets_established': 17, 'self_rss_mb': 235.5, 'self_cpu_percent': 0.0, 'self_threads': 8, 'self_fds': 12, 'self_uptime_seconds': 419}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-06-05 18:17 UTC
+
+**System snapshot**: 28848 memories, 27 beliefs, 7422 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+  - **mastermind_prime** (backlog_directive_selection):  — *backlog_idx=19 priority=9 target=system reason: From improvement backlog*
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (25 total)
+
+  - `2026-06-05T05:24:31.836793` — 37.7s, waning_gibbous, 14 recommendations
+  - `2026-06-05T05:20:33.215736` — 40.0s, waning_gibbous, 14 recommendations
+  - `2026-06-05T04:48:33.030985` — 33.9s, waning_gibbous, 14 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+  - `bdi.mastermind_strategy_mastermind_prime.beliefs.system.state`: {'cpu_percent': 29.7, 'cpu_iowait': 1.6, 'cpu_steal': 0.0, 'load_1m': 1.08203125, 'memory_percent': 77.6, 'memory_available_gb': 1.28, 'swap_percent': 56.4, 'disk_root_percent': 98.2, 'sockets_established': 17, 'self_rss_mb': 235.5, 'self_cpu_percent': 0.0, 'self_threads': 8, 'self_fds': 12, 'self_uptime_seconds': 419}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-06-05 17:47 UTC
+
+**System snapshot**: 28839 memories, 27 beliefs, 7422 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (25 total)
+
+  - `2026-06-05T05:24:31.836793` — 37.7s, waning_gibbous, 14 recommendations
+  - `2026-06-05T05:20:33.215736` — 40.0s, waning_gibbous, 14 recommendations
+  - `2026-06-05T04:48:33.030985` — 33.9s, waning_gibbous, 14 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+  - `bdi.mastermind_strategy_mastermind_prime.beliefs.system.state`: {'cpu_percent': 29.7, 'cpu_iowait': 1.6, 'cpu_steal': 0.0, 'load_1m': 1.08203125, 'memory_percent': 77.6, 'memory_available_gb': 1.28, 'swap_percent': 56.4, 'disk_root_percent': 98.2, 'sockets_established': 17, 'self_rss_mb': 235.5, 'self_cpu_percent': 0.0, 'self_threads': 8, 'self_fds': 12, 'self_uptime_seconds': 419}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-06-05 12:29 UTC
+
+**Improvement cycle 1 succeeded** — goal: {"error": "TimeoutError", "message": "Request timed out after 120s. Model may be too large or server overloaded."}, agents: strategic_evolution_agent, bdi_agent, mastermind_agent
+
+
+
+## 2026-06-05 12:23 UTC
+
+**System snapshot**: 28717 memories, 27 beliefs, 7404 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.600 top3=[openai/gpt-os*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (24 total)
+
+  - `2026-06-05T05:20:33.215736` — 40.0s, waning_gibbous, 14 recommendations
+  - `2026-06-05T04:48:33.030985` — 33.9s, waning_gibbous, 14 recommendations
+  - `2026-06-05T03:20:42.661856` — 86.4s, waning_gibbous, 13 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+  - `bdi.mastermind_strategy_mastermind_prime.beliefs.system.state`: {'cpu_percent': 29.7, 'cpu_iowait': 1.6, 'cpu_steal': 0.0, 'load_1m': 1.08203125, 'memory_percent': 77.6, 'memory_available_gb': 1.28, 'swap_percent': 56.4, 'disk_root_percent': 98.2, 'sockets_established': 17, 'self_rss_mb': 235.5, 'self_cpu_percent': 0.0, 'self_threads': 8, 'self_fds': 12, 'self_uptime_seconds': 419}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-06-05 12:23 UTC
+
+**System snapshot**: 28715 memories, 27 beliefs, 7404 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.600 top3=[openai/gpt-os*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (24 total)
+
+  - `2026-06-05T05:20:33.215736` — 40.0s, waning_gibbous, 14 recommendations
+  - `2026-06-05T04:48:33.030985` — 33.9s, waning_gibbous, 14 recommendations
+  - `2026-06-05T03:20:42.661856` — 86.4s, waning_gibbous, 13 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+  - `bdi.mastermind_strategy_mastermind_prime.beliefs.system.state`: {'cpu_percent': 29.7, 'cpu_iowait': 1.6, 'cpu_steal': 0.0, 'load_1m': 1.08203125, 'memory_percent': 77.6, 'memory_available_gb': 1.28, 'swap_percent': 56.4, 'disk_root_percent': 98.2, 'sockets_established': 17, 'self_rss_mb': 235.5, 'self_cpu_percent': 0.0, 'self_threads': 8, 'self_fds': 12, 'self_uptime_seconds': 419}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-06-05 12:19 UTC
+
+**System snapshot**: 28641 memories, 27 beliefs, 7404 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.549 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.549 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (23 total)
+
+  - `2026-06-05T04:48:33.030985` — 33.9s, waning_gibbous, 14 recommendations
+  - `2026-06-05T03:20:42.661856` — 86.4s, waning_gibbous, 13 recommendations
+  - `2026-05-16T11:40:12.763726` — 46.8s, waning_crescent, 17 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+  - `bdi.mastermind_strategy_mastermind_prime.beliefs.system.state`: {'cpu_percent': 29.7, 'cpu_iowait': 1.6, 'cpu_steal': 0.0, 'load_1m': 1.08203125, 'memory_percent': 77.6, 'memory_available_gb': 1.28, 'swap_percent': 56.4, 'disk_root_percent': 98.2, 'sockets_established': 17, 'self_rss_mb': 235.5, 'self_cpu_percent': 0.0, 'self_threads': 8, 'self_fds': 12, 'self_uptime_seconds': 419}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-06-05 12:19 UTC
+
+**System snapshot**: 28637 memories, 27 beliefs, 7404 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.549 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.549 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (23 total)
+
+  - `2026-06-05T04:48:33.030985` — 33.9s, waning_gibbous, 14 recommendations
+  - `2026-06-05T03:20:42.661856` — 86.4s, waning_gibbous, 13 recommendations
+  - `2026-05-16T11:40:12.763726` — 46.8s, waning_crescent, 17 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+  - `bdi.mastermind_strategy_mastermind_prime.beliefs.system.state`: {'cpu_percent': 29.7, 'cpu_iowait': 1.6, 'cpu_steal': 0.0, 'load_1m': 1.08203125, 'memory_percent': 77.6, 'memory_available_gb': 1.28, 'swap_percent': 56.4, 'disk_root_percent': 98.2, 'sockets_established': 17, 'self_rss_mb': 235.5, 'self_cpu_percent': 0.0, 'self_threads': 8, 'self_fds': 12, 'self_uptime_seconds': 419}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-06-05 12:18 UTC
+
+**System snapshot**: 28615 memories, 27 beliefs, 7404 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (23 total)
+
+  - `2026-06-05T04:48:33.030985` — 33.9s, waning_gibbous, 14 recommendations
+  - `2026-06-05T03:20:42.661856` — 86.4s, waning_gibbous, 13 recommendations
+  - `2026-05-16T11:40:12.763726` — 46.8s, waning_crescent, 17 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+  - `bdi.mastermind_strategy_mastermind_prime.beliefs.system.state`: {'cpu_percent': 29.7, 'cpu_iowait': 1.6, 'cpu_steal': 0.0, 'load_1m': 1.08203125, 'memory_percent': 77.6, 'memory_available_gb': 1.28, 'swap_percent': 56.4, 'disk_root_percent': 98.2, 'sockets_established': 17, 'self_rss_mb': 235.5, 'self_cpu_percent': 0.0, 'self_threads': 8, 'self_fds': 12, 'self_uptime_seconds': 419}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-06-05 11:54 UTC
+
+**Improvement cycle 1 succeeded** — goal: {"error": "TimeoutError", "message": "Request timed out after 120s. Model may be too large or server overloaded."}, agents: strategic_evolution_agent, bdi_agent, mastermind_agent
+
+
+
+## 2026-06-05 11:48 UTC
+
+**System snapshot**: 28493 memories, 26 beliefs, 7389 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.549 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (22 total)
+
+  - `2026-06-05T03:20:42.661856` — 86.4s, waning_gibbous, 13 recommendations
+  - `2026-05-16T11:40:12.763726` — 46.8s, waning_crescent, 17 recommendations
+  - `2026-05-15T21:39:22.260420` — 95.4s, waning_crescent, 17 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-06-05 11:47 UTC
+
+**System snapshot**: 28491 memories, 26 beliefs, 7389 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.549 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (22 total)
+
+  - `2026-06-05T03:20:42.661856` — 86.4s, waning_gibbous, 13 recommendations
+  - `2026-05-16T11:40:12.763726` — 46.8s, waning_crescent, 17 recommendations
+  - `2026-05-15T21:39:22.260420` — 95.4s, waning_crescent, 17 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-06-05 11:46 UTC
+
+**System snapshot**: 28456 memories, 26 beliefs, 7389 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.549 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.549 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (22 total)
+
+  - `2026-06-05T03:20:42.661856` — 86.4s, waning_gibbous, 13 recommendations
+  - `2026-05-16T11:40:12.763726` — 46.8s, waning_crescent, 17 recommendations
+  - `2026-05-15T21:39:22.260420` — 95.4s, waning_crescent, 17 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-06-05 11:46 UTC
+
+**System snapshot**: 28454 memories, 26 beliefs, 7389 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **bdi_agent_mastermind_strategy_mastermind_prime** (degraded_planning): skeleton_plan — *LLM planning failed (handler=ollama/gpt-oss:120b-cloud) — generated structural skeleton*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.549 top3=[openai/gpt-oss*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.549 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (22 total)
+
+  - `2026-06-05T03:20:42.661856` — 86.4s, waning_gibbous, 13 recommendations
+  - `2026-05-16T11:40:12.763726` — 46.8s, waning_crescent, 17 recommendations
+  - `2026-05-15T21:39:22.260420` — 95.4s, waning_crescent, 17 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-06-05 11:19 UTC
+
+**System snapshot**: 28363 memories, 26 beliefs, 7374 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_heartbeat** (self_aware_model_selection):  — *task_class=reasoning importance=routine confidence=high chosen=openai/gpt-oss-120b:free score=0.600 top3=[openai/gpt-oss*
+  - **mindx_heartbeat** (self_aware_model_selection):  — *task_class=reasoning importance=routine confidence=high chosen=openai/gpt-oss-120b:free score=0.600 top3=[openai/gpt-oss*
+  - **mindx_heartbeat** (self_aware_model_selection):  — *task_class=reasoning importance=routine confidence=high chosen=openai/gpt-oss-120b:free score=0.600 top3=[openai/gpt-oss*
+  - **mindx_heartbeat** (self_aware_model_selection):  — *task_class=reasoning importance=routine confidence=high chosen=openai/gpt-oss-120b:free score=0.600 top3=[openai/gpt-oss*
+  - **mindx_heartbeat** (self_aware_model_selection):  — *task_class=reasoning importance=routine confidence=high chosen=openai/gpt-oss-120b:free score=0.600 top3=[openai/gpt-oss*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (22 total)
+
+  - `2026-06-05T03:20:42.661856` — 86.4s, waning_gibbous, 13 recommendations
+  - `2026-05-16T11:40:12.763726` — 46.8s, waning_crescent, 17 recommendations
+  - `2026-05-15T21:39:22.260420` — 95.4s, waning_crescent, 17 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-06-05 10:49 UTC
+
+**System snapshot**: 28332 memories, 26 beliefs, 7374 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_heartbeat** (self_aware_model_selection):  — *task_class=reasoning importance=routine confidence=high chosen=openai/gpt-oss-120b:free score=0.600 top3=[openai/gpt-oss*
+  - **mindx_heartbeat** (self_aware_model_selection):  — *task_class=reasoning importance=routine confidence=high chosen=openai/gpt-oss-120b:free score=0.600 top3=[openai/gpt-oss*
+  - **mindx_heartbeat** (self_aware_model_selection):  — *task_class=reasoning importance=routine confidence=high chosen=openai/gpt-oss-120b:free score=0.600 top3=[openai/gpt-oss*
+  - **mindx_heartbeat** (self_aware_model_selection):  — *task_class=reasoning importance=routine confidence=high chosen=openai/gpt-oss-120b:free score=0.600 top3=[openai/gpt-oss*
+  - **mindx_heartbeat** (self_aware_model_selection):  — *task_class=reasoning importance=routine confidence=high chosen=openai/gpt-oss-120b:free score=0.600 top3=[openai/gpt-oss*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (22 total)
+
+  - `2026-06-05T03:20:42.661856` — 86.4s, waning_gibbous, 13 recommendations
+  - `2026-05-16T11:40:12.763726` — 46.8s, waning_crescent, 17 recommendations
+  - `2026-05-15T21:39:22.260420` — 95.4s, waning_crescent, 17 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-06-05 10:25 UTC
+
+**Improvement cycle 1 succeeded** — goal: {"error": "TimeoutError", "message": "Request timed out after 120s. Model may be too large or server overloaded."}, agents: strategic_evolution_agent, bdi_agent, mastermind_agent
+
+
+
+## 2026-06-05 10:20 UTC
+
+**Chapter published: day 19/28 — Agents** — waning gibbous
+
+
+
+## 2026-06-05 10:19 UTC
+
+**System snapshot**: 28207 memories, 26 beliefs, 7359 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=inclusionai/ling-2.6-1t:free score=0.550 top3=[inclusiona*
+  - **smoke_bdi** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=inclusionai/ling-2.6-1t:free score=0.550 top3=[inclusiona*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=low chosen=openai/gpt-oss-120b:free score=0.480 top3=[openai/gpt-oss-*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (21 total)
+
+  - `2026-05-16T11:40:12.763726` — 46.8s, waning_crescent, 17 recommendations
+  - `2026-05-15T21:39:22.260420` — 95.4s, waning_crescent, 17 recommendations
+  - `2026-05-15T21:53:53.249099` — 42.4s, waning_crescent, 17 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-06-05 10:19 UTC
+
+**System snapshot**: 28206 memories, 26 beliefs, 7359 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=inclusionai/ling-2.6-1t:free score=0.550 top3=[inclusiona*
+  - **smoke_bdi** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=inclusionai/ling-2.6-1t:free score=0.550 top3=[inclusiona*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=low chosen=openai/gpt-oss-120b:free score=0.480 top3=[openai/gpt-oss-*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=openai/gpt-oss-120b:free score=0.550 top3=[openai/gpt-oss*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (21 total)
+
+  - `2026-05-16T11:40:12.763726` — 46.8s, waning_crescent, 17 recommendations
+  - `2026-05-15T21:39:22.260420` — 95.4s, waning_crescent, 17 recommendations
+  - `2026-05-15T21:53:53.249099` — 42.4s, waning_crescent, 17 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-16 18:39 UTC
+
+**System snapshot**: 28018 memories, 18 beliefs, 7341 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.518 top3=[*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.518 top3=[*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (20 total)
+
+  - `2026-05-15T21:53:53.249099` — 42.4s, waning_crescent, 17 recommendations
+  - `2026-05-15T21:39:22.260420` — 95.4s, waning_crescent, 17 recommendations
+  - `2026-05-15T11:41:29.548304` — 51.8s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-16 18:39 UTC
+
+**System snapshot**: 28018 memories, 18 beliefs, 7341 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.518 top3=[*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.518 top3=[*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (20 total)
+
+  - `2026-05-15T21:53:53.249099` — 42.4s, waning_crescent, 17 recommendations
+  - `2026-05-15T21:39:22.260420` — 95.4s, waning_crescent, 17 recommendations
+  - `2026-05-15T11:41:29.548304` — 51.8s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-16 05:23 UTC
+
+**System snapshot**: 27978 memories, 18 beliefs, 7335 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (20 total)
+
+  - `2026-05-15T21:53:53.249099` — 42.4s, waning_crescent, 17 recommendations
+  - `2026-05-15T21:39:22.260420` — 95.4s, waning_crescent, 17 recommendations
+  - `2026-05-15T11:41:29.548304` — 51.8s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-16 04:53 UTC
+
+**System snapshot**: 27782 memories, 18 beliefs, 7287 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (19 total)
+
+  - `2026-05-15T21:39:22.260420` — 95.4s, waning_crescent, 17 recommendations
+  - `2026-05-15T11:41:29.548304` — 51.8s, waning_crescent, 16 recommendations
+  - `2026-05-15T11:24:39.222310` — 36.5s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-16 04:53 UTC
+
+**System snapshot**: 27782 memories, 18 beliefs, 7287 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (19 total)
+
+  - `2026-05-15T21:39:22.260420` — 95.4s, waning_crescent, 17 recommendations
+  - `2026-05-15T11:41:29.548304` — 51.8s, waning_crescent, 16 recommendations
+  - `2026-05-15T11:24:39.222310` — 36.5s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-16 04:38 UTC
+
+**Chapter published: day 28/28 — Full Moon** — new moon
+
+
+
+## 2026-05-16 04:37 UTC
+
+**System snapshot**: 27639 memories, 18 beliefs, 7269 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.527 top3=[*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.527 top3=[*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (18 total)
+
+  - `2026-05-15T11:41:29.548304` — 51.8s, waning_crescent, 16 recommendations
+  - `2026-05-15T11:24:39.222310` — 36.5s, waning_crescent, 16 recommendations
+  - `2026-05-15T10:01:19.254350` — 37.4s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-16 04:37 UTC
+
+**System snapshot**: 27639 memories, 18 beliefs, 7269 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.527 top3=[*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.527 top3=[*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (18 total)
+
+  - `2026-05-15T11:41:29.548304` — 51.8s, waning_crescent, 16 recommendations
+  - `2026-05-15T11:24:39.222310` — 36.5s, waning_crescent, 16 recommendations
+  - `2026-05-15T10:01:19.254350` — 37.4s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-15 19:10 UTC
+
+**System snapshot**: 27534 memories, 18 beliefs, 7236 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (18 total)
+
+  - `2026-05-15T11:41:29.548304` — 51.8s, waning_crescent, 16 recommendations
+  - `2026-05-15T11:24:39.222310` — 36.5s, waning_crescent, 16 recommendations
+  - `2026-05-15T10:01:19.254350` — 37.4s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-15 18:40 UTC
+
+**System snapshot**: 27356 memories, 18 beliefs, 7197 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (17 total)
+
+  - `2026-05-15T11:24:39.222310` — 36.5s, waning_crescent, 16 recommendations
+  - `2026-05-15T10:01:19.254350` — 37.4s, waning_crescent, 16 recommendations
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-15 18:40 UTC
+
+**System snapshot**: 27356 memories, 18 beliefs, 7197 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (17 total)
+
+  - `2026-05-15T11:24:39.222310` — 36.5s, waning_crescent, 16 recommendations
+  - `2026-05-15T10:01:19.254350` — 37.4s, waning_crescent, 16 recommendations
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-15 18:24 UTC
+
+**System snapshot**: 27215 memories, 18 beliefs, 7179 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.549 top3=[*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.549 top3=[*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (16 total)
+
+  - `2026-05-15T10:01:19.254350` — 37.4s, waning_crescent, 16 recommendations
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-15 18:24 UTC
+
+**System snapshot**: 27213 memories, 18 beliefs, 7179 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.549 top3=[*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.549 top3=[*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (16 total)
+
+  - `2026-05-15T10:01:19.254350` — 37.4s, waning_crescent, 16 recommendations
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-15 18:01 UTC
+
+**System snapshot**: 27155 memories, 18 beliefs, 7164 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (16 total)
+
+  - `2026-05-15T10:01:19.254350` — 37.4s, waning_crescent, 16 recommendations
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-15 17:31 UTC
+
+**System snapshot**: 27035 memories, 18 beliefs, 7125 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (16 total)
+
+  - `2026-05-15T10:01:19.254350` — 37.4s, waning_crescent, 16 recommendations
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-15 17:02 UTC
+
+**Chapter published: day 28/28 — Full Moon** — waning crescent
+
+
+
+## 2026-05-15 17:00 UTC
+
+**System snapshot**: 26823 memories, 18 beliefs, 7071 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=low chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.498 top3=[n*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=low chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.498 top3=[n*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (15 total)
+
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-15 17:00 UTC
+
+**System snapshot**: 26823 memories, 18 beliefs, 7071 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=low chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.498 top3=[n*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=low chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.498 top3=[n*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (15 total)
+
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 15:24 UTC
+
+**System snapshot**: 26721 memories, 18 beliefs, 7041 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (15 total)
+
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 14:54 UTC
+
+**System snapshot**: 26571 memories, 18 beliefs, 6981 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (15 total)
+
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 14:24 UTC
+
+**System snapshot**: 26282 memories, 18 beliefs, 6864 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (15 total)
+
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 13:54 UTC
+
+**System snapshot**: 26065 memories, 18 beliefs, 6774 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (15 total)
+
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 13:24 UTC
+
+**System snapshot**: 25844 memories, 18 beliefs, 6690 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (15 total)
+
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 12:54 UTC
+
+**System snapshot**: 25626 memories, 18 beliefs, 6597 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (15 total)
+
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 12:24 UTC
+
+**System snapshot**: 25375 memories, 18 beliefs, 6501 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (15 total)
+
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 11:54 UTC
+
+**System snapshot**: 25140 memories, 18 beliefs, 6399 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (15 total)
+
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 11:24 UTC
+
+**System snapshot**: 24965 memories, 18 beliefs, 6336 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (15 total)
+
+  - `2026-05-14T04:24:10.750897` — 35.8s, waning_crescent, 16 recommendations
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 10:54 UTC
+
+**System snapshot**: 24774 memories, 18 beliefs, 6282 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (14 total)
+
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 10:24 UTC
+
+**System snapshot**: 24625 memories, 18 beliefs, 6231 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (14 total)
+
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 09:54 UTC
+
+**System snapshot**: 24516 memories, 18 beliefs, 6192 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (14 total)
+
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 09:23 UTC
+
+**System snapshot**: 24355 memories, 18 beliefs, 6138 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (14 total)
+
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 08:53 UTC
+
+**System snapshot**: 24225 memories, 18 beliefs, 6087 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (14 total)
+
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 08:23 UTC
+
+**System snapshot**: 24100 memories, 18 beliefs, 6048 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (14 total)
+
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 07:52 UTC
+
+**System snapshot**: 23960 memories, 18 beliefs, 5994 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (14 total)
+
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 07:22 UTC
+
+**System snapshot**: 23811 memories, 18 beliefs, 5943 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (14 total)
+
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 06:52 UTC
+
+**System snapshot**: 23705 memories, 18 beliefs, 5904 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (14 total)
+
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 06:21 UTC
+
+**System snapshot**: 23544 memories, 18 beliefs, 5850 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (14 total)
+
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 05:51 UTC
+
+**System snapshot**: 23416 memories, 18 beliefs, 5799 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (14 total)
+
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 05:21 UTC
+
+**System snapshot**: 23289 memories, 18 beliefs, 5760 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (14 total)
+
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Resilient & Perpetual MindX Evolution v0.5', 'target_mindx_version_increment': '0.5.0', 'focus_areas': ['Fault Tolerance & Fallback Mechanisms', 'Comprehensive Input Validation & Security', 'Self-Healing & Autonomous Recovery', 'Model Diversity & Perpetual Knowledge Retention', 'Observability, Metrics & Adaptive Governance'], 'bdi_todo_list': [{'goal_description': 'Design and implement a dynamic fallback provider selection algorithm that ranks providers by health, latency, and cost, with automatic switch‑over on failure', 'priority': 9}, {'goal_description': 'Add schema‑based validation and sanitization for all inbound API requests, including rate‑limiting and injection protection', 'priority': 9}, {'goal_description': 'Create a self‑diagnostic health‑check service that can restart failed components, clear stale states, and trigger model re‑loads without manual intervention', 'priority': 8}, {'goal_description': 'Implement a model‑registry with version pinning, automated pull‑testing, and rollback capability to ensure perpetual availability of working models', 'priority': 7}, {'goal_description': 'Deploy centralized logging, tracing, and alerting (Prometheus/Grafana) with SLA‑based KPIs and automated anomaly detection', 'priority': 7}, {'goal_description': 'Introduce chaos‑testing harness to periodically inject faults and validate resilience mechanisms', 'priority': 6}], 'key_performance_indicators': {'mean_time_to_recovery_seconds': 15, 'fallback_success_rate_percent': 99.5, 'validation_error_rate_percent': 0.1, 'system_uptime_percent': 99.9, 'average_model_latency_ms': 250, 'backlog_growth_rate_items_per_day': 5}, 'potential_risks': ['Over‑dependence on a single external API provider leading to cascading failures', 'Model drift or degradation causing reduced answer quality', 'Security vulnerabilities introduced by overly permissive validation schemas', 'Resource exhaustion due to uncontrolled fallback retries or model loading', 'Configuration drift across environments causing inconsistent behavior'], 'source': 'llm_enriched'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 04:50 UTC
+
+**System snapshot**: 23155 memories, 18 beliefs, 5709 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (14 total)
+
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Resilient Perpetual Evolution v0.5.0', 'target_mindx_version_increment': '0.5.0', 'focus_areas': ['Robust Fallback & Error Handling', 'Comprehensive Input Validation & Security', 'Self-Healing Adaptive Learning', 'Long‑Term Knowledge Persistence (Belief & Memory Systems)', 'Scalable Multi‑Provider Management & Cost Optimization', 'Observability & Autonomous Governance'], 'bdi_todo_list': [{'goal_description': 'Implement dynamic fallback provider selection with health‑checking and latency‑aware routing for all LLM calls', 'priority': 9}, {'goal_description': 'Add schema‑based input validation and sanitization middleware for all API endpoints (including agent‑to‑agent messages)', 'priority': 9}, {'goal_description': 'Deploy a lightweight belief‑revision module that logs contradictions and triggers self‑improvement proposals when confidence drops below threshold', 'priority': 8}, {'goal_description': 'Design a persistent knowledge store (vector‑backed + relational) for agent experiences, enabling perpetual learning across restarts', 'priority': 8}, {'goal_description': 'Create provider quota‑aware load balancer that rotates usage, tracks cost, and automatically switches to local Ollama models when limits approached', 'priority': 7}, {'goal_description': 'Instrument system with Prometheus‑compatible metrics (MTTR, fallback hit‑rate, validation error rate, belief‑update frequency) and automated alerting', 'priority': 7}, {'goal_description': 'Run a chaos‑engineering test suite (simulated provider failures, malformed inputs) to verify resilience guarantees before release', 'priority': 6}], 'key_performance_indicators': {'mean_time_to_recovery_seconds': '<30', 'fallback_success_rate': '>0.95', 'input_validation_error_rate': '<0.001', 'belief_update_frequency_per_hour': '>2', 'knowledge_store_retention_days': '>365', 'provider_cost_vs_budget_variance': '<5%', 'system_uptime_percentage': '>99.9'}, 'potential_risks': ['Over‑reliance on external API providers leading to quota exhaustion or service degradation', 'Latency introduced by health‑checking and fallback logic impacting real‑time agent interactions', 'Validation overhead could become a bottleneck if not optimized', 'Belief revision mechanisms may drift or produce inconsistent ontologies without proper governance', 'Persistent knowledge store growth could exceed storage capacity if not pruned', 'Complex multi‑provider orchestration increases surface for configuration errors', 'Chaos testing might inadvertently affect production‑like environments if not isolated'], 'source': 'llm_enriched'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 04:20 UTC
+
+**System snapshot**: 23024 memories, 18 beliefs, 5667 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (14 total)
+
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Resilient Perpetual MindX Evolution', 'target_mindx_version_increment': '0.5.0', 'focus_areas': ['Provider Fallback & Load Balancing', 'Robust Input Validation & Sanitization', 'Local Model Infrastructure (Ollama)', 'Self-Healing & Monitoring', 'Knowledge Persistence & Versioned Beliefs'], 'bdi_todo_list': [{'goal_description': 'Implement dynamic fallback provider selection with health checks', 'priority': 9}, {'goal_description': 'Add comprehensive schema-based validation for all API endpoints', 'priority': 9}, {'goal_description': 'Automate Ollama installation and model pulling in deployment scripts', 'priority': 8}, {'goal_description': 'Deploy health‑check microservice and auto‑restart on failure', 'priority': 8}, {'goal_description': 'Design persistent belief store with versioned snapshots for long‑term learning', 'priority': 7}, {'goal_description': 'Introduce chaos testing to verify resilience under provider outages', 'priority': 6}, {'goal_description': 'Establish KPI dashboard for uptime, latency, and validation error rates', 'priority': 5}], 'key_performance_indicators': {'system_uptime_percent': 99.9, 'mean_time_to_recovery_seconds': 30, 'provider_switch_latency_ms': 200, 'input_validation_error_rate_percent': 0.1, 'local_model_inference_success_rate_percent': 98, 'belief_store_version_retention_count': 12}, 'potential_risks': ['Dependency on external API keys leading to quota exhaustion', 'Model drift causing degraded performance over time', 'Increased complexity introducing new failure points', 'Security vulnerabilities from insufficient input validation', 'Resource strain from running multiple local models concurrently'], 'source': 'llm_enriched'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 03:50 UTC
+
+**System snapshot**: 22905 memories, 18 beliefs, 5622 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+  - `sea_audit_driven_2a7b95bc` — **FAILURE**: Blueprint generation failed: Blueprint generation failed: unsupported operand type(s) for +: 'dict' and 'list'
+
+### Dream Cycles (14 total)
+
+  - `2026-05-13T20:23:12.602508` — 175.9s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Resilient AI Provider and Input Validation Enhancement', 'target_mindx_version_increment': '0.5.0', 'focus_areas': ['Provider Resilience', 'Input Validation & Security', 'Local AI Deployment', 'Monitoring & Observability', 'Validation & Testing'], 'bdi_todo_list': [{'goal_description': 'Implement fallback provider selection mechanism for LLM calls', 'priority': 7}, {'goal_description': 'Add comprehensive input validation and sanitization for all API endpoints', 'priority': 9}, {'goal_description': 'Install Ollama service and pull required models for local inference', 'priority': 8}, {'goal_description': 'Deploy health‑checks, metrics collection and alerting for provider failures and latency spikes', 'priority': 6}, {'goal_description': 'Create automated validation tests (unit, integration, chaos) to verify fallback and validation logic', 'priority': 5}], 'key_performance_indicators': ['LLM request success rate (%)', 'Average request latency (ms)', 'Provider failover time (s)', 'Number of validation errors per hour', 'System uptime (%)'], 'potential_risks': ['Reliance on external Ollama service availability', 'Increased code complexity leading to bugs', 'Performance overhead from validation layers', 'Model download or initialization failures', 'Insufficient monitoring coverage causing blind spots'], 'source': 'llm_enriched'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 03:24 UTC
+
+**Improvement cycle 1 succeeded** — goal: {"error": "ConnectionError", "message": "Cannot connect to Ollama at http://10.0.0.155:18080"}, agents: strategic_evolution_agent, bdi_agent, mastermind_agent
+
+
+
+## 2026-05-14 03:20 UTC
+
+**System snapshot**: 22557 memories, 18 beliefs, 5502 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.549 top3=[*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.549 top3=[*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **SUCCESS**: Enhanced blueprint campaign completed. 0 tasks created.
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+
+### Dream Cycles (13 total)
+
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+  - `2026-05-13T18:24:45.135855` — 32.1s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Resilient Perpetual Evolution Framework', 'target_mindx_version_increment': '0.5.0', 'focus_areas': ['Robustness & Fault Tolerance', 'Automated Self‑Improvement Loop', 'Knowledge Persistence & Model Evolution', 'Secure & Validated I/O', 'Scalable Provider Orchestration'], 'bdi_todo_list': [{'goal_description': 'Implement dynamic fallback provider selection with health‑checking and latency‑aware routing for all LLM calls', 'priority': 9}, {'goal_description': 'Deploy comprehensive input validation and sanitization middleware for all API endpoints (schema‑based, type‑safe, injection‑proof)', 'priority': 9}, {'goal_description': 'Create an automated backlog‑processing agent that prioritizes, executes, and validates improvement suggestions using a sandboxed test harness', 'priority': 8}, {'goal_description': 'Design a belief‑storage subsystem that persistently logs agent decisions, outcomes, and learned heuristics for long‑term knowledge retention', 'priority': 7}, {'goal_description': 'Introduce model versioning and continuous fine‑tuning pipeline that retrains local models on approved interaction data while preserving previous checkpoints', 'priority': 6}, {'goal_description': 'Add observability stack (metrics, tracing, alerting) to measure MTTR, request success rates, and resource utilization', 'priority': 7}, {'goal_description': 'Implement role‑based access control and API key vault integration for the coordinator_agent and future agents', 'priority': 5}], 'key_performance_indicators': {'mean_time_to_recover_mttr_seconds': 45, 'input_validation_pass_rate_percent': 99.5, 'backlog_items_processed_per_week': 120, 'knowledge_base_growth_entries_per_day': 25, 'model_update_latency_hours': 6, 'system_uptime_percent': 99.9, 'agent_authorization_compliance_percent': 100}, 'potential_risks': ['Over‑dependence on external LLM providers causing cascading fallback failures', 'Validation overhead increasing latency beyond acceptable thresholds', 'Sandboxed improvement agent could inadvertently execute harmful code if not properly isolated', 'Model drift or catastrophic forgetting during continuous fine‑tuning', 'Backlog growth outpacing processing capacity leading to stale improvements', 'Security misconfiguration in vault or RBAC exposing API keys', 'Observability blind spots causing delayed detection of degradation'], 'source': 'llm_enriched'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 03:20 UTC
+
+**System snapshot**: 22555 memories, 18 beliefs, 5502 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.549 top3=[*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.549 top3=[*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **SUCCESS**: Enhanced blueprint campaign completed. 0 tasks created.
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+
+### Dream Cycles (13 total)
+
+  - `2026-05-13T19:45:40.525099` — 34.2s, waning_crescent, 16 recommendations
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+  - `2026-05-13T18:24:45.135855` — 32.1s, waning_crescent, 16 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Resilient Perpetual Evolution Framework', 'target_mindx_version_increment': '0.5.0', 'focus_areas': ['Robustness & Fault Tolerance', 'Automated Self‑Improvement Loop', 'Knowledge Persistence & Model Evolution', 'Secure & Validated I/O', 'Scalable Provider Orchestration'], 'bdi_todo_list': [{'goal_description': 'Implement dynamic fallback provider selection with health‑checking and latency‑aware routing for all LLM calls', 'priority': 9}, {'goal_description': 'Deploy comprehensive input validation and sanitization middleware for all API endpoints (schema‑based, type‑safe, injection‑proof)', 'priority': 9}, {'goal_description': 'Create an automated backlog‑processing agent that prioritizes, executes, and validates improvement suggestions using a sandboxed test harness', 'priority': 8}, {'goal_description': 'Design a belief‑storage subsystem that persistently logs agent decisions, outcomes, and learned heuristics for long‑term knowledge retention', 'priority': 7}, {'goal_description': 'Introduce model versioning and continuous fine‑tuning pipeline that retrains local models on approved interaction data while preserving previous checkpoints', 'priority': 6}, {'goal_description': 'Add observability stack (metrics, tracing, alerting) to measure MTTR, request success rates, and resource utilization', 'priority': 7}, {'goal_description': 'Implement role‑based access control and API key vault integration for the coordinator_agent and future agents', 'priority': 5}], 'key_performance_indicators': {'mean_time_to_recover_mttr_seconds': 45, 'input_validation_pass_rate_percent': 99.5, 'backlog_items_processed_per_week': 120, 'knowledge_base_growth_entries_per_day': 25, 'model_update_latency_hours': 6, 'system_uptime_percent': 99.9, 'agent_authorization_compliance_percent': 100}, 'potential_risks': ['Over‑dependence on external LLM providers causing cascading fallback failures', 'Validation overhead increasing latency beyond acceptable thresholds', 'Sandboxed improvement agent could inadvertently execute harmful code if not properly isolated', 'Model drift or catastrophic forgetting during continuous fine‑tuning', 'Backlog growth outpacing processing capacity leading to stale improvements', 'Security misconfiguration in vault or RBAC exposing API keys', 'Observability blind spots causing delayed detection of degradation'], 'source': 'llm_enriched'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 02:45 UTC
+
+**System snapshot**: 22330 memories, 18 beliefs, 5487 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=1*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **SUCCESS**: Enhanced blueprint campaign completed. 0 tasks created.
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+
+### Dream Cycles (12 total)
+
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+  - `2026-05-13T18:24:45.135855` — 32.1s, waning_crescent, 16 recommendations
+  - `2026-05-13T10:24:12.781233` — 243.7s, waning_crescent, 15 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Resilient Perpetual Infrastructure v0.5', 'target_mindx_version_increment': '0.5.0', 'focus_areas': ['Provider Resilience', 'Input Validation & Security', 'Local Model Deployment', 'Self-Healing Mechanisms', 'Continuous Learning Loop'], 'bdi_todo_list': [{'goal_description': 'Implement dynamic fallback provider selection with health checks', 'priority': 9}, {'goal_description': 'Add comprehensive input validation and sanitization for all API endpoints', 'priority': 9}, {'goal_description': 'Automate Ollama installation and model pulling via init scripts', 'priority': 8}, {'goal_description': 'Design self-healing supervisor that restarts failed LLM agents', 'priority': 7}, {'goal_description': 'Establish metrics collection for latency, error rates, and provider availability', 'priority': 7}, {'goal_description': 'Create a perpetual learning pipeline that feeds back improvement backlog from runtime anomalies', 'priority': 6}], 'key_performance_indicators': {'provider_failover_latency_ms': 200, 'input_validation_coverage_percent': 100, 'local_model_startup_time_seconds': 30, 'self_healing_success_rate_percent': 95, 'improvement_backlog_growth_rate_per_week': 5}, 'potential_risks': ['Over-reliance on external APIs leading to quota exhaustion', 'Increased complexity causing deployment failures', 'Security vulnerabilities from insufficient input validation', 'Model drift degrading local inference quality', 'Resource exhaustion from uncontrolled self-healing loops'], 'source': 'llm_enriched'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 02:45 UTC
+
+**System snapshot**: 22326 memories, 18 beliefs, 5487 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=5*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=1*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **SUCCESS**: Enhanced blueprint campaign completed. 0 tasks created.
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+
+### Dream Cycles (12 total)
+
+  - `2026-05-13T19:43:39.314107` — 41.0s, waning_crescent, 16 recommendations
+  - `2026-05-13T18:24:45.135855` — 32.1s, waning_crescent, 16 recommendations
+  - `2026-05-13T10:24:12.781233` — 243.7s, waning_crescent, 15 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Resilient Perpetual Infrastructure v0.5', 'target_mindx_version_increment': '0.5.0', 'focus_areas': ['Provider Resilience', 'Input Validation & Security', 'Local Model Deployment', 'Self-Healing Mechanisms', 'Continuous Learning Loop'], 'bdi_todo_list': [{'goal_description': 'Implement dynamic fallback provider selection with health checks', 'priority': 9}, {'goal_description': 'Add comprehensive input validation and sanitization for all API endpoints', 'priority': 9}, {'goal_description': 'Automate Ollama installation and model pulling via init scripts', 'priority': 8}, {'goal_description': 'Design self-healing supervisor that restarts failed LLM agents', 'priority': 7}, {'goal_description': 'Establish metrics collection for latency, error rates, and provider availability', 'priority': 7}, {'goal_description': 'Create a perpetual learning pipeline that feeds back improvement backlog from runtime anomalies', 'priority': 6}], 'key_performance_indicators': {'provider_failover_latency_ms': 200, 'input_validation_coverage_percent': 100, 'local_model_startup_time_seconds': 30, 'self_healing_success_rate_percent': 95, 'improvement_backlog_growth_rate_per_week': 5}, 'potential_risks': ['Over-reliance on external APIs leading to quota exhaustion', 'Increased complexity causing deployment failures', 'Security vulnerabilities from insufficient input validation', 'Model drift degrading local inference quality', 'Resource exhaustion from uncontrolled self-healing loops'], 'source': 'llm_enriched'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 02:44 UTC
+
+**Chapter published: day 26/28 — Dreams** — waning crescent
+
+
+
+## 2026-05-14 02:42 UTC
+
+**System snapshot**: 22232 memories, 18 beliefs, 5487 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **SUCCESS**: Enhanced blueprint campaign completed. 0 tasks created.
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+
+### Dream Cycles (11 total)
+
+  - `2026-05-13T18:24:45.135855` — 32.1s, waning_crescent, 16 recommendations
+  - `2026-05-13T10:24:12.781233` — 243.7s, waning_crescent, 15 recommendations
+  - `2026-05-13T02:19:58.943393` — 32.6s, waning_crescent, 14 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 02:42 UTC
+
+**System snapshot**: 22230 memories, 18 beliefs, 5487 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.sea_for_mastermind** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **strategic_evolution_agent.strategic_evolution_agent** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **startup_agent** (startup_ollama_bootstrap):  — *Ollama reachable at http://localhost:11434*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **SUCCESS**: Enhanced blueprint campaign completed. 0 tasks created.
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+
+### Dream Cycles (11 total)
+
+  - `2026-05-13T18:24:45.135855` — 32.1s, waning_crescent, 16 recommendations
+  - `2026-05-13T10:24:12.781233` — 243.7s, waning_crescent, 15 recommendations
+  - `2026-05-13T02:19:58.943393` — 32.6s, waning_crescent, 14 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 02:23 UTC
+
+**System snapshot**: 22023 memories, 18 beliefs, 5424 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindx_meta_agent** (mindx_improvement_execution):  — *autonomous_improvement_loop*
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=1*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **SUCCESS**: Enhanced blueprint campaign completed. 0 tasks created.
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+
+### Dream Cycles (11 total)
+
+  - `2026-05-13T18:24:45.135855` — 32.1s, waning_crescent, 16 recommendations
+  - `2026-05-13T10:24:12.781233` — 243.7s, waning_crescent, 15 recommendations
+  - `2026-05-13T02:19:58.943393` — 32.6s, waning_crescent, 14 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
+## 2026-05-14 01:53 UTC
+
+**System snapshot**: 21877 memories, 18 beliefs, 5367 backlog items, 4/10 sources available (local inference active)
+
+### Autonomous Decisions
+
+  - **mindXagent.mindx_meta_agent** (self_aware_model_selection):  — *task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=*
+  - **mindx_meta_agent** (mindx_improvement_selection):  — *priority=1*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+  - **blueprint_agent.blueprint_agent_mindx_v2** (self_aware_model_selection):  — *task_class=planning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.550 top3=[*
+
+### Improvement Campaigns
+
+  - `sea_enhanced_run_78e17dac` — **SUCCESS**: Enhanced blueprint campaign completed. 0 tasks created.
+  - `sea_enhanced_run_78e17dac` — **PARTIAL_SUCCESS**: Improvements partially completed
+
+### Dream Cycles (11 total)
+
+  - `2026-05-13T18:24:45.135855` — 32.1s, waning_crescent, 16 recommendations
+  - `2026-05-13T10:24:12.781233` — 243.7s, waning_crescent, 15 recommendations
+  - `2026-05-13T02:19:58.943393` — 32.6s, waning_crescent, 14 recommendations
+
+### New Beliefs (Learned Knowledge)
+
+  - `mindx.evolution.blueprint.latest`: {'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'target_mindx_version_increment': '0.0.1', 'focus_areas': ['system'], 'bdi_todo_list': [{'goal_description': 'Install Ollama and pull required models for local AI inference', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Implement fallback provider selection when primary LLM fails', 'priority': 7, 'target_component': 'system'}, {'goal_description': 'Implement comprehensive input validation for API requests', 'priority': 9, 'target_component': 'system'}, {'goal_description': 'Add output validation checks to ensure expected formats and data types', 'priority': 8, 'target_component': 'system'}, {'goal_description': 'Enhance model input validation with specific checks for LLM providers', 'priority': 7, 'target_component': 'system'}], 'key_performance_indicators': ['Improvement cycle completion rate', 'Agent health score'], 'potential_risks': ['Skeleton requires LLM enrichment for strategic depth'], 'source': 'skeleton'}
+  - `evolution.blueprint_conversion.latest`: {'timestamp': 1778695913.776597, 'blueprint_title': 'Structural Blueprint (skeleton from improvement backlog)', 'blueprint_version': '0.0.1', 'actions_count': 3, 'total_estimated_cost': 0.17, 'total_estimated_duration': 360, 'safety_levels': {'low': 1, 'standard': 1, 'high': 1, 'critical': 0}, 'action_types': ['CREATE_ROLLBACK_PLAN', 'GENERATE_REPORT', 'CHECK_METRICS'], 'conversion_id': '3ec02d78-aa38-4122-b4a5-81e6fcb0a342'}
+
+### Priority Backlog
+
+  - [9] `validation.input_validator`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+  - [9] `system`: Implement comprehensive input validation for API requests
+
+
+
 ## 2026-05-14 01:23 UTC
 
 **System snapshot**: 21595 memories, 18 beliefs, 5280 backlog items, 4/10 sources available (local inference active)
@@ -2472,3 +5103,23 @@
 
 
 
+
+### Milestone — Calibrate Gödel claim + ship Gödel Machine Index (GMI) Phase 0
+- score 1.0; docs, new-capability, public-surface, feature
+- 4 commit(s); see docs/MILESTONES.md
+
+### Milestone — feat(overlord): use @openagents/overlord as full replacement for shadow-overlord at mindX
+- score 0.8; new-capability, public-surface, feature
+- 3 commit(s); see docs/MILESTONES.md
+
+### Milestone — docs(readme): AuthorAgent regenerates README from canonical docs — drop hackathon framing
+- score 1.0; tagged
+- 42 commit(s); see docs/MILESTONES.md
+
+### Milestone — feat(faice): FACE-of-AI-service from facets, x402-gated, overlord (bankon.eth); voaice voice peer
+- score 1.0; tagged
+- 1 commit(s); see docs/MILESTONES.md
+
+### Milestone — fix(gate): restore public feedback surfaces in strict allowlist
+- score 1.0; tagged
+- 9 commit(s); see docs/MILESTONES.md

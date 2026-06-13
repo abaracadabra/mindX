@@ -1,0 +1,31 @@
+{
+  "agent_id": "id_manager_for_coordinator_agent_main",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 26,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Top processes: id_manager_wallet_exists(13), id_manager_address_lookup(13)",
+      "Peak activity hour: 19:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 26
+        },
+        "process_distribution": {
+          "id_manager_wallet_exists": 13,
+          "id_manager_address_lookup": 13
+        },
+        "total_memories": 26,
+        "timestamp": "2026-05-15T11:28:30.590208"
+      }
+    ]
+  },
+  "promoted_at": "2026-05-15T11:28:30.590226",
+  "promotion_criteria": {
+    "pattern_threshold": 3,
+    "days_analyzed": 7
+  }
+}

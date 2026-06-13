@@ -1,0 +1,31 @@
+{
+  "agent_id": "shutdown_agent",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 4,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Top processes: system_shutdown_complete(2), shutdown_initiation(2)",
+      "Peak activity hour: 9:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 4
+        },
+        "process_distribution": {
+          "system_shutdown_complete": 2,
+          "shutdown_initiation": 2
+        },
+        "total_memories": 4,
+        "timestamp": "2026-06-05T05:24:06.122159"
+      }
+    ]
+  },
+  "promoted_at": "2026-06-05T05:24:06.122174",
+  "promotion_criteria": {
+    "pattern_threshold": 2,
+    "days_analyzed": 7
+  }
+}

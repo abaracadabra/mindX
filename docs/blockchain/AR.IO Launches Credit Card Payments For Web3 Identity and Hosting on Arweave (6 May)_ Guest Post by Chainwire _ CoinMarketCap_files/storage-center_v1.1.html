@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<!-- saved from url=(0060)https://s2.coinmarketcap.com/static/storage-center_v1.1.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrossDomain Storage Center</title>
+    <style>
+      body {
+        display: none;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      (function () {
+        'use strict';
+
+        // 存储中心逻辑
+        const storageCenter = {
+          setItem: function (key, value) {
+            try {
+              localStorage.setItem(key, JSON.stringify(value));
+              return { success: true };
+            } catch (error) {
+              console.error('[StorageCenter] setItem failed:', error);
+              return { success: false, error: error.message };
+            }
+          },
+
+          getItem: function (key) {
+            try {
+              const item = localStorage.getItem(key);
+              return {
+                success: true,
+                data: item ? JSON.parse(item) : undefined,
+              };
+            } catch (error) {
+              console.error('[StorageCenter] getItem failed:', error);
+              return { success: false, error: error.message };
+            }
+          },
+
+          removeItem: function (key) {
+            try {
+              localStorage.removeItem(key);
+              return { success: true };
+            } catch (error) {
+              console.error('[StorageCenter] removeItem failed:', error);
+              return { success: false, error: error.message };
+            }
+          },
+
+          clear: function () {
+            try {
+              localStorage.clear();
+              return { success: true };
+            } catch (error) {
+              console.error('[StorageCenter] clear failed:', error);
+              return { success: false, error: error.message };
+            }
+          },
+        };
+
+        // 允许的域名列表（coinmarketcap.com 的所有子域名）
+        function isAllowedOrigin(origin) {
+          if (!origin) return false;
+
+          try {
+            const url = new URL(origin);
+            // 允许 coinmarketcap.com 的所有子域名
+            return (
+              url.hostname.endsWith('.coinmarketcap.com') ||
+              url.hostname === 'coinmarketcap.com' ||
+              // 开发环境
+              url.hostname === 'localhost' ||
+              url.hostname.startsWith('127.0.0.1')
+            );
+          } catch (error) {
+            console.error('[StorageCenter] Invalid origin:', origin);
+            return false;
+          }
+        }
+
+        // 监听来自其他域名的消息
+        window.addEventListener(
+          'message',
+          function (event) {
+            // 验证来源域名
+            if (!isAllowedOrigin(event.origin)) {
+              console.warn(
+                '[StorageCenter] Rejected message from unauthorized origin:',
+                event.origin,
+              );
+              return;
+            }
+
+            const { action, key, value, requestId } = event.data || {};
+
+            if (!requestId) return;
+
+            let result;
+
+            // 执行相应的存储操作
+            switch (action) {
+              case 'setItem':
+                result = storageCenter.setItem(key, value);
+                break;
+              case 'getItem':
+                result = storageCenter.getItem(key);
+                break;
+              case 'removeItem':
+                result = storageCenter.removeItem(key);
+                break;
+              case 'clear':
+                result = storageCenter.clear();
+                break;
+              default:
+                result = {
+                  success: false,
+                  error: 'Unknown action: ' + action,
+                };
+            }
+
+            // 发送响应消息
+            try {
+              event.source.postMessage(
+                {
+                  requestId: requestId,
+                  success: result.success,
+                  data: result.data,
+                  error: result.error,
+                },
+                event.origin,
+              );
+            } catch (error) {
+              console.error('[StorageCenter] Failed to send response:', error);
+            }
+          },
+          false,
+        );
+
+        // 发送就绪信号给父窗口
+        if (window.parent && window.parent !== window) {
+          try {
+            window.parent.postMessage(
+              {
+                type: 'STORAGE_CENTER_READY',
+                timestamp: Date.now(),
+              },
+              '*',
+            );
+          } catch (error) {
+            console.error('[StorageCenter] Failed to send ready signal:', error);
+          }
+        }
+      })();
+    </script>
+  
+
+</body></html>

@@ -1,0 +1,53 @@
+{
+  "agent_id": "machine_dreaming",
+  "dream_timestamp": "2026-05-16T11:39:51.549770",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "behavioral",
+      "description": "Top processes: machine_dream_cycle(20)",
+      "score": 0.2116,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 20
+    },
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (20 occurrences)",
+      "score": 0.2116,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 20
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 20, 2, 21",
+      "score": 0.0802,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 8
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: machine_dream_cycle(20)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 20:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 5
+}

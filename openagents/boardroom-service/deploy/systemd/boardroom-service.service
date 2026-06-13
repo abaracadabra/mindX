@@ -1,0 +1,49 @@
+[Unit]
+Description=mindX boardroom-service — standalone consensus service (CEO + 7 soldiers + public rooms)
+After=network-online.target mindx.service
+Wants=network-online.target
+# Soft dependency on mindx.service for shared JSONL substrate availability
+PartOf=multi-user.target
+
+[Service]
+Type=simple
+User=mindx
+Group=mindx
+WorkingDirectory=/home/mindx/mindX/openagents/boardroom-service
+
+# Pre-flight: cross-check that agent_map.json has all seven soldiers and
+# the BANKON vault has the mindx.boardroom.{client,owner}:pk keys.
+ExecStartPre=/usr/bin/node /home/mindx/mindX/openagents/boardroom-service/scripts/cross_check.js
+
+ExecStart=/usr/bin/node /home/mindx/mindX/openagents/boardroom-service/dist/server.js
+
+Environment=NODE_ENV=production
+Environment=BOARDROOM_PORT=8771
+EnvironmentFile=-/home/mindx/mindX/.env
+
+# JWT secret + vault paths come from .env (loaded above)
+# BOARDROOM_JWT_SECRET=... must be present in .env or this service refuses to boot.
+
+Restart=on-failure
+RestartSec=5s
+StartLimitBurst=10
+StartLimitIntervalSec=60
+
+# Hardening — only allow writes to data/governance/.
+ReadWritePaths=/home/mindx/mindX/data/governance
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# Resource caps — boardroom should never need more than this.
+LimitNOFILE=4096
+MemoryMax=512M
+CPUQuota=80%
+
+[Install]
+WantedBy=multi-user.target

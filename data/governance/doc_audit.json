@@ -1,19 +1,19 @@
 {
-  "timestamp": 1778692921.0240288,
-  "total_docs": 228,
+  "timestamp": 1781309464.7310107,
+  "total_docs": 246,
   "archived": 6,
   "deprecated": 1,
   "recently_modified": [
-    "AUTHOR_AGENT",
-    "BANKON_VAULT",
-    "BANKON_VAULT_HANDOFF",
+    "AUTHORAGENT_COMPOSITION",
     "BOOK_OF_MINDX",
-    "HERMES_INTEGRATION",
+    "DOC_INDEX",
     "IMPROVEMENT_JOURNAL",
-    "INDEX",
-    "MARKETING",
-    "MARKETING_AGENT",
-    "MARKETING_PLAYBOOK"
+    "MILESTONES",
+    "MUSIC4ROBOTS2DANCE2",
+    "NAV",
+    "PACKAGE_ADOPTION",
+    "SIMPLECODER_SANDBOX_AUDIT",
+    "SPEECH_FROM_THE_THRONE"
   ],
   "conflicts": [
     "TECHNICAL: MindXAgent is meta-agent",
@@ -39,6 +39,7 @@
     "ATARAXIA",
     "ATTRIBUTION",
     "AUDIT_DRIVEN_CAMPAIGN_IMPLEMENTATION",
+    "AUTHORAGENT_COMPOSITION",
     "AUTHOR_AGENT",
     "AUTOMINDX_ENHANCED_SUMMARY",
     "AUTOMINDX_INFT_SUMMARY",
@@ -49,8 +50,7 @@
     "Arc_Testnet_Deployment_Guide",
     "BANKON_VAULT",
     "BANKON_VAULT_HANDOFF",
-    "BOARDROOM",
-    "BOOK_OF_MINDX",
-    "Blueprint"
+    "BEST_PRACTICES",
+    "BOARDROOM"
   ]
 }

@@ -116,6 +116,10 @@ tr:hover td{background:rgba(121,192,255,.04);color:var(--text)}
         </div>
         <div class="bar"><i id="eval-rate-bar" style="width:0%"></i></div>
       </div>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text3)">
+        Gödel Machine Index: <span id="gmi-verdict">checking…</span>
+        <div style="margin-top:6px;font-size:10px;line-height:1.5">This gate scores <b>rationale coherence</b>, not a proof of utility increase. <a href="/feedback.html#sec-godel-machine">full self-audit →</a></div>
+      </div>
     </div>
 
     <div class="card">
@@ -129,7 +133,7 @@ tr:hover td{background:rgba(121,192,255,.04);color:var(--text)}
     <div id="activity" class="activity"></div>
   </div>
 
-  <div class="foot">mindX · agentic.html · public, read-only · refresh 30s · <a href="/feedback.txt">plain text</a> · <a href="/insight/publications/audit?h=true">publish audit</a> · <a href="/insight/eval/health?h=true">eval health</a></div>
+  <div class="foot">mindX · agentic.html · public, read-only · refresh 30s · <a href="/feedback.txt">plain text</a> · <a href="/insight/publications/audit?h=true">publish audit</a> · <a href="/insight/eval/health?h=true">eval health</a> · <a href="/insight/godel/machine?h=true">gödel index</a></div>
 </div>
 
 <script>
@@ -226,6 +230,15 @@ async function loadEval(){
   document.getElementById('eval-rate-pct').textContent=sr==null?'—':(pct+'%');
   document.getElementById('eval-rate-bar').style.width=pct+'%';
 }
+async function loadGMI(){
+  const g=await f('/insight/godel/machine');
+  const el=document.getElementById('gmi-verdict');if(!el)return;
+  if(!g||!g.verdict){el.textContent='unavailable';return}
+  const yes=g.verdict==='GODEL_MACHINE';
+  const cov=(typeof g.proof_coverage==='number')?(g.proof_coverage*100).toFixed(0)+'%':'—';
+  el.innerHTML=(yes?'<span class="pill ok">GÖDEL MACHINE</span>':'<span class="pill dim">NOT YET</span>')+
+    ' · proof coverage '+cov;
+}
 
 async function loadStuck(){
   const d=await f('/insight/stuck_loops?window=900&min_repeats=5');
@@ -257,7 +270,7 @@ async function loadActivity(){
 }
 
 async function refreshAll(){
-  await Promise.allSettled([loadPubSummary(),loadPubEvents(),loadDrafts(),loadEval(),loadStuck(),loadActivity()]);
+  await Promise.allSettled([loadPubSummary(),loadPubEvents(),loadDrafts(),loadEval(),loadGMI(),loadStuck(),loadActivity()]);
   const now=new Date();
   document.getElementById('last-refresh').textContent='last '+now.toLocaleTimeString();
 }

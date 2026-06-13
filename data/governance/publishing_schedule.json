@@ -1,0 +1,14 @@
+{
+  "protocol_series": {
+    "enabled": true,
+    "interval_days": 1,
+    "start_date": "2026-06-06",
+    "max_publications": 7,
+    "hour_utc": 13,
+    "status": "publish",
+    "published_count": 0,
+    "last_published_date": null,
+    "updated_at": 1780732516.11139,
+    "updated_by": "operator:flip-to-publish"
+  }
+}

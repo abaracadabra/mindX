@@ -1,0 +1,51 @@
+{
+  "agent_id": "strategic_evolution_agent",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 182,
+  "patterns": {
+    "success_patterns": [
+      {
+        "pattern": "success_rate_observed",
+        "success_rate": 1.0,
+        "success_count": 182,
+        "top_processes": [
+          "comprehensive_audit",
+          "comprehensive_audit",
+          "comprehensive_audit",
+          "comprehensive_audit",
+          "comprehensive_audit",
+          "comprehensive_audit",
+          "comprehensive_audit",
+          "comprehensive_audit",
+          "comprehensive_audit",
+          "comprehensive_audit"
+        ],
+        "timestamp": "2026-05-15T11:28:12.561289"
+      }
+    ],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Active: 182 memories",
+      "Success rate: 100.0% (182 success, 0 failure)",
+      "Top processes: comprehensive_audit(182)",
+      "Peak activity hour: 6:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 182
+        },
+        "process_distribution": {
+          "comprehensive_audit": 182
+        },
+        "total_memories": 182,
+        "timestamp": "2026-05-15T11:28:12.561339"
+      }
+    ]
+  },
+  "promoted_at": "2026-05-15T11:28:12.561351",
+  "promotion_criteria": {
+    "pattern_threshold": 3,
+    "days_analyzed": 7
+  }
+}

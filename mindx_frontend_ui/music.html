@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Music 4 Robots 2 Dance 2 — mindX</title>
+<link rel="stylesheet" href="/m4r2d2/m4r2d2-player.css">
+<style>
+  body { margin: 0; background: #0c0c0e; color: #e8e8e8;
+    font: 15px/1.55 Interstate, "Lucida Grande", Verdana, Tahoma, sans-serif; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 140px; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  .sub { color: #9a9a9a; margin: 0 0 28px; }
+  h2 { font-size: 18px; margin: 36px 0 12px; border-bottom: 1px solid #222; padding-bottom: 6px; }
+  a { color: #ff5500; }
+  code, pre { background: #161618; border: 1px solid #242428; border-radius: 6px; }
+  code { padding: 1px 6px; }
+  pre { padding: 12px 14px; overflow-x: auto; font-size: 13px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; }
+  button.cta { cursor: pointer; border: 0; border-radius: 6px; padding: 10px 16px;
+    background: #ff5500; color: #fff; font-weight: 600; }
+  button.ghost { background: #1c1c20; color: #eee; border: 1px solid #333; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Music 4 Robots 2 Dance 2</h1>
+  <p class="sub">The mindX in-app player — same engine as the WordPress plugin and the DROP.
+    <a href="https://rage.pythai.net/take-it-own-it-codephreak/" target="_blank">▶ the story</a></p>
+
+  <h2>The highlights (zero-config)</h2>
+  <p>One tag, no attributes → plays the highlights with custom controls + the story link:</p>
+  <pre>&lt;m4r2d2-player&gt;&lt;/m4r2d2-player&gt;</pre>
+  <m4r2d2-player></m4r2d2-player>
+
+  <h2>takIT — takeitownit (visual, light theme)</h2>
+  <pre>&lt;m4r2d2-player album="takit" theme="light"&gt;&lt;/m4r2d2-player&gt;</pre>
+  <m4r2d2-player album="takit" theme="light"></m4r2d2-player>
+
+  <h2>DROP it from the app (injective event)</h2>
+  <p>Inject a permission-gated, self-docking player anywhere — programmatically or by event:</p>
+  <div class="row">
+    <button class="cta" id="drop">M4R2D2.drop()</button>
+    <button class="ghost" id="dropEvent">dispatch m4r2d2:drop</button>
+  </div>
+  <pre>// programmatic
+M4R2D2.drop({ album: "music4robots2dance2", sticky: true });
+
+// injective event — anyone can fire this
+window.dispatchEvent(new CustomEvent("m4r2d2:drop",
+  { detail: { album: "music4robots2dance2", sticky: true } }));</pre>
+
+  <h2>Share it (paste-anywhere, minimal)</h2>
+  <p>One line installs the player on any web2 page:</p>
+  <pre>&lt;script src="https://cdn.jsdelivr.net/gh/gnugui/music4robots2dance2@v1.0.0-alpha/assets/m4r2d2-drop.js"
+        data-album="music4robots2dance2" data-sticky="true" defer&gt;&lt;/script&gt;</pre>
+</div>
+
+<script src="/m4r2d2/m4r2d2-player.js"></script>
+<script>
+  document.getElementById("drop").addEventListener("click", function () {
+    M4R2D2.drop({ album: "music4robots2dance2", sticky: true });
+  });
+  document.getElementById("dropEvent").addEventListener("click", function () {
+    window.dispatchEvent(new CustomEvent("m4r2d2:drop",
+      { detail: { album: "takit", sticky: true, theme: "light" } }));
+  });
+</script>
+</body>
+</html>

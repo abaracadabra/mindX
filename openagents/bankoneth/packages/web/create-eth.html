@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BANKON · own a .eth, then resell subnames</title>
+<link rel="stylesheet" href="./styled.css" />
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><span class="mark">BANKON</span><span class="eth">.eth</span>
+      <span class="tagline">Own a name · become a registry</span></div>
+    <span class="spacer"></span>
+    <a href="./index.html"><button class="ghost">← storefront</button></a>
+    <span class="row" data-conn></span>
+  </div>
+
+  <section class="hero">
+    <img class="crest" src="/gfx/doorway1.png" alt="create .eth" onerror="this.src='/gfx/bankonvault.png';this.onerror=null" />
+    <h1>Create your own <span style="color:var(--gold)">.eth</span></h1>
+    <p class="sub">Register a top-level <code>.eth</code> through BANKON, then turn it into your own
+      subname registry — sell <code>name.yourname.eth</code> and list on AgenticPlace.</p>
+  </section>
+
+  <!-- Step 1: search + quote -->
+  <div class="panel" id="step1">
+    <h3>① Pick a .eth</h3>
+    <div class="bigsearch">
+      <input id="name" type="text" placeholder="yourname" autocomplete="off" spellcheck="false" />
+      <span class="muted" style="align-self:center">.eth</span>
+      <select id="years" style="max-width:120px"><option value="1">1 year</option><option value="2">2 years</option><option value="3">3 years</option></select>
+      <button class="primary" id="quoteBtn">Quote</button>
+    </div>
+    <div id="q" class="result" style="display:none"></div>
+  </div>
+
+  <!-- Step 2: commit -> reveal -->
+  <div class="panel" id="step2" style="display:none">
+    <h3>② Register (commit → reveal)</h3>
+    <div class="note">ENS requires a two-step commit→reveal (~60s wait) to prevent front-running. Your price includes the BANKON fee (<span id="feepct">…</span>).</div>
+    <div class="row">
+      <button id="commitBtn">1 · Commit</button>
+      <button class="gold" id="revealBtn" disabled>2 · Reveal &amp; pay</button>
+    </div>
+    <div id="r" class="result" style="display:none"></div>
+  </div>
+
+  <!-- Step 3: confirmation -> resell + list -->
+  <div class="panel" id="step3" style="display:none">
+    <h3>🎉 You own <span id="ownedName" style="color:var(--gold)"></span></h3>
+    <p class="sub">Now monetise it — enrol it as a subname registry and list it on AgenticPlace.</p>
+    <div class="grid">
+      <div class="card">
+        <h3>Sell subnames</h3>
+        <div class="sub">Let buyers mint <code>name.<span class="ownedShort"></span></code>. BANKON takes a <span id="hostpct">…</span> host fee; you keep the rest.</div>
+        <label class="field"><span class="lbl">price / subname (ETH)</span><input id="subPriceEth" type="text" value="0.005" /></label>
+        <label class="field"><span class="lbl">your share (bps)</span><input id="ownerShare" type="text" value="9000" /></label>
+        <button class="primary" id="enrollBtn">Enrol for resale</button>
+        <div id="enrollOut" class="result" style="display:none"></div>
+      </div>
+      <div class="card">
+        <h3>List on AgenticPlace</h3>
+        <div class="sub">Publish your registry to <a href="https://agenticplace.pythai.net/marketspace" target="_blank" rel="noopener">agenticplace.pythai.net/marketspace</a>.</div>
+        <label class="field"><span class="lbl">metadata URI (optional)</span><input id="metaUri" type="text" placeholder="ipfs://… or https://…" /></label>
+        <button class="gold" id="listBtn">List on AgenticPlace</button>
+        <div id="listOut" class="result" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">Just want a subname under bankon.eth? <a href="./index.html">storefront →</a></div>
+</div>
+
+<script type="module" src="./webgl-bg.js"></script>
+<script type="module">
+import { BANKON, F, ethers, connect, topbar, whoami, toast, el } from "./app-common.js";
+
+const show = (n, t, c = "") => { n.style.display = "block"; n.className = "result " + c; n.textContent = t; };
+let secret = null, quoteWei = null, label = null, years = 1, ownedName = null;
+
+async function reg() {
+  if (!BANKON.deployments) BANKON.deployments = await F.loadDeployments(BANKON.PUBLIC_BASE, BANKON.chainId || 1);
+  const address = F.addressFor(BANKON.deployments, "ethRegistrar");
+  if (!address) throw new Error(".eth registrar not deployed on this network yet.");
+  return { address, abi: await F.loadAbi(BANKON.PUBLIC_BASE, "BankonEthRegistrar") };
+}
+function commitParams() {
+  return { label, owner: BANKON.address, durationYears: BigInt(years), secret,
+    resolver: "0x0000000000000000000000000000000000000000", reverseRecord: false, ownerControlledFuses: 0 };
+}
+
+document.getElementById("quoteBtn").addEventListener("click", async () => {
+  const q = document.getElementById("q");
+  label = document.getElementById("name").value.trim().toLowerCase().replace(/\.eth$/, "");
+  years = Number(document.getElementById("years").value);
+  if (!label) return;
+  show(q, "quoting " + label + ".eth …");
+  try {
+    if (!BANKON.address) await connect();
+    const { address, abi } = await reg();
+    const [wei, usd6] = await F.readContract({ provider: BANKON.browserProvider, address, abi, fn: "quote", args: [label, BigInt(years)], ethers });
+    quoteWei = wei;
+    let fee = "";
+    try { const bps = await F.readContract({ provider: BANKON.browserProvider, address, abi, fn: "markupBps", args: [], ethers }); fee = ` (incl. ${Number(bps) / 100}% BANKON fee)`; document.getElementById("feepct").textContent = `${Number(bps) / 100}%`; } catch {}
+    show(q, `${label}.eth · ${years}yr\nprice: ${ethers.formatEther(wei)} ETH${fee}\n≈ $${(Number(usd6) / 1e6).toFixed(2)}`, "ok");
+    document.getElementById("step2").style.display = "block";
+    document.getElementById("step2").scrollIntoView({ behavior: "smooth" });
+  } catch (e) { show(q, "✗ " + (e.shortMessage || e.message), "err"); }
+});
+
+document.getElementById("commitBtn").addEventListener("click", async () => {
+  const r = document.getElementById("r");
+  try {
+    const { address, abi } = await reg();
+    const signer = await BANKON.browserProvider.getSigner();
+    secret = ethers.hexlify(ethers.randomBytes(32));
+    show(r, "committing…");
+    const tx = await F.writeContract({ signer, address, abi, fn: "commit", args: [commitParams()], ethers });
+    show(r, "commit sent: " + tx.hash + "\nwaiting…"); await tx.wait();
+    let left = 60; const rb = document.getElementById("revealBtn");
+    show(r, "✅ committed. Wait ~60s (anti-front-running), then reveal.", "ok");
+    rb.textContent = `2 · Reveal (${left}s)`;
+    const iv = setInterval(() => { left--; rb.textContent = left > 0 ? `2 · Reveal (${left}s)` : "2 · Reveal & pay"; if (left <= 0) { clearInterval(iv); rb.disabled = false; } }, 1000);
+  } catch (e) { show(r, "✗ " + (e.shortMessage || e.message), "err"); }
+});
+
+document.getElementById("revealBtn").addEventListener("click", async () => {
+  const r = document.getElementById("r");
+  try {
+    const { address, abi } = await reg();
+    const signer = await BANKON.browserProvider.getSigner();
+    show(r, "revealing & paying " + ethers.formatEther(quoteWei) + " ETH…");
+    const tx = await F.writeContract({ signer, address, abi, fn: "reveal", args: [commitParams(), "0x"], value: quoteWei, ethers });
+    show(r, "reveal sent: " + tx.hash + "\nwaiting…"); const rcpt = await tx.wait();
+    ownedName = `${label}.eth`;
+    show(r, `✅ ${ownedName} registered in block ${rcpt.blockNumber}!`, "ok");
+    document.getElementById("ownedName").textContent = ownedName;
+    for (const e of document.querySelectorAll(".ownedShort")) e.textContent = ownedName;
+    document.getElementById("step3").style.display = "block";
+    try { const { address: ha, abi: hb } = await hosting(); const hb2 = await F.readContract({ provider: BANKON.browserProvider, address: ha, abi: hb, fn: "hostShareBps", args: [], ethers }); document.getElementById("hostpct").textContent = `${Number(hb2) / 100}%`; } catch {}
+    document.getElementById("step3").scrollIntoView({ behavior: "smooth" });
+  } catch (e) { show(r, "✗ " + (e.shortMessage || e.message), "err"); }
+});
+
+// ── Step 3: enrol for resale + list on AgenticPlace ──────────────────────────
+async function hosting() {
+  const address = F.addressFor(BANKON.deployments, "domainHosting");
+  if (!address) throw new Error("DomainHosting not deployed on this network.");
+  return { address, abi: await F.loadAbi(BANKON.PUBLIC_BASE, "BankonDomainHosting") };
+}
+
+document.getElementById("enrollBtn").addEventListener("click", async () => {
+  const o = document.getElementById("enrollOut");
+  try {
+    const { address, abi } = await hosting();
+    const node = ethers.namehash(ownedName);
+    const priceWei = ethers.parseEther(document.getElementById("subPriceEth").value || "0");
+    const ownerShare = Number(document.getElementById("ownerShare").value || "9000");
+    const expiry = BigInt(Math.floor(Date.now() / 1000) + 31536000);
+    const signer = await BANKON.browserProvider.getSigner();
+    show(o, "enrolling " + ownedName + " as a subname registry…");
+    const tx = await F.writeContract({ signer, address, abi, fn: "enroll", args: [node, 0n, priceWei, 327685, expiry, ownerShare], ethers });
+    show(o, "sent: " + tx.hash + "\nwaiting…"); const r = await tx.wait();
+    show(o, `✅ ${ownedName} is now a registry — buyers can mint name.${ownedName}. (block ${r.blockNumber})\nTip: burn CANNOT_UNWRAP on ${ownedName} if enrol reverted on fuses.`, "ok");
+  } catch (e) { show(o, "✗ " + (e.shortMessage || e.message) + "\n(If this is a fuses error, burn CANNOT_UNWRAP on " + ownedName + " in the NameWrapper first.)", "err"); }
+});
+
+document.getElementById("listBtn").addEventListener("click", async () => {
+  const o = document.getElementById("listOut");
+  try {
+    const address = F.addressFor(BANKON.deployments, "agenticPlaceHook");
+    if (!address) throw new Error("AgenticPlace hook not deployed on this network.");
+    const abi = await F.loadAbi(BANKON.PUBLIC_BASE, "BankonAgenticPlaceHook");
+    const node = ethers.namehash(ownedName);
+    const labelhash = ethers.keccak256(ethers.toUtf8Bytes(label));
+    const signer = await BANKON.browserProvider.getSigner();
+    const meta = document.getElementById("metaUri").value || `https://agenticplace.pythai.net/marketspace/${ownedName}`;
+    show(o, "listing on AgenticPlace…");
+    const tx = await F.writeContract({ signer, address, abi, fn: "list", args: [node, labelhash, "0x0000000000000000000000000000000000000000", 0n, meta, BANKON.address], ethers });
+    show(o, "sent: " + tx.hash + "\nwaiting…"); const r = await tx.wait();
+    show(o, `✅ listed in block ${r.blockNumber}\nView: https://agenticplace.pythai.net/marketspace`, "ok");
+    o.appendChild(el("div", { cls: "row", attrs: { style: "margin-top:8px" } }, [el("a", { attrs: { href: "https://agenticplace.pythai.net/marketspace", target: "_blank", rel: "noopener" } }, [el("button", { cls: "gold", text: "Open AgenticPlace marketspace ↗" })])]));
+  } catch (e) { show(o, "✗ " + (e.shortMessage || e.message), "err"); }
+});
+
+(async function () { await whoami(); await connect().catch(() => {}); topbar(); })();
+</script>
+</body>
+</html>

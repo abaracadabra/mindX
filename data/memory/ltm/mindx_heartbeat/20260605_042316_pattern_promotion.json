@@ -1,0 +1,30 @@
+{
+  "agent_id": "mindx_heartbeat",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 49,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Top processes: godel_core_choice(49)",
+      "Peak activity hour: 3:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 49
+        },
+        "process_distribution": {
+          "godel_core_choice": 49
+        },
+        "total_memories": 49,
+        "timestamp": "2026-06-05T04:23:16.607772"
+      }
+    ]
+  },
+  "promoted_at": "2026-06-05T04:23:16.607800",
+  "promotion_criteria": {
+    "pattern_threshold": 3,
+    "days_analyzed": 7
+  }
+}

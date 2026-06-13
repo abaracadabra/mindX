@@ -234,6 +234,22 @@
       "signature": "0x393f1c7f21849a8d2a53c8949b4eff0a0f25c8a70dd10ebcd5433e9895c4ada502b42a0bf71df285971f415697195a90c39917a86a02e7d824bf9dca109fe8911c",
       "recovered_address": "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169",
       "timestamp": 1771985166.890236
+    },
+    {
+      "is_valid": true,
+      "message": "mindX would like you to sign in with your wallet.\n\nThis signature proves you own this address. It does not authorize any transaction, transfer of funds, or approval of tokens. You are in full control and remain safe.\n\nOnly sign if you requested access to mindX right now.\n\nLogin \u00b7 0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169 \u00b7 1780655242 \u00b7 58a19186",
+      "signature": "0x32a4b2e81e355c600c8c70355f5cc335f505f15bedd0c67fff5b36bddb487f913146dc7de535ad7a662e9a71e90293464665b801bc38d0fbff5ffd793542e7371b",
+      "recovered_address": "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169",
+      "timestamp": 1780655262.939056
+    }
+  ],
+  "0xA79542F2236817726705B23Ae8d97Fd57D8ABbD0": [
+    {
+      "is_valid": true,
+      "message": "mindX would like you to sign in with your wallet.\n\nThis signature proves you own this address. It does not authorize any transaction, transfer of funds, or approval of tokens. You are in full control and remain safe.\n\nOnly sign if you requested access to mindX right now.\n\nLogin \u00b7 0xA79542F2236817726705B23Ae8d97Fd57D8ABbD0 \u00b7 1780655898 \u00b7 37a0e9f4",
+      "signature": "0xd7453cf5873755dda35bd2ea3257cfb9ba8f9add3ac6fb87108b976120eebab55fd09090516e512f4c45bf70d20ba6db691e993790b132a4c1665829bf027c161c",
+      "recovered_address": "0xA79542F2236817726705B23Ae8d97Fd57D8ABbD0",
+      "timestamp": 1780655925.17083
     }
   ]
 }

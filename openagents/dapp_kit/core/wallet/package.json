@@ -1,0 +1,38 @@
+{
+  "name": "@openagents/wallet",
+  "version": "0.1.0",
+  "description": "EIP-6963 discovery + viem WalletClient for openagents/ dApp kit. EVM-first; Algorand adapter slot is optional.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./chains": "./dist/chains.js",
+    "./eip6963": "./dist/eip6963.js"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
+  "peerDependencies": {
+    "@txnlab/use-wallet": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@txnlab/use-wallet": { "optional": true }
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "happy-dom": "^15.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}

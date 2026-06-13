@@ -1,0 +1,41 @@
+{
+  "ollama_cloud": {
+    "provider": "ollama_cloud",
+    "headroom": 0.889,
+    "safety": 0.9,
+    "windows": [
+      {
+        "span_s": 60,
+        "limit": 10.0,
+        "eff": 10.0,
+        "used": 1
+      },
+      {
+        "span_s": 3600,
+        "limit": 150.0,
+        "eff": 150.0,
+        "used": 1
+      },
+      {
+        "span_s": 18000,
+        "limit": 50.0,
+        "eff": 50.0,
+        "used": 1
+      },
+      {
+        "span_s": 604800,
+        "limit": 500.0,
+        "eff": 500.0,
+        "used": 1
+      }
+    ],
+    "binding_window_s": 60,
+    "binding_used": 1,
+    "binding_limit": 10.0,
+    "tokens_min": 100,
+    "backoff_s": 0,
+    "consec_429": 0,
+    "total_req": 1,
+    "total_429": 0
+  }
+}

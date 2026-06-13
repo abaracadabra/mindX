@@ -1,0 +1,80 @@
+{
+  "agent_id": "strategic_evolution_agent",
+  "dream_timestamp": "2026-05-13T20:20:21.356885",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "success",
+      "description": "Success rate: 100.0%",
+      "score": 2.0492,
+      "importance": 1.0,
+      "novelty": 1.0,
+      "confidence": 1.0,
+      "frequency": 111
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: comprehensive_audit(111)",
+      "score": 0.3279,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 111
+    },
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (111 occurrences)",
+      "score": 0.3279,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 111
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 7, 6, 5",
+      "score": 0.1128,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 21
+    },
+    {
+      "type": "behavioral",
+      "description": "Active: 111 memories",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Success rate: 100.0% (111 success, 0 failure)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: comprehensive_audit(111)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 7:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 8
+}

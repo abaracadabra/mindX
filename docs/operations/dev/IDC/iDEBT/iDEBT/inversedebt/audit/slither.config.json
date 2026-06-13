@@ -1,0 +1,29 @@
+{
+  "//": "Slither configuration for DELTAVERSE Debt Inheritance Protocol",
+  "//": "Run with: slither . --config-file audit/slither.config.json",
+
+  "detectors_to_exclude": "pragma,solc-version,naming-convention,assembly,low-level-calls",
+  "//": "pragma and solc-version: we pin 0.8.24 intentionally for Foundry compatibility",
+  "//": "naming-convention: our style uses underscored private vars which Slither flags",
+  "//": "assembly: EmergencyPauser uses low-level calls by design (documented in KNOWN_ISSUES)",
+  "//": "low-level-calls: same reason as assembly",
+
+  "filter_paths": "lib/|test/|script/|node_modules/",
+  "//": "Focus analysis on src/ only. Dependencies and test code are out of scope.",
+
+  "exclude_informational": true,
+  "exclude_low": false,
+  "//": "Informational findings are too noisy; low-severity are kept because ",
+  "//": "some real issues in DeFi are classified as low.",
+
+  "exclude_medium": false,
+  "exclude_high": false,
+  "//": "All medium and high findings must be reviewed.",
+
+  "json": "audit/slither-report.json",
+  "//": "Output a JSON report for programmatic processing by CI pipelines.",
+
+  "solc_args": "--optimize --optimize-runs 1000 --via-ir",
+  "//": "Match the foundry.toml compiler settings so Slither sees the same ",
+  "//": "bytecode the production build produces."
+}

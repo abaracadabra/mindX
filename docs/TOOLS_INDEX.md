@@ -4,8 +4,8 @@
 
 This document provides a complete index of all tools in the mindX system, with links to detailed documentation for each tool.
 
-**Last Updated**: 2026-01-11  
-**Total Tools**: 31+
+**Last Updated**: 2026-06-10  
+**Total Tools**: 33+
 
 ---
 
@@ -45,6 +45,7 @@ This document provides a complete index of all tools in the mindX system, with l
 30. **[Ollama Cloud Tool](ollama/INDEX.md)** - Cloud inference via Ollama (chat, generate, embed, model discovery). Gives any agent access to 120B+ parameter models via Ollama cloud with adaptive rate limiting, 18dp precision metrics, and branch-ready design for peripheral agents. Source: `tools/cloud/ollama_cloud_tool.py`
 31. **[Hostinger VPS Agent](DEPLOYMENT_MINDX_PYTHAI_NET.md)** - VPS management via three MCP channels: SSH (shell access), Hostinger API (restart, metrics, backups), mindX Backend (health, diagnostics, activity). Persistent connection state across sessions. MCP tool registration for agent discovery. Source: `agents/hostinger_vps_agent.py`, definition: `agents/hostinger.vps.agent`
 32. **[Autotune Tool](../autotune/README.md)** - Agnostic ahead-of-time tuner. Probes hardware (AMD/ROCm, NVIDIA/CUDA, CPU) and emits a reproducible `AutotunePlan` (attention backend, GEMM heuristic, collective topology) — written once before a workload starts, never re-tuned (AOT-only). Degrades cleanly to a CPU reference plan on a torch-less box. Source: `tools/autotune_tool.py`, standalone package: `autotune/` (extracted/generalized from mindXtrain). CLI: `python -m autotune bench --dry-run`
+33. **[LLMFit Tool](PACKAGE_ADOPTION.md)** - Node-capability oracle answering "what can this node actually run?" Wraps the MIT `llmfit` binary (invoked, never vendored — Apache-2.0 boundary preserved) via one-shot CLI or loopback REST sidecar; zero new pip dependencies. Publishes `mindx.node.fit_profile.v1` and powers the fail-open InferenceDiscovery fit-gate (`MINDX_LLMFIT_GATE_ENABLED`, dormant by default). First package adopted through the SimpleCoder-audit → SEA-decision pipeline. Source: `tools/inference/llmfit_tool.py`, definition: `agents/llmfit.advisor.agent`, sidecar: `tools/inference/llmfit.container`
 
 ### 📝 Partially Documented Tools
 
@@ -105,6 +106,10 @@ All major tools have been documented! The following tools have partial documenta
 - **Avatar Agent** - Avatar generation for agents/participants
 - **A2A Tool** - Agent-to-agent communication protocol
 - **MCP Tool** - Model Context Protocol support
+
+### 11. Inference Tools
+- **Ollama Cloud Tool** - Cloud inference for any agent (120B+ models)
+- **LLMFit Tool** - Node-capability oracle; hardware-aware model-fit advisor + InferenceDiscovery fit-gate
 
 ---
 

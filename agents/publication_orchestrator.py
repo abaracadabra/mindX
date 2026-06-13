@@ -76,6 +76,36 @@ DEFAULT_MIN_GAP_S       = 21600    # 6 hours
 DEFAULT_POLL_INTERVAL_S = 60       # how often watchers check their sources
 
 
+async def _emit_pub(
+    coordinator: Optional[Any],
+    topic: str,
+    payload: Dict[str, Any],
+) -> None:
+    """Emit a publication.* event to (1) the catalogue (always), (2) the
+    coordinator pub/sub (if present). Both paths are best-effort —
+    failures must never affect the publish flow.
+
+    This is what AGInt's milestone recognizer subscribes to.
+    """
+    # Catalogue mirror (always).
+    try:
+        from agents.catalogue import emit_catalogue_event
+        await emit_catalogue_event(
+            kind=topic,
+            actor="publication_orchestrator",
+            payload=payload,
+            source_log="data/governance/published_triggers.json",
+        )
+    except Exception:
+        pass
+    # Coordinator pub/sub (only if wired).
+    if coordinator is not None:
+        try:
+            await coordinator.publish_event(topic, payload)
+        except Exception:
+            pass
+
+
 @dataclass
 class LedgerEntry:
     """One persisted publish record."""
@@ -130,9 +160,14 @@ class Ledger:
     def has(self, trigger_id: str) -> bool:
         return any(e.trigger_id == trigger_id for e in self.published)
 
-    def append_published(self, entry: LedgerEntry) -> None:
+    def append_published(self, entry: LedgerEntry, advance_clock: bool = True) -> None:
         self.published.append(entry)
-        if entry.published_at:
+        # advance_clock=False lets a side-channel cadence (e.g. the daily
+        # protocol series) record its publish WITHOUT moving the shared
+        # MIN_GAP_S clock — so it never coalesces a milestone / SEA / dream
+        # publish that fires soon after. Orthogonal cadences must not deter
+        # the improvement-event triggers.
+        if entry.published_at and advance_clock:
             self.last_published_at = max(self.last_published_at, entry.published_at)
         self.save()
 
@@ -150,12 +185,26 @@ class Ledger:
 
 class PublicationOrchestrator:
     """Listens to improvement events; publishes via AuthorAgent on a
-    debounced, jittered, rate-limited cadence."""
+    debounced, jittered, rate-limited cadence.
+
+    Two trigger paths:
+      * direct callbacks via coordinator pub/sub (``sea.campaign.concluded``,
+        ``dream.report.written``) — fires within the same async tick;
+      * file-polling watchers (``watch_sea``, ``watch_dreams``) — resilient
+        fallback for restart-recovery and any callback that gets dropped.
+
+    Hybrid status policy: SEA campaign articles default to ``publish``
+    (mindX reporting its own milestones, public by default); dream-cycle
+    book editions default to ``draft`` (deeper material, reviewable).
+    Both overridable via env vars ``MINDX_PUBLICATION_SEA_STATUS`` and
+    ``MINDX_PUBLICATION_DREAM_STATUS``.
+    """
 
     def __init__(
         self,
         author_agent: Any,                                # AuthorAgent (avoid circular import)
         *,
+        coordinator: Optional[Any] = None,                # CoordinatorAgent (avoid circular import)
         sea_history_path: Optional[Path] = None,
         dream_dir: Optional[Path] = None,
         ledger_path: Optional[Path] = None,
@@ -165,6 +214,7 @@ class PublicationOrchestrator:
         poll_interval_s: float = DEFAULT_POLL_INTERVAL_S,
     ):
         self.author = author_agent
+        self.coordinator = coordinator
         self.sea_history_path = Path(
             sea_history_path
             if sea_history_path is not None
@@ -186,6 +236,208 @@ class PublicationOrchestrator:
         self.poll_interval_s = float(poll_interval_s)
         self.ledger = Ledger.load(self.ledger_path)
 
+        # Per-source publish-status policy. Hybrid by default; operator
+        # flips via env once accuracy is proven, no code change required.
+        #   sea_campaign_success  → publish  (routine milestone reports)
+        #   dream_book_edition    → draft    (deeper / reviewable)
+        #   sea_milestone         → publish  (SEA-flagged evolution moments,
+        #                                     authored by AuthorAgent)
+        #   book_edition          → draft    (lunar Book of mindX, reviewable)
+        #   journal_lunar_digest  → publish  (mindX's milestone-style digest)
+        self._sea_status        = os.getenv("MINDX_PUBLICATION_SEA_STATUS",       "publish").strip().lower() or "publish"
+        self._dream_status      = os.getenv("MINDX_PUBLICATION_DREAM_STATUS",     "draft").strip().lower()   or "draft"
+        self._milestone_status  = os.getenv("MINDX_PUBLICATION_MILESTONE_STATUS", "publish").strip().lower() or "publish"
+        self._book_status       = os.getenv("MINDX_PUBLICATION_BOOK_STATUS",      "draft").strip().lower()   or "draft"
+        self._journal_status    = os.getenv("MINDX_PUBLICATION_JOURNAL_STATUS",   "publish").strip().lower() or "publish"
+        # Daily protocol series — an orthogonal cadence (not a milestone
+        # trigger). Status falls back to env→draft; the live value is owned
+        # by AuthorAgent's settable schedule. The master enable flag lets an
+        # operator force the whole cadence off without touching the schedule.
+        self._protocol_status   = os.getenv("MINDX_PUBLICATION_PROTOCOL_STATUS", "draft").strip().lower()   or "draft"
+        self._protocol_series_enabled = os.getenv("MINDX_PROTOCOL_SERIES_ENABLED", "1").strip().lower() not in ("0", "false", "no", "off")
+
+        # Liveness diagnostics — populated by the watchers each scan.
+        self._last_sea_scan_at: Optional[float]    = None
+        self._last_dream_scan_at: Optional[float]  = None
+        self._last_protocol_scan_at: Optional[float] = None
+        self._first_sea_scan_logged: bool          = False
+        self._first_dream_scan_logged: bool        = False
+        self._first_protocol_scan_logged: bool     = False
+
+        # Wire direct callbacks if a coordinator was passed.
+        if self.coordinator is not None:
+            try:
+                self.coordinator.subscribe("sea.campaign.concluded",     self.on_sea_campaign_success)
+                self.coordinator.subscribe("dream.report.written",       self.on_dream_book_edition)
+                self.coordinator.subscribe("book.edition.published",     self.on_book_edition_published)
+                self.coordinator.subscribe("journal.lunar.digest.ready", self.on_journal_lunar_digest)
+                logger.info(
+                    "PublicationOrchestrator: subscribed to "
+                    "'sea.campaign.concluded' + 'dream.report.written' + "
+                    "'book.edition.published' + 'journal.lunar.digest.ready' via coordinator"
+                )
+            except Exception as e:
+                logger.warning(f"PublicationOrchestrator: coordinator subscribe failed: {e}")
+
+    def _default_status_for_source(self, kind: str) -> str:
+        """Per-source publish-status policy. Hybrid by default; env-overridable."""
+        if kind == "sea_campaign_success":
+            return self._sea_status
+        if kind == "sea_milestone":
+            return self._milestone_status
+        if kind == "dream_book_edition":
+            return self._dream_status
+        if kind == "book_edition":
+            return self._book_status
+        if kind == "journal_lunar_digest":
+            return self._journal_status
+        if kind == "protocol_series":
+            # Status is owned by AuthorAgent's settable schedule (the x402
+            # frequency-as-a-service seam); fall back to env/draft.
+            try:
+                ps = self.author.get_publishing_schedule().get("protocol_series", {})
+                s = (ps.get("status") or self._protocol_status).strip().lower()
+                return s if s in ("draft", "publish") else "draft"
+            except Exception:
+                return self._protocol_status
+        return "draft"  # unknown kinds default to safe
+
+    # Lunar-cadence kinds fire at most ~1/day each by construction
+    # (full moons + SEA milestones are rare). They are exempt from the
+    # 6-hour MIN_GAP_S rate limit that protects against bursty routine
+    # SUCCESS / dream-cycle events. The daily protocol series is also
+    # exempt AND records with advance_clock=False (see _schedule_publish),
+    # so it never deters a milestone / SEA / dream publish.
+    _EXEMPT_FROM_MIN_GAP = frozenset({
+        "sea_milestone", "book_edition", "journal_lunar_digest", "protocol_series",
+    })
+
+    # ─── Direct callback entry points (coordinator pub/sub) ──────
+
+    async def on_sea_campaign_success(self, data: Dict[str, Any]) -> None:
+        """Coordinator subscriber for 'sea.campaign.concluded' (SUCCESS only).
+
+        Routes is_milestone=True payloads through the 'sea_milestone' kind
+        so the orchestrator delegates composition to AuthorAgent's richer
+        compose_milestone_article. Routine successes keep the existing
+        'sea_campaign_success' generic-template path.
+        """
+        if not isinstance(data, dict):
+            return
+        if data.get("overall_campaign_status") != "SUCCESS":
+            return
+        campaign_id = str(data.get("campaign_run_id") or "")
+        if not campaign_id:
+            return
+        is_milestone = bool(data.get("is_milestone"))
+        kind = "sea_milestone" if is_milestone else "sea_campaign_success"
+        # Distinct trigger_id prefix per kind keeps the ledger greppable
+        # and prevents collision if both kinds were ever attempted on the
+        # same campaign (impossible today but cheap insurance).
+        trigger_id = f"{kind}_{campaign_id}" if is_milestone else campaign_id
+        if self.ledger.has(trigger_id):
+            return
+        await self._schedule_publish(
+            trigger_id=trigger_id,
+            kind=kind,
+            payload=data,
+        )
+
+    async def on_dream_book_edition(self, data: Dict[str, Any]) -> None:
+        """Coordinator subscriber for 'dream.report.written'. Only acts on
+        reports that triggered a book edition (full/new moon)."""
+        if not isinstance(data, dict):
+            return
+        if not data.get("book_edition_triggered"):
+            return
+        trigger_id = str(data.get("timestamp") or "")
+        if not trigger_id or self.ledger.has(trigger_id):
+            return
+        await self._schedule_publish(
+            trigger_id=trigger_id,
+            kind="dream_book_edition",
+            payload=data,
+        )
+
+    async def on_book_edition_published(self, data: Dict[str, Any]) -> None:
+        """Coordinator subscriber for 'book.edition.published' — emitted by
+        AuthorAgent._full_moon_publish after the lunar Book of mindX edition
+        is written to disk. The orchestrator publishes a rage article composed
+        by AuthorAgent.compose_book_edition_article (canonical authorship)."""
+        if not isinstance(data, dict):
+            return
+        edition = str(data.get("edition") or "")
+        edition_hash = str(data.get("edition_hash") or "")[:16]
+        if not edition:
+            return
+        trigger_id = f"book_edition_{edition}" + (f"_{edition_hash}" if edition_hash else "")
+        if self.ledger.has(trigger_id):
+            return
+        await self._schedule_publish(
+            trigger_id=trigger_id,
+            kind="book_edition",
+            payload=data,
+        )
+
+    async def on_journal_lunar_digest(self, data: Dict[str, Any]) -> None:
+        """Coordinator subscriber for 'journal.lunar.digest.ready' — emitted
+        by AuthorAgent on the full-moon write alongside the book edition.
+        The orchestrator reads docs/IMPROVEMENT_JOURNAL.md and asks
+        AuthorAgent.compose_journal_digest_article to summarise the cycle."""
+        if not isinstance(data, dict):
+            return
+        lunar = data.get("lunar") or {}
+        is_full = bool(lunar.get("is_full_moon"))
+        is_new = bool(lunar.get("is_new_moon"))
+        phase = "full" if is_full else "new" if is_new else "lunar"
+        edition_id = str(data.get("edition_id") or "")
+        # Date-only id so clock skew within a lunar day can't double-fire.
+        date_part = edition_id.split("_")[0] if edition_id else time.strftime("%Y%m%d")
+        trigger_id = f"journal_digest_{date_part}_{phase}"
+        if self.ledger.has(trigger_id):
+            return
+        await self._schedule_publish(
+            trigger_id=trigger_id,
+            kind="journal_lunar_digest",
+            payload=data,
+        )
+
+    # ─── Diagnostics ─────────────────────────────────────────────
+
+    def get_health(self) -> Dict[str, Any]:
+        """Snapshot for /insight/publications/health. Cheap, mutable attrs only."""
+        last = self.ledger.published[-1] if self.ledger.published else None
+        return {
+            "watch_sea_alive":     self._last_sea_scan_at is not None,
+            "watch_dreams_alive":  self._last_dream_scan_at is not None,
+            "watch_protocol_alive":self._last_protocol_scan_at is not None,
+            "last_sea_scan_at":    self._last_sea_scan_at,
+            "last_dream_scan_at":  self._last_dream_scan_at,
+            "last_protocol_scan_at": self._last_protocol_scan_at,
+            "protocol_series_enabled": self._protocol_series_enabled,
+            "protocol_schedule":   (self.author.get_publishing_schedule().get("protocol_series")
+                                    if hasattr(self.author, "get_publishing_schedule") else None),
+            "ledger_path":         str(self.ledger_path),
+            "ledger_entries":      len(self.ledger.published),
+            "last_publish_at":     self.ledger.last_published_at or None,
+            "last_publish_url":    (last.url if last else None),
+            "last_publish_post_id":(last.post_id if last else None),
+            "last_publish_title":  (last.title if last else None),
+            "sea_status_default":       self._sea_status,
+            "dream_status_default":     self._dream_status,
+            "milestone_status_default": self._milestone_status,
+            "book_status_default":      self._book_status,
+            "journal_status_default":   self._journal_status,
+            "exempt_from_min_gap":      sorted(self._EXEMPT_FROM_MIN_GAP),
+            "coordinator_wired":   self.coordinator is not None,
+            "min_gap_s":           int(self.min_gap_s),
+            "base_delay_s":        int(self.base_delay_s),
+            "jitter_fraction":     self.jitter_fraction,
+            "poll_interval_s":     int(self.poll_interval_s),
+            "sea_history_exists":  self.sea_history_path.exists(),
+            "dream_dir_exists":    self.dream_dir.exists(),
+        }
+
     # ─── Public watchers (start via asyncio.create_task) ─────────
 
     async def watch_sea(self) -> None:
@@ -198,6 +450,13 @@ class PublicationOrchestrator:
         while True:
             try:
                 await self._scan_sea_once()
+                self._last_sea_scan_at = time.time()
+                if not self._first_sea_scan_logged:
+                    self._first_sea_scan_logged = True
+                    logger.info(
+                        f"watch_sea: first scan complete, ledger has "
+                        f"{len(self.ledger.published)} entries"
+                    )
             except Exception as e:  # pragma: no cover — never let the watcher die
                 logger.warning(f"watch_sea: scan failed: {e}")
             await asyncio.sleep(self.poll_interval_s)
@@ -212,11 +471,133 @@ class PublicationOrchestrator:
         while True:
             try:
                 await self._scan_dreams_once()
+                self._last_dream_scan_at = time.time()
+                if not self._first_dream_scan_logged:
+                    self._first_dream_scan_logged = True
+                    logger.info(
+                        f"watch_dreams: first scan complete, ledger has "
+                        f"{len(self.ledger.published)} entries"
+                    )
             except Exception as e:  # pragma: no cover
                 logger.warning(f"watch_dreams: scan failed: {e}")
             await asyncio.sleep(self.poll_interval_s)
 
+    async def watch_github(self) -> None:
+        """Watch mindX's own public git history. New commits are chronicled by
+        AuthorAgent; batches that rise to a milestone are published. Zero
+        network — local `git log`. Runs forever."""
+        logger.info(
+            f"PublicationOrchestrator: watching git history via github.awareness "
+            f"(poll={self.poll_interval_s}s)"
+        )
+        while True:
+            try:
+                await self._scan_github_once()
+            except Exception as e:  # pragma: no cover
+                logger.warning(f"watch_github: scan failed: {e}")
+            await asyncio.sleep(self.poll_interval_s)
+
+    async def watch_protocol_series(self) -> None:
+        """Daily "mindX as a protocol" essay cadence. Orthogonal to the
+        milestone triggers — exempt from MIN_GAP_S and recorded with
+        advance_clock=False so it never coalesces a milestone publish.
+        Frequency/duration/status come from AuthorAgent's settable schedule
+        (the x402 frequency-as-a-service seam). Runs forever; self-disables
+        when MINDX_PROTOCOL_SERIES_ENABLED is off."""
+        if not self._protocol_series_enabled:
+            logger.info(
+                "PublicationOrchestrator: protocol-series cadence master-disabled "
+                "(MINDX_PROTOCOL_SERIES_ENABLED=0); watcher idle."
+            )
+            return
+        logger.info(
+            "PublicationOrchestrator: watching protocol-series schedule "
+            f"(poll={self.poll_interval_s}s; status owned by AuthorAgent schedule)"
+        )
+        while True:
+            try:
+                await self._scan_protocol_series_once()
+                self._last_protocol_scan_at = time.time()
+                if not self._first_protocol_scan_logged:
+                    self._first_protocol_scan_logged = True
+                    try:
+                        plan = self.author.protocol_publish_plan()
+                        logger.info(
+                            f"watch_protocol_series: first scan — due={plan.get('due')} "
+                            f"reason={plan.get('reason', 'due')} part={plan.get('part')}"
+                        )
+                    except Exception:
+                        pass
+            except Exception as e:  # pragma: no cover — never let the watcher die
+                logger.warning(f"watch_protocol_series: scan failed: {e}")
+            await asyncio.sleep(self.poll_interval_s)
+
     # ─── Scanners (per-tick) ─────────────────────────────────────
+
+    async def _scan_protocol_series_once(self) -> None:
+        """If a protocol-series slot is due (per the AuthorAgent schedule),
+        schedule one publish. The schedule is a slot model — a publish slot
+        opens every ``interval_seconds`` after the anchor — so this supports
+        sub-daily cadences (e.g. every 8h), not just whole days. Idempotent
+        per slot via the ledger (trigger_id = protocol_series_slot_<N>); the
+        slot's timing gate is already baked into ``due``."""
+        plan_fn = getattr(self.author, "protocol_publish_plan", None)
+        if plan_fn is None:
+            return
+        plan = plan_fn()
+        if not plan.get("due"):
+            return
+        slot_index = plan.get("slot_index")
+        if slot_index is None:
+            # Legacy fallback: date-keyed trigger when the schedule predates slots.
+            slot_key = str(plan.get("date", "")).replace("-", "")
+            if not slot_key:
+                return
+            trigger_id = f"protocol_series_{slot_key}"
+        else:
+            trigger_id = f"protocol_series_slot_{int(slot_index)}"
+        if self.ledger.has(trigger_id):
+            return
+        await self._schedule_publish(
+            trigger_id=trigger_id,
+            kind="protocol_series",
+            payload={"date": plan.get("date"), "plan": plan},
+        )
+
+    async def _scan_github_once(self) -> None:
+        """Read new commits; chronicle them; publish the batch if it is a
+        milestone. Watermark advances only once the batch is handled (published
+        or coalesced), so a wordpress-agent outage never loses a milestone."""
+        gh = self.author._get_github_awareness()
+        if gh is None or not gh.is_repo():
+            return
+        watermark = gh.read_watermark()
+        all_commits = gh.commits_since(watermark)
+        if not all_commits:
+            return
+        head = all_commits[-1].sha  # advance past everything we've seen, incl. backups
+        # Drop routine/backup/merge commits — backup_agent pushes one every
+        # restart; those are not milestone material.
+        commits = [c for c in all_commits if not self.author.is_routine_commit(c.subject)]
+        if not commits:
+            gh.write_watermark(head)
+            return
+        decision = self.author.assess_milestone(commits)
+        self.author.journal_milestone(commits, decision)  # always chronicle (idempotent)
+        trigger_id = "milestone:" + commits[-1].sha[:12]
+
+        handled = True
+        if decision.get("worthy") and not self.ledger.has(trigger_id):
+            payload = {"commits": [c.to_dict() for c in commits], "decision": decision}
+            await self._schedule_publish(
+                trigger_id=trigger_id, kind="milestone", payload=payload,
+            )
+            # Published or coalesced both land in the ledger; a failed publish
+            # does not — in which case we retry on the next tick.
+            handled = self.ledger.has(trigger_id)
+        if handled:
+            gh.write_watermark(head)
+
 
     async def _scan_sea_once(self) -> None:
         """Read SEA history. Any new SUCCESS not already in the ledger
@@ -277,8 +658,10 @@ class PublicationOrchestrator:
         kind: str,
         payload: Dict[str, Any],
     ) -> None:
-        """Debounced + jittered publish. Honors MIN_GAP_S rate limit."""
+        """Debounced + jittered publish. Honors MIN_GAP_S rate limit except
+        for lunar-cadence kinds (see _EXEMPT_FROM_MIN_GAP)."""
         detected_at = time.time()
+        exempt = kind in self._EXEMPT_FROM_MIN_GAP
 
         await _emit_pub_event(
             "publication.attempted",
@@ -288,8 +671,11 @@ class PublicationOrchestrator:
 
         # Rate-limit BEFORE we burn jitter. If the last publish was too
         # recent, coalesce this trigger into the ledger and skip.
+        # Lunar-cadence kinds skip this guard — they fire at most ~1/day
+        # by construction and would otherwise be coalesced into oblivion
+        # when bursting from a single full-moon emit point.
         time_since_last = detected_at - self.ledger.last_published_at
-        if self.ledger.last_published_at > 0 and time_since_last < self.min_gap_s:
+        if not exempt and self.ledger.last_published_at > 0 and time_since_last < self.min_gap_s:
             wait_more = int(self.min_gap_s - time_since_last)
             logger.info(
                 f"PublicationOrchestrator: coalescing {trigger_id} "
@@ -302,25 +688,20 @@ class PublicationOrchestrator:
                 detected_at=detected_at,
                 note=f"within MIN_GAP_S={int(self.min_gap_s)}s",
             )
-            await _emit_pub_event(
-                "publication.coalesced",
-                {
-                    "trigger_id": trigger_id,
-                    "kind": kind,
-                    "detected_at": detected_at,
-                    "reason": "within_min_gap_s",
-                    "min_gap_s": int(self.min_gap_s),
-                    "seconds_since_last": int(time_since_last),
-                },
-                source_ref=trigger_id,
-            )
+            await _emit_pub(self.coordinator, "publication.coalesced", {
+                "trigger_id": trigger_id,
+                "kind": kind,
+                "detected_at": detected_at,
+                "reason": f"within MIN_GAP_S={int(self.min_gap_s)}s",
+            })
             return
 
         # Compute the jittered delay. Bound stays within ± jitter_fraction.
         delay = self._compute_delay()
         logger.info(
             f"PublicationOrchestrator: scheduling {kind} {trigger_id} in {int(delay)}s "
-            f"(base={int(self.base_delay_s)} ± {self.jitter_fraction:.0%})"
+            f"(base={int(self.base_delay_s)} ± {self.jitter_fraction:.0%}"
+            f"{'; exempt from MIN_GAP_S' if exempt else ''})"
         )
         await asyncio.sleep(delay)
 
@@ -330,26 +711,21 @@ class PublicationOrchestrator:
             return
 
         # Re-check rate limit after the delay too — another publish may
-        # have happened in the meantime.
+        # have happened in the meantime. Exempt kinds still bypass.
         now = time.time()
-        if now - self.ledger.last_published_at < self.min_gap_s:
+        if not exempt and now - self.ledger.last_published_at < self.min_gap_s:
             self.ledger.append_coalesced(
                 trigger_id=trigger_id,
                 kind=kind,
                 detected_at=detected_at,
                 note=f"raced past delay; MIN_GAP_S={int(self.min_gap_s)}s",
             )
-            await _emit_pub_event(
-                "publication.coalesced",
-                {
-                    "trigger_id": trigger_id,
-                    "kind": kind,
-                    "detected_at": detected_at,
-                    "reason": "raced_past_delay",
-                    "min_gap_s": int(self.min_gap_s),
-                },
-                source_ref=trigger_id,
-            )
+            await _emit_pub(self.coordinator, "publication.coalesced", {
+                "trigger_id": trigger_id,
+                "kind": kind,
+                "detected_at": detected_at,
+                "reason": f"raced past delay; MIN_GAP_S={int(self.min_gap_s)}s",
+            })
             return
 
         # Compose + publish.
@@ -368,16 +744,36 @@ class PublicationOrchestrator:
             "_mindx_trigger_kind": kind,
         }
 
+        publish_status = self._default_status_for_source(kind)
+
+        # Emit publication.attempted BEFORE the wire call so the catalogue
+        # records the intent even if the wordpress-agent is down.
+        await _emit_pub(self.coordinator, "publication.attempted", {
+            "trigger_id": trigger_id,
+            "kind": kind,
+            "title": title,
+            "status": publish_status,
+            "detected_at": detected_at,
+        })
+
+        # The protocol series drives its art through artist.agent (choose /
+        # create / both), per the plan the scan decided. Other kinds keep the
+        # legacy /gfx auto-pick.
+        graphics_mode: Optional[str] = None
+        if kind == "protocol_series":
+            graphics_mode = ((payload or {}).get("plan") or {}).get("graphics") or "both"
+
         try:
             result = await self.author.publish_to_rage(
                 title=title,
                 content_html=content_html,
-                status="draft",            # always draft from the orchestrator — operator reviews
+                status=publish_status,     # per-source policy: SEA→publish, dreams→draft (env-overridable)
                 excerpt=excerpt,
                 topic=topic,
                 meta=meta,
                 seo_description=excerpt,
                 seo_keywords=self._derive_keywords(kind, payload),
+                graphics_mode=graphics_mode,
             )
         except Exception as e:
             logger.warning(f"PublicationOrchestrator: publish_to_rage raised: {e}")
@@ -392,6 +788,10 @@ class PublicationOrchestrator:
 
         published_at = time.time()
         post_id_val = int(result.get("post_id")) if result.get("post_id") else None
+        # The protocol series is an orthogonal cadence — record it WITHOUT
+        # advancing the shared MIN_GAP_S clock, so it never coalesces a
+        # milestone / SEA / dream publish that fires soon after.
+        advance_clock = kind != "protocol_series"
         self.ledger.append_published(LedgerEntry(
             trigger_id=trigger_id,
             kind=kind,
@@ -400,9 +800,17 @@ class PublicationOrchestrator:
             post_id=post_id_val,
             url=result.get("url"),
             title=title,
-        ))
+        ), advance_clock=advance_clock)
+        # Quota accounting for the frequency-as-a-service schedule.
+        if kind == "protocol_series":
+            note = getattr(self.author, "note_protocol_published", None)
+            if note is not None:
+                try:
+                    note((payload or {}).get("plan") or {"date": (payload or {}).get("date")})
+                except Exception as e:
+                    logger.warning(f"note_protocol_published failed: {e}")
         logger.info(
-            f"PublicationOrchestrator: published {trigger_id} → "
+            f"PublicationOrchestrator: published {trigger_id} (status={publish_status}) → "
             f"post_id={result.get('post_id')} url={result.get('url')}"
         )
         await _emit_pub_event(
@@ -420,6 +828,20 @@ class PublicationOrchestrator:
             source_ref=trigger_id,
         )
 
+        # Emit publication.published AFTER the ledger write so any subscriber
+        # (incl. AGInt's milestone recognizer) sees a consistent view —
+        # ledger contains it, catalogue contains it, coordinator fires.
+        await _emit_pub(self.coordinator, "publication.published", {
+            "trigger_id": trigger_id,
+            "kind": kind,
+            "title": title,
+            "status": publish_status,
+            "post_id": int(result.get("post_id")) if result.get("post_id") else None,
+            "url": result.get("url"),
+            "slug": result.get("slug"),
+            "published_at": published_at,
+        })
+
     def _compute_delay(self) -> float:
         """jittered delay = base × (1 + uniform(-jitter, +jitter))."""
         jitter = self.base_delay_s * random.uniform(
@@ -432,12 +854,103 @@ class PublicationOrchestrator:
     def _compose_article(
         self, kind: str, payload: Dict[str, Any]
     ) -> tuple[str, str, Optional[str], Optional[str]]:
-        """Return (title, content_html, excerpt, topic) for the publish."""
+        """Return (title, content_html, excerpt, topic) for the publish.
+
+        Routine kinds (sea_campaign_success, dream_book_edition) use the
+        orchestrator's internal terse templates. Rich kinds (sea_milestone,
+        book_edition, journal_lunar_digest) delegate to AuthorAgent — the
+        canonical writer — so the framing is mindX's own voice rather than
+        the orchestrator's generic template. Established pattern at
+        agents/learning/improvement_journal.py:76-87.
+        """
         if kind == "sea_campaign_success":
             return self._compose_sea_article(payload)
         if kind == "dream_book_edition":
             return self._compose_dream_article(payload)
+        if kind == "sea_milestone":
+            return self._delegate_to_author("compose_milestone_article", payload)
+        if kind == "book_edition":
+            return self._delegate_to_author("compose_book_edition_article", payload)
+        if kind == "journal_lunar_digest":
+            return self._compose_journal_digest(payload)
+        if kind == "protocol_series":
+            return self._compose_protocol_series(payload)
+        if kind == "milestone":
+            # github.awareness milestone — composition lives on the canonical
+            # author (mindX's own voice).
+            return self.author._compose_milestone_article(payload)
         return "", "", None, None
+
+    def _delegate_to_author(
+        self, method_name: str, payload: Dict[str, Any]
+    ) -> tuple[str, str, Optional[str], Optional[str]]:
+        """Call an AuthorAgent compose_* method and normalise the return."""
+        method = getattr(self.author, method_name, None)
+        if method is None:
+            logger.warning(
+                f"PublicationOrchestrator: AuthorAgent missing {method_name}; "
+                f"falling back to empty article (publish will be skipped)"
+            )
+            return "", "", None, None
+        try:
+            return method(payload)
+        except Exception as e:
+            logger.warning(
+                f"PublicationOrchestrator: AuthorAgent.{method_name} raised: {e}; "
+                f"falling back to empty article"
+            )
+            return "", "", None, None
+
+    def _compose_protocol_series(
+        self, payload: Dict[str, Any]
+    ) -> tuple[str, str, Optional[str], Optional[str]]:
+        """Compose the protocol-series article from the plan carried in the
+        payload (deterministic, retry-safe across sub-daily cadences).
+
+        Composing from the carried plan — not from a re-derived date — is the
+        fix for the slot-model freeze: a date-anchored recompute
+        (compose_next_protocol_article(date)) evaluates at the anchor hour, i.e.
+        slot 0, which is already published, so it returns an empty article and
+        the publish never fires. We use the plan the scan already decided; only
+        when no plan was carried do we fall back to a REAL-TIME recompose (no
+        date arg), which re-derives the current slot correctly."""
+        plan = (payload or {}).get("plan")
+        if plan:
+            from_plan = getattr(self.author, "compose_protocol_from_plan", None)
+            if from_plan is not None:
+                try:
+                    return from_plan(plan)
+                except Exception as e:
+                    logger.warning(f"PublicationOrchestrator: compose_protocol_from_plan raised: {e}")
+                    return "", "", None, None
+        method = getattr(self.author, "compose_next_protocol_article", None)
+        if method is None:
+            return "", "", None, None
+        try:
+            return method()  # real-time `now` — NOT a date-anchored recompute
+        except Exception as e:
+            logger.warning(f"PublicationOrchestrator: compose_next_protocol_article raised: {e}")
+            return "", "", None, None
+
+    def _compose_journal_digest(
+        self, event: Dict[str, Any]
+    ) -> tuple[str, str, Optional[str], Optional[str]]:
+        """Read docs/IMPROVEMENT_JOURNAL.md, delegate to AuthorAgent.
+        compose_journal_digest_article to summarise the cycle."""
+        journal_path = PROJECT_ROOT / "docs" / "IMPROVEMENT_JOURNAL.md"
+        try:
+            journal_text = journal_path.read_text(encoding="utf-8") if journal_path.exists() else ""
+        except Exception as e:
+            logger.warning(f"PublicationOrchestrator: could not read journal: {e}")
+            journal_text = ""
+        method = getattr(self.author, "compose_journal_digest_article", None)
+        if method is None:
+            return "", "", None, None
+        try:
+            return method(journal_text, event.get("lunar") or {})
+        except Exception as e:
+            logger.warning(f"PublicationOrchestrator: compose_journal_digest_article raised: {e}")
+            return "", "", None, None
 
     def _compose_sea_article(
         self, entry: Dict[str, Any]
@@ -596,6 +1109,13 @@ class PublicationOrchestrator:
             kw.extend(["strategic evolution", "improvement"])
         elif kind == "dream_book_edition":
             kw.extend(["consolidation", "lunar cycle", "long-term memory"])
+        elif kind == "protocol_series":
+            kw = ["mindX", "protocol", "autonomous agents", "scaling",
+                  "horizontal scaling", "vertical scaling", "optimization"]
+        elif kind == "milestone":
+            dec = (payload or {}).get("decision") or {}
+            kw = ["mindX", "milestone", "self-improvement", "open source",
+                  dec.get("theme", "evolution")]
         return kw
 
 

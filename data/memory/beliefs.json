@@ -87,7 +87,7 @@
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1778723433.257857
+    "last_updated": 1776022239.3365555
   },
   "identity.map.entity_to_address.smoke_test_entity_1": {
     "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
@@ -183,6 +183,97 @@
     "confidence": 0.9,
     "source": "self_analysis",
     "timestamp": 1778665500.0558453,
-    "last_updated": 1778695913.9248307
+    "last_updated": 1778665500.0558453
+  },
+  "identity.map.entity_to_address.blockchain.agent.pytest-anvil-agent": {
+    "value": "0xBc3AD8073c38372E0Fa5AA8E8B0c9A3EFd3eD7E9",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1780265239.5289278,
+    "last_updated": 1780265239.5289278
+  },
+  "identity.map.address_to_entity.0xBc3AD8073c38372E0Fa5AA8E8B0c9A3EFd3eD7E9": {
+    "value": "blockchain.agent.pytest-anvil-agent",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1780265239.612937,
+    "last_updated": 1780265239.612937
+  },
+  "identity.map.entity_to_address.blockchain.agent.oracle-scout": {
+    "value": "0x108eEb4441701A1d1c1cC89f6a2abCa590Bc006D",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1780265256.9574683,
+    "last_updated": 1780265256.9574683
+  },
+  "identity.map.address_to_entity.0x108eEb4441701A1d1c1cC89f6a2abCa590Bc006D": {
+    "value": "blockchain.agent.oracle-scout",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1780265257.0322325,
+    "last_updated": 1780265257.0322325
+  },
+  "identity.map.entity_to_address.blockchain.agent.sentinel-bravo": {
+    "value": "0x537A0A5DE5FECBC54aAD8c06ad459Ea7D2Af2Baf",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1780265314.801523,
+    "last_updated": 1780265314.801523
+  },
+  "identity.map.address_to_entity.0x537A0A5DE5FECBC54aAD8c06ad459Ea7D2Af2Baf": {
+    "value": "blockchain.agent.sentinel-bravo",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1780265314.9020925,
+    "last_updated": 1780265314.9020925
+  },
+  "identity.map.entity_to_address.blockchain.agent.orion-delta": {
+    "value": "0x2177ad621e9a07044708c99d49B7c4332B9286bA",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1780265353.707655,
+    "last_updated": 1780265353.707655
+  },
+  "identity.map.address_to_entity.0x2177ad621e9a07044708c99d49B7c4332B9286bA": {
+    "value": "blockchain.agent.orion-delta",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1780265353.8045104,
+    "last_updated": 1780265353.8045104
+  },
+  "bdi.mastermind_strategy_mastermind_prime.beliefs.system.state": {
+    "value": {
+      "cpu_percent": 29.7,
+      "cpu_iowait": 1.6,
+      "cpu_steal": 0.0,
+      "load_1m": 1.08203125,
+      "memory_percent": 77.6,
+      "memory_available_gb": 1.28,
+      "swap_percent": 56.4,
+      "disk_root_percent": 98.2,
+      "sockets_established": 17,
+      "self_rss_mb": 235.5,
+      "self_cpu_percent": 0.0,
+      "self_threads": 8,
+      "self_fds": 12,
+      "self_uptime_seconds": 419
+    },
+    "confidence": 0.95,
+    "source": "perception",
+    "timestamp": 1780660397.2999012,
+    "last_updated": 1780660397.2999012
+  },
+  "sea.adoption.llmfit": {
+    "value": {
+      "decision": "ADOPT",
+      "confidence": 0.8,
+      "cycle_id": "adopt-llmfit-7d7802ee",
+      "rationale": "The package meets the security criteria as all high-severity findings are addressed in the audit summary. The license boundary is also met as the declared license is Apache-2.0, which is compatible with mindX's doctrine. Additionally, the package adds value to mindX by providing node-capability-aware inference routing and does not pin a model or hard-couple to one consumer.",
+      "aggregate_risk": "medium"
+    },
+    "confidence": 0.8,
+    "source": "inference",
+    "timestamp": 1781152485.4882739,
+    "last_updated": 1781152838.2529452
   }
 }

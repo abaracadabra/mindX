@@ -1,0 +1,36 @@
+/* music4robots2dance2 — cypherpunk2048 player frame. GPL-3.0-or-later. */
+.m4r2d2 {
+	margin: 1.5em 0;
+	padding: 10px;
+	background: #0a0a12;
+	border: 1px solid #d4af37;
+	border-radius: 10px;
+	box-shadow: 0 0 0 1px rgba(54, 150, 110, .25) inset;
+	max-width: 100%;
+}
+.m4r2d2-title {
+	color: #d4af37;
+	font-weight: 700;
+	letter-spacing: .02em;
+	margin: 2px 4px 8px;
+}
+.m4r2d2-player {
+	display: block;
+	width: 100%;
+	border: 0;
+	border-radius: 6px;
+	background: #0a0a12;
+}
+.m4r2d2-foot {
+	margin-top: 8px;
+	font-size: .8rem;
+	color: #9698a8;
+	text-align: center;
+}
+.m4r2d2-foot a { color: #36966e; text-decoration: none; }
+.m4r2d2-foot a:hover { color: #d4af37; }
+.m4r2d2-foot em { color: #d4af37; opacity: .85; }
+.m4r2d2-error {
+	color: #e4e4ec;
+	font-family: monospace;
+}

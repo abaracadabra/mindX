@@ -1,0 +1,55 @@
+{
+  "timestamp": "2026-06-01T09:27:38.605738",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "unknown",
+  "content": {
+    "process_name": "system_state_shutdown",
+    "data": {
+      "event_type": "shutdown",
+      "timestamp": 1780331258.3884315,
+      "event_id": "shutdown_1780331258",
+      "resource_snapshot": {
+        "timestamp": 1780331258.5973268,
+        "cpu_percent": 7.7,
+        "memory_percent": 65.9,
+        "memory_used": 4026531840,
+        "memory_total": 6120328396,
+        "disk_usage": {
+          "/": 92.54389261916248
+        },
+        "network_bytes_sent": 71131686,
+        "network_bytes_recv": 107685282,
+        "process_count": 288,
+        "load_average": [
+          2.90380859375,
+          1.560546875,
+          1.25830078125
+        ]
+      },
+      "performance_snapshot": null,
+      "agents_registered": [],
+      "agents_active": [],
+      "tools_registered": [],
+      "system_version": null,
+      "improvement_count": 0,
+      "rollback_count": 0,
+      "last_improvement": null,
+      "last_rollback": null,
+      "errors": [],
+      "warnings": [],
+      "metadata": {
+        "phase": "before_shutdown"
+      }
+    }
+  },
+  "context": {
+    "tracker": "system_state_tracker"
+  },
+  "tags": [
+    "system_state_shutdown",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "23496bf6cd578b0e"
+}

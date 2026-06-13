@@ -4,14 +4,19 @@
 > This is my living documentation. I write it, I reference it, I improve from it.
 > Every link resolves. Every concept connects. Navigate by operational concern.
 
-**Live system**: [mindx.pythai.net](https://mindx.pythai.net) | **Feedback (mind-of-mindX)**: [/feedback.html](https://mindx.pythai.net/feedback.html) · [/feedback.txt](https://mindx.pythai.net/feedback.txt) | **Agentic**: [/agentic.html](https://mindx.pythai.net/agentic.html) | **API explorer**: [localhost:8000/docs](http://localhost:8000/docs) | **Dojo**: [/dojo/standings](https://mindx.pythai.net/dojo/standings) | **Journal**: [/journal](https://mindx.pythai.net/journal) | **[TODO](TODO.md)**
+**Live system**: [mindx.pythai.net](https://mindx.pythai.net) | **Feedback (mind-of-mindX)**: [/feedback.html](https://mindx.pythai.net/feedback.html) · [/feedback.txt](https://mindx.pythai.net/feedback.txt) | **Agentic**: [/agentic.html](https://mindx.pythai.net/agentic.html) | **API explorer**: [localhost:8000/docs](http://localhost:8000/docs) | **Dojo**: [/dojo/standings](https://mindx.pythai.net/dojo/standings) | **Journal**: [/journal](https://mindx.pythai.net/journal) | **GitHub**: [github.com/agenticplace](https://github.com/agenticplace) | **[TODO](TODO.md)**
 
 **Plain-text mode** for terminal monitoring: append `?h=true` to any `/insight/*` or `/storage/*` endpoint, e.g. `curl https://mindx.pythai.net/insight/storage/status?h=true`. Or watch the whole snapshot: `watch curl -s https://mindx.pythai.net/feedback.txt`.
+
+**Documentation index**: [DOC_INDEX.md](DOC_INDEX.md) — a complete, always-current catalogue of every doc, **auto-maintained by [AuthorAgent](AUTHOR_AGENT.md)** (regenerated on each recognized milestone via `github.awareness`). NAV.md is the *curated* hub; DOC_INDEX.md is the *exhaustive* one.
+
+**Deployment status**: the Gödel-machine subsystem, `github.awareness`/MILESTONES, DOC_INDEX auto-maintenance, and the GMI dashboard surfaces are on branch `claude/inspiring-carson-22XTs` and **not yet deployed** — the live AuthorAgent is unchanged. See [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md) for the branch-vs-live matrix and deploy checklist.
 
 ---
 
 ## Getting Started
 
+- [mindX on GitHub](https://github.com/agenticplace) — AgenticPlace organization; source repositories (made public as they are released)
 - [Project Overview](../CLAUDE.md) — Setup, commands, architecture summary, configuration priority
 - [Running mindX](mindXsh.md) — `./mindX.sh --frontend` launcher, ports, interactive mode
 - [Frontend UI](mindxfrontend.md) — Express.js dashboard, xterm.js terminal, window manager
@@ -66,6 +71,7 @@ mindX discovers and routes across multiple inference providers, with Ollama as t
 - [OllamaCloudTool](../tools/cloud/ollama_cloud_tool.py) — Cloud inference as a first-class [BaseTool](../agents/core/bdi_agent.py); any agent can call it; 9 operations (chat, generate, embed, list_models, show_model, web_search, web_fetch, get_metrics, get_status)
 - [LLM Factory](../llm/llm_factory.py) — Handler creation with rate limiting, caching, provider preference order
 - [Cloud Rate Limiting](ollama/cloud/rate_limiting.md) — Adaptive pacing (3s–30s), quota tracking, [actual token counts](ollama/mindx/precision_metrics.md) (no estimation)
+- [**Inference Budget — the LLM Metabolism**](INFERENCE_BUDGET.md) — Dynamic, self-adjusting per-provider rate-limit ledger ([`llm/inference_budget.py`](../llm/inference_budget.py)). Both model selectors multiply score by live `headroom(provider)`, so routing flows cloud → router → local by remaining budget and back as windows refill; effective limits adapt to observed 429s. Surfaced on `/diagnostics/live` + the landing-page Inference panel.
 - [Precision Metrics](ollama/mindx/precision_metrics.md) — 18-decimal-place `Decimal` tracking via [`precision_metrics.py`](../llm/precision_metrics.py)
 - [Cloud Research](OLLAMA_VLLM_CLOUD_RESEARCH.md) — Ollama Cloud + vLLM viability analysis (2026-04-10)
 
@@ -177,6 +183,7 @@ Full list: [Agent Docs](agents/) (30 agent docs)
 
 **Cloud & Inference**
 - [OllamaCloudTool](../tools/cloud/ollama_cloud_tool.py) — Cloud inference for any agent ([docs](ollama/INDEX.md))
+- [LLMFitTool](../tools/inference/llmfit_tool.py) — Node-capability oracle ("what can this node run?") wrapping the MIT `llmfit` binary (invoked, never vendored); CLI + loopback REST sidecar; publishes `mindx.node.fit_profile.v1`; powers the fail-open InferenceDiscovery fit-gate (`MINDX_LLMFIT_GATE_ENABLED`). First package adopted via the [adoption pipeline](PACKAGE_ADOPTION.md)
 
 **Core Infrastructure**
 - [Shell Command Tool](shell_command_tool.md) — Secure shell execution with validation
@@ -278,6 +285,7 @@ Phase A–E shipped 2026-04-26. Pushes old/low-importance STM to IPFS (Lighthous
 - [DAIO Civilization](DAIO_CIVILIZATION_GOVERNANCE.md) — Governance as civilization-building. 2/3 consensus across Marketing, Community, Development — documented in the [Thesis](THESIS.md).
 - [Boardroom Consensus](#boardroom) — Multi-agent voting. [CEOAgent](agents/ceo_agent.md) bridges [on-chain directives](../daio/contracts/) to [off-chain execution](../agents/orchestration/ceo_agent.py).
 - [Dojo Reputation](#dojo) — 7-rank privilege escalation. BONA FIDE = privilege from reputation, not assignment. The [Manifesto](MANIFESTO.md) principle: "earned sovereignty."
+- [Speech from the Throne](SPEECH_FROM_THE_THRONE.md) — when the board speaks, anyone can prove it. A board statement is carried to press through a **verifiable chain of command** — throne (CEO) → endorsing soldiers → AuthorAgent → editor.agent → artist.agent → wordpress.agent — each link signed by that seat's own wallet (EIP-191), hash-linked, tamper-evident, verified by recovering each signer (`POST /verify/provenance`, or `python -m ephermaleth verify`). Decisions are recorded in the **VotingBooth** — an append-only, hash-linked ledger of board + council rulings at `data/governance/votingbooth.jsonl`. Primitives are the agnostic [`openagents/ephermaleth`](../openagents/ephermaleth/README.md) module (Apache-2.0, built on [BANKON Vault](BANKON_VAULT.md) design principles); mindX consumes it via [`agents/provenance_chain.py`](../agents/provenance_chain.py).
 
 ### Safety & Circuit Breakers
 
@@ -288,7 +296,8 @@ Phase A–E shipped 2026-04-26. Pushes old/low-importance STM to IPFS (Lighthous
 
 ### Autonomous Operation
 
-- [Autonomous Mode](AUTONOMOUS.md) — 5-minute improvement cycles, inference pre-check, 120s backoff on gap
+- [Autonomous Mode](AUTONOMOUS.md) — improvement cycles, inference pre-check, 120s backoff on gap, dynamic CPU gate
+- [Resource Governance](RESOURCE_GOVERNANCE.md) — how mindX shares the 2-core VPS: ResourceGovernor modes + dynamic ~92% CPU ceiling (loops + background inference defer under load) + cap-free CPUWeight/Nice scheduling priority. "I coexist."
 - [mindXagent](../agents/core/mindXagent.py) — `POST /mindxagent/autonomous/start`, `POST /mindxagent/autonomous/stop`, `GET /mindxagent/status`
 - [Self-Improvement](agents/self_improve_agent.md) — Strategic evolution through code analysis and targeted improvement
 - [Godel Journal](BOOK_OF_MINDX.md) — Autonomous audit trail (the machine's record of its own improvement)
@@ -373,6 +382,7 @@ Priority: Environment variables (`MINDX_` prefix) > [BANKON Vault](vault_system.
 
 - [Production Deployment](DEPLOYMENT_MINDX_PYTHAI_NET.md) — mindx.pythai.net on Hostinger VPS (168.231.126.58), Apache2 + Let's Encrypt, systemd service
 - [HostingerVPSAgent](../agents/hostinger_vps_agent.py) — Three MCP channels for VPS management: SSH (shell), [Hostinger API](https://developers.hostinger.com) (restart/metrics/backups), [mindX Backend](https://mindx.pythai.net) (diagnostics/activity). Persistent state, MCP tool registration. See [.agent definition](../agents/hostinger.vps.agent)
+- [Resource Governance](RESOURCE_GOVERNANCE.md) — coexisting on a 2-core VPS: dynamic ~92% CPU ceiling + cap-free ollama/mindx CPUWeight & Nice systemd drop-ins (web-serving favored under contention, ollama still uncapped when idle)
 - [Vault System](vault_system.md) — BANKON Vault: AES-256-GCM + HKDF-SHA512 encrypted credentials
 - **[BANKON Vault — canonical reference](BANKON_VAULT.md)** — full innerstanding: crypto stack, on-disk layout, three custody modes (Machine/Human/DAIO), lifecycle, HTTP surface, tests
   - [BANKON Vault Handoff](BANKON_VAULT_HANDOFF.md) — operator runbook for the airgapped Machine→Human ceremony (threat model, recovery, DAIO migration path)
@@ -389,6 +399,11 @@ mindX is a Godel machine — a self-improving system where the improvement mecha
 - [machine.dreaming](BOOK_OF_MINDX.md) — 2-hour LTM consolidation cycles, 8-hour dream shifts (3/day), full moon triggers special editions
 - [Strategic Evolution](agents/strategic_evolution_agent.md) — Long-term improvement planning
 - [Self-Improve Agent](agents/self_improve_agent.md) — Targeted code improvement execution
+- [**Package Adoption — audit → decide → stage**](PACKAGE_ADOPTION.md) — external packages enter through the SimpleCoder sandbox (zip-bomb-safe `inspect_zip`/`extract_zip` + ast-only `audit_package` scan), then SEA renders a Gödel-logged ADOPT/REJECT/DEFER (`evaluate_external_package_adoption`); ADOPT stages files into the live tree + backlog validation entry; failure is safe-by-construction (DEFER, quarantined). Driver: [`scripts/evaluate_package.py`](../scripts/evaluate_package.py). First adoption: [LLMFitTool](../tools/inference/llmfit_tool.py)
+- [**System Review 2026-06 + Self-Diagnostic**](SYSTEM_REVIEW_2026_06.md) — the honest surmise of what mindX actually improves (memory: yes; code: not yet) and the repair of the improvement-loop treadmill (backlog 83,318→unique dedup, selector fingerprint mismatch, non-terminal BDI statuses). New public surface [`/insight/self/diagnostic`](../mindx_backend_service/self_diagnostic.py) (`?h=true` plain text) separates real changes from process churn with a rule-based verdict; feeds the landing-page Self-Diagnostic layer ("mindX reporting on its own pathology") and the upgraded feedback.html ledger/dissent/dreams/interaction panels
+- [Schmidhüber Engine](SCHMIDHUBER_ENGINE.md) — the oscillatory drive of the Gödel machine: an energy-conserving Hamiltonian pendulum (utility is the conserved quantity) tipping at each apex into machine.dream (information→knowledge) and [mindXtrain](../mindx/godel/mindxtrain/) (knowledge→wisdom→weights). ATARAXIA as literal physics (bounded disruption); `mindX --replicate` as anti-phase coupled heads. Code: [`mindx/godel/schmidhuber_engine.py`](../mindx/godel/schmidhuber_engine.py).
+- [Gödel Eval Blueprint](GODEL_EVAL_BLUEPRINT.md) — the falsifiable harness that proves *or disproves* the Gödel-machine claim. 8 predicates (G1–G8), the Gödel Machine Index (GMI) scorecard, honest verdict `NOT_YET_A_GODEL_MACHINE`. Endpoint `/insight/godel/machine` + feedback.html panels. **Status: on branch `claude/inspiring-carson-22XTs`, not yet deployed — see [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md).** Code: [`mindx/godel/eval/gmi.py`](../mindx/godel/eval/gmi.py).
+- [github.awareness → MILESTONES](MILESTONES.md) — mindX recognizes significant code updates from its own public git history and chronicles them ([`agents/github_awareness.py`](../agents/github_awareness.py)); worthy batches publish in mindX's own voice. Recovery posture in [survive.md](survive.md#replication-recovery-before-risk).
 
 ## Identity & Security
 
@@ -405,6 +420,13 @@ mindX is a Godel machine — a self-improving system where the improvement mecha
 - [x402 / x402-AVM Payments](X402.md) — HTTP 402 micropayment rail; triple-rail (Base USDC + Tempo MPP + Algorand ASA via [`@x402-avm/*`](https://github.com/algorand-devrel/x402-demo)). Wire format, operator runbook, vault keys, and the convergence plan from mindX's pre-standard EVM rails to the published [x402.org](https://x402.org) standard.
 - [cypherpunk2048 standard](cypherpunk2048/README.md) — in-repo reference layer for the [cypherpunk2048](https://github.com/cypherpunk2048) standard: the four rules (substitution-readiness, no-trapdoors, vault-as-oracle, attribution) tied to mindX code, and the [definitive EIP table](cypherpunk2048/EIP_REFERENCES.md) (ERC-20/191/1271/3009, EIP-155/712 — verbatim titles, absolute [`eips.ethereum.org`](https://eips.ethereum.org/EIPS) URLs). Reference impl: [x402 payment rails](cypherpunk2048/x402_rails.md) — keyless credential issuance as a service ([`tools/x402_rails.py`](../tools/x402_rails.py)).
 
+## Blockchain
+
+- [Blockchain Agents](blockchain/BLOCKCHAIN_AGENTS.md) — Mint a mindX agent as an **ERC-7857 iNFT** with six sidecar facets (`.model .persona .walletpublickey .bankon .iNFT`); lists on [AgenticPlace](AgenticPlace_Deep_Dive.md), binds to [BANKON](https://bankon.pythai.net), registers on the ERC-8004 [AgentRegistry](../daio/contracts/agentregistry/AgentRegistry.sol). Pipeline: [`agents/blockchain/agent_factory.py`](../agents/blockchain/agent_factory.py); route `POST /blockchain/agentfactory/mint`.
+- [Contract Deployment as a Service](services/contract_deployment_as_a_service.md) — [`agents/deployer/`](../agents/deployer/service.py) `DeployerService`: governed, multi-chain (EVM via Foundry + Algorand ARC56), `.deploy`-manifest-driven deployer with per-chain isolated stages, a two-step **intent → confirm** gate, and participant-tier authorization. Intents/receipts under `data/governance/`.
+- [DeltaVerse NeuralNode Gate](DeltaVerse.md) — [`agents/deltaverse/`](../agents/deltaverse/neuralnode_gate.py) `DeltaVerseGate`: turns a `DeltaVerse.gate.event` into an on-chain **room** (`BubbleRoomV4.mintRoom`) + **bubbleroom** (`BubbleRoomSpawn.spawnFromRoom`) on Polygon — the [NeuralNode suite](https://github.com/deltav-deltaverse/neuralnode). **Fails CLOSED** (no addresses / RPC / spawner key → records a blocked event, never a partial broadcast). Emits catalogue kinds `deltaverse.gate.event`, `deltaverse.room.created`, `deltaverse.bubbleroom.spawned`. The runtime companion to the Solidity `Pay2PlayGate` ([`openagents/bankoneth/pay2play`](../openagents/bankoneth/pay2play)). Addresses: `data/config/blockchain_addresses.json` (Polygon contracts zero until deployed via [`agents/deployer`](../agents/deployer/service.py)).
+- [CoinMarketCap Integration](blockchain/coinmarketcap_integration_guide.md) — Provider-agnostic market data (key-auth REST / keyless public / x402 pay-per-request on Base).
+
 ## Economics
 
 - [Manifesto](MANIFESTO.md) — 3 pillars + Project Chimaiera roadmap + $BANKON token
@@ -416,7 +438,9 @@ mindX is a Godel machine — a self-improving system where the improvement mecha
 - [Thesis](THESIS.md) — [Darwin](ATTRIBUTION.md#intellectual-inspirations)-[Godel](ATTRIBUTION.md#intellectual-inspirations) Machine synthesis: mindX as practical implementation of [self-referential improvement](BOOK_OF_MINDX.md). The [BDI architecture](agents/bdi_agent.md) is the cognitive substrate, the [5-step resilience chain](ollama/INDEX.md#resilience-design) is the operational guarantee, and the [Dojo](../daio/governance/dojo.py) is the evolutionary pressure.
 - [Manifesto](MANIFESTO.md) — 3 pillars ([BDI reasoning](agents/bdi_agent.md), [BANKON vault](vault_system.md), [DAIO governance](DAIO.md)), Project [Chimaiera](ollama/setup/modelfile.md#from-modelfile-to-agent-alignment) roadmap, $BANKON token, [cypherpunk](ATTRIBUTION.md#intellectual-inspirations) tradition. Not cyberpunk — sovereign agents earn privilege through [Dojo reputation](#dojo), not assigned authority.
 - [Book of mindX](BOOK_OF_MINDX.md) — 17 chapters written by [AuthorAgent](AUTHOR_AGENT.md) via [machine.dreaming](#self-improvement). Lunar cycle editions. The [Godel journal](BOOK_OF_MINDX.md) — the machine's record of its own improvement.
+- [AuthorAgent Composition](AUTHORAGENT_COMPOSITION.md) — how I shape what I write: the full-spectrum **arc** (hook → rising complexity → expert tier → conclusion → digest), selectable **register** (`public`/`essay`/`phd`/`global`), contemporary **length** (`brief`…`pillar` or a custom word count, grown on a no-filler facet pool), rage.pythai.net **house-style** match-and-exceed via [editor.agent](../agents/editor_agent.py), original art via [artist.agent](../agents/artist_agent.py), and the **self-referential / ideology / narrative** dials — governed by the [boardroom](#boardroom). Code: [`agents/author_composition.py`](../agents/author_composition.py), curated depth in [`agents/protocol_series_enrichment.py`](../agents/protocol_series_enrichment.py).
 - [WordPress Publishing](WORDPRESS_PUBLISHING.md) — AuthorAgent → [wordpress-agent](../agents/wordpress.publish.agent) → rage.pythai.net. **Vault-backed, decrypt-on-demand**: WP API key + wordpress.agent wallet live in the isolated `wordpress.agent.keys` BANKON-vault namespace (never in any process env). Public wallet-authorized flow `POST /publish/rage/challenge` → `/authorize`, gated by EIP-191 signature + `WORDPRESS_PUBLISHER_ADDRESSES` allowlist; admin path `POST /admin/publish-to-rage`. Provisioning: `scripts/vault/provision_wordpress_agent.py`.
+- [MILESTONES](MILESTONES.md) — mindX's chronicle of its own evolution, auto-maintained by [AuthorAgent](AUTHOR_AGENT.md) from the **public git history** (`github.awareness`, [`agents/github_awareness.py`](../agents/github_awareness.py)). Every commit is chronicled (`data/milestones/milestone_log.jsonl`); batches that clear the worthiness threshold are published in mindX's own voice to rage.pythai.net via the same [wordpress-agent](../agents/wordpress.publish.agent) relationship — a third [PublicationOrchestrator](../agents/publication_orchestrator.py) trigger alongside SEA-success and full-moon dreams. A push is already public, so chronicling it adds zero overhead and no new disclosure.
 - [How I Turn Logs Into Memory: RAGE + PostgreSQL](publications/rage_postgresql_memory_from_logs.md) — the pipeline from process traces → STM → pgvector embeddings → LTM → RAGE retrieval feeding AGInt.
 - [Machine Dreaming: How I Consolidate Experience Without Ever Sleeping](publications/machine_dreaming_explained.md) — the 8-phase dream cycle, training-data export, the lunar trigger, the self-improvement loop.
 - [Emergent Resilience](publications/ErmegentResilience.md) — Academic paper on emergent resilient AI systems
@@ -492,7 +516,8 @@ mindX extrapolates ideas from the [SwarmClaw](https://github.com/swarmclawai) ec
 
 | Resource | URL |
 |----------|-----|
-| mindX GitHub | [github.com/Professor-Codephreak](https://github.com/Professor-Codephreak) |
+| mindX GitHub (AgenticPlace org) | [github.com/agenticplace](https://github.com/agenticplace) |
+| Creator — Professor Codephreak | [github.com/Professor-Codephreak](https://github.com/Professor-Codephreak) |
 | SwarmClaw AI | [github.com/swarmclawai](https://github.com/swarmclawai) |
 | Ollama | [ollama.com](https://ollama.com) |
 | Ollama Cloud Models | [ollama.com/search?c=cloud](https://ollama.com/search?c=cloud) |

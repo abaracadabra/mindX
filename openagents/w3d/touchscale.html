@@ -1,0 +1,402 @@
+<!--
+  TouchScale — a pure-JavaScript multi-touch library template.
+
+  Models the progression of human interaction on a touch UI:
+    1 finger  -> 2 -> 3 -> 4 -> 5   (one hand)
+    6 -> 7 -> 8 -> 9 -> 10           (second hand joins)
+
+  Zero dependencies. Drop the <script> class into any project.
+  License: Apache-2.0  (c) 2026 BANKON — all rights reserved
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>TouchScale · 1→10 multi-touch template</title>
+<style>
+  :root {
+    --bg:        #0b0e14;
+    --bg-grid:   #141a26;
+    --ink:       #e6edf3;
+    --ink-dim:   #7d8590;
+    --hand-a:    #5ad1ff;   /* first hand  — cool */
+    --hand-b:    #ff9e64;   /* second hand — warm */
+    --accent:    #c3f73a;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--mono);
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* The capture surface — fills the viewport */
+  #stage {
+    position: fixed;
+    inset: 0;
+    touch-action: none;            /* critical: stop the browser eating touches */
+    background:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px) 0 0 / 100% 56px,
+      linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px) 0 0 / 56px 100%,
+      var(--bg);
+    cursor: crosshair;
+  }
+
+  /* HUD */
+  #hud {
+    position: fixed;
+    top: 16px; left: 16px;
+    z-index: 20;
+    pointer-events: none;
+    max-width: min(92vw, 520px);
+  }
+  #title {
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+  }
+  #count {
+    font-size: clamp(48px, 14vw, 120px);
+    line-height: 1;
+    font-weight: 800;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    transition: transform .12s ease;
+  }
+  #stage-label {
+    font-size: 15px;
+    color: var(--ink);
+    min-height: 1.4em;
+  }
+  #stage-label b { color: var(--accent); }
+
+  /* per-hand tally */
+  #hands {
+    display: flex; gap: 28px; margin-top: 10px; font-size: 13px;
+  }
+  #hands .h { display: flex; align-items: center; gap: 8px; }
+  #hands .dot { width: 10px; height: 10px; border-radius: 50%; }
+  #hands .a .dot { background: var(--hand-a); box-shadow: 0 0 12px var(--hand-a); }
+  #hands .b .dot { background: var(--hand-b); box-shadow: 0 0 12px var(--hand-b); }
+  #hands .lbl { color: var(--ink-dim); }
+  #hands .val { color: var(--ink); font-weight: 700; }
+
+  /* progress pips 1..10 */
+  #pips { display: flex; gap: 6px; margin-top: 16px; }
+  #pips .pip {
+    width: 22px; height: 6px; border-radius: 3px;
+    background: var(--bg-grid);
+    transition: background .15s ease, box-shadow .15s ease, transform .15s ease;
+  }
+  #pips .pip.on  { background: var(--hand-a); transform: scaleY(1.6); }
+  #pips .pip.on.b{ background: var(--hand-b); }
+
+  /* hint footer */
+  #hint {
+    position: fixed; bottom: 14px; left: 0; right: 0;
+    text-align: center; font-size: 12px; color: var(--ink-dim);
+    z-index: 20; pointer-events: none; padding: 0 12px;
+  }
+  #hint kbd {
+    background: var(--bg-grid); border-radius: 4px; padding: 1px 6px;
+    color: var(--ink); border: 1px solid #222b3a;
+  }
+
+  /* touch ring elements are injected by JS */
+  .touch {
+    position: fixed;
+    z-index: 10;
+    width: 0; height: 0;
+    pointer-events: none;
+    will-change: transform;
+  }
+  .touch .ring {
+    position: absolute;
+    width: 84px; height: 84px;
+    margin: -42px 0 0 -42px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    box-shadow: 0 0 22px currentColor, inset 0 0 14px currentColor;
+    animation: pop .18s ease-out;
+  }
+  .touch .core {
+    position: absolute;
+    width: 14px; height: 14px;
+    margin: -7px 0 0 -7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .touch .tag {
+    position: absolute;
+    transform: translate(48px, -8px);
+    font-size: 11px;
+    white-space: nowrap;
+    color: var(--ink);
+    text-shadow: 0 1px 3px #000;
+  }
+  .touch .tag small { color: var(--ink-dim); }
+
+  @keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<div id="hud">
+  <div id="title">TouchScale · 1 → 10</div>
+  <div id="count">0</div>
+  <div id="stage-label">Touch the surface with one finger to begin.</div>
+  <div id="hands">
+    <div class="h a"><span class="dot"></span><span class="lbl">hand A</span><span class="val" id="valA">0</span></div>
+    <div class="h b"><span class="dot"></span><span class="lbl">hand B</span><span class="val" id="valB">0</span></div>
+  </div>
+  <div id="pips"></div>
+</div>
+
+<div id="hint">
+  Real multi-touch needs a touchscreen. On desktop, hold <kbd>Shift</kbd> and click to pin synthetic points (up to 10).
+</div>
+
+<script>
+/* =========================================================================
+ * TouchScale — pure JS multi-touch tracker (no dependencies)
+ *
+ * It normalises Pointer Events + Touch Events into a single stream of active
+ * contact points, classifies them into "hand A" (first five) and "hand B"
+ * (next five), and fires lifecycle callbacks as the count climbs 1→10 and
+ * falls back down. Designed as a reusable template: instantiate it on any
+ * element and wire the callbacks you care about.
+ * ========================================================================= */
+
+class TouchScale {
+  /**
+   * @param {HTMLElement} surface  element to capture touches on
+   * @param {object} opts
+   *   maxPoints   {number}  hard cap (default 10)
+   *   handSize    {number}  contacts assigned to hand A before B (default 5)
+   *   onChange    {fn}      (state) => void  — any add/remove/move
+   *   onStep      {fn}      (n, prev, state) => void — count crossed to a new n
+   *   onStageEnter{fn}      (stage, state) => void — entered a named stage
+   */
+  constructor(surface, opts = {}) {
+    this.surface   = surface;
+    this.maxPoints = opts.maxPoints ?? 10;
+    this.handSize  = opts.handSize  ?? 5;
+    this.onChange     = opts.onChange     || (() => {});
+    this.onStep       = opts.onStep       || (() => {});
+    this.onStageEnter = opts.onStageEnter || (() => {});
+
+    /** active points keyed by pointerId/identifier */
+    this.points = new Map();
+    this._lastCount = 0;
+    this._lastStage = null;
+
+    // Named stages for the 1→10 progression. Edit freely.
+    this.stages = [
+      { at: 1,  name: 'single-tap',     hand: 'A', note: 'One finger — pointer / select.' },
+      { at: 2,  name: 'pinch',          hand: 'A', note: 'Two fingers — pinch, zoom, rotate.' },
+      { at: 3,  name: 'three-swipe',    hand: 'A', note: 'Three fingers — pan / swipe gestures.' },
+      { at: 4,  name: 'four-spread',    hand: 'A', note: 'Four fingers — app-switch / overview.' },
+      { at: 5,  name: 'full-hand',      hand: 'A', note: 'Full hand — grab / palm gesture.' },
+      { at: 6,  name: 'two-hands-1',    hand: 'B', note: 'Second hand joins — bimanual control.' },
+      { at: 7,  name: 'two-hands-2',    hand: 'B', note: 'Seven points — split-surface control.' },
+      { at: 8,  name: 'two-hands-3',    hand: 'B', note: 'Eight points — dual quad manipulation.' },
+      { at: 9,  name: 'two-hands-4',    hand: 'B', note: 'Nine points — near-full both hands.' },
+      { at: 10, name: 'all-ten',        hand: 'B', note: 'All ten — full two-handed engagement.' },
+    ];
+
+    this._usePointer = window.PointerEvent !== undefined;
+    this._bind();
+  }
+
+  /* ---- event wiring ---------------------------------------------------- */
+  _bind() {
+    if (this._usePointer) {
+      this.surface.addEventListener('pointerdown',   e => this._down(e.pointerId, e), { passive: false });
+      this.surface.addEventListener('pointermove',   e => this._move(e.pointerId, e), { passive: false });
+      this.surface.addEventListener('pointerup',     e => this._up(e.pointerId),      { passive: false });
+      this.surface.addEventListener('pointercancel', e => this._up(e.pointerId),      { passive: false });
+      this.surface.addEventListener('pointerleave',  e => this._up(e.pointerId),      { passive: false });
+    } else {
+      // Fallback for browsers without Pointer Events
+      const each = (e, fn) => { for (const t of e.changedTouches) fn(t.identifier, t); };
+      this.surface.addEventListener('touchstart',  e => { e.preventDefault(); each(e, (id, t) => this._down(id, t)); }, { passive: false });
+      this.surface.addEventListener('touchmove',   e => { e.preventDefault(); each(e, (id, t) => this._move(id, t)); }, { passive: false });
+      this.surface.addEventListener('touchend',    e => { each(e, id => this._up(id)); }, { passive: false });
+      this.surface.addEventListener('touchcancel', e => { each(e, id => this._up(id)); }, { passive: false });
+    }
+  }
+
+  /* ---- lifecycle ------------------------------------------------------- */
+  _down(id, src) {
+    if (this.points.size >= this.maxPoints) return;     // cap at ten
+    if (this.points.has(id)) return;
+    this.points.set(id, { id, x: src.clientX, y: src.clientY, t0: performance.now() });
+    this._reassignHands();
+    this._emit();
+  }
+
+  _move(id, src) {
+    const p = this.points.get(id);
+    if (!p) return;
+    p.x = src.clientX; p.y = src.clientY;
+    this._emit(true); // move-only: skip step/stage logic, just report positions
+  }
+
+  _up(id) {
+    if (!this.points.delete(id)) return;
+    this._reassignHands();
+    this._emit();
+  }
+
+  /** assign each point to hand A or B by arrival order */
+  _reassignHands() {
+    let i = 0;
+    for (const p of this.points.values()) {
+      p.hand = i < this.handSize ? 'A' : 'B';
+      p.indexInHand = (i % this.handSize) + 1;
+      i++;
+    }
+  }
+
+  /* ---- reporting ------------------------------------------------------- */
+  _emit(moveOnly = false) {
+    const state = this.snapshot();
+    this.onChange(state);
+
+    if (moveOnly) return;
+
+    const n = state.count;
+    if (n !== this._lastCount) {
+      this.onStep(n, this._lastCount, state);
+      this._lastCount = n;
+
+      const stage = this.stages.find(s => s.at === n) || null;
+      if (stage && stage.name !== this._lastStage) {
+        this._lastStage = stage.name;
+        this.onStageEnter(stage, state);
+      }
+      if (n === 0) this._lastStage = null;
+    }
+  }
+
+  /** immutable view of current state */
+  snapshot() {
+    const list = [...this.points.values()].map(p => ({ ...p }));
+    const handA = list.filter(p => p.hand === 'A');
+    const handB = list.filter(p => p.hand === 'B');
+    return {
+      count: list.length,
+      points: list,
+      handA, handB,
+      handACount: handA.length,
+      handBCount: handB.length,
+      twoHanded: handB.length > 0,
+    };
+  }
+
+  destroy() { this.points.clear(); /* listeners drop with element removal */ }
+}
+
+/* =========================================================================
+ *  DEMO WIRING — visualises the library above. Replace freely.
+ * ========================================================================= */
+(function demo() {
+  const stage   = document.getElementById('stage');
+  const countEl = document.getElementById('count');
+  const labelEl = document.getElementById('stage-label');
+  const valAEl  = document.getElementById('valA');
+  const valBEl  = document.getElementById('valB');
+  const pipsEl  = document.getElementById('pips');
+
+  // build 10 progress pips
+  const pips = [];
+  for (let i = 1; i <= 10; i++) {
+    const el = document.createElement('div');
+    el.className = 'pip';
+    pipsEl.appendChild(el);
+    pips.push(el);
+  }
+
+  const rings = new Map();       // id -> DOM node for a touch point
+
+  function makeRing(p) {
+    const el = document.createElement('div');
+    el.className = 'touch';
+    el.style.color = p.hand === 'A' ? 'var(--hand-a)' : 'var(--hand-b)';
+    el.innerHTML =
+      '<div class="ring"></div><div class="core"></div>' +
+      '<div class="tag"></div>';
+    stage.appendChild(el);
+    rings.set(p.id, el);
+    return el;
+  }
+
+  function paint(state) {
+    // remove rings whose points are gone
+    const live = new Set(state.points.map(p => p.id));
+    for (const [id, el] of rings) {
+      if (!live.has(id)) { el.remove(); rings.delete(id); }
+    }
+    // add/update rings
+    state.points.forEach((p, idx) => {
+      const el = rings.get(p.id) || makeRing(p);
+      el.style.color = p.hand === 'A' ? 'var(--hand-a)' : 'var(--hand-b)';
+      el.style.transform = `translate(${p.x}px, ${p.y}px)`;
+      const tag = el.querySelector('.tag');
+      tag.innerHTML = `#${idx + 1} <small>hand ${p.hand}·${p.indexInHand}</small>`;
+    });
+
+    // HUD numbers
+    countEl.textContent = state.count;
+    valAEl.textContent  = state.handACount;
+    valBEl.textContent  = state.handBCount;
+
+    // pips
+    pips.forEach((pip, i) => {
+      const on = i < state.count;
+      pip.classList.toggle('on', on);
+      pip.classList.toggle('b', i >= 5);   // second hand band warm
+    });
+  }
+
+  const ts = new TouchScale(stage, {
+    onChange: paint,
+    onStep: (n) => {
+      countEl.style.transform = 'scale(1.18)';
+      setTimeout(() => (countEl.style.transform = 'scale(1)'), 120);
+      if (n === 0) labelEl.textContent = 'Released. Touch again to begin.';
+    },
+    onStageEnter: (stage) => {
+      labelEl.innerHTML = `<b>${stage.at}</b> · ${stage.name} — ${stage.note}`;
+    },
+  });
+
+  /* --- desktop fallback: Shift+click pins synthetic points ------------- */
+  let synthId = -1;
+  stage.addEventListener('mousedown', (e) => {
+    if (!e.shiftKey) return;
+    e.preventDefault();
+    ts._down(synthId--, { clientX: e.clientX, clientY: e.clientY });
+  });
+  // click a pinned point near it to release the most recent one
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      const ids = [...ts.points.keys()];
+      if (ids.length) ts._up(ids[ids.length - 1]);
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,44 +1,28 @@
 {
-  "mindx_meta_agent_d9366302": {
-    "session_id": "mindx_meta_agent_d9366302",
+  "mindx_meta_agent_b9b76dac": {
+    "session_id": "mindx_meta_agent_b9b76dac",
     "agent_id": "mindx_meta_agent",
-    "created_at": 1778658259.980756,
-    "last_activity": 1778663447.4132597,
-    "expires_at": 1778744659.980756,
-    "cycle_count": 6,
+    "created_at": 1781309144.338044,
+    "last_activity": 1781309144.338044,
+    "expires_at": 1781395544.338044,
+    "cycle_count": 0,
     "circuit_breaker_trips": 0,
     "last_reset_reason": null,
     "metadata": {
-      "autonomous_mode": true,
-      "last_improvement": "{\"error\": \"ConnectionError\", \"message\": \"Cannot connect to Ollama at http://10.0.0.155:18080\"}"
+      "autonomous_mode": true
     }
   },
-  "mindx_meta_agent_8ab06141": {
-    "session_id": "mindx_meta_agent_8ab06141",
+  "mindx_meta_agent_c2118c9b": {
+    "session_id": "mindx_meta_agent_c2118c9b",
     "agent_id": "mindx_meta_agent",
-    "created_at": 1778664104.9412344,
-    "last_activity": 1778692628.3003256,
-    "expires_at": 1778750504.9412344,
-    "cycle_count": 54,
+    "created_at": 1781309482.3355594,
+    "last_activity": 1781309482.3355594,
+    "expires_at": 1781395882.3355594,
+    "cycle_count": 0,
     "circuit_breaker_trips": 0,
     "last_reset_reason": null,
     "metadata": {
-      "autonomous_mode": true,
-      "last_improvement": "Improve improvement success rate"
-    }
-  },
-  "mindx_meta_agent_c21c7669": {
-    "session_id": "mindx_meta_agent_c21c7669",
-    "agent_id": "mindx_meta_agent",
-    "created_at": 1778692777.583709,
-    "last_activity": 1778723010.9527187,
-    "expires_at": 1778779177.583709,
-    "cycle_count": 47,
-    "circuit_breaker_trips": 0,
-    "last_reset_reason": null,
-    "metadata": {
-      "autonomous_mode": true,
-      "last_improvement": "Improve improvement success rate"
+      "autonomous_mode": true
     }
   }
 }

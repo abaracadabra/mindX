@@ -448,7 +448,6 @@
 
     <div class="page">
         <section class="hero">
-            <div class="logo-mark" aria-hidden="true"></div>
             <h1 class="slogan"><span class="accent-text">Shadow-Overlord</span></h1>
             <p>EIP-191 wallet signature → 5-minute JWT for the mindX admin tier. One wallet. No password. No cookies. Your private key never leaves your device.</p>
             <div class="crown-banner" id="crownBanner">welcome, overlord</div>
@@ -463,7 +462,7 @@
             <div style="text-align:center; margin-top: 12px;">
                 <button class="wallet-btn" id="walletBtn" onclick="connectWallet()">
                     <span class="dot"></span>
-                    <span id="walletBtnLabel">Connect Wallet</span>
+                    <span id="walletBtnLabel">CONNECT WALLET</span>
                 </button>
                 <div class="wallet-address" id="walletAddress"></div>
                 <div class="chain-chip" id="chainChip" hidden></div>
@@ -836,7 +835,7 @@ POST /admin/shadow/verify      { nonce, signature }   → { jwt, exp }</pre>
                 } catch {}
             }
         } catch (err) {
-            label.textContent = 'Connect Wallet';
+            label.textContent = 'CONNECT WALLET';
             if (err && err.code === 4001) return; // user rejected
             showStatus('error', 'Wallet connect failed: ' + (err?.message || err));
         }
@@ -852,7 +851,7 @@ POST /admin/shadow/verify      { nonce, signature }   → { jwt, exp }</pre>
         connectedAddress = null;
         const btn = document.getElementById('walletBtn');
         btn.classList.remove('connected');
-        document.getElementById('walletBtnLabel').textContent = 'Connect Wallet';
+        document.getElementById('walletBtnLabel').textContent = 'CONNECT WALLET';
         document.getElementById('walletAddress').textContent = '';
         document.getElementById('signinBtn').disabled = true;
         clearSession();

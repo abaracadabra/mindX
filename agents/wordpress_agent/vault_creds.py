@@ -107,19 +107,23 @@ def load_wp_settings_from_vault() -> Optional[Settings]:
         return None
 
 
-def sign_with_agent_wallet(message: str) -> Optional[tuple[str, str]]:
-    """Sign ``message`` (a short string — typically a sha256 hex digest of the post body)
-    with wordpress.agent's vault-held wallet key. Returns ``(signature_hex, address)``,
-    or ``None`` if the wallet isn't provisioned.
+def sign_as(agent_id: str, message: str) -> Optional[tuple[str, str]]:
+    """Sign ``message`` (typically a sha256/challenge string) with the vault key
+    of *any* agent, by the ``{agent_id}:pk`` convention (same naming the
+    /vault/sign/{agent_id} oracle uses). Returns ``(signature_hex, address)`` or
+    ``None`` when that agent has no provisioned key — so callers can build a
+    chain of custody across agents (ceo, soldiers, author.agent, editor.agent,
+    artist.agent, wordpress.agent) and degrade gracefully on any missing link.
 
-    Decrypts ``wordpress.agent:pk`` and immediately re-locks. The private key never
+    Decrypts ``{agent_id}:pk`` and immediately re-locks; the private key never
     leaves this function's stack.
     """
+    entry = agent_id if agent_id.endswith(":pk") else f"{agent_id}:pk"
     vault = _open_unlocked_vault()
     if vault is None:
         return None
     try:
-        pk_hex = vault.retrieve(ENTRY_PK)
+        pk_hex = vault.retrieve(entry)
     finally:
         vault.lock()
     if not pk_hex:
@@ -142,10 +146,16 @@ def sign_with_agent_wallet(message: str) -> Optional[tuple[str, str]]:
         address = Web3.to_checksum_address(acct.address)
         return signature, address
     except Exception as e:
-        logger.warning(f"sign_with_agent_wallet failed: {e}")
+        logger.warning(f"sign_as({agent_id}) failed: {e}")
         return None
     finally:
         pk_hex = None  # best-effort GC hint; Python strings are immutable
+
+
+def sign_with_agent_wallet(message: str) -> Optional[tuple[str, str]]:
+    """Sign ``message`` with wordpress.agent's vault-held wallet key (the default
+    publishing identity). Thin wrapper over :func:`sign_as`."""
+    return sign_as(_AGENT_ID, message)
 
 
 def sha256_hex(payload: str) -> str:
@@ -156,6 +166,7 @@ def sha256_hex(payload: str) -> str:
 __all__ = [
     "load_wp_settings_from_vault",
     "sign_with_agent_wallet",
+    "sign_as",
     "sha256_hex",
     "ENTRY_PK",
     "ENTRY_ADDRESS",
