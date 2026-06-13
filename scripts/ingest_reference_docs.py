@@ -51,6 +51,17 @@ MANIFEST_PATH = PROJECT_ROOT / "data" / "reference_corpus_manifest.json"
 HEADING_RE = re.compile(r"^(#{1,3})\s+(.+)$")
 MIN_CHUNKABLE_CHARS = 300  # below this, 0 chunks is legitimate, not a deferral
 
+# THOT power-of-two scale: 8 … 8192. Chunk sizing walks DOWN this ladder on
+# failure — embedding windows vary per model (mxbai-embed-large: 512 tokens;
+# code-dense text tokenizes ~2x prose, so word counts lie), and binary
+# descent finds the largest size that fits without model-specific tuning.
+THOT_LADDER = [2 ** k for k in range(3, 14)]  # [8, 16, …, 4096, 8192]
+
+
+def thot_descend(start: int):
+    """Ladder rungs ≤ start, largest first."""
+    return [s for s in sorted(THOT_LADDER, reverse=True) if s <= start]
+
 
 def extract_md_summary(text: str) -> dict:
     """Deterministic summary: title, first ~20 headings, first paragraph."""
@@ -112,6 +123,10 @@ async def main() -> None:
     ap.add_argument("--retries", type=int, default=5, help="retries per doc when embeds defer")
     ap.add_argument("--cooldown", type=float, default=60.0, help="seconds between retries")
     ap.add_argument("--pace", type=float, default=3.0, help="seconds between docs")
+    ap.add_argument("--chunk-start", type=int, default=256,
+                    help="starting chunk size in words — descends the THOT power-of-two "
+                         "ladder (8..8192) on failure; 256 because 512 overflows "
+                         "mxbai-embed-large on code-dense text")
     args = ap.parse_args()
 
     docs_dir = PROJECT_ROOT / "docs"
@@ -176,16 +191,27 @@ async def main() -> None:
 
             doc_name = relpath.rsplit(".", 1)[0]
             stored = 0
+            # Walk the THOT ladder down from --chunk-start: each failed
+            # attempt halves the chunk size (256 → 128 → … → 8 words) until
+            # the embedding window accepts it. CPU-governor deferrals retry
+            # at the same descent position after the cooldown.
+            ladder = thot_descend(args.chunk_start)
             for attempt in range(args.retries + 1):
+                csize = ladder[min(attempt, len(ladder) - 1)]
                 # purge first so a shrunken doc doesn't keep stale tail chunks
                 # (embed_and_store_doc upserts per (doc_name, chunk_idx))
                 await pool.execute("DELETE FROM doc_embeddings WHERE doc_name = $1", doc_name)
-                stored = await embed_and_store_doc(doc_name, text, interactive=args.aggressive)
+                stored = await embed_and_store_doc(doc_name, text, chunk_size=csize,
+                                                   interactive=args.aggressive)
                 if stored > 0 or len(text) < MIN_CHUNKABLE_CHARS:
                     break
                 if attempt < args.retries:
-                    print(f"  ... {relpath}: embeds deferred (CPU hot), retry {attempt+1}/{args.retries} in {args.cooldown:.0f}s")
-                    await asyncio.sleep(args.cooldown)
+                    # aggressive mode bypasses the governor, so 0 chunks there
+                    # means context overflow — deterministic, no point waiting
+                    cool = min(args.cooldown, 5.0) if args.aggressive else args.cooldown
+                    print(f"  ... {relpath}: 0 chunks at chunk_size={csize}, "
+                          f"descending THOT ladder, retry {attempt+1}/{args.retries} in {cool:.0f}s")
+                    await asyncio.sleep(cool)
             total_chunks += stored
 
             entry = manifest.get(relpath, {})
