@@ -217,6 +217,7 @@ async def ascend_recipe(
     use_imprint: bool = True,
     promote: bool = False,
     register_fallback: bool = False,
+    train_timeout: int = 6 * 3600,
 ) -> AscentResult:
     """The PROVEN v1.0.0 ascent flow, driving mindXtrain's own recipe CLI
     (validated on the VPS 2026-06-13):
@@ -261,18 +262,34 @@ async def ascend_recipe(
         notes.append(f"could not set data.path: {e}")
         return result
 
-    # 3. train (positional config + built-in CPU throttle)
-    train = _bridge.run_cli(
+    # 3. train (positional config + built-in CPU throttle). Streamed to a log
+    #    file so the dashboard can tail it live, and a status file marks
+    #    "training in progress" with a start timestamp for the elapsed timer.
+    from .status import write_status, STATUS_PATH
+    import time as _t
+    train_log = work_dir / "train.log"
+    started = _t.time()
+    write_status("running", recipe=recipe, generation=generation,
+                 started_ts=started, ended_ts=None, log_path=str(train_log),
+                 stage="training")
+    train = _bridge.run_cli_streamed(
         ["train", cfg, "--out", "out/runs", "--cpu-percent", str(cpu_percent),
          "--cpu-nice", str(cpu_nice)],
-        cap=cap, cwd=work_dir, timeout=CPU_MAX_MINUTES * 60 + 600,
+        cap=cap, cwd=work_dir, log_path=train_log,
+        timeout=train_timeout,
     )
-    result.train = {"ok": train.get("ok"), "tail": (train.get("stdout") or "")[-600:]}
+    result.train = {"ok": train.get("ok"), "tail": (train.get("tail") or "")[-600:]}
     if not train.get("ok"):
         result.stage = "train_failed"
-        notes.append(f"train failed: {(train.get('stderr') or '')[-300:]}")
+        write_status("failed", recipe=recipe, generation=generation,
+                     started_ts=started, ended_ts=_t.time(), log_path=str(train_log),
+                     stage="train_failed")
+        notes.append(f"train failed: {(train.get('tail') or train.get('error') or '')[-300:]}")
         return result
     result.stage = "trained"
+    write_status("running", recipe=recipe, generation=generation,
+                 started_ts=started, ended_ts=None, log_path=str(train_log),
+                 stage="imprint")
     # locate the adapter dir under out/runs/<run>/checkpoint
     adapter = _find_adapter(work_dir / "out" / "runs")
     result.weights_path = str(adapter) if adapter else str(work_dir / "out" / "runs")
@@ -287,6 +304,10 @@ async def ascend_recipe(
         if not v.get("accepted"):
             result.stage = "proof_rejected"
             notes.append(f"imprint verdict: {v.get('reason')}")
+            write_status("rejected", recipe=recipe, generation=generation,
+                         started_ts=started, ended_ts=_t.time(),
+                         log_path=str(train_log), stage="proof_rejected",
+                         recall=result.recall)
             return result
         notes.append(f"imprint accepted: {v.get('reason')}")
         result.stage = "accepted"
@@ -304,6 +325,10 @@ async def ascend_recipe(
             notes.append(f"promoted to Ollama model {result.ollama_model}")
         else:
             notes.append(f"promotion failed: {pr.get('reason') or pr.get('stderr','')[:200]}")
+    write_status("promoted" if result.promoted else "done", recipe=recipe,
+                 generation=generation, started_ts=started, ended_ts=_t.time(),
+                 log_path=str(train_log), stage=result.stage,
+                 recall=result.recall, ollama_model=result.ollama_model)
     return result
 
 

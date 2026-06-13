@@ -234,3 +234,54 @@ def run_cli(
                 "cmd": " ".join(cmd)}
     except (subprocess.TimeoutExpired, OSError) as e:
         return {"ok": False, "error": str(e), "cmd": " ".join(cmd)}
+
+
+def run_cli_streamed(
+    args: Sequence[str],
+    *,
+    cap: Optional[Capability] = None,
+    cwd: Optional[Path] = None,
+    log_path: Optional[Path] = None,
+    timeout: int = 7200,
+) -> dict:
+    """Like run_cli but STREAMS combined stdout/stderr to `log_path` line-by-
+    line as it runs — so a long training run is tailable live (the dashboard's
+    training panel reads that file). Returns {ok, returncode, tail}.
+
+    Used for the train step of a real ascent, which can run for many minutes;
+    run_cli's buffered capture would hide all output until completion."""
+    cap = cap or discover()
+    if not cap.enabled:
+        return {"ok": False, "dormant": True, "reason": "bridge not armed"}
+    if not cap.installed or cap.cli is None:
+        return {"ok": False, "dry_run": True, "reason": "mindXtrain not installed"}
+    cmd = cap.cli.split() + list(args)
+    workdir = str(cwd or cap.home or Path.cwd())
+    tail: list = []
+    lf = None
+    try:
+        if log_path is not None:
+            Path(log_path).parent.mkdir(parents=True, exist_ok=True)
+            lf = open(log_path, "a", encoding="utf-8", buffering=1)
+        proc = subprocess.Popen(
+            cmd, cwd=workdir, stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, text=True, bufsize=1,
+        )
+        import time as _t
+        deadline = _t.time() + timeout
+        for line in proc.stdout:  # streams as the child emits lines
+            if lf:
+                lf.write(line)
+            tail.append(line)
+            if len(tail) > 200:
+                tail = tail[-200:]
+            if _t.time() > deadline:
+                proc.kill()
+                return {"ok": False, "error": "timeout", "tail": "".join(tail[-40:])}
+        rc = proc.wait()
+        return {"ok": rc == 0, "returncode": rc, "tail": "".join(tail[-40:]), "cmd": " ".join(cmd)}
+    except (OSError, ValueError) as e:
+        return {"ok": False, "error": str(e), "tail": "".join(tail[-40:])}
+    finally:
+        if lf:
+            lf.close()

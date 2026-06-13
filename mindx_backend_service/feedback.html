@@ -1638,6 +1638,16 @@ function renderGodelMachine(d) {
   if (d.constraint) html += '<div class="sub" style="margin-top:10px">' + escapeHtml(d.constraint) + '</div>';
   return html;
 }
+function _fmtDur(s) {
+  s = Math.max(0, Math.floor(s));
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  return (h ? h+'h ' : '') + (h||m ? m+'m ' : '') + sec + 's';
+}
+// tick the training elapsed timer every second between fetches
+setInterval(function(){
+  const t = window._ascendTraining; const el = document.getElementById('trainElapsed');
+  if (t && el) el.textContent = _fmtDur(t.base + (Date.now() - t.at)/1000);
+}, 1000);
 async function refreshAscend() {
   try {
     const d = await fetch('/insight/godel/ascend', { cache: 'no-store' }).then(r => r.json());
@@ -1654,6 +1664,22 @@ async function refreshAscend() {
       + escapeHtml(cap.version || '—') + ' · level <b>' + escapeHtml(cap.level || '?') + '</b>'
       + ' · CPU-train ' + (cap.cpu_train_active ? '<b style="color:var(--green)">active</b>' : 'inactive')
       + (cap.home ? ' · <span style="color:var(--text3)">' + escapeHtml(cap.home) + '</span>' : '') + '</div>';
+    // ── live training indicator ──
+    const tr = d.training || {};
+    window._ascendTraining = null;
+    if (tr.state === 'running') {
+      pill.textContent = 'TRAINING'; pill.className = 'pill warn';
+      // base the ticking timer on server elapsed_s + local drift since fetch
+      window._ascendTraining = { base: tr.elapsed_s || 0, at: Date.now(), gen: tr.generation, recipe: tr.recipe, stage: tr.stage };
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(227,179,65,.08);border-left:2px solid var(--amber);border-radius:3px;margin-bottom:8px">'
+        + '<span class="train-dot" style="width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse 1.4s ease-in-out infinite"></span>'
+        + '<span style="color:var(--amber)">TRAINING</span> gen <b>' + escapeHtml(String(tr.generation || '?')) + '</b>'
+        + ' · ' + escapeHtml(tr.recipe || '') + ' · <span style="color:var(--text3)">' + escapeHtml(tr.stage || '') + '</span>'
+        + ' · <span id="trainElapsed" style="color:var(--amber);font-weight:600">' + _fmtDur(tr.elapsed_s || 0) + '</span></div>';
+      if (tr.log_tail) html += '<pre style="background:rgba(5,8,16,.5);border:1px solid var(--border);border-radius:4px;padding:8px;font-size:10px;line-height:1.4;max-height:160px;overflow:auto;color:var(--text2);margin-bottom:8px">' + escapeHtml(tr.log_tail) + '</pre>';
+    } else if (tr.state === 'stale') {
+      html += '<div style="padding:6px 10px;color:var(--red);font-size:11px">⚠ last training crashed (' + escapeHtml(tr.note || '') + ')</div>';
+    }
     const evs = d.events || [];
     if (!evs.length) {
       html += '<div style="color:var(--text3)">no ascents yet — '
@@ -2784,7 +2810,7 @@ async function boot() {
   startSSE();
   await Promise.allSettled([refreshCognition(), refreshGodelMachine(), refreshAscend(), refreshMilestones(), refreshSysPulse(), refreshStuck(), refreshSelfEval(), refreshBDI(), refreshLedger(), refreshSelfAware(), refreshBoardroom(), refreshBoardRollcall(), refreshBoardLeaderboard(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
   setInterval(refreshGodelMachine, 45000);
-  setInterval(refreshAscend, 60000);
+  setInterval(refreshAscend, 15000);  // 15s so the live training panel stays fresh
   setInterval(refreshMilestones, 60000);
   setInterval(refreshCognition, 30000);
   setInterval(refreshSysPulse, 15000);

@@ -3006,5 +3006,33 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
 })();
 </script>
 
+<!-- mindXtrain live training light — pulses while a Schmidhüber ascent trains -->
+<div id="mxt-train-light" style="display:none;position:fixed;top:54px;left:50%;transform:translateX(-50%);z-index:60;background:rgba(10,14,20,.94);border:1px solid rgba(227,179,65,.4);border-radius:20px;padding:6px 14px;font-family:var(--mono),monospace;font-size:11px;color:var(--amber);box-shadow:0 4px 20px rgba(0,0,0,.5);display:none;align-items:center;gap:8px">
+  <span style="width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse-dot 1.4s ease-in-out infinite"></span>
+  <span>mindXtrain</span> <b id="mxt-train-label">TRAINING</b>
+  <span style="color:var(--text3)">·</span> <b id="mxt-train-timer" style="color:var(--amber)">0s</b>
+</div>
+<script>
+(function(){
+  var box=document.getElementById('mxt-train-light');
+  var label=document.getElementById('mxt-train-label');
+  var timer=document.getElementById('mxt-train-timer');
+  var T=null;  // {base, at, gen}
+  function fmt(s){s=Math.max(0,Math.floor(s));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60;return (h?h+'h ':'')+(h||m?m+'m ':'')+x+'s';}
+  setInterval(function(){ if(T&&box.style.display!=='none') timer.textContent=fmt(T.base+(Date.now()-T.at)/1000); },1000);
+  function poll(){
+    fetch('/insight/godel/ascend',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+      var tr=(d&&d.training)||{};
+      if(tr.state==='running'){
+        T={base:tr.elapsed_s||0,at:Date.now()};
+        label.textContent='TRAINING gen '+(tr.generation||'?')+(tr.stage?' ('+tr.stage+')':'');
+        timer.textContent=fmt(tr.elapsed_s||0);
+        box.style.display='flex';
+      } else { T=null; box.style.display='none'; }
+    }).catch(function(){});
+  }
+  poll(); setInterval(poll,10000);
+})();
+</script>
 </body>
 </html>

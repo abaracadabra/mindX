@@ -4344,6 +4344,29 @@ async def insight_godel_ascend(request: Request, limit: int = 20):
         cap = _mxt_bridge.discover().as_dict()
     except Exception as e:
         cap = {"error": f"bridge discover failed: {e}"}
+    # Live training indicator: status file (running/elapsed) + a tail of the
+    # streamed train log, so the page can show a "TRAINING" light + timer.
+    training: Dict[str, Any] = {"state": "idle"}
+    try:
+        from mindx.godel.mindxtrain.status import read_status
+        st = read_status()
+        if st:
+            training = st
+            lp = st.get("log_path")
+            if lp and Path(lp).exists():
+                try:
+                    with open(lp, "rb") as _lf:
+                        _lf.seek(0, 2)
+                        _sz = _lf.tell()
+                        _lf.seek(max(0, _sz - 8 * 1024))
+                        _raw = _lf.read().decode("utf-8", errors="replace")
+                    # carriage-return progress bars → keep last segment per line
+                    _lines = [ln.split("\r")[-1] for ln in _raw.splitlines() if ln.strip()]
+                    training["log_tail"] = "\n".join(_lines[-14:])
+                except Exception:
+                    pass
+    except Exception:
+        pass
     log_path = _PR / "data" / "logs" / "ascend_log.jsonl"
     events: list = []
     if log_path.exists():
@@ -4364,7 +4387,8 @@ async def insight_godel_ascend(request: Request, limit: int = 20):
                     continue
         except Exception:
             pass
-    return _maybe_h_text(request, {"capability": cap, "events": events, "count": len(events)},
+    return _maybe_h_text(request, {"capability": cap, "training": training,
+                                   "events": events, "count": len(events)},
                          route_path="/insight/godel/ascend")
 
 
