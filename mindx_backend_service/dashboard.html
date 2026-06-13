@@ -3007,18 +3007,26 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
 </script>
 
 <!-- mindXtrain live training light — pulses while a Schmidhüber ascent trains -->
-<div id="mxt-train-light" style="display:none;position:fixed;top:54px;left:50%;transform:translateX(-50%);z-index:60;background:rgba(10,14,20,.94);border:1px solid rgba(227,179,65,.4);border-radius:20px;padding:6px 14px;font-family:var(--mono),monospace;font-size:11px;color:var(--amber);box-shadow:0 4px 20px rgba(0,0,0,.5);display:none;align-items:center;gap:8px">
-  <span style="width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse-dot 1.4s ease-in-out infinite"></span>
-  <span>mindXtrain</span> <b id="mxt-train-label">TRAINING</b>
-  <span style="color:var(--text3)">·</span> <b id="mxt-train-timer" style="color:var(--amber)">0s</b>
+<div id="mxt-train-light" style="display:none;position:fixed;top:54px;left:50%;transform:translateX(-50%);z-index:60;background:rgba(10,14,20,.95);border:1px solid rgba(227,179,65,.4);border-radius:10px;padding:8px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--amber);box-shadow:0 4px 24px rgba(0,0,0,.6);max-width:92vw">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse-dot 1.4s ease-in-out infinite"></span>
+    <span>mindXtrain</span> <b id="mxt-train-label">TRAINING</b>
+    <span style="color:var(--text3)">·</span> <b id="mxt-train-timer" style="color:var(--amber)">0s</b>
+  </div>
+  <div id="mxt-train-chronos" style="font-size:10px;color:var(--text2);margin-top:4px"></div>
+  <div id="mxt-train-cores" style="font-size:9.5px;color:var(--text3);margin-top:3px"></div>
 </div>
 <script>
 (function(){
   var box=document.getElementById('mxt-train-light');
   var label=document.getElementById('mxt-train-label');
   var timer=document.getElementById('mxt-train-timer');
-  var T=null;  // {base, at, gen}
+  var chronosEl=document.getElementById('mxt-train-chronos');
+  var coresEl=document.getElementById('mxt-train-cores');
+  var T=null;
   function fmt(s){s=Math.max(0,Math.floor(s));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60;return (h?h+'h ':'')+(h||m?m+'m ':'')+x+'s';}
+  function fmtCyc(c){if(c==null)return '—';var u=[[1e15,'Pcyc'],[1e12,'Tcyc'],[1e9,'Gcyc'],[1e6,'Mcyc'],[1e3,'Kcyc']];for(var i=0;i<u.length;i++)if(c>=u[i][0])return (c/u[i][0]).toFixed(2)+' '+u[i][1];return c+' cyc';}
+  function esc(s){var d=document.createElement('span');d.textContent=s;return d.innerHTML;}
   setInterval(function(){ if(T&&box.style.display!=='none') timer.textContent=fmt(T.base+(Date.now()-T.at)/1000); },1000);
   function poll(){
     fetch('/insight/godel/ascend',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
@@ -3027,11 +3035,18 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
         T={base:tr.elapsed_s||0,at:Date.now()};
         label.textContent='TRAINING gen '+(tr.generation||'?')+(tr.stage?' ('+tr.stage+')':'');
         timer.textContent=fmt(tr.elapsed_s||0);
-        box.style.display='flex';
+        var ch=tr.chronos||{};
+        chronosEl.innerHTML = ch.elapsed_18dp ? ('⏱ chronos.agent <b style="color:#d2a8ff">'+esc(ch.elapsed_18dp)+'</b> s <span style="color:#6e7681">('+esc(ch.consensus||'?')+')</span>') : '';
+        var cpu=tr.cpu||{};
+        var html='';
+        if(cpu.train_cycles_est!=null) html+='⚙ training <b style="color:#79c0ff">'+fmtCyc(cpu.train_cycles_est)+'</b> ('+cpu.train_cpu_seconds+'s CPU) · ';
+        if(cpu.cores) html+=cpu.cores.map(function(c){return 'c'+c.core+' '+c.usage_pct+'% '+(c.freq_mhz||'')+'MHz '+fmtCyc(c.cycles_cumulative)+' '+(c.temp_c!=null?c.temp_c+'°C':'temp n/a');}).join(' · ');
+        coresEl.innerHTML=html;
+        box.style.display='block';
       } else { T=null; box.style.display='none'; }
     }).catch(function(){});
   }
-  poll(); setInterval(poll,10000);
+  poll(); setInterval(poll,8000);
 })();
 </script>
 </body>

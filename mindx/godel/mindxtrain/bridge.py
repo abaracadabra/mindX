@@ -122,7 +122,10 @@ def discover(home: Optional[Path] = None) -> Capability:
     if home and (home / "pyproject.toml").exists():
         installed = True
         uv = _find_uv()
-        cli = f"{uv} run mindxtrain" if uv else None
+        # Pin --project so `uv run` resolves mindXtrain's env regardless of the
+        # cwd we shell from (ascent runs in the per-generation work dir, which
+        # is NOT a uv project — without --project uv fails to find mindxtrain).
+        cli = f"{uv} run --project {home} mindxtrain" if uv else None
     if cli is None and shutil.which("mindxtrain"):
         installed = True
         cli = "mindxtrain"

@@ -4327,6 +4327,95 @@ async def insight_godel_recent(request: Request, limit: int = 50):
         return {"events": [], "count": 0, "error": str(e)}
 
 
+async def _ascend_cpu_telemetry(driver_pid) -> Dict[str, Any]:
+    """Per-core CPU telemetry for the training light: usage%, frequency,
+    cumulative clock cycles (from /proc/stat jiffies × per-core freq),
+    temperature (per core when the host exposes sensors — a virtualized VPS
+    does not), plus the training process tree's own CPU cycles. All best-effort.
+    """
+    import psutil as _ps
+    CLK = os.sysconf("SC_CLK_TCK") if hasattr(os, "sysconf") else 100
+    # per-core usage % (short sample) + per-core frequency
+    usage = _ps.cpu_percent(interval=0.2, percpu=True)
+    try:
+        freqs = _ps.cpu_freq(percpu=True) or []
+    except Exception:
+        freqs = []
+    agg_freq = None
+    try:
+        af = _ps.cpu_freq()
+        agg_freq = af.current if af else None
+    except Exception:
+        pass
+    # per-core temperatures (coretemp) if the host exposes them
+    core_temps = {}
+    temps_available = False
+    try:
+        sens = _ps.sensors_temperatures()
+        for chip in ("coretemp", "k10temp", "cpu_thermal", "acpitz"):
+            if chip in sens:
+                temps_available = True
+                for i, s in enumerate(sens[chip]):
+                    core_temps[i] = round(s.current, 1) if s.current is not None else None
+                break
+    except Exception:
+        pass
+    # cumulative per-core cycles from /proc/stat jiffies
+    core_jiffies = {}
+    try:
+        with open("/proc/stat", "r") as f:
+            for line in f:
+                if line.startswith("cpu") and line[3:4].isdigit():
+                    parts = line.split()
+                    idx = int(parts[0][3:])
+                    busy = sum(int(x) for x in parts[1:8])  # user..steal, exclude idle/iowait? keep all busy
+                    core_jiffies[idx] = busy
+    except Exception:
+        pass
+    cores = []
+    for i in range(len(usage)):
+        fmhz = round(freqs[i].current) if i < len(freqs) and freqs[i] else (round(agg_freq) if agg_freq else None)
+        cyc = None
+        if i in core_jiffies and fmhz:
+            cpu_seconds = core_jiffies[i] / CLK
+            cyc = int(cpu_seconds * fmhz * 1_000_000)  # freq MHz → Hz
+        cores.append({
+            "core": i,
+            "usage_pct": round(usage[i], 1),
+            "freq_mhz": fmhz,
+            "temp_c": core_temps.get(i),
+            "cycles_cumulative": cyc,
+        })
+    # training process tree CPU cycles (the work the ascent itself consumed)
+    train_cpu_seconds = None
+    train_cycles = None
+    if driver_pid:
+        try:
+            proc = _ps.Process(int(driver_pid))
+            procs = [proc] + proc.children(recursive=True)
+            tot = 0.0
+            for p in procs:
+                try:
+                    ct = p.cpu_times()
+                    tot += ct.user + ct.system
+                except Exception:
+                    continue
+            train_cpu_seconds = round(tot, 2)
+            if agg_freq:
+                train_cycles = int(tot * agg_freq * 1_000_000)
+        except Exception:
+            pass
+    return {
+        "cores": cores,
+        "n_cores": len(cores),
+        "temps_available": temps_available,
+        "temps_note": None if temps_available else "no CPU temp sensors (virtualized host)",
+        "train_cpu_seconds": train_cpu_seconds,
+        "train_cycles_est": train_cycles,
+        "clk_tck": CLK,
+    }
+
+
 @app.get("/insight/godel/ascend", tags=["insight"])
 @_insight_safe
 async def insight_godel_ascend(request: Request, limit: int = 20):
@@ -4365,6 +4454,26 @@ async def insight_godel_ascend(request: Request, limit: int = 20):
                     training["log_tail"] = "\n".join(_lines[-14:])
                 except Exception:
                     pass
+            # Live per-core CPU telemetry + chronos 18dp clock — only while
+            # actually training (the readings cost a ~0.2s sample).
+            if st.get("state") == "running":
+                try:
+                    training["cpu"] = await _ascend_cpu_telemetry(st.get("driver_pid") or st.get("pid"))
+                except Exception as _ce:
+                    training["cpu"] = {"error": str(_ce)}
+                try:
+                    from mindx.godel.mindxtrain.status import chronos_now as _cn, elapsed_18dp as _e18
+                    now18, consensus, conf = await _cn()
+                    training["chronos"] = {
+                        "now_unix_18dp": now18,
+                        "started_unix_18dp": st.get("chronos_started"),
+                        "elapsed_18dp": _e18(st.get("chronos_started"), now18),
+                        "consensus": consensus,
+                        "confidence_ms": conf,
+                        "promised_by": "chronos.agent",
+                    }
+                except Exception as _che:
+                    training["chronos"] = {"error": str(_che)}
     except Exception:
         pass
     log_path = _PR / "data" / "logs" / "ascend_log.jsonl"

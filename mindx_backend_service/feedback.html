@@ -1643,6 +1643,12 @@ function _fmtDur(s) {
   const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
   return (h ? h+'h ' : '') + (h||m ? m+'m ' : '') + sec + 's';
 }
+function _fmtCycles(c) {
+  if (c == null) return '—';
+  const u = [[1e15,'Pcyc'],[1e12,'Tcyc'],[1e9,'Gcyc'],[1e6,'Mcyc'],[1e3,'Kcyc']];
+  for (const [d,n] of u) if (c >= d) return (c/d).toFixed(2)+' '+n;
+  return c+' cyc';
+}
 // tick the training elapsed timer every second between fetches
 setInterval(function(){
   const t = window._ascendTraining; const el = document.getElementById('trainElapsed');
@@ -1671,11 +1677,41 @@ async function refreshAscend() {
       pill.textContent = 'TRAINING'; pill.className = 'pill warn';
       // base the ticking timer on server elapsed_s + local drift since fetch
       window._ascendTraining = { base: tr.elapsed_s || 0, at: Date.now(), gen: tr.generation, recipe: tr.recipe, stage: tr.stage };
-      html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(227,179,65,.08);border-left:2px solid var(--amber);border-radius:3px;margin-bottom:8px">'
+      html += '<div style="padding:8px 10px;background:rgba(227,179,65,.08);border-left:2px solid var(--amber);border-radius:3px;margin-bottom:8px">';
+      html += '<div style="display:flex;align-items:center;gap:8px">'
         + '<span class="train-dot" style="width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse 1.4s ease-in-out infinite"></span>'
         + '<span style="color:var(--amber)">TRAINING</span> gen <b>' + escapeHtml(String(tr.generation || '?')) + '</b>'
         + ' · ' + escapeHtml(tr.recipe || '') + ' · <span style="color:var(--text3)">' + escapeHtml(tr.stage || '') + '</span>'
         + ' · <span id="trainElapsed" style="color:var(--amber);font-weight:600">' + _fmtDur(tr.elapsed_s || 0) + '</span></div>';
+      // chronos.agent 18-decimal verified clock
+      var ch = tr.chronos || {};
+      if (ch.elapsed_18dp) {
+        var cc = {correlated:'var(--green)',degraded:'var(--amber)',drifted:'var(--red)',offline:'var(--text3)',local:'var(--text3)'}[ch.consensus]||'var(--text3)';
+        html += '<div style="margin-top:6px;font-size:10.5px;color:var(--text2)">⏱ chronos.agent elapsed <b style="color:var(--violet)">' + escapeHtml(ch.elapsed_18dp) + '</b> s'
+          + ' · <span style="color:'+cc+'">' + escapeHtml(ch.consensus||'?') + '</span>'
+          + (ch.confidence_ms!=null?' ±'+Math.round(ch.confidence_ms)+'ms':'') + '</div>';
+      }
+      // per-core CPU telemetry
+      var cpu = tr.cpu || {};
+      if (cpu.cores && cpu.cores.length) {
+        html += '<div style="margin-top:6px;font-size:10px;font-family:var(--mono)">';
+        html += '<div style="color:var(--text3);margin-bottom:2px">per-core'
+          + (cpu.train_cycles_est!=null?' · training consumed <b style="color:var(--blue)">'+_fmtCycles(cpu.train_cycles_est)+'</b> ('+cpu.train_cpu_seconds+'s CPU)':'') + '</div>';
+        for (var i=0;i<cpu.cores.length;i++){ var co=cpu.cores[i];
+          var ub = Math.min(100,co.usage_pct);
+          html += '<div style="display:flex;align-items:center;gap:6px;margin:1px 0">'
+            + '<span style="color:var(--text3);width:42px">core '+co.core+'</span>'
+            + '<span style="display:inline-block;width:70px;height:7px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden"><span style="display:block;height:7px;width:'+ub+'%;background:'+(ub>85?'var(--red)':ub>50?'var(--amber)':'var(--green)')+'"></span></span>'
+            + '<span style="width:42px;text-align:right">'+co.usage_pct+'%</span>'
+            + '<span style="color:var(--text3)">'+(co.freq_mhz?co.freq_mhz+'MHz':'')+'</span>'
+            + (co.cycles_cumulative!=null?'<span style="color:var(--text3)">· '+_fmtCycles(co.cycles_cumulative)+'</span>':'')
+            + '<span style="color:'+(co.temp_c!=null?'var(--amber)':'var(--text3)')+'">· '+(co.temp_c!=null?co.temp_c+'°C':'temp n/a')+'</span>'
+            + '</div>';
+        }
+        if (cpu.temps_note) html += '<div style="color:var(--text3);font-size:9px;margin-top:2px">'+escapeHtml(cpu.temps_note)+'</div>';
+        html += '</div>';
+      }
+      html += '</div>';
       if (tr.log_tail) html += '<pre style="background:rgba(5,8,16,.5);border:1px solid var(--border);border-radius:4px;padding:8px;font-size:10px;line-height:1.4;max-height:160px;overflow:auto;color:var(--text2);margin-bottom:8px">' + escapeHtml(tr.log_tail) + '</pre>';
     } else if (tr.state === 'stale') {
       html += '<div style="padding:6px 10px;color:var(--red);font-size:11px">⚠ last training crashed (' + escapeHtml(tr.note || '') + ')</div>';

@@ -250,7 +250,8 @@ async def ascend_recipe(
     # 1. init a known-good recipe config
     init = _bridge.run_cli(["init", "-t", recipe, "-o", cfg], cap=cap, cwd=work_dir, timeout=300)
     if not init.get("ok"):
-        notes.append(f"init failed: {(init.get('stderr') or init.get('reason') or '')[:200]}")
+        result.stage = "init_failed"
+        notes.append(f"init failed: {(init.get('stderr') or init.get('reason') or init.get('error') or '')[:300]}")
         return result
     # 2. point the mindx_dreams adapter at THIS deploy's dream memory
     try:
@@ -269,9 +270,15 @@ async def ascend_recipe(
     import time as _t
     train_log = work_dir / "train.log"
     started = _t.time()
+    # chronos.agent promised time at train start — the verified clock the
+    # training light measures elapsed against (18dp), not just wall time.
+    from .status import chronos_now as _chronos_now
+    chronos_started, chronos_consensus, chronos_conf = await _chronos_now()
     write_status("running", recipe=recipe, generation=generation,
                  started_ts=started, ended_ts=None, log_path=str(train_log),
-                 stage="training")
+                 stage="training", chronos_started=chronos_started,
+                 chronos_consensus=chronos_consensus, chronos_confidence_ms=chronos_conf,
+                 driver_pid=__import__("os").getpid())
     train = _bridge.run_cli_streamed(
         ["train", cfg, "--out", "out/runs", "--cpu-percent", str(cpu_percent),
          "--cpu-nice", str(cpu_nice)],

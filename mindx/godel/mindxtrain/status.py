@@ -36,6 +36,33 @@ def write_status(state: str, **fields: Any) -> None:
         pass
 
 
+async def chronos_now() -> tuple:
+    """(unix_18dp_str, consensus, confidence_ms) from chronos.agent — the
+    verified clock, to 18 decimals. Best-effort: falls back to local
+    time.time_ns()/1e9 (18dp) with consensus 'local' if chronos is unreachable."""
+    try:
+        from agents.chronos_agent import ChronosAgent
+        ch = await ChronosAgent.get_instance()
+        pt = await ch.now()
+        return str(pt.unix_18dp), pt.consensus, float(pt.confidence_ms)
+    except Exception:
+        from decimal import Decimal as _D
+        return str(_D(time.time_ns()) / _D(1_000_000_000)), "local", 0.0
+
+
+def elapsed_18dp(started_unix_18dp: Optional[str], now_unix_18dp: str) -> Optional[str]:
+    """High-precision elapsed = now - started, to 18 decimal places (string)."""
+    if not started_unix_18dp:
+        return None
+    try:
+        from decimal import Decimal as _D, getcontext
+        getcontext().prec = 40
+        d = _D(now_unix_18dp) - _D(started_unix_18dp)
+        return f"{d:.18f}"
+    except Exception:
+        return None
+
+
 def _alive(pid: Optional[int]) -> bool:
     if not pid:
         return False
