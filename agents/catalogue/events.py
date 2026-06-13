@@ -27,6 +27,7 @@ def _uuid7_like() -> str:
 
 EventKind = Literal[
     "memory.write",          # MemoryAgent.save_timestamped_memory
+    "memory.embed",          # doc/chunk embedded into pgvector (semantic index)
     "memory.consolidate",    # STM → LTM promotion
     "memory.dream",          # MachineDreamCycle phase event
     "memory.offload",        # IPFS push (storage.offload_projector)

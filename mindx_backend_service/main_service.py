@@ -3474,24 +3474,39 @@ async def insight_memory_recent(request: Request, limit: int = 24):
         for raw in reversed(lines):
             if len(events) >= limit:
                 break
-            if b'"kind":"memory.write"' not in raw:
+            # memory.write = a log became a memory; memory.embed = a doc became
+            # a vector in the semantic index. Both are "mindX remembering".
+            if b'"kind":"memory.write"' not in raw and b'"kind":"memory.embed"' not in raw:
                 continue
             try:
                 obj = json.loads(raw.decode("utf-8", errors="replace"))
             except Exception:
                 continue
-            if obj.get("kind") != "memory.write":
+            kind = obj.get("kind")
+            if kind not in ("memory.write", "memory.embed"):
                 continue
             payload = obj.get("payload") or {}
-            events.append({
-                "ts": obj.get("ts"),
-                "actor": obj.get("actor"),
-                "source_log": obj.get("source_log"),
-                "memory_type": payload.get("memory_type") or "memory",
-                "importance": payload.get("importance"),
-                "memory_id": payload.get("memory_id") or obj.get("source_ref"),
-                "tags": (payload.get("tags") or [])[:6],
-            })
+            if kind == "memory.embed":
+                doc = payload.get("doc_name") or obj.get("source_ref") or "doc"
+                events.append({
+                    "ts": obj.get("ts"),
+                    "actor": obj.get("actor"),
+                    "source_log": doc,
+                    "memory_type": "embedding",
+                    "importance": f"{payload.get('chunks', '?')} chunks",
+                    "memory_id": doc,
+                    "tags": ["pgvector", "semantic-index"],
+                })
+            else:
+                events.append({
+                    "ts": obj.get("ts"),
+                    "actor": obj.get("actor"),
+                    "source_log": obj.get("source_log"),
+                    "memory_type": payload.get("memory_type") or "memory",
+                    "importance": payload.get("importance"),
+                    "memory_id": payload.get("memory_id") or obj.get("source_ref"),
+                    "tags": (payload.get("tags") or [])[:6],
+                })
     except Exception as e:
         return _maybe_h_text(request, {"events": [], "count": 0, "error": str(e)}, route_path="/insight/memory/recent")
     return _maybe_h_text(

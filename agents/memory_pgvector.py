@@ -752,12 +752,17 @@ async def generate_embedding(
 # the entire failure was logged only at DEBUG, leaving 105/210 docs unembedded
 # with no operator-visible signal. See: 2026-04-29 backfill diagnosis.
 async def embed_and_store_doc(doc_name: str, text_content: str, chunk_size: int = 200,
-                              interactive: bool = False) -> int:
+                              interactive: bool = False, bail_on_first_failure: bool = False) -> int:
     """Chunk a document and store embeddings in doc_embeddings table.
 
     interactive=True bypasses the ResourceGovernor CPU-throttle/semaphore —
     only for operator-supervised backfills (e.g. scripts/ingest_reference_docs
-    --aggressive); unattended callers must stay governor-respecting."""
+    --aggressive); unattended callers must stay governor-respecting.
+
+    bail_on_first_failure=True returns 0 the moment the first chunk fails to
+    embed — so a caller walking a chunk-size ladder (THOT descent) drops to a
+    smaller size after one failed embed instead of failing every chunk of a
+    large doc at an oversized window first."""
     pool = await get_pool()
     if not pool:
         return 0
@@ -780,6 +785,8 @@ async def embed_and_store_doc(doc_name: str, text_content: str, chunk_size: int 
         emb = await generate_embedding(chunk, interactive=interactive)
         if emb is None:
             embed_failures += 1
+            if bail_on_first_failure and stored == 0:
+                return 0  # window too big — let the caller descend the ladder
             continue
         try:
             await pool.execute(
@@ -798,6 +805,22 @@ async def embed_and_store_doc(doc_name: str, text_content: str, chunk_size: int 
             f"embed_and_store_doc({doc_name}): 0/{len(chunks)} chunks stored "
             f"(embed_failures={embed_failures}, insert_failures={insert_failures})"
         )
+    elif stored > 0:
+        # Surface embedding as visible mindX work — flows to the catalogue and
+        # the landing page's "Logs → Memories" stream. Best-effort; an emit
+        # failure must never break a backfill.
+        try:
+            from agents.catalogue.events import emit_catalogue_event
+            top = doc_name.split("/", 1)[0] if "/" in doc_name else "doc"
+            await emit_catalogue_event(
+                kind="memory.embed",
+                actor="reference_corpus" if top in ("operations", "blockchain", "publications") else "pgvector.embedder",
+                payload={"doc_name": doc_name, "chunks": stored, "chunk_size": chunk_size},
+                source_log="memory_pgvector.embed_and_store_doc",
+                source_ref=doc_name,
+            )
+        except Exception:
+            pass
     return stored
 
 
