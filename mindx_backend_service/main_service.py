@@ -4327,6 +4327,47 @@ async def insight_godel_recent(request: Request, limit: int = 50):
         return {"events": [], "count": 0, "error": str(e)}
 
 
+@app.get("/insight/godel/ascend", tags=["insight"])
+@_insight_safe
+async def insight_godel_ascend(request: Request, limit: int = 20):
+    """mindXtrain RIGHT-apex: recent knowledge->wisdom->weights ascents +
+    current bridge capability (version, level, armed/dormant, autonomous-armed).
+
+    The ascent log (data/logs/ascend_log.jsonl) records each generation's
+    stage, dcoach recall delta, and the promoted Ollama model. The capability
+    block shows whether the bridge is recognized, armed, and CPU-train-active.
+    """
+    from utils.config import PROJECT_ROOT as _PR
+    cap: Dict[str, Any] = {}
+    try:
+        from mindx.godel.mindxtrain import bridge as _mxt_bridge
+        cap = _mxt_bridge.discover().as_dict()
+    except Exception as e:
+        cap = {"error": f"bridge discover failed: {e}"}
+    log_path = _PR / "data" / "logs" / "ascend_log.jsonl"
+    events: list = []
+    if log_path.exists():
+        try:
+            with open(log_path, "rb") as f:
+                f.seek(0, 2)
+                size = f.tell()
+                start = max(0, size - 256 * 1024)
+                f.seek(start)
+                chunk = f.read()
+            lines = [ln for ln in chunk.split(b"\n") if ln.strip()]
+            if start > 0 and lines:
+                lines = lines[1:]
+            for ln in reversed(lines[-max(1, min(limit, 100)):]):
+                try:
+                    events.append(json.loads(ln.decode("utf-8", errors="replace")))
+                except Exception:
+                    continue
+        except Exception:
+            pass
+    return _maybe_h_text(request, {"capability": cap, "events": events, "count": len(events)},
+                         route_path="/insight/godel/ascend")
+
+
 @app.get("/insight/godel/machine", tags=["insight"])
 @_insight_safe
 async def insight_godel_machine(request: Request):

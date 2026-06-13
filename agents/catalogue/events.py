@@ -33,6 +33,8 @@ EventKind = Literal[
     "memory.offload",        # IPFS push (storage.offload_projector)
     "memory.anchor",         # on-chain CID anchor (storage.anchor)
     "godel.choice",          # MemoryAgent.log_godel_choice
+    "train.ascended",        # mindXtrain right-apex ascent ran (knowledge->weights)
+    "train.promoted",        # ascended generation accepted + served as Ollama model
     "board.session",         # boardroom session completion
     "board.vote",            # individual vote within a session
     "tool.invoke",           # BaseTool.execute() entry (opt-in)

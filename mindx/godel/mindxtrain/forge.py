@@ -100,8 +100,13 @@ def forge(
     generation: int,
     base_model: str = "Qwen/Qwen3-8B",
     template: str = DEFAULT_TEMPLATE,
+    max_minutes: int = 120,
+    max_seq_len: int = 4096,
 ) -> ForgeResult:
-    """Write corpus + config; return provenance for the ascent step."""
+    """Write corpus + config; return provenance for the ascent step.
+
+    max_minutes / max_seq_len are threaded so the CPU ascent can forge a
+    cheap, bounded config (the GPU path keeps the larger defaults)."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     corpus_path = out_dir / f"mindx_dreams_gen{generation}.jsonl"
@@ -138,14 +143,14 @@ def forge(
                  "bundle_id": bundle_id,
                  "format": "chat_jsonl"}
             ],
-            "max_seq_len": 4096,
+            "max_seq_len": max_seq_len,
         },
         "autotune": {"aot_probe_seconds": 60, "attention": "auto",
                      "hipblaslt": "auto", "rccl": "auto"},
         "train": {"epochs": 1, "lr": 2.0e-4, "micro_batch": 1,
                   "grad_accum": 16, "scheduler": "cosine"},
         "eval": {"enabled": True, "holdout_fraction": 0.05},
-        "budget": {"max_minutes": 120, "max_usd": 0},
+        "budget": {"max_minutes": max_minutes, "max_usd": 0},
         "deploy": {"serve": False, "openai_compatible": True},
         "provenance": {"erc8004_attest": True,
                        "parent_generation": generation - 1,

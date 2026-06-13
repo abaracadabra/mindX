@@ -39,7 +39,14 @@ import os
 
 MINDXTRAIN_REPO = "https://github.com/professor-codephreak/mindXtrain"
 MINDX_DREAMS_SOURCE = "mindx_dreams"   # the data-source adapter name in mindXtrain
-DEFAULT_TEMPLATE = "qwen3_8b_sft_lora"  # mindXtrain quickstart LoRA template
+DEFAULT_TEMPLATE = "qwen3_8b_sft_lora"  # mindXtrain quickstart LoRA template (GPU)
+
+# v1.0.0 (2026-06-12) made CPU training active. On the 8GB/2-core VPS the
+# right-apex ascent uses a small CPU-trainable base, bounded budget. The HF id
+# is what mindXtrain trains; the Ollama tag is what mindX serves the result as.
+CPU_BASE_MODEL = "Qwen/Qwen2.5-0.5B"   # ~0.5B — fits the 6GB recipe / 8GB VPS
+CPU_BASE_OLLAMA_TAG = "qwen3:0.6b"     # FROM line for the promoted Modelfile
+CPU_MAX_MINUTES = 20                    # default CPU train budget (bounded)
 
 # --------------------------------------------------------------------------- #
 # Isolation contract (operator decision, 2026-06-04)                          #
@@ -58,22 +65,46 @@ DEFAULT_TEMPLATE = "qwen3_8b_sft_lora"  # mindXtrain quickstart LoRA template
 # --------------------------------------------------------------------------- #
 
 ENABLE_ENV = "MINDX_ENABLE_MINDXTRAIN"   # set to 1/true/yes to arm the bridge
+# A SECOND, independent flag. Arming the bridge (above) enables operator/manual
+# ascents. Autonomous, SEA-triggered training requires THIS flag as well — so
+# that arming for a supervised operator ascent can never unleash spontaneous
+# training. Both must be set for the autonomous loop to ever train.
+AUTONOMOUS_TRAIN_ENV = "MINDX_ENABLE_AUTONOMOUS_TRAIN"
+ASCEND_COOLDOWN_S = 24 * 3600            # min interval between autonomous ascents
+
+
+def _flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
 
 
 def is_enabled() -> bool:
     """True only when the operator has explicitly armed the mindXtrain bridge."""
-    return os.environ.get(ENABLE_ENV, "").strip().lower() in ("1", "true", "yes", "on")
+    return _flag(ENABLE_ENV)
+
+
+def autonomous_train_enabled() -> bool:
+    """True only when BOTH the bridge is armed AND autonomous training is
+    explicitly opted into — the two-flag guard for spontaneous ascents."""
+    return is_enabled() and _flag(AUTONOMOUS_TRAIN_ENV)
 
 
 __all__ = [
     "MINDXTRAIN_REPO",
     "MINDX_DREAMS_SOURCE",
     "DEFAULT_TEMPLATE",
+    "CPU_BASE_MODEL",
+    "CPU_BASE_OLLAMA_TAG",
+    "CPU_MAX_MINUTES",
     "ENABLE_ENV",
+    "AUTONOMOUS_TRAIN_ENV",
+    "ASCEND_COOLDOWN_S",
     "is_enabled",
+    "autonomous_train_enabled",
     "distill",
     "curate",
     "forge",
     "ascend",
     "bridge",
+    "dcoach",
+    "promote",
 ]

@@ -2761,6 +2761,26 @@ class MindXAgent:
                     except Exception as _se_esc:
                         logger.debug(f"{self.log_prefix} self-eval escalate failed: {_se_esc}")
 
+                # RIGHT apex (knowledge->wisdom->weights): autonomous Schmidhüber
+                # ascent via mindXtrain. Separately gated — needs BOTH
+                # MINDX_ENABLE_MINDXTRAIN and MINDX_ENABLE_AUTONOMOUS_TRAIN, is
+                # not-resource-bound, and respects a 24h cooldown — so merely
+                # arming the bridge for an operator ascent never trains here.
+                try:
+                    from mindx.godel.mindxtrain import autonomous_train_enabled
+                    if autonomous_train_enabled():
+                        from mindx.godel.ascend_scheduler import run_ascent_if_due
+                        asc = await run_ascent_if_due(
+                            self._self_eval,
+                            sea=getattr(self, "strategic_evolution_agent", None))
+                        if asc:
+                            logger.info(
+                                f"{self.log_prefix} Autonomous ascent gen "
+                                f"{asc.get('generation')}: stage={asc.get('stage')} "
+                                f"model={asc.get('ollama_model')}")
+                except Exception as _asc_e:
+                    logger.debug(f"{self.log_prefix} autonomous ascent skipped: {_asc_e}")
+
                 # Log thinking step
                 self._log_thinking("analyzing_system_state", "Analyzing current system state for improvement opportunities")
 

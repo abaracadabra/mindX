@@ -450,6 +450,18 @@ tr:hover td{background:rgba(121,192,255,.02)}
   <div id="godelMachine" class="card"><div class="empty">loading…</div></div>
 </section>
 
+<!-- 3c. mindXtrain RIGHT apex — knowledge → wisdom → weights -->
+<section id="sec-ascend">
+  <div class="sec-head">
+    <h2>knowledge → wisdom → weights <span id="ascendPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/godel/ascend · the Schmidhüber right apex (mindXtrain v1.0.0)</span>
+  </div>
+  <p class="sec-desc">
+    The dream cycle turns information into knowledge (left apex); <a href="https://github.com/professor-Codephreak/mindXtrain">mindXtrain</a> turns that knowledge into <b>weights</b> (right apex) — a new generation fine-tuned on mindX's own curated dream wisdom. As of v1.0.0 this runs on CPU. Each ascent is proof-gated by <b>dcoach</b> (does the model actually recall its training? recall before→after), and only an accepted generation becomes a servable Ollama model. Two flags gate it: <code>MINDX_ENABLE_MINDXTRAIN</code> (operator) + <code>MINDX_ENABLE_AUTONOMOUS_TRAIN</code> (autonomous, 24h cooldown). <a href="/insight/godel/ascend?h=true" target="_blank" rel="noopener">view raw</a>
+  </p>
+  <div id="ascendBox" class="card"><div class="empty">reading bridge capability…</div></div>
+</section>
+
 <!-- 3c. Milestones — mindX's chronicle of its own evolution -->
 <section id="sec-milestones">
   <div class="sec-head">
@@ -1626,6 +1638,42 @@ function renderGodelMachine(d) {
   if (d.constraint) html += '<div class="sub" style="margin-top:10px">' + escapeHtml(d.constraint) + '</div>';
   return html;
 }
+async function refreshAscend() {
+  try {
+    const d = await fetch('/insight/godel/ascend', { cache: 'no-store' }).then(r => r.json());
+    const cap = d.capability || {};
+    const pill = $('ascendPill'), box = $('ascendBox');
+    let state, cls;
+    if (!cap.installed) { state = 'NOT INSTALLED'; cls = ''; }
+    else if (!cap.armed) { state = 'DORMANT'; cls = 'warn'; }
+    else if (cap.autonomous_enabled) { state = 'ARMED + AUTONOMOUS'; cls = 'ok'; }
+    else { state = 'ARMED (operator)'; cls = 'ok'; }
+    pill.textContent = state; pill.className = 'pill ' + cls;
+    let html = '<div style="font-family:var(--mono);font-size:12px">';
+    html += '<div style="color:var(--text2);margin-bottom:8px">mindXtrain '
+      + escapeHtml(cap.version || '—') + ' · level <b>' + escapeHtml(cap.level || '?') + '</b>'
+      + ' · CPU-train ' + (cap.cpu_train_active ? '<b style="color:var(--green)">active</b>' : 'inactive')
+      + (cap.home ? ' · <span style="color:var(--text3)">' + escapeHtml(cap.home) + '</span>' : '') + '</div>';
+    const evs = d.events || [];
+    if (!evs.length) {
+      html += '<div style="color:var(--text3)">no ascents yet — '
+        + (cap.armed ? 'awaiting first generation' : 'arm the bridge to forge a generation') + '</div>';
+    } else {
+      const e = evs[0];
+      const r = e.recall || {};
+      html += '<div style="padding:8px 10px;background:rgba(86,211,100,.06);border-left:2px solid var(--green);border-radius:3px">';
+      html += 'gen <b>' + escapeHtml(String(e.generation || '?')) + '</b> · stage <b>' + escapeHtml(e.stage || '?') + '</b>';
+      if (r.recall_before != null) html += ' · recall <b>' + r.recall_before + '→' + r.recall_after + '</b> (Δ' + r.delta + ')';
+      if (e.ollama_model) html += ' · model <b style="color:var(--blue)">' + escapeHtml(e.ollama_model) + '</b>';
+      html += '</div>';
+    }
+    html += '</div>';
+    box.innerHTML = html;
+  } catch (e) {
+    $('ascendBox').innerHTML = '<div class="empty">ascend surface unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
 async function refreshGodelMachine() {
   const box = $('godelMachine');
   const pill = $('gmiPill');
@@ -2734,8 +2782,9 @@ async function boot() {
   _initTabbar();
   await seedDialogue();
   startSSE();
-  await Promise.allSettled([refreshCognition(), refreshGodelMachine(), refreshMilestones(), refreshSysPulse(), refreshStuck(), refreshSelfEval(), refreshBDI(), refreshLedger(), refreshSelfAware(), refreshBoardroom(), refreshBoardRollcall(), refreshBoardLeaderboard(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
+  await Promise.allSettled([refreshCognition(), refreshGodelMachine(), refreshAscend(), refreshMilestones(), refreshSysPulse(), refreshStuck(), refreshSelfEval(), refreshBDI(), refreshLedger(), refreshSelfAware(), refreshBoardroom(), refreshBoardRollcall(), refreshBoardLeaderboard(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
   setInterval(refreshGodelMachine, 45000);
+  setInterval(refreshAscend, 60000);
   setInterval(refreshMilestones, 60000);
   setInterval(refreshCognition, 30000);
   setInterval(refreshSysPulse, 15000);

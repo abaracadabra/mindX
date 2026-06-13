@@ -73,7 +73,9 @@ def _load_report_scores(report_path: Path) -> dict:
 
 
 def _iter_training_files(dreams_dir: Path) -> Iterator[Path]:
-    yield from sorted(dreams_dir.glob("*_training.jsonl"))
+    # Recursive: dreams_dir may be a single agent dir OR the ltm root, in which
+    # case every agent's *_training.jsonl is consolidated into one curriculum.
+    yield from sorted(dreams_dir.rglob("*_training.jsonl"))
 
 
 def distill(
@@ -93,9 +95,10 @@ def distill(
     for tf in _iter_training_files(dreams_dir):
         if since_ts is not None and tf.stat().st_mtime < since_ts:
             continue
-        # Pair the training file with its sibling dream report for metadata.
+        # Pair the training file with its sibling dream report for metadata
+        # (next to the training file — files may live in per-agent subdirs).
         stem = tf.name.replace("_training.jsonl", "")
-        report = dreams_dir / f"{stem}_dream_report.json"
+        report = tf.parent / f"{stem}_dream_report.json"
         scores = _load_report_scores(report) if report.exists() else {}
         try:
             lines = tf.read_text(encoding="utf-8").splitlines()

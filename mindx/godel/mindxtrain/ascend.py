@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Awaitable, Callable, Optional
 
-from . import DEFAULT_TEMPLATE, is_enabled
+from . import (DEFAULT_TEMPLATE, CPU_BASE_MODEL, CPU_MAX_MINUTES, is_enabled)
 from . import bridge as _bridge
 from .curate import CurationStats, curate
 from .distill import distill, write_corpus  # noqa: F401  (write_corpus re-exported)
@@ -43,6 +43,8 @@ class AscentResult:
     train: dict = field(default_factory=dict)
     promoted: bool = False
     weights_path: Optional[str] = None
+    ollama_model: Optional[str] = None
+    recall: dict = field(default_factory=dict)   # dcoach proof-of-recall result
     notes: list[str] = field(default_factory=list)
 
     def as_dict(self) -> dict:
@@ -51,6 +53,8 @@ class AscentResult:
             "generation": self.generation,
             "promoted": self.promoted,
             "weights_path": self.weights_path,
+            "ollama_model": self.ollama_model,
+            "recall": self.recall,
             "forge": self.forge_result.as_dict() if self.forge_result else None,
             "curation": self.curation,
             "capability": self.capability,
@@ -75,6 +79,10 @@ async def ascend(
     min_score: float = 0.05,
     verdict: Optional[Verdict] = None,
     train_if_gpu: bool = True,
+    cpu_train: bool = False,
+    max_minutes: Optional[int] = None,
+    use_dcoach: bool = False,
+    promote: bool = False,
 ) -> AscentResult:
     """Run the full knowledge->wisdom->weights ascent for one generation.
 
@@ -101,8 +109,12 @@ async def ascend(
                   min_score=min_score, stats=stats)
 
     # 3. forge corpus + config (materializes the curated stream)
+    budget_minutes = max_minutes if max_minutes is not None else (
+        CPU_MAX_MINUTES if cpu_train else 120)
     fr = forge(rows, out_dir=work_dir, generation=generation,
-               base_model=base_model, template=template)
+               base_model=base_model, template=template,
+               max_minutes=budget_minutes,
+               max_seq_len=1024 if cpu_train else 4096)
     result = AscentResult(
         stage="forged", generation=generation, forge_result=fr,
         curation=stats.as_dict(), capability=cap.as_dict(), notes=notes,
@@ -119,29 +131,72 @@ async def ascend(
     result.bench = bench
     result.stage = "benched"
 
-    # 5. train (GPU only). On CPU we stop at the plan — the project's level.
+    # 5. train. GPU path unchanged; CPU path is live as of mindXtrain v1.0.0
+    #    (was previously gated on the MI300X). Either way the budget lives in
+    #    the forged YAML; we only append a budget flag if the verb exposes one.
+    did_train = False
     if cap.level == "gpu" and train_if_gpu:
         train = _bridge.run_cli(
             ["train", "--config", fr.config_path.name],
             cap=cap, cwd=fr.config_path.parent, timeout=3600,
         )
         result.train = train
-        if train.get("ok"):
-            result.stage = "trained"
-            result.weights_path = str(
-                fr.config_path.parent / f"runs/mindx-gen{generation}"
-            )
+        did_train = bool(train.get("ok"))
+    elif cap.cpu_train_active and cpu_train:
+        train_args = ["train", "--config", fr.config_path.name]
+        flags = _bridge.discover_verb_flags("train", cap)
+        if "--max-minutes" in flags:
+            train_args += ["--max-minutes", str(budget_minutes)]
+        train = _bridge.run_cli(
+            train_args, cap=cap, cwd=fr.config_path.parent,
+            timeout=budget_minutes * 60 + 300,
+        )
+        result.train = train
+        did_train = bool(train.get("ok"))
+        notes.append(f"CPU train (v1.0.0): {'ok' if did_train else 'failed'}")
     else:
-        notes.append("CPU level: forged plan only; train gated on MI300X")
+        notes.append("forged plan only; arm cpu_train (v1.0.0) or run on MI300X")
+
+    if did_train:
+        result.stage = "trained"
+        result.weights_path = str(fr.config_path.parent / f"runs/mindx-gen{generation}")
+
+    # 5b. dcoach proof-of-recall verdict (v1.0.0): if asked and we trained, the
+    #     objective gate is whether the model now recalls its training. This
+    #     becomes the verdict when no explicit verdict callback was supplied.
+    if did_train and use_dcoach and verdict is None:
+        try:
+            from .dcoach import dcoach_verdict_factory
+            verdict = dcoach_verdict_factory(cap, fr.config_path.parent)
+        except Exception as e:  # pragma: no cover - defensive
+            notes.append(f"dcoach verdict unavailable: {e}")
 
     # 6. proof-gated promotion. No verdict callback => shadow mode, promote
     #    nothing (matches the kernel-absent posture of the engine).
     if verdict is not None:
         v = await verdict(fr)
+        result.recall = {k: v.get(k) for k in ("recall_before", "recall_after", "delta")
+                         if v.get(k) is not None}
         if v.get("accepted"):
-            result.promoted = True
-            result.stage = "promoted"
+            result.stage = "accepted"
             notes.append(f"generation {generation} accepted: {v.get('reason','')}")
+            # 7. LoRA -> Modelfile -> Ollama: the next generation becomes a
+            #    servable mindX model. Only after the proof gate accepts.
+            if promote and result.weights_path:
+                try:
+                    from .promote import promote_to_ollama
+                    pr = await promote_to_ollama(cap, fr, result.weights_path, generation)
+                    if pr.get("ok"):
+                        result.promoted = True
+                        result.stage = "promoted"
+                        result.ollama_model = pr.get("model_name")
+                        notes.append(f"promoted to Ollama model {result.ollama_model}")
+                    else:
+                        notes.append(f"promotion failed: {pr.get('reason') or pr.get('stderr','')[:200]}")
+                except Exception as e:  # pragma: no cover - defensive
+                    notes.append(f"promotion error: {e}")
+            else:
+                notes.append("accepted (shadow): no promotion requested or no weights")
         else:
             notes.append(f"generation {generation} rejected: {v.get('reason','')}")
     else:
