@@ -64,13 +64,19 @@ def imprint_verdict_factory(
 
     async def _verdict(fr) -> dict:
         cfg = config_name or getattr(getattr(fr, "config_path", None), "name", "run.yaml")
-        res = _bridge.run_cli(
+        # Stream the FULL imprint output to a file and parse that — the verdict
+        # JSON embeds the before/after response arrays and easily exceeds a
+        # truncated stdout window (the cause of a false "unparseable" earlier).
+        from pathlib import Path as _P
+        out_file = _P(work_dir) / "imprint_out.txt"
+        res = _bridge.run_cli_streamed(
             ["imprint", cfg, "--out", run_out, "--n", str(n_probes)],
-            cap=cap, cwd=work_dir, timeout=1800,
+            cap=cap, cwd=work_dir, log_path=out_file, timeout=1800,
         )
-        # imprint exits non-zero (4) when no imprint — but still prints the JSON
-        # verdict, so parse rather than trusting the return code.
-        blob = (res.get("stdout") or "") + (res.get("stderr") or "")
+        try:
+            blob = out_file.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            blob = (res.get("tail") or "")
         parsed = _parse_imprint(blob)
         if "imprinted" not in parsed and "imprint_delta" not in parsed:
             return {"accepted": False, "reason": "imprint output unparseable",

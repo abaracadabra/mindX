@@ -233,7 +233,7 @@ def run_cli(
             capture_output=True, text=True, timeout=timeout,
         )
         return {"ok": proc.returncode == 0, "returncode": proc.returncode,
-                "stdout": proc.stdout[-8000:], "stderr": proc.stderr[-4000:],
+                "stdout": proc.stdout[-40000:], "stderr": proc.stderr[-8000:],
                 "cmd": " ".join(cmd)}
     except (subprocess.TimeoutExpired, OSError) as e:
         return {"ok": False, "error": str(e), "cmd": " ".join(cmd)}
