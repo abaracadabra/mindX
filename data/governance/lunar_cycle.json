@@ -56,8 +56,15 @@
       "title": "Agents",
       "phase": "waning gibbous",
       "timestamp": "2026-06-05T10:20:27.459593+00:00"
+    },
+    {
+      "date": "2026-06-13",
+      "day": 26,
+      "title": "Dreams",
+      "phase": "waning crescent",
+      "timestamp": "2026-06-13T00:05:17.827144+00:00"
     }
   ],
-  "current_day": 19,
+  "current_day": 26,
   "full_moons": []
 }

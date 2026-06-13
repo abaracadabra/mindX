@@ -1,38 +1,10 @@
 {
-  "mindx_meta_agent_c5c8b948": {
-    "session_id": "mindx_meta_agent_c5c8b948",
+  "mindx_meta_agent_b9b76dac": {
+    "session_id": "mindx_meta_agent_b9b76dac",
     "agent_id": "mindx_meta_agent",
-    "created_at": 1780654836.9770327,
-    "last_activity": 1780659173.571281,
-    "expires_at": 1780741236.9770327,
-    "cycle_count": 2,
-    "circuit_breaker_trips": 0,
-    "last_reset_reason": null,
-    "metadata": {
-      "autonomous_mode": true,
-      "last_improvement": "{\"error\": \"TimeoutError\", \"message\": \"Request timed out after 120s. Model may be too large or server overloaded.\"}"
-    }
-  },
-  "mindx_meta_agent_b8f271b5": {
-    "session_id": "mindx_meta_agent_b8f271b5",
-    "agent_id": "mindx_meta_agent",
-    "created_at": 1780660157.9025297,
-    "last_activity": 1780660447.394464,
-    "expires_at": 1780746557.9025297,
-    "cycle_count": 1,
-    "circuit_breaker_trips": 0,
-    "last_reset_reason": null,
-    "metadata": {
-      "autonomous_mode": true,
-      "last_improvement": "{\"error\": \"TimeoutError\", \"message\": \"Request timed out after 120s. Model may be too large or server overloaded.\"}"
-    }
-  },
-  "mindx_meta_agent_40db38df": {
-    "session_id": "mindx_meta_agent_40db38df",
-    "agent_id": "mindx_meta_agent",
-    "created_at": 1780662045.15111,
-    "last_activity": 1780662045.15111,
-    "expires_at": 1780748445.15111,
+    "created_at": 1781309144.338044,
+    "last_activity": 1781309144.338044,
+    "expires_at": 1781395544.338044,
     "cycle_count": 0,
     "circuit_breaker_trips": 0,
     "last_reset_reason": null,
@@ -40,18 +12,17 @@
       "autonomous_mode": true
     }
   },
-  "mindx_meta_agent_06646dfb": {
-    "session_id": "mindx_meta_agent_06646dfb",
+  "mindx_meta_agent_c2118c9b": {
+    "session_id": "mindx_meta_agent_c2118c9b",
     "agent_id": "mindx_meta_agent",
-    "created_at": 1780662269.1221616,
-    "last_activity": 1780684206.4068916,
-    "expires_at": 1780748669.1221616,
-    "cycle_count": 2,
+    "created_at": 1781309482.3355594,
+    "last_activity": 1781309482.3355594,
+    "expires_at": 1781395882.3355594,
+    "cycle_count": 0,
     "circuit_breaker_trips": 0,
     "last_reset_reason": null,
     "metadata": {
-      "autonomous_mode": true,
-      "last_improvement": "{\"error\": \"ConnectionError\", \"message\": \"Cannot connect to Ollama at http://10.0.0.155:18080\"}"
+      "autonomous_mode": true
     }
   }
 }
