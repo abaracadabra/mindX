@@ -1516,7 +1516,8 @@ function render(d){
   const au=d.autonomous||{},auth=d.author||{},gv=d.governor||{};
   let auH='<div style="font-size:11px;color:var(--text2);padding:4px 0;margin-bottom:8px"><a href="/doc/AUTONOMOUS" class="link">autonomous docs</a> &#183; <a href="/doc/THESIS" class="link">thesis</a> &#183; <a href="/doc/AUTHOR_AGENT" class="link">author agent</a> &#183; <a href="/doc/BOOK_OF_MINDX" class="link">book</a> &#183; <a href="/doc/enhanced_monitoring_system" class="link">monitoring</a></div>';
   auH+='<div style="background:var(--surface);padding:12px 14px">';
-  auH+=`<div class="dr"><span class="dr-key"><span class="dot ${au.loop_running?'dot-g':'dot-r'}"></span><a href="/doc/THESIS" class="dlink">improvement loop</a></span><span class="dr-val">${au.loop_running?'active':'stopped'}${au.last_cycle?' &#183; '+Fmt.timeAgo(au.last_cycle):''}</span></div>`;
+  auH+=`<div class="dr"><span class="dr-key"><span class="dot ${au.loop_running?'dot-g':'dot-r'}"></span><a href="/doc/THESIS" class="dlink">improvement loop</a></span><span class="dr-val">${au.loop_running?'active':'stopped'}${au.cycle_count?' &#183; cycle '+au.cycle_count:''}${au.last_cycle?' &#183; '+Fmt.timeAgo(au.last_cycle):''}</span></div>`;
+  if(au.skip_reason)auH+=`<div class="dr"><span class="dr-key" style="padding-left:14px;color:var(--amber)">&#8627; last cycle skipped</span><span class="dr-val" style="color:var(--amber)">${Fmt.esc(au.skip_reason)}</span></div>`;
   auH+=`<div class="dr"><span class="dr-key"><span class="dot ${auth.periodic_active?'dot-g':'dot-x'}"></span><a href="/doc/AUTHOR_AGENT" class="dlink">author agent</a></span><span class="dr-val">${auth.last_chapter||'no chapters yet'}${auth.lunar_day?' &#183; day '+auth.lunar_day:''}</span></div>`;
   auH+=`<div class="dr"><span class="dr-key"><span class="dot ${au.restart_pending?'dot-y':'dot-x'}"></span>restart signal</span><span class="dr-val">${au.restart_pending?'PENDING':'none'}</span></div>`;
   const dreamActions=(d.actions||[]).filter(a=>a.agent_id==='machine_dreaming');
@@ -2304,6 +2305,152 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
       _checkHeroLinks();
     }
   },8000);
+
+  // ════════════════════════════════════════════════════════════════════
+  //  Participant interaction log  +  voice oscilloscope → Fabric
+  //  Every motion and click the participant makes is logged live; an
+  //  opt-in microphone drives the same Fabric the mouse does. dv,
+  //  particles, nodes, flashE, W, H are all in this IIFE's scope.
+  // ════════════════════════════════════════════════════════════════════
+
+  // ── DOM: log panel (bottom-left) + oscilloscope/mic (above it) ──
+  var ixWrap=document.createElement('div');
+  ixWrap.style.cssText='position:fixed;left:12px;bottom:12px;z-index:21;width:300px;max-width:42vw;font-family:var(--mono);pointer-events:auto';
+  ixWrap.innerHTML=
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+    + '<button id="osc-mic" style="background:rgba(10,14,20,.92);border:1px solid var(--border);border-radius:5px;color:var(--text2);font-family:var(--mono);font-size:9px;padding:5px 9px;cursor:pointer;letter-spacing:.5px">&#9679; VOICE</button>'
+    + '<canvas id="osc" width="200" height="34" style="background:rgba(8,12,18,.85);border:1px solid var(--border);border-radius:5px;flex:1;height:34px"></canvas>'
+    + '</div>'
+    + '<div id="ix-log-hdr" style="display:flex;justify-content:space-between;align-items:center;background:rgba(10,14,20,.92);border:1px solid var(--border);border-bottom:none;border-radius:6px 6px 0 0;padding:5px 9px;cursor:pointer;font-size:9px;color:var(--violet);letter-spacing:.5px">'
+    + '<span>PARTICIPANT INTERACTION</span><span id="ix-live" style="color:var(--text3)">&mdash;</span></div>'
+    + '<div id="ix-log" style="background:rgba(8,12,18,.88);border:1px solid var(--border);border-radius:0 0 6px 6px;height:150px;overflow:hidden;font-size:9px;line-height:1.5;padding:5px 9px"></div>';
+  document.body.appendChild(ixWrap);
+
+  var ixLog=document.getElementById('ix-log');
+  var ixLive=document.getElementById('ix-live');
+  var IX_MAX=60, ixLines=[];
+  function ixPush(txt,col){
+    var t=new Date(),ts=('0'+t.getMinutes()).slice(-2)+':'+('0'+t.getSeconds()).slice(-2)+'.'+('00'+t.getMilliseconds()).slice(-3);
+    ixLines.unshift('<div><span style="color:var(--text3)">'+ts+'</span> <span style="color:'+(col||'var(--text2)')+'">'+txt+'</span></div>');
+    if(ixLines.length>IX_MAX)ixLines.pop();
+    ixLog.innerHTML=ixLines.join('');
+  }
+  var ixOpen=true;
+  document.getElementById('ix-log-hdr').addEventListener('click',function(){
+    ixOpen=!ixOpen;ixLog.style.display=ixOpen?'block':'none';
+  });
+
+  // ── Every motion: live readout (per-frame), throttled discrete entries ──
+  var _lastMoveLog=0;
+  dv.on('move',function(d){
+    var sp=Math.round(d.speed||0);
+    ixLive.textContent='('+Math.round(d.x)+','+Math.round(d.y)+') '+sp+'px/s '+(d.direction||'·');
+    var now=Date.now();
+    if(sp>40 && now-_lastMoveLog>140){ // log only meaningful motion, ~7/s cap
+      _lastMoveLog=now;
+      ixPush('move '+(d.direction||'')+' '+sp+'px/s','var(--blue)');
+    }
+  });
+  dv.on('click',function(d){ixPush('click ('+Math.round(d.x)+','+Math.round(d.y)+')','var(--green)')});
+  dv.on('mousedown',function(d){ixPush('press ('+Math.round(d.x)+','+Math.round(d.y)+')','var(--text2)')});
+  dv.on('drag',function(d){ixPush('drag ('+Math.round(d.x)+','+Math.round(d.y)+')','var(--amber)')});
+  dv.on('tap',function(d){ixPush('tap ×'+(d.count||1),'var(--green)')});
+  dv.on('gesture',function(d){ixPush('gesture: '+d.type+(d.direction?' '+d.direction:''),'var(--violet)')});
+  dv.on('depth',function(d){ixPush('scroll '+((d.delta||0)>0?'↓':'↑')+' d='+(d.depth!=null?Math.round(d.depth):'?'),'var(--text2)')});
+  dv.on('key',function(d){ixPush('key: '+(d.key||'?'),'var(--text2)')});
+  dv.on('momentum_stop',function(d){ixPush('momentum stop ('+(d.sustained||0).toFixed(1)+'s)','var(--amber)')});
+  dv.on('rank_up',function(){ixPush('▲ RANK UP','var(--violet)')});
+  dv.on('achievement',function(d){ixPush('✨ '+d.name,'var(--violet)')});
+  dv.on('konami',function(){ixPush('✨ KONAMI','var(--green)')});
+  ixPush('listening to mouse + touch — click VOICE to add audio','var(--text3)');
+
+  // ── Voice oscilloscope → Fabric ─────────────────────────────────────
+  // The microphone CANNOT be opened without the participant's consent —
+  // browsers gate getUserMedia behind a permission prompt and there is no
+  // way around it (nor should there be). The VOICE button requests it; once
+  // granted, the live waveform drives the same particles/nodes the mouse
+  // does. Until then (or if denied) the scope visualizes the Fabric's own
+  // interaction energy, so it is never dead.
+  var oc=document.getElementById('osc'),ocx=oc.getContext('2d');
+  var micBtn=document.getElementById('osc-mic');
+  var audioOn=false, analyser=null, timeBuf=null, freqBuf=null, actx=null, micStream=null;
+  var _prevRMS=0;
+  var _hasShock=(typeof shockwaves!=='undefined');
+
+  micBtn.addEventListener('click',async function(){
+    if(audioOn){ // toggle off
+      try{micStream&&micStream.getTracks().forEach(function(t){t.stop()});actx&&actx.close()}catch(e){}
+      audioOn=false;analyser=null;micStream=null;actx=null;
+      micBtn.style.color='var(--text2)';micBtn.style.borderColor='var(--border)';
+      ixPush('voice off','var(--text3)');return;
+    }
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+      ixPush('voice: getUserMedia unavailable in this browser','var(--red)');return;
+    }
+    try{
+      micStream=await navigator.mediaDevices.getUserMedia({audio:true});
+      actx=new (window.AudioContext||window.webkitAudioContext)();
+      var srcN=actx.createMediaStreamSource(micStream);
+      analyser=actx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.75;
+      srcN.connect(analyser);
+      timeBuf=new Uint8Array(analyser.fftSize);
+      freqBuf=new Uint8Array(analyser.frequencyBinCount);
+      audioOn=true;
+      micBtn.style.color='var(--green)';micBtn.style.borderColor='rgba(86,211,100,.5)';
+      ixPush('voice ON — mic now drives the Fabric','var(--green)');
+    }catch(err){
+      ixPush('voice denied ('+(err&&err.name||'error')+') — mic needs permission','var(--red)');
+    }
+  });
+
+  function drawOsc(){
+    ocx.clearRect(0,0,oc.width,oc.height);
+    ocx.strokeStyle=audioOn?'#56d364':'rgba(121,192,255,.5)';ocx.lineWidth=1;ocx.beginPath();
+    if(audioOn&&analyser){
+      analyser.getByteTimeDomainData(timeBuf);
+      var step=timeBuf.length/oc.width, rms=0;
+      for(var x=0;x<oc.width;x++){
+        var v=(timeBuf[Math.floor(x*step)]-128)/128;
+        rms+=v*v;
+        var y=oc.height/2+v*oc.height/2;
+        x?ocx.lineTo(x,y):ocx.moveTo(x,y);
+      }
+      ocx.stroke();
+      rms=Math.sqrt(rms/oc.width);
+      analyser.getByteFrequencyData(freqBuf);
+      var peak=0,peakBin=0,sum=0;
+      for(var f=0;f<freqBuf.length;f++){sum+=freqBuf[f];if(freqBuf[f]>peak){peak=freqBuf[f];peakBin=f}}
+      var bright=sum/freqBuf.length/255;             // overall loudness 0..1
+      var tone=peakBin/freqBuf.length;               // dominant pitch 0..1
+      var transient=Math.max(0,rms-_prevRMS);_prevRMS=rms;
+      if(particles.length){
+        for(var p=0;p<particles.length;p++){
+          particles[p].vx+=(Math.random()-.5)*bright*.6;
+          particles[p].vy+=((tone-.5)*-.4 + (Math.random()-.5)*bright*.6);
+        }
+      }
+      if(nodes.length){
+        for(var n=0;n<nodes.length;n++)nodes[n].act=Math.max(nodes[n].act,bright*.5);
+      }
+      if(transient>.06&&nodes.length>1){            // a beat / consonant → flash + shockwave
+        var nf=Math.min(6,Math.floor(transient*40));
+        for(var i=0;i<nf;i++)flashE(Math.floor(Math.random()*nodes.length),Math.floor(Math.random()*nodes.length));
+        if(_hasShock)shockwaves.push({x:W/2,y:H/2,r:0,life:1,col:'rgba(86,211,100,'});
+      }
+    }else{
+      // fallback: trace the Fabric's own interaction energy so it lives
+      var energy=(dv.pressure&&dv.pressure.intensity||0);
+      var amp=Math.min(1,energy+(dv.momentum&&dv.momentum.sustained||0)*.05);
+      for(var x2=0;x2<oc.width;x2++){
+        var ph=x2/oc.width*6.28*3 + Date.now()/200;
+        var y2=oc.height/2+Math.sin(ph)*amp*oc.height/2*.8;
+        x2?ocx.lineTo(x2,y2):ocx.moveTo(x2,y2);
+      }
+      ocx.stroke();
+    }
+    requestAnimationFrame(drawOsc);
+  }
+  drawOsc();
 })();
 </script>
 

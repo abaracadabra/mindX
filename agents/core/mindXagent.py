@@ -228,6 +228,10 @@ class MindXAgent:
         self.running = False
         self.autonomous_mode = False
         self.autonomous_task: Optional[asyncio.Task] = None
+        # Real loop telemetry surfaced on the public "Autonomous Systems" tab.
+        self._cycle_count = 0
+        self._last_cycle_time: Optional[str] = None
+        self._last_skip_reason: Optional[str] = None
 
         # LLM configuration for autonomous mode — model discovered at startup, not hardcoded
         self.llm_provider = "ollama"
@@ -2624,6 +2628,11 @@ class MindXAgent:
         while self.running and self.autonomous_mode:
             try:
                 cycle_count += 1
+                # Surface real loop state for /diagnostics/live → the public
+                # "Autonomous Systems" tab. Previously the tab read dead flags
+                # (_autonomous_running, never set) and always showed "stopped".
+                self._cycle_count = cycle_count
+                self._last_cycle_time = datetime.utcnow().isoformat() + "Z"
                 logger.info(f"{self.log_prefix} === AUTONOMOUS CYCLE {cycle_count} ===")
 
                 # PREREQUISITE: Verify inference is available before this cycle
@@ -2703,12 +2712,14 @@ class MindXAgent:
                     from agents.resource_governor import ResourceGovernor
                     _gov = await ResourceGovernor.get_instance()
                     if not await _gov.throttle_for_cpu(label="mindx_loop", max_wait=180):
+                        self._last_skip_reason = "CPU over ceiling — sharing processor"
                         logger.info(
                             f"{self.log_prefix} Cycle {cycle_count}: CPU over ceiling "
                             f"after backoff — skipping cycle (shares processor)"
                         )
                         await asyncio.sleep(120)
                         continue
+                    self._last_skip_reason = None  # cycle is proceeding
                 except Exception:
                     pass
 

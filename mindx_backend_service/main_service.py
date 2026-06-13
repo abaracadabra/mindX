@@ -7558,8 +7558,13 @@ async def _diag_compute():
         mx = await _safe_await(MindXAgent.get_instance(), default=None)
         if mx:
             autonomous_data = {
-                "loop_running": getattr(mx, '_autonomous_running', False),
+                # loop_running tracks the real loop flag (self.autonomous_mode);
+                # the old _autonomous_running attr was never set True, so the
+                # tab always showed "stopped" even while cycles ran.
+                "loop_running": getattr(mx, 'autonomous_mode', False),
                 "last_cycle": getattr(mx, '_last_cycle_time', None),
+                "cycle_count": getattr(mx, '_cycle_count', 0),
+                "skip_reason": getattr(mx, '_last_skip_reason', None),
                 "stuck_cycles": getattr(mx, '_stuck_cycle_count', 0) if hasattr(mx, '_stuck_cycle_count') else (getattr(mx, 'stuck_loop_detector', None) and getattr(mx.stuck_loop_detector, 'no_progress_count', 0)) or 0,
                 "circuit_breaker_open": getattr(mx, '_circuit_breaker_open', False) if hasattr(mx, '_circuit_breaker_open') else (getattr(mx, 'stuck_loop_detector', None) and getattr(mx.stuck_loop_detector, 'circuit_open', False)) or False,
                 "restart_pending": getattr(mx, '_restart_pending', False),
