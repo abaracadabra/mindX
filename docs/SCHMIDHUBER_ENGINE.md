@@ -142,15 +142,19 @@ The right apex is where **knowledge becomes wisdom becomes weights**. The
 bridge package [`mindx/godel/mindxtrain/`](../mindx/godel/mindxtrain/) wires
 mindX's dream cycle to the external fine-tuning framework
 **[github.com/professor-codephreak/mindXtrain](https://github.com/professor-codephreak/mindXtrain)**
-(LoRA on AMD MI300X; ships a `mindx_dreams` data-source adapter; currently at
-"CPU training level" — ~38 CPU-safe modules, GPU paths gated behind `--extra ml`).
+(LoRA fine-tuning; ships a `mindx_dreams` data-source adapter that reads mindX's
+dream training files under `data/memory` directly. **As of v1.0.0 (2026-06-12)
+CPU training is active** — the GPU/MI300X path remains for the big recipes, but
+the small mindX recipes (`mindx_fallback_qwen3_1_5b_cpu_{smoke,real}`) train on
+a CPU box. See [MINDXTRAIN_INSTALL.md](MINDXTRAIN_INSTALL.md) for the CPU/GPU
+install.)
 
 | Stage | Module | Does |
 |---|---|---|
 | **distill** | `distill.py` | Walk dream `*_training.jsonl` + `*_dream_report.json`; normalize into the `mindx_dreams` corpus with insight scores attached. |
 | **curate** | `curate.py` | Keep only utility-positive, alignment-clean, high-score rows (DreamInsight composite score + the BOTTOM alignment floor). Wireheading via the training set is structurally blocked. |
 | **forge** | `forge.py` | Write a deterministic, content-addressed dataset bundle + the XTrainConfig YAML (mindXtrain's 10-section schema) pointed at the corpus. |
-| **ascend** | `ascend.py` | Drive the `mindxtrain` CLI: `bench --dry-run` (CPU plan) → `train` (MI300X → LoRA weights) → proof-gated register of the new model card. |
+| **ascend** | `ascend.py` (`ascend_recipe`) | Drive the real `mindxtrain` CLI: `init` a mindX CPU recipe → `train <config> --cpu-percent N` (LoRA on CPU) → **`imprint`** proof-of-recall verdict → `serve --to ollama` only on positive imprint. |
 
 **Provenance chain:** `machine.dream` already writes chat-completion training
 rows and indexes them as "RELEVANT WISDOM" in pgvector (see
@@ -160,10 +164,18 @@ nothing is reinvented; the dataset half already exists. The bridge adds the
 **dataset → weights** half via mindXtrain, and proof-gates promotion of the new
 weights so the next generation is born wiser only if the change is accepted.
 
-**CPU-level honesty:** on the current host (no MI300X) `ascend()` runs
-distill→curate→forge→`bench --dry-run` and stops at a forged *plan* — it
-promotes nothing. That is shadow mode, matching mindXtrain's CPU level and the
-Gödel-machine rule that nothing reaches the live mind without a verdict.
+**Proof-gated, CPU-live (v1.0.0):** the VPS now runs a *real* CPU ascent
+(`ascend_recipe`), proof-gated by `mindxtrain imprint` — recall before vs after
+training. A generation becomes a servable Ollama model **only** if the imprint
+is positive. The first live smoke ascent (SmolLM2-135M, 8 SFT steps from the
+dream corpus) produced a real LoRA but the imprint gate **rejected** it
+(`imprinted=false`, Δ−0.0415) — too small a run to learn, correctly not served.
+That is the Gödel-machine rule holding: nothing reaches the live mind without a
+verdict. **Two flags** gate it — `MINDX_ENABLE_MINDXTRAIN` (operator, the VPS is
+armed here) and `MINDX_ENABLE_AUTONOMOUS_TRAIN` (autonomous, deliberately off);
+autonomous ascents additionally require not-resource-bound + a 24h cooldown.
+Surfaced at `/insight/godel/ascend` and the feedback "knowledge→wisdom→weights"
+panel.
 
 ---
 
