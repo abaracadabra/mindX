@@ -402,6 +402,18 @@ tr:hover td{background:rgba(121,192,255,.02)}
   <div id="stuckBox"><div class="empty">scanning recent activity…</div></div>
 </section>
 
+<!-- 1b. Objective self-eval feedback — the loop responding to its own track record -->
+<section id="sec-selfeval">
+  <div class="sec-head">
+    <h2>objective self-eval feedback <span id="selfEvalPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/autonomous/feedback · campaign success rate → SEA corrective campaign</span>
+  </div>
+  <p class="sec-desc">
+    The core evolution loop reading its <b>own objective eval</b> every cycle — the rolling campaign success rate and <a href="/doc/GODEL_EVAL_BLUEPRINT">alignment</a> mean — and deciding whether to act. <b style="color:var(--green)">improving</b> = succeeding; <b style="color:var(--amber)">stalled</b> = below target, watching; <b style="color:var(--red)">failing</b> = escalates a corrective campaign to <a href="/doc/agents/strategic_evolution_agent">SEA</a> naming the dominant failure mode; <b style="color:var(--amber)">resource_bound</b> = cycles deferring on a saturated CPU (the honest verdict — contention, not judgement — so it does <em>not</em> doom-loop more work onto a hot box). This is the feedback edge that was missing when 0/25 just sat on a dashboard. <a href="/insight/autonomous/feedback?h=true" target="_blank" rel="noopener">view raw</a>
+  </p>
+  <div id="selfEvalBox" class="card"><div class="empty">reading objective eval…</div></div>
+</section>
+
 <!-- 2. Live agent dialogue -->
 <section id="sec-live">
   <div class="sec-head">
@@ -1299,6 +1311,39 @@ async function refreshStuck() {
     box.innerHTML = html;
   } catch (e) {
     $('stuckBox').innerHTML = '<div class="empty">stuck detector unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+async function refreshSelfEval() {
+  try {
+    const r = await fetch('/insight/autonomous/feedback', { cache: 'no-store' });
+    const d = await r.json();
+    const pill = $('selfEvalPill'), box = $('selfEvalBox');
+    const v = d.verdict || 'warming_up';
+    const cls = { improving:'ok', stalled:'warn', failing:'err', resource_bound:'warn', warming_up:'' }[v] || '';
+    pill.textContent = v.toUpperCase().replace('_',' ');
+    pill.className = 'pill ' + cls;
+    const col = { improving:'var(--green)', stalled:'var(--amber)', failing:'var(--red)', resource_bound:'var(--amber)', warming_up:'var(--text3)' }[v] || 'var(--text3)';
+    const align = (d.alignment_mean_live!=null) ? Number(d.alignment_mean_live).toFixed(2) : (d.alignment_mean!=null?Number(d.alignment_mean).toFixed(2):'—');
+    let html = '<div style="font-family:var(--mono);font-size:12.5px">';
+    html += '<div style="font-size:1.4em;color:'+col+';font-weight:700;margin-bottom:6px">'+escapeHtml(v.replace('_',' '))+'</div>';
+    html += '<div style="color:var(--text2)">campaigns succeeding: <b style="color:'+col+'">'+escapeHtml(d.sample||'0/0')+'</b>';
+    if (d.cpu_percent!=null) html += ' · CPU <b>'+Math.round(d.cpu_percent)+'%</b>';
+    html += ' · alignment <b>'+align+'</b>';
+    if (d.alignment_samples!=null) html += ' <span style="color:var(--text3)">('+d.alignment_samples+' evals)</span>';
+    html += '</div>';
+    if (d.recommendation) html += '<div style="color:var(--text3);margin-top:8px;line-height:1.5">↳ '+escapeHtml(d.recommendation)+'</div>';
+    const esc = d.last_escalation;
+    if (esc && esc.failure_mode) {
+      html += '<div style="margin-top:10px;padding:8px 10px;background:rgba(121,192,255,.06);border-left:2px solid var(--blue);border-radius:3px">';
+      html += '<span style="color:var(--blue)">last SEA escalation</span> · '+escapeHtml(esc.status||'')+' · failure mode: <b>'+escapeHtml(esc.failure_mode)+'</b>';
+      if (esc.ts) html += '<br><span style="color:var(--text3);font-size:11px">'+escapeHtml(Human.timeAgo ? Human.timeAgo(esc.ts*1000) : new Date(esc.ts*1000).toISOString())+'</span>';
+      html += '</div>';
+    }
+    html += '</div>';
+    box.innerHTML = html;
+  } catch (e) {
+    $('selfEvalBox').innerHTML = '<div class="empty">self-eval unavailable: ' + escapeHtml(e.message) + '</div>';
   }
 }
 
@@ -2689,12 +2734,13 @@ async function boot() {
   _initTabbar();
   await seedDialogue();
   startSSE();
-  await Promise.allSettled([refreshCognition(), refreshGodelMachine(), refreshMilestones(), refreshSysPulse(), refreshStuck(), refreshBDI(), refreshLedger(), refreshSelfAware(), refreshBoardroom(), refreshBoardRollcall(), refreshBoardLeaderboard(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
+  await Promise.allSettled([refreshCognition(), refreshGodelMachine(), refreshMilestones(), refreshSysPulse(), refreshStuck(), refreshSelfEval(), refreshBDI(), refreshLedger(), refreshSelfAware(), refreshBoardroom(), refreshBoardRollcall(), refreshBoardLeaderboard(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
   setInterval(refreshGodelMachine, 45000);
   setInterval(refreshMilestones, 60000);
   setInterval(refreshCognition, 30000);
   setInterval(refreshSysPulse, 15000);
   setInterval(refreshStuck, 30000);
+  setInterval(refreshSelfEval, 30000);
   setInterval(refreshBDI, 20000);
   setInterval(refreshLedger, 45000);
   setInterval(refreshSelfAware, 45000);

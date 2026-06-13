@@ -232,6 +232,14 @@ class MindXAgent:
         self._cycle_count = 0
         self._last_cycle_time: Optional[str] = None
         self._last_skip_reason: Optional[str] = None
+        # Objective self-eval feedback — the core evolution edge that turns
+        # mindX's own campaign success rate back into corrective action.
+        self._self_eval: Optional[Dict[str, Any]] = None
+        try:
+            from agents.core.self_eval_feedback import SelfEvalFeedback
+            self._self_eval_feedback = SelfEvalFeedback(log_prefix=f"{getattr(self,'log_prefix','SelfEval:')} ")
+        except Exception:
+            self._self_eval_feedback = None
 
         # LLM configuration for autonomous mode — model discovered at startup, not hardcoded
         self.llm_provider = "ollama"
@@ -2635,6 +2643,20 @@ class MindXAgent:
                 self._last_cycle_time = datetime.utcnow().isoformat() + "Z"
                 logger.info(f"{self.log_prefix} === AUTONOMOUS CYCLE {cycle_count} ===")
 
+                # Objective self-eval feedback (cheap, no inference) — read our
+                # own campaign success rate every cycle, even one about to defer,
+                # so the loop is aware of its own track record.
+                if self._self_eval_feedback is not None:
+                    try:
+                        self._self_eval = self._self_eval_feedback.assess(
+                            loop_skip_reason=self._last_skip_reason)
+                        if self._self_eval.get("verdict") in ("failing", "resource_bound"):
+                            logger.info(
+                                f"{self.log_prefix} Self-eval: {self._self_eval['verdict']} "
+                                f"({self._self_eval['sample']}) — {self._self_eval['recommendation']}")
+                    except Exception as _se_e:
+                        logger.debug(f"{self.log_prefix} self-eval assess failed: {_se_e}")
+
                 # PREREQUISITE: Verify inference is available before this cycle
                 cycle_model = await self._resolve_inference_model()
                 if not cycle_model:
@@ -2722,6 +2744,22 @@ class MindXAgent:
                     self._last_skip_reason = None  # cycle is proceeding
                 except Exception:
                     pass
+
+                # The cycle is proceeding (inference available, CPU under
+                # ceiling). If the objective self-eval says we're failing on
+                # our merits — not resource-bound — engage SEA with a corrective
+                # campaign. Cooldown-guarded; never doom-loops onto a hot box.
+                if self._self_eval_feedback is not None and self._self_eval:
+                    try:
+                        esc = await self._self_eval_feedback.maybe_escalate(
+                            getattr(self, "strategic_evolution_agent", None),
+                            self._self_eval, inference_available=bool(cycle_model))
+                        if esc:
+                            logger.info(
+                                f"{self.log_prefix} Self-eval escalated corrective campaign "
+                                f"to SEA: {esc.get('status')} (trigger {esc.get('trigger_sample')})")
+                    except Exception as _se_esc:
+                        logger.debug(f"{self.log_prefix} self-eval escalate failed: {_se_esc}")
 
                 # Log thinking step
                 self._log_thinking("analyzing_system_state", "Analyzing current system state for improvement opportunities")

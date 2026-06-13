@@ -4576,6 +4576,44 @@ async def insight_eval_summary(request: Request, window: int = 200):
     )
 
 
+@app.get("/insight/autonomous/feedback", tags=["insight"])
+@_insight_safe
+async def insight_autonomous_feedback(request: Request):
+    """Objective self-eval feedback — the core evolution loop's verdict on its
+    own performance (campaign success rate + alignment), plus the last
+    corrective campaign it escalated to SEA.
+
+    Reads the persisted state file (data/system_state/self_eval_feedback.json)
+    so it surfaces even between restarts, and enriches with the live alignment
+    mean. This is the loop *responding to its own objective eval* — the edge
+    that was missing when 0/25 campaigns just sat on a dashboard.
+    """
+    from utils.config import PROJECT_ROOT as _PR
+    state_path = _PR / "data" / "system_state" / "self_eval_feedback.json"
+    verdict: Dict[str, Any] = {}
+    try:
+        if state_path.exists():
+            verdict = json.loads(state_path.read_text(encoding="utf-8"))
+    except Exception:
+        verdict = {}
+    # live alignment mean from the objective eval events
+    try:
+        evs = _read_alignment_events(limit=100) or []
+        scores = []
+        for e in evs:
+            try:
+                scores.append(float((e.get("payload", {}) or {}).get("score")))
+            except (TypeError, ValueError):
+                continue
+        verdict["alignment_mean_live"] = (sum(scores) / len(scores)) if scores else None
+        verdict["alignment_samples"] = len(scores)
+    except Exception:
+        pass
+    if not verdict:
+        verdict = {"verdict": "warming_up", "recommendation": "no self-eval recorded yet", "sample": "0/0"}
+    return _maybe_h_text(request, verdict, route_path="/insight/autonomous/feedback")
+
+
 @app.get("/insight/eval/health", tags=["insight"])
 @_insight_safe
 async def insight_eval_health(request: Request):
@@ -7568,6 +7606,9 @@ async def _diag_compute():
                 "stuck_cycles": getattr(mx, '_stuck_cycle_count', 0) if hasattr(mx, '_stuck_cycle_count') else (getattr(mx, 'stuck_loop_detector', None) and getattr(mx.stuck_loop_detector, 'no_progress_count', 0)) or 0,
                 "circuit_breaker_open": getattr(mx, '_circuit_breaker_open', False) if hasattr(mx, '_circuit_breaker_open') else (getattr(mx, 'stuck_loop_detector', None) and getattr(mx.stuck_loop_detector, 'circuit_open', False)) or False,
                 "restart_pending": getattr(mx, '_restart_pending', False),
+                # Objective self-eval feedback — verdict from the core evolution
+                # loop reading its own campaign success rate.
+                "self_eval": getattr(mx, '_self_eval', None),
             }
     except Exception:
         pass

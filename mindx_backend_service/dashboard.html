@@ -1518,6 +1518,14 @@ function render(d){
   auH+='<div style="background:var(--surface);padding:12px 14px">';
   auH+=`<div class="dr"><span class="dr-key"><span class="dot ${au.loop_running?'dot-g':'dot-r'}"></span><a href="/doc/THESIS" class="dlink">improvement loop</a></span><span class="dr-val">${au.loop_running?'active':'stopped'}${au.cycle_count?' &#183; cycle '+au.cycle_count:''}${au.last_cycle?' &#183; '+Fmt.timeAgo(au.last_cycle):''}</span></div>`;
   if(au.skip_reason)auH+=`<div class="dr"><span class="dr-key" style="padding-left:14px;color:var(--amber)">&#8627; last cycle skipped</span><span class="dr-val" style="color:var(--amber)">${Fmt.esc(au.skip_reason)}</span></div>`;
+  // Objective self-eval feedback — the loop's verdict on its own success rate.
+  const se=au.self_eval||{};
+  if(se.verdict){
+    const vc={improving:'var(--green)',stalled:'var(--amber)',failing:'var(--red)',resource_bound:'var(--amber)',warming_up:'var(--text3)'}[se.verdict]||'var(--text3)';
+    auH+=`<div class="dr"><span class="dr-key"><span class="dot" style="background:${vc}"></span>self-eval (objective)</span><span class="dr-val" style="color:${vc}">${Fmt.esc(se.verdict)}${se.sample?' &#183; '+Fmt.esc(se.sample)+' campaigns':''}${se.alignment_mean!=null?' &#183; align '+Number(se.alignment_mean).toFixed(2):''}</span></div>`;
+    if(se.recommendation)auH+=`<div class="dr"><span class="dr-key" style="padding-left:14px;color:var(--text3);font-size:10px">&#8627; ${Fmt.esc(se.recommendation)}</span><span class="dr-val"></span></div>`;
+    if(se.last_escalation&&se.last_escalation.failure_mode)auH+=`<div class="dr"><span class="dr-key" style="padding-left:14px;color:var(--blue);font-size:10px">&#8627; escalated to SEA</span><span class="dr-val" style="color:var(--blue);font-size:10px">${Fmt.esc(se.last_escalation.status||'')} &#183; ${Fmt.esc(se.last_escalation.failure_mode)}</span></div>`;
+  }
   auH+=`<div class="dr"><span class="dr-key"><span class="dot ${auth.periodic_active?'dot-g':'dot-x'}"></span><a href="/doc/AUTHOR_AGENT" class="dlink">author agent</a></span><span class="dr-val">${auth.last_chapter||'no chapters yet'}${auth.lunar_day?' &#183; day '+auth.lunar_day:''}</span></div>`;
   auH+=`<div class="dr"><span class="dr-key"><span class="dot ${au.restart_pending?'dot-y':'dot-x'}"></span>restart signal</span><span class="dr-val">${au.restart_pending?'PENDING':'none'}</span></div>`;
   const dreamActions=(d.actions||[]).filter(a=>a.agent_id==='machine_dreaming');
