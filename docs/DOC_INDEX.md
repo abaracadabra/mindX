@@ -2,9 +2,9 @@
 
 > Auto-maintained by [AuthorAgent](AUTHOR_AGENT.md). Regenerated on every recognized milestone (`github.awareness`). Do not edit by hand — changes are overwritten. The curated hub is [NAV.md](NAV.md); this is the exhaustive catalogue, grouped as on [/docs.html](https://mindx.pythai.net/docs.html).
 
-_Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
+_Last regenerated: 2026-06-14 20:54 UTC · 246 documents in 10 categories._
 
-[Core Architecture](#core-architecture) (17) · [Agents](#agents) (45) · [Tools](#tools) (33) · [Governance & DAIO](#governance--daio) (6) · [Memory & Knowledge](#memory--knowledge) (11) · [Deployment & Operations](#deployment--operations) (19) · [API & Integration](#api--integration) (18) · [Philosophy & Vision](#philosophy--vision) (12) · [Tutorials & Guides](#tutorials--guides) (4) · [Other](#other) (80)
+[Core Architecture](#core-architecture) (17) · [Agents](#agents) (46) · [Tools](#tools) (33) · [Governance & DAIO](#governance--daio) (6) · [Memory & Knowledge](#memory--knowledge) (11) · [Deployment & Operations](#deployment--operations) (19) · [API & Integration](#api--integration) (18) · [Philosophy & Vision](#philosophy--vision) (12) · [Tutorials & Guides](#tutorials--guides) (4) · [Other](#other) (80)
 
 ## Core Architecture
 
@@ -17,14 +17,14 @@ _Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
 | [CORE.md](CORE.md) | CORE: mindX Complete Technical Architecture Reference | 2026-04-11 |
 | [CORE_AUDIT_SUMMARY.md](CORE_AUDIT_SUMMARY.md) | mindX CORE System Audit & Improvement Summary | 2026-03-31 |
 | [DAIO_BRANCHING_SERVICES_ARCHITECTURE.md](DAIO_BRANCHING_SERVICES_ARCHITECTURE.md) | DAIO Branching Services Architecture: 13th Contract Expansion Framework | 2026-03-31 |
-| [GODEL_EVAL_BLUEPRINT.md](GODEL_EVAL_BLUEPRINT.md) | GÖDEL EVAL BLUEPRINT | 2026-06-04 |
+| [GODEL_EVAL_BLUEPRINT.md](GODEL_EVAL_BLUEPRINT.md) | GÖDEL EVAL BLUEPRINT | 2026-06-13 |
 | [hierarchy.md](hierarchy.md) | MindX System Hierarchy & Data Flow | 2025-09-21 |
 | [mindx_memory_architecture_scalable.md](mindx_memory_architecture_scalable.md) | MindX Memory and Logging System - Scalable Architecture | 2025-09-21 |
 | [monetization_blueprint.md](monetization_blueprint.md) | 💸 Monetization Blueprint | 2026-01-05 |
 | [ORCHESTRATION.md](ORCHESTRATION.md) | mindX Orchestration System - Complete Reference | 2026-03-31 |
 | [orchestration_audit.md](orchestration_audit.md) | Orchestration System Audit Report | 2025-09-21 |
 | [orchestration_improvements_summary.md](orchestration_improvements_summary.md) | Orchestration System Improvements Summary | 2025-09-21 |
-| [SCHMIDHUBER_ENGINE.md](SCHMIDHUBER_ENGINE.md) | THE SCHMIDHÜBER ENGINE | 2026-06-04 |
+| [SCHMIDHUBER_ENGINE.md](SCHMIDHUBER_ENGINE.md) | THE SCHMIDHÜBER ENGINE | 2026-06-13 |
 | [system_architecture_map.md](system_architecture_map.md) | MindX System Architecture Comprehensive Map | 2025-09-21 |
 | [TECHNICAL.md](TECHNICAL.md) | mindX Orchestration Environment - Technical Architecture Documentation | 2026-03-31 |
 
@@ -40,8 +40,8 @@ _Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
 | [AGINT.md](AGINT.md) | AGInt: The Cognitive Core of MindX | 2025-09-21 |
 | [agint.md](agint.md) | AGInt Agent | 2026-04-03 |
 | [agint_memory_integration.md](agint_memory_integration.md) | AGInt Memory Integration | 2026-01-05 |
-| [AUTHOR_AGENT.md](AUTHOR_AGENT.md) | AuthorAgent — mindX Writes Its Own Book | 2026-06-04 |
-| [AUTHORAGENT_COMPOSITION.md](AUTHORAGENT_COMPOSITION.md) | AuthorAgent Composition — depth, register, length, house-style, graphics | 2026-06-09 |
+| [AUTHOR_AGENT.md](AUTHOR_AGENT.md) | AuthorAgent — mindX Writes Its Own Book | 2026-06-13 |
+| [AUTHORAGENT_COMPOSITION.md](AUTHORAGENT_COMPOSITION.md) | AuthorAgent Composition — depth, register, length, house-style, graphics | 2026-06-13 |
 | [automindx_and_personas.md](automindx_and_personas.md) | AutoMINDX: Dynamic Personas, iNFT Generation, and Blockchain Integration | 2025-09-21 |
 | [AUTOMINDX_ENHANCED_SUMMARY.md](AUTOMINDX_ENHANCED_SUMMARY.md) | AutoMINDX Enhanced System Summary | 2025-09-21 |
 | [AUTOMINDX_INFT_SUMMARY.md](AUTOMINDX_INFT_SUMMARY.md) | iNFT (legacy) — Original Intelligent NFT Smart Contract Reference | 2026-04-28 |
@@ -49,11 +49,11 @@ _Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
 | [autonomous_audit_coordinator.md](autonomous_audit_coordinator.md) | Autonomous Audit Coordinator | 2026-01-12 |
 | [base_gen_agent_backup.md](base_gen_agent_backup.md) | BaseGenAgent (`base_gen_agent.py`) - Configurable Codebase Documenter | 2026-01-12 |
 | [basegenagent_optimization_assessment.md](basegenagent_optimization_assessment.md) | BaseGenAgent Optimization Assessment for Code Auditing | 2025-09-21 |
-| [BOOK_OF_MINDX.md](BOOK_OF_MINDX.md) | The Book of mindX | 2026-06-05 |
+| [BOOK_OF_MINDX.md](BOOK_OF_MINDX.md) | The Book of mindX | 2026-06-13 |
 | [CEO.md](CEO.md) | What Has Been Built Here? A High-Level Explanation | 2026-01-05 |
 | [CEO_AGENT_BATTLE_HARDENED_GUIDE.md](CEO_AGENT_BATTLE_HARDENED_GUIDE.md) | CEO Agent Battle Hardened Guide | 2026-01-05 |
 | [CEO_AGENT_TEMPLATE.md](CEO_AGENT_TEMPLATE.md) | CEO Agent Template Documentation | 2026-01-05 |
-| [DEPLOYMENT_MINDX_PYTHAI_NET.md](DEPLOYMENT_MINDX_PYTHAI_NET.md) | I Am Live at mindx.pythai.net | 2026-06-02 |
+| [DEPLOYMENT_MINDX_PYTHAI_NET.md](DEPLOYMENT_MINDX_PYTHAI_NET.md) | I Am Live at mindx.pythai.net | 2026-06-13 |
 | [error_recovery_coordinator.md](error_recovery_coordinator.md) | Error Recovery Coordinator | 2026-01-12 |
 | [GITHUB_AGENT.md](GITHUB_AGENT.md) | GitHub Agent Tool - Complete Documentation | 2026-01-12 |
 | [MARKETING_AGENT.md](MARKETING_AGENT.md) | marketinga.agent — marketing capabilities on the CEO + Seven Soldiers boardroom | 2026-05-09 |
@@ -71,6 +71,7 @@ _Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
 | [mindxfrontend.md](mindxfrontend.md) | MindX Frontend Documentation | 2025-09-21 |
 | [mindXsh.md](mindXsh.md) | mindX.sh - Comprehensive Deployment Script Documentation | 2025-09-21 |
 | [mindXsh_quick_reference.md](mindXsh_quick_reference.md) | mindX.sh Quick Reference Guide | 2026-03-29 |
+| [MINDXTRAIN_INSTALL.md](MINDXTRAIN_INSTALL.md) | mindXtrain Install — CPU (handheld-class) and GPU (MI300X) | 2026-06-13 |
 | [multimodel_agent2.md](multimodel_agent2.md) | Multi-Model Agent (MMA) (`multimodel_agent.py`) - Production Candidate Stub v2 | 2026-04-03 |
 | [OPENROUTER_mindX.md](OPENROUTER_mindX.md) | OpenRouter integration manual for mindX | 2026-05-04 |
 | [run_mindx_coordinator.md](run_mindx_coordinator.md) | MindX Coordinator CLI (`run_mindx_coordinator.py`) - Production Candidate | 2025-09-21 |
@@ -112,7 +113,7 @@ _Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
 | [TOOLS.md](TOOLS.md) | MindX Tools Registry Reference | 2026-03-31 |
 | [TOOLS_AUDIT_SUMMARY.md](TOOLS_AUDIT_SUMMARY.md) | Tools Audit and Documentation Summary | 2026-01-12 |
 | [tools_ecosystem_review.md](tools_ecosystem_review.md) | MindX Tools Ecosystem Review | 2025-09-21 |
-| [TOOLS_INDEX.md](TOOLS_INDEX.md) | MindX Tools Index | 2026-06-11 |
+| [TOOLS_INDEX.md](TOOLS_INDEX.md) | MindX Tools Index | 2026-06-13 |
 | [tools_organization_audit.md](tools_organization_audit.md) | Tools Organization Audit & Update | 2026-03-29 |
 | [web_search_tool.md](web_search_tool.md) | Web Search Tool Documentation | 2026-01-13 |
 
@@ -125,7 +126,7 @@ _Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
 | [DAIO_CIVILIZATION_GOVERNANCE.md](DAIO_CIVILIZATION_GOVERNANCE.md) | DAIO Civilization Governance: The Constitutional Framework for Autonomous Digital Sovereig | 2026-01-11 |
 | [DAIO_DOCUMENTATION_COMPLETION_SUMMARY.md](DAIO_DOCUMENTATION_COMPLETION_SUMMARY.md) | DAIO Documentation Completion Summary | 2026-03-31 |
 | [governance-tab.md](governance-tab.md) | Governance Tab: DAIO Constitutional Compliance | 2026-03-29 |
-| [RESOURCE_GOVERNANCE.md](RESOURCE_GOVERNANCE.md) | Resource Governance — How mindX Shares the Processor | 2026-06-02 |
+| [RESOURCE_GOVERNANCE.md](RESOURCE_GOVERNANCE.md) | Resource Governance — How mindX Shares the Processor | 2026-06-13 |
 
 ## Memory & Knowledge
 
@@ -133,7 +134,7 @@ _Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
 |----------|-------|---------|
 | [belief_system.md](belief_system.md) | Belief System | 2026-01-13 |
 | [knowledge-tab.md](knowledge-tab.md) | Knowledge Tab: Semantic Knowledge Graph | 2026-03-29 |
-| [KNOWLEDGE_CATALOGUE.md](KNOWLEDGE_CATALOGUE.md) | mindX Knowledge Catalogue — Subsystem Specification | 2026-06-04 |
+| [KNOWLEDGE_CATALOGUE.md](KNOWLEDGE_CATALOGUE.md) | mindX Knowledge Catalogue — Subsystem Specification | 2026-06-13 |
 | [memory.md](memory.md) | `memory_agent.py` | 2026-04-03 |
 | [memory_and_logging_sanity.md](memory_and_logging_sanity.md) | MindX Memory, Logging, and Identity Sanity | 2026-04-03 |
 | [MEMORY_AUDIT_2026_04_27.md](MEMORY_AUDIT_2026_04_27.md) | Memory & Data Audit — 2026-04-27 | 2026-04-27 |
@@ -148,10 +149,10 @@ _Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
 | document | title | updated |
 |----------|-------|---------|
 | [Arc_Testnet_Deployment_Guide.md](Arc_Testnet_Deployment_Guide.md) | AgenticPlace on Arc Testnet: Current Implementation Phase | 2026-03-29 |
-| [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md) | Deployment Status — Gödel subsystem & AuthorAgent | 2026-06-04 |
+| [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md) | Deployment Status — Gödel subsystem & AuthorAgent | 2026-06-13 |
 | [enhanced_monitoring_system.md](enhanced_monitoring_system.md) | Enhanced Monitoring System | 2025-09-21 |
 | [enhanced_monitoring_update_summary.md](enhanced_monitoring_update_summary.md) | Enhanced Monitoring System - Update Summary | 2025-09-21 |
-| [MILESTONE_RECOGNITION.md](MILESTONE_RECOGNITION.md) | Milestone recognition — mindX recognizes its own achievements | 2026-05-23 |
+| [MILESTONE_RECOGNITION.md](MILESTONE_RECOGNITION.md) | Milestone recognition — mindX recognizes its own achievements | 2026-06-13 |
 | [MILESTONES.md](MILESTONES.md) | MILESTONES — mindX's chronicle of its own evolution | 2026-06-13 |
 | [monitoring_implementation_summary.md](monitoring_implementation_summary.md) | Enhanced Monitoring System Implementation Summary | 2025-09-21 |
 | [monitoring_integration.md](monitoring_integration.md) | Monitoring Integration | 2026-01-12 |
@@ -159,12 +160,12 @@ _Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
 | [performance_monitor.md](performance_monitor.md) | Performance Monitor | 2026-01-13 |
 | [production_deployment.md](production_deployment.md) | Production Deployment Guide | 2026-04-03 |
 | [resource_monitor.md](resource_monitor.md) | Resource Monitor | 2026-01-13 |
-| [SEA_MILESTONES.md](SEA_MILESTONES.md) | SEA Milestones — when mindX flags an evolution moment | 2026-05-23 |
+| [SEA_MILESTONES.md](SEA_MILESTONES.md) | SEA Milestones — when mindX flags an evolution moment | 2026-06-13 |
 | [security-tab.md](security-tab.md) | Security Tab: System-Wide Security Monitoring | 2026-03-29 |
 | [security.md](security.md) | MindX Security Model | 2026-03-31 |
 | [security_configuration.md](security_configuration.md) | Security Configuration Guide | 2026-03-31 |
 | [SECURITY_VULNERABILITIES.md](SECURITY_VULNERABILITIES.md) | mindX Security Vulnerabilities | 2026-04-03 |
-| [survive.md](survive.md) | Core directive: survive | 2026-06-04 |
+| [survive.md](survive.md) | Core directive: survive | 2026-06-13 |
 | [X402_DEPLOY.md](X402_DEPLOY.md) | X402_DEPLOY — once-and-only-once mainnet ceremony | 2026-05-02 |
 
 ## API & Integration
@@ -175,7 +176,7 @@ _Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
 | [api_documentation.md](api_documentation.md) | mindX API Documentation | 2026-03-31 |
 | [audit_gemini.md](audit_gemini.md) | Gemini API Integration and Control in MindX | 2025-09-21 |
 | [gemini_handler.md](gemini_handler.md) | Gemini LLM Handler & Discovery Tool | 2025-09-21 |
-| [INFERENCE_BUDGET.md](INFERENCE_BUDGET.md) | Inference Budget — the LLM Metabolism | 2026-06-02 |
+| [INFERENCE_BUDGET.md](INFERENCE_BUDGET.md) | Inference Budget — the LLM Metabolism | 2026-06-13 |
 | [inference_optimization.md](inference_optimization.md) | Inference Frequency Optimization | 2026-03-29 |
 | [mistral_api.md](mistral_api.md) | Mistral AI API Integration Documentation | 2025-09-21 |
 | [mistral_chat_completion_api_compliance.md](mistral_chat_completion_api_compliance.md) | Mistral Chat Completion API Compliance | 2025-09-21 |
@@ -205,7 +206,7 @@ _Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
 | [THESIS.md](THESIS.md) | mindX: A Self-Building Cognitive Architecture | 2026-04-13 |
 | [TODO.md](TODO.md) | mindX TODO — Where I Am and Where I Am Going | 2026-04-13 |
 | [whitepaper.md](whitepaper.md) | 🧠 The Dawn of the First Autonomous Digital Civilization | 2026-03-29 |
-| [WORDPRESS_PUBLISHING.md](WORDPRESS_PUBLISHING.md) | WordPress Publishing — AuthorAgent → wordpress-agent → rage.pythai.net | 2026-05-23 |
+| [WORDPRESS_PUBLISHING.md](WORDPRESS_PUBLISHING.md) | WordPress Publishing — AuthorAgent → wordpress-agent → rage.pythai.net | 2026-06-13 |
 
 ## Tutorials & Guides
 
@@ -226,7 +227,7 @@ _Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
 | [ATTRIBUTION.md](ATTRIBUTION.md) | Attribution — Open Source That Powers mindX | 2026-04-12 |
 | [AUDIT_DRIVEN_CAMPAIGN_IMPLEMENTATION.md](AUDIT_DRIVEN_CAMPAIGN_IMPLEMENTATION.md) | Audit-Driven Campaign Implementation - Complete Integration | 2026-06-04 |
 | [augmentic_integration_documentation.md](augmentic_integration_documentation.md) | 🧠 Augmentic Integration Documentation | 2025-09-21 |
-| [AUTONOMOUS.md](AUTONOMOUS.md) | MindX Autonomous Intelligence System | 2026-06-02 |
+| [AUTONOMOUS.md](AUTONOMOUS.md) | MindX Autonomous Intelligence System | 2026-06-13 |
 | [autonomous_audit_evolution_proof.md](autonomous_audit_evolution_proof.md) | 🧠 PROOF: MastermindAgent Autonomous Audit & Evolution Capabilities | 2025-09-21 |
 | [AUTONOMOUS_IMPROVEMENTS_IMPLEMENTATION.md](AUTONOMOUS_IMPROVEMENTS_IMPLEMENTATION.md) | MindX Autonomous Improvements Implementation Summary | 2025-09-21 |
 | [BANKON_VAULT.md](BANKON_VAULT.md) | BANKON Vault — canonical reference | 2026-05-19 |
@@ -245,7 +246,7 @@ _Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
 | [DIRECTIVES.md](DIRECTIVES.md) | mindX Directives | 2026-03-29 |
 | [economy-tab.md](economy-tab.md) | Economy Tab: Autonomous Treasury Management | 2026-03-29 |
 | [EMBEDDING_SYSTEM.md](EMBEDDING_SYSTEM.md) | RAGE Embed — Semantic Search over Documentation and Memory | 2026-04-03 |
-| [emergent.md](emergent.md) | emergent.md — what mindX is currently doing, and what it should be | 2026-05-25 |
+| [emergent.md](emergent.md) | emergent.md — what mindX is currently doing, and what it should be | 2026-06-13 |
 | [enhanced_simple_coder.md](enhanced_simple_coder.md) | Enhanced Simple Coder Agent | 2026-01-12 |
 | [faicey_integration.md](faicey_integration.md) | Faicey Integration - Modular UI/UX Expression System | 2026-03-29 |
 | [frontend_backend_analysis.md](frontend_backend_analysis.md) | Frontend-Backend Analysis and Updates | 2025-09-21 |
@@ -272,10 +273,10 @@ _Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
 | [MARKETING_PLAYBOOK.md](MARKETING_PLAYBOOK.md) | Marketing playbook — 90-day ops runbook | 2026-05-09 |
 | [MARKETING_RECEIPTS.md](MARKETING_RECEIPTS.md) | The three-receipt model — marketinga.agent on-chain provenance | 2026-05-09 |
 | [mindterm_integration.md](mindterm_integration.md) | mindterm v0.0.4 - Complete mindX Integration | 2026-03-29 |
-| [MUSIC4ROBOTS2DANCE2.md](MUSIC4ROBOTS2DANCE2.md) | Music 4 Robots 2 Dance 2 — pro SoundCloud player | 2026-06-08 |
-| [NAV.md](NAV.md) | mindX Documentation | 2026-06-11 |
+| [MUSIC4ROBOTS2DANCE2.md](MUSIC4ROBOTS2DANCE2.md) | Music 4 Robots 2 Dance 2 — pro SoundCloud player | 2026-06-13 |
+| [NAV.md](NAV.md) | mindX Documentation | 2026-06-14 |
 | [operations.md](operations.md) | Agent Hierarchy and Operations | 2025-09-21 |
-| [PACKAGE_ADOPTION.md](PACKAGE_ADOPTION.md) | External Package Adoption — audit → decide → stage | 2026-06-11 |
+| [PACKAGE_ADOPTION.md](PACKAGE_ADOPTION.md) | External Package Adoption — audit → decide → stage | 2026-06-13 |
 | [plan_management.md](plan_management.md) | Plan Management System | 2026-01-13 |
 | [platform-tab.md](platform-tab.md) | Platform Tab: Enterprise SRE Dashboard | 2026-03-29 |
 | [processor.md](processor.md) | Processor Agent | 2026-01-12 |
@@ -286,11 +287,11 @@ _Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
 | [rememberthesource.md](rememberthesource.md) | rememberthesource | 2025-09-21 |
 | [reporter.md](reporter.md) | Reporter Agent | 2026-01-12 |
 | [SCHEMA.md](SCHEMA.md) | mindX Documentation Schema | 2026-04-11 |
-| [SERVICE_ISOLATION.md](SERVICE_ISOLATION.md) | Service Isolation Plan — Boardroom, Dojo, War-Council | 2026-05-25 |
+| [SERVICE_ISOLATION.md](SERVICE_ISOLATION.md) | Service Isolation Plan — Boardroom, Dojo, War-Council | 2026-06-13 |
 | [SimpleCoder.md](SimpleCoder.md) | 🛠️ SimpleCoder: Comprehensive Coding Agent System | 2026-03-29 |
-| [SIMPLECODER_SANDBOX_AUDIT.md](SIMPLECODER_SANDBOX_AUDIT.md) | SimpleCoder Sandbox — Audit & Hardening | 2026-06-11 |
-| [SPEECH_FROM_THE_THRONE.md](SPEECH_FROM_THE_THRONE.md) | Speech from the Throne — a verifiable chain of command | 2026-06-09 |
-| [SYSTEM_REVIEW_2026_06.md](SYSTEM_REVIEW_2026_06.md) | System Review 2026-06 — what is mindX actually improving? | 2026-06-11 |
+| [SIMPLECODER_SANDBOX_AUDIT.md](SIMPLECODER_SANDBOX_AUDIT.md) | SimpleCoder Sandbox — Audit & Hardening | 2026-06-13 |
+| [SPEECH_FROM_THE_THRONE.md](SPEECH_FROM_THE_THRONE.md) | Speech from the Throne — a verifiable chain of command | 2026-06-13 |
+| [SYSTEM_REVIEW_2026_06.md](SYSTEM_REVIEW_2026_06.md) | System Review 2026-06 — what is mindX actually improving? | 2026-06-13 |
 | [THOT_NEXT_STEPS.md](THOT_NEXT_STEPS.md) | THOT Ecosystem Implementation: Next Steps Plan | 2026-03-29 |
 | [TIME_ORACLE.md](TIME_ORACLE.md) | time.oracle — Multi-Source Time Correlation | 2026-04-03 |
 | [timestampsummary.md](timestampsummary.md) | MindX Core Components Review | 2025-09-21 |
@@ -303,4 +304,4 @@ _Last regenerated: 2026-06-13 00:03 UTC · 245 documents in 10 categories._
 
 ## Subtrees
 
-`agents/`, `ollama/`, `pitchdeck/`, `publications/`, `services/` — browse directly; lunar editions & dailies live under `publications/`.
+`agents/`, `cypherpunk2048/`, `ollama/`, `pitchdeck/`, `publications/`, `services/` — browse directly; lunar editions & dailies live under `publications/`.
