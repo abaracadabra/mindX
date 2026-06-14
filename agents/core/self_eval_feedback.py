@@ -31,6 +31,9 @@ except Exception:  # pragma: no cover - bootstrap
 
 CAMPAIGNS_FILE = PROJECT_ROOT / "data" / "memory" / "agent_workspaces" / "mastermind_prime" / "mastermind_campaigns_history.json"
 STATE_FILE = PROJECT_ROOT / "data" / "system_state" / "self_eval_feedback.json"
+# the mindXtrain right-apex objective eval — imprint/ascent verdicts
+ASCEND_LOG = PROJECT_ROOT / "data" / "logs" / "ascend_log.jsonl"
+TRAIN_WINDOW = 10           # last-N ascents/imprints for the rolling training rate
 
 # A campaign counts as a win only on terminal SUCCESS. Everything else
 # (MAX_CYCLES_REACHED, FAILED_PLANNING, RUNNING, NO_OP) is not a success.
@@ -96,6 +99,40 @@ class SelfEvalFeedback:
         except Exception:
             return None
 
+    def _training_eval(self) -> Dict[str, Any]:
+        """The mindXtrain objective eval: imprint/ascent verdicts (the right
+        apex's proof of recall). Reads the ascend log tail and computes the
+        rolling imprint-accept rate + the last recall delta + trend."""
+        out = {"total": 0, "accepted": 0, "rate": None, "last_delta": None,
+               "last_stage": None, "last_model": None, "trend": None}
+        try:
+            rows = []
+            with ASCEND_LOG.open("r", encoding="utf-8") as fh:
+                for line in fh:
+                    line = line.strip()
+                    if line:
+                        try:
+                            rows.append(json.loads(line))
+                        except Exception:
+                            continue
+            recent = rows[-TRAIN_WINDOW:]
+            out["total"] = len(recent)
+            if recent:
+                out["accepted"] = sum(1 for r in recent if r.get("accepted") or r.get("promoted"))
+                out["rate"] = round(out["accepted"] / len(recent), 3)
+                last = recent[-1]
+                out["last_stage"] = last.get("stage")
+                out["last_model"] = last.get("ollama_model")
+                out["last_delta"] = (last.get("recall") or {}).get("delta")
+                deltas = [(r.get("recall") or {}).get("delta") for r in recent
+                          if (r.get("recall") or {}).get("delta") is not None]
+                if len(deltas) >= 2:
+                    out["trend"] = "improving" if deltas[-1] > deltas[0] else (
+                        "declining" if deltas[-1] < deltas[0] else "flat")
+        except Exception:
+            pass
+        return out
+
     @staticmethod
     def _alignment_mean(read_alignment_events) -> Optional[float]:
         """read_alignment_events: optional callable(limit)->[events] injected by
@@ -123,6 +160,7 @@ class SelfEvalFeedback:
         camp = self._campaign_rate()
         cpu = self._live_cpu()
         align = self._alignment_mean(read_alignment_events)
+        train = self._training_eval()   # mindXtrain right-apex objective eval
         rate = camp["rate"]
 
         resource_bound = (cpu is not None and cpu >= CPU_CEILING) or \
@@ -145,6 +183,28 @@ class SelfEvalFeedback:
         else:
             verdict, rec, escalate = "stalled", f"{camp['successes']}/{camp['total']} succeeding — below target, watching", False
 
+        # ── fold in the mindXtrain objective eval (right apex) ──
+        # The imprint is mindX's hardest objective signal: did a trained
+        # generation actually learn (recall up) or not. When training has run
+        # and NOTHING imprints, that's an honest "training_stalled" — surfaced
+        # for the operator, but it does NOT trigger more training (the recipe/
+        # actor is the fix, not more compute). A positive imprint is a genuine
+        # win even when campaigns are quiet.
+        train_note = None
+        if train["total"]:
+            if train["accepted"] == 0:
+                train_note = (f"training: 0/{train['total']} imprints took "
+                              f"(last Δ{train['last_delta']}) — recipe/actor too small to learn, "
+                              f"not a compute problem")
+                if verdict in ("warming_up", "stalled", "improving"):
+                    verdict = "training_stalled"
+                    rec = train_note
+            else:
+                train_note = (f"training: {train['accepted']}/{train['total']} imprints took"
+                              + (f", served {train['last_model']}" if train["last_model"] else ""))
+                if verdict in ("warming_up", "stalled"):
+                    rec = (rec + " · " + train_note) if rec else train_note
+
         out = {
             "ts": time.time(),
             "verdict": verdict,
@@ -158,6 +218,8 @@ class SelfEvalFeedback:
             "resource_bound": resource_bound,
             "recommendation": rec,
             "should_escalate": escalate,
+            "training_eval": train,        # the right-apex objective eval, folded in
+            "training_note": train_note,
             "last_escalation_ts": self._last.get("last_escalation_ts"),
         }
         self._last = {**self._last, **out}

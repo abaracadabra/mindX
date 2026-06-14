@@ -1521,9 +1521,11 @@ function render(d){
   // Objective self-eval feedback — the loop's verdict on its own success rate.
   const se=au.self_eval||{};
   if(se.verdict){
-    const vc={improving:'var(--green)',stalled:'var(--amber)',failing:'var(--red)',resource_bound:'var(--amber)',warming_up:'var(--text3)'}[se.verdict]||'var(--text3)';
+    const vc={improving:'var(--green)',stalled:'var(--amber)',failing:'var(--red)',resource_bound:'var(--amber)',training_stalled:'var(--amber)',warming_up:'var(--text3)'}[se.verdict]||'var(--text3)';
     auH+=`<div class="dr"><span class="dr-key"><span class="dot" style="background:${vc}"></span>self-eval (objective)</span><span class="dr-val" style="color:${vc}">${Fmt.esc(se.verdict)}${se.sample?' &#183; '+Fmt.esc(se.sample)+' campaigns':''}${se.alignment_mean!=null?' &#183; align '+Number(se.alignment_mean).toFixed(2):''}</span></div>`;
     if(se.recommendation)auH+=`<div class="dr"><span class="dr-key" style="padding-left:14px;color:var(--text3);font-size:10px">&#8627; ${Fmt.esc(se.recommendation)}</span><span class="dr-val"></span></div>`;
+    const te=se.training_eval||{};
+    if(te.total)auH+=`<div class="dr"><span class="dr-key" style="padding-left:14px;color:var(--violet);font-size:10px">&#8627; training eval (imprints)</span><span class="dr-val" style="color:${te.accepted>0?'var(--green)':'var(--amber)'};font-size:10px">${te.accepted}/${te.total} took${te.last_delta!=null?' &#183; Δ'+te.last_delta:''}${te.last_model?' &#183; '+Fmt.esc(te.last_model):''}</span></div>`;
     if(se.last_escalation&&se.last_escalation.failure_mode)auH+=`<div class="dr"><span class="dr-key" style="padding-left:14px;color:var(--blue);font-size:10px">&#8627; escalated to SEA</span><span class="dr-val" style="color:var(--blue);font-size:10px">${Fmt.esc(se.last_escalation.status||'')} &#183; ${Fmt.esc(se.last_escalation.failure_mode)}</span></div>`;
   }
   auH+=`<div class="dr"><span class="dr-key"><span class="dot ${auth.periodic_active?'dot-g':'dot-x'}"></span><a href="/doc/AUTHOR_AGENT" class="dlink">author agent</a></span><span class="dr-val">${auth.last_chapter||'no chapters yet'}${auth.lunar_day?' &#183; day '+auth.lunar_day:''}</span></div>`;

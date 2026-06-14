@@ -1332,10 +1332,10 @@ async function refreshSelfEval() {
     const d = await r.json();
     const pill = $('selfEvalPill'), box = $('selfEvalBox');
     const v = d.verdict || 'warming_up';
-    const cls = { improving:'ok', stalled:'warn', failing:'err', resource_bound:'warn', warming_up:'' }[v] || '';
-    pill.textContent = v.toUpperCase().replace('_',' ');
+    const cls = { improving:'ok', stalled:'warn', failing:'err', resource_bound:'warn', training_stalled:'warn', warming_up:'' }[v] || '';
+    pill.textContent = v.toUpperCase().replace(/_/g,' ');
     pill.className = 'pill ' + cls;
-    const col = { improving:'var(--green)', stalled:'var(--amber)', failing:'var(--red)', resource_bound:'var(--amber)', warming_up:'var(--text3)' }[v] || 'var(--text3)';
+    const col = { improving:'var(--green)', stalled:'var(--amber)', failing:'var(--red)', resource_bound:'var(--amber)', training_stalled:'var(--amber)', warming_up:'var(--text3)' }[v] || 'var(--text3)';
     const align = (d.alignment_mean_live!=null) ? Number(d.alignment_mean_live).toFixed(2) : (d.alignment_mean!=null?Number(d.alignment_mean).toFixed(2):'—');
     let html = '<div style="font-family:var(--mono);font-size:12.5px">';
     html += '<div style="font-size:1.4em;color:'+col+';font-weight:700;margin-bottom:6px">'+escapeHtml(v.replace('_',' '))+'</div>';
@@ -1345,6 +1345,16 @@ async function refreshSelfEval() {
     if (d.alignment_samples!=null) html += ' <span style="color:var(--text3)">('+d.alignment_samples+' evals)</span>';
     html += '</div>';
     if (d.recommendation) html += '<div style="color:var(--text3);margin-top:8px;line-height:1.5">↳ '+escapeHtml(d.recommendation)+'</div>';
+    // the mindXtrain right-apex objective eval, folded into the self-eval
+    const te = d.training_eval || {};
+    if (te.total) {
+      const tc = te.accepted>0 ? 'var(--green)' : 'var(--amber)';
+      html += '<div style="margin-top:8px;padding:6px 10px;background:rgba(210,168,255,.06);border-left:2px solid var(--violet);border-radius:3px;font-size:11.5px">'
+        + '<span style="color:var(--violet)">training objective eval</span> · imprints <b style="color:'+tc+'">'+te.accepted+'/'+te.total+'</b> took'
+        + (te.last_delta!=null?' · last Δ<b>'+te.last_delta+'</b>':'')
+        + (te.trend?' · '+escapeHtml(te.trend):'')
+        + (te.last_model?' · served <b style="color:var(--blue)">'+escapeHtml(te.last_model)+'</b>':'') + '</div>';
+    }
     const esc = d.last_escalation;
     if (esc && esc.failure_mode) {
       html += '<div style="margin-top:10px;padding:8px 10px;background:rgba(121,192,255,.06);border-left:2px solid var(--blue);border-radius:3px">';
