@@ -86,6 +86,24 @@ async def promote_to_ollama(
                         "stdout": (res.get("stdout") or "")[:400]}
             logger.info("mindXtrain serve --to ollama failed, falling back: %s",
                         (res.get("stderr") or "")[:200])
+            # mindXtrain's serve merges the LoRA into base weights (ollama_push/
+            # merged) but writes a RELATIVE `FROM` Modelfile that ollama create
+            # rejects ("invalid model name"). Recover: FROM the merged dir with
+            # an ABSOLUTE path.
+            if shutil.which("ollama"):
+                for merged in Path(cwd).rglob("ollama_push/merged"):
+                    if (merged / "config.json").exists():
+                        mf = merged.parent / "Modelfile.abs"
+                        mf.write_text(f"FROM {merged.resolve()}\n", encoding="utf-8")
+                        try:
+                            p = subprocess.run(["ollama", "create", model_name, "-f", str(mf)],
+                                               capture_output=True, text=True, timeout=1800)
+                            if p.returncode == 0:
+                                return {"ok": True, "model_name": model_name,
+                                        "via": "mindxtrain serve (merged) + ollama create (abs FROM)"}
+                        except (subprocess.TimeoutExpired, OSError):
+                            pass
+                        break
 
     # 2. Fallback: build a Modelfile + `ollama create`.
     if not shutil.which("ollama"):
@@ -98,8 +116,9 @@ async def promote_to_ollama(
               f"consolidated dream wisdom (knowledge->wisdom->weights).")
     try:
         modelfile.write_text(
+            # absolute paths — ollama rejects relative FROM/ADAPTER targets
             f"FROM {base_ollama_tag}\n"
-            f"ADAPTER {lora_dir}\n"
+            f"ADAPTER {Path(lora_dir).resolve()}\n"
             f'SYSTEM """{system}"""\n',
             encoding="utf-8",
         )
