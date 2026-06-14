@@ -10,6 +10,12 @@ mindX is an autonomous multi-agent orchestration system implementing a Belief-De
 
 **Gödel-machine subsystem** (`mindx/godel/`): the [Schmidhüber Engine](docs/SCHMIDHUBER_ENGINE.md) (Hamiltonian self-improvement oscillator + `mindXtrain` dream→weights bridge); the [Gödel Eval Blueprint](docs/GODEL_EVAL_BLUEPRINT.md) + the Gödel Machine Index self-audit (`/insight/godel/machine`, honest verdict: *not yet*) — Phases 0–3 shipped: the trusted proof `kernel/` (total, fuzz-verified checker + `Checkable(K')` lock), the formal `utility.py` (structural anti-wireheading floor), and `eval/` predicates G1–G8 (5/8 proven; verdict gated on real proof coverage ≥ 50%); and [`github.awareness`](agents/github_awareness.py) → [MILESTONES](docs/MILESTONES.md) recognition/publishing. mindX chronicles its own public git history and keeps its docs current from it.
 
+**mindXtrain right apex — CPU training active (v1.0.0)** (`mindx/godel/mindxtrain/`): the dream→weights bridge to the external [mindXtrain](https://github.com/professor-Codephreak/mindXtrain) framework, dormant-by-default behind **two flags** — `MINDX_ENABLE_MINDXTRAIN` (operator) + `MINDX_ENABLE_AUTONOMOUS_TRAIN` (autonomous; arming the first alone never trains). As of v1.0.0 CPU training is live: `ascend_recipe` drives the real CLI (init mindX CPU recipe → `train` → **`imprint`** proof-of-recall verdict → `serve --to ollama` only on positive imprint). The CPU regimen (`settings.py`, `data/config/mindxtrain_regimen.json`, host-specific) is the **smallest model (SmolLM2-135M), 33% CPU, 24h wall ≈ 8h effective**, measured against the host's single CPU+RAM profile (per-core cycles + RAM + chronos-18dp clock on the live training light). Personas (`personas/{professor_codephreak,mindx,jaimla,automindx}.json`) + directed scenes (`scenes/`, e.g. The Sovereign Workshop) imprint a voice onto a tiny actor; build with `scripts/build_persona_script.py` / `direct_scene.py`, run with `scripts/run_ascent.py` / `imprint_persona.py`. Install: [docs/MINDXTRAIN_INSTALL.md](docs/MINDXTRAIN_INSTALL.md) (CPU-only on the VPS; `uv pip install --torch-backend cpu torch`). Surfaced at `/insight/godel/ascend` (capability + live training telemetry + ascent log).
+
+**Objective self-eval feedback** (`agents/core/self_eval_feedback.py`): each autonomous cycle reads mindX's own objective eval — campaign success rate + alignment + the mindXtrain **imprint** verdicts — into one honest verdict (improving / stalled / failing / resource_bound / training_stalled). Failing-on-merit escalates a corrective campaign to SEA; `resource_bound` / `training_stalled` decline to pile on (contention or a too-small actor is not fixed by more compute). Surfaced at `/insight/autonomous/feedback`, the landing "self-eval (objective)" tab, and feedback.html.
+
+**Reference corpus** (`utils/reference_corpus.py`): private docs subtrees (`docs/operations/`, `docs/blockchain/`, `docs/publications/pdf/`) are **ingest-only** — embedded into pgvector + RAGE for mindX's own retrieval but never linked on `/docs.html`. Gated behind `/reference` (session/API-key/shadow-JWT), excluded from public `/chat/docs` and IPFS offload. Ingest: `scripts/ingest_reference_docs.py`.
+
 **VPS Deployment**: [`agents/hostinger_vps_agent.py`](agents/hostinger_vps_agent.py) manages mindx.pythai.net via three MCP channels: SSH, [Hostinger API](https://developers.hostinger.com), and mindX Backend HTTPS. See [`agents/hostinger.vps.agent`](agents/hostinger.vps.agent) for full parameters.
 
 ## Development Commands
@@ -124,6 +130,7 @@ Key routes:
 - `GET /feedback.html` - Mind-of-mindX page (live agent dialogue, improvement ledger, boardroom, dream cycles, stuck-loop detector, memories on chain)
 - `GET /feedback.txt` - Plain-text snapshot for `watch curl …` (public)
 - `GET /agentic.html` - Agentic activity console: AuthorAgent publish audit (drafts vs ledger), `publication.*` event tail, alignment-eval gate health, stuck-loop watch, 30-event redacted activity feed; refresh 30 s
+- `GET /reference` - Gated reference-corpus catalogue (public shell; data via handler-gated `/reference/catalog` + `/reference/file/{path}`). Lists every `docs/` file `/docs.html` does not link (the private ingest-only subtrees). Session token / API key / shadow-overlord JWT.
 
 **Public-surface redaction:** Free-text shown on public dashboards (activity headlines, memory snippets) is run through `text_render.sanitize_text()` — redacts API keys, ETH private keys, JWTs, `key=value` secrets, and absolute `/home/*` paths. ETH wallet *addresses* are kept (public identity). `/agentic.html` consumes `/insight/agentic/activity` (redacted, high-level: agent/tier/type/time/one headline; `detail` dict dropped) — never raw `/activity/recent`.
 
@@ -144,6 +151,8 @@ Implementation: `mindx_backend_service/text_render.py` (per-endpoint renderers +
 - `/insight/improvement/{summary,timeline}` - Campaign success rates + ledger with rationale
 - `/insight/dreams/recent` - machine.dreaming cycles + tuning recommendations
 - `/insight/godel/recent` - Gödel choices with rationale (full self-reference audit trail)
+- `/insight/godel/ascend` - mindXtrain right apex: bridge capability (version/armed/cpu_train_active) + live training telemetry (per-core cycles/RAM/temp, chronos-18dp clock, regimen) + ascent log (imprint deltas, served models)
+- `/insight/autonomous/feedback` - objective self-eval verdict (campaigns + alignment + imprint results folded in) + last SEA escalation
 - `/insight/boardroom/recent` - Boardroom sessions with per-soldier votes, providers, confidence
 - `/insight/stuck_loops` - Repeating `(agent, step)` tuples (15-min window)
 - `/insight/storage/{status,recent}` - IPFS offload counts + recent CIDs/tx_hashes
