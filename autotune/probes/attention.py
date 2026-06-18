@@ -17,6 +17,8 @@ Vendor → candidate backends:
   * NVIDIA/CUDA: ``flash_cuda`` (``SDPBackend.FLASH_ATTENTION``) vs
                  ``mem_efficient`` (``SDPBackend.EFFICIENT_ATTENTION``).
   * CPU        : ``math`` only — no benchmark, returned directly.
+  * Apple/MPS, Intel/XPU: ``math`` — no vendor SDPA kernel race exists for
+                 these accelerators in this layer, so they take the CPU path.
 
 Extracted and generalized from the mindXtrain hackathon project
 (Professor-Codephreak/mindXtrain). Apache-2.0.
@@ -44,7 +46,11 @@ def _torch_available() -> bool:
 
 
 def _candidates(profile: HardwareProfile) -> tuple[AttentionBackend, AttentionBackend] | None:
-    """Return the (a, b) backend pair to race for this vendor, or None for CPU."""
+    """Return the (a, b) backend pair to race for this vendor, or None.
+
+    None for CPU and for accelerators without a vendor SDPA race in this layer
+    (Apple/MPS, Intel/XPU) — callers fall back to ``"math"``.
+    """
     if profile.vendor == "amd":
         return ("flash_ck", "flash_triton")
     if profile.vendor == "nvidia":

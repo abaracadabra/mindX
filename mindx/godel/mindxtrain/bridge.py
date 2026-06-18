@@ -32,7 +32,7 @@ from . import MINDXTRAIN_REPO, is_enabled, autonomous_train_enabled
 KNOWN_VERBS = ("init", "bench", "train", "eval", "quantize", "serve", "coach", "dcoach")
 
 _FLAG_CACHE: dict = {}   # per-process cache: (cli, verb) -> set[str] of --flags
-_PROBE_CACHE: dict = {}  # cli -> (ts, version, verbs) — TTL'd so the public
+_PROBE_CACHE: dict = {}  # cli -> (ts, version, verbs, torch_build) — TTL'd so the public
 _PROBE_TTL_S = 300       # /insight endpoint can't spawn the slow probe per hit
 
 
@@ -62,6 +62,7 @@ class Capability:
     verbs: tuple = ()
     cpu_train_active: bool = False   # mindXtrain >= 1.0.0 (CPU training active)
     autonomous_enabled: bool = False # second flag — autonomous training opted in
+    torch_build: Optional[str] = None  # external torch build, e.g. "2.12.0+cpu"
 
     @property
     def armed(self) -> bool:
@@ -81,6 +82,7 @@ class Capability:
             "verbs": list(self.verbs),
             "cpu_train_active": self.cpu_train_active,
             "autonomous_enabled": self.autonomous_enabled,
+            "torch_build": self.torch_build,
             "repo": MINDXTRAIN_REPO,
         }
 
@@ -141,21 +143,52 @@ def discover(home: Optional[Path] = None) -> Capability:
     if installed and cli:
         cached = _PROBE_CACHE.get(cli)
         if cached and (time.time() - cached[0]) < _PROBE_TTL_S:
-            version, verbs = cached[1], cached[2]
+            version, verbs, torch_build = cached[1], cached[2], cached[3]
         else:
-            version, verbs = _probe(cli, home)
-            _PROBE_CACHE[cli] = (time.time(), version, verbs)
+            version, verbs, torch_build = _probe(cli, home)
+            _PROBE_CACHE[cli] = (time.time(), version, verbs, torch_build)
         cap.version = version
         cap.verbs = verbs or KNOWN_VERBS
         cap.cpu_train_active = _ge_version(version, "1.0.0")
+        cap.torch_build = torch_build
     return cap
 
 
+def _python_cmd(cli: str) -> list:
+    """Derive the python interpreter for the mindXtrain env from its CLI.
+
+    ``uv run --project HOME mindxtrain`` → ``uv run --project HOME python`` so we
+    probe the *same* resolved env. A bare ``mindxtrain`` install falls back to
+    plain ``python`` (best effort; torch may not be importable there)."""
+    parts = cli.split()
+    if parts and parts[-1] == "mindxtrain":
+        return parts[:-1] + ["python"]
+    return ["python"]
+
+
+def _probe_torch(cli: str, home: Optional[Path]) -> Optional[str]:
+    """Return the external env's torch build (e.g. ``2.12.0+cpu``), or None.
+
+    Provenance only — version discipline per the PyTorch 2.x reference. Never
+    raises; tolerates a torch-less env (the CPU-only base install)."""
+    try:
+        out = subprocess.run(
+            _python_cmd(cli) + ["-c", "import torch; print(torch.__version__)"],
+            cwd=str(home or Path.cwd()),
+            capture_output=True, text=True, timeout=120,
+        )
+        build = (out.stdout or "").strip().splitlines()
+        return build[0].strip() if out.returncode == 0 and build else None
+    except Exception:
+        return None
+
+
 def _probe(cli: str, home: Optional[Path]) -> tuple:
-    """Run `mindxtrain --version` + `--help` to learn version + verb set.
+    """Run `mindxtrain --version` + `--help` to learn version + verb set, and
+    probe the external torch build.
 
     First `uv run` can be cold (env resolve) so the timeout is generous.
-    Never raises — returns (None, ()) on any failure."""
+    Never raises — returns (None, (), None) on any failure."""
     try:
         out = subprocess.run(
             cli.split() + ["--version"],
@@ -176,7 +209,8 @@ def _probe(cli: str, home: Optional[Path]) -> tuple:
         verbs = tuple(found) if found else ()
     except Exception:
         pass
-    return version, verbs
+    torch_build = _probe_torch(cli, home)
+    return version, verbs, torch_build
 
 
 def discover_verb_flags(verb: str, cap: Optional["Capability"] = None) -> set:

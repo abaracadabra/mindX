@@ -214,10 +214,13 @@ def base_usdc_x402_signer(
             "nonce": "0x" + nonce_bytes.hex(),
             "signature": signed.signature.to_0x_hex(),
         }
+        # x402 v2 envelope: CAIP-2 network id + version 2. The server reads both
+        # v2 (PAYMENT-SIGNATURE) and v1 (X-PAYMENT) and both envelope versions, so
+        # this stays backward-compatible while advertising as v2.
         envelope = {
-            "x402Version": 1,
+            "x402Version": 2,
             "scheme": str(term.get("scheme", "exact")),
-            "network": network,
+            "network": "eip155:8453",  # CAIP-2 for Base mainnet (this is the Base rail)
             "payload": payload,
         }
         return base64.b64encode(json.dumps(envelope).encode()).decode()

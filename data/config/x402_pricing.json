@@ -1,7 +1,7 @@
 {
-  "_comment": "x402 paywall pricing per endpoint. Values are in microUSDC (1e6 == $1). Hot-reloadable: changes take effect on next request. Contract documented in docs/services/x402_as_a_service.md §6.",
-  "_version": "1.0.0",
-  "_updated": "2026-05-13",
+  "_comment": "x402 paywall pricing per endpoint. Values are in microUSDC (1e6 == $1). Hot-reloadable: changes take effect on next request. Contract documented in docs/services/x402_as_a_service.md §6. v2 (CAIP-2 networks + PAYMENT-* headers, v1 X-PAYMENT fallback).",
+  "_version": "2.0.0",
+  "_updated": "2026-06-17",
 
   "free_quota": {
     "_comment": "Per-wallet free-call allowance on cost-center endpoints. Resets every 24h rolling window. Anonymous callers get 0 free calls (must pay every time).",
@@ -16,51 +16,66 @@
     "/coordinator/backlog/process":{ "max_amount_microusd": 3000, "description": "Pops + processes one item, may chain calls" },
     "/agents/{agent_id}/evolve":   { "max_amount_microusd": 5000, "description": "Full directive loop, up to N LLM calls" },
     "/boardroom/convene":          { "max_amount_microusd": 5000, "description": "7-agent deliberation, 7 LLM calls" },
-    "/llm/chat":                   { "max_amount_microusd": 2000, "description": "Direct provider proxy, base price" },
-    "/llm/completion":             { "max_amount_microusd": 2000, "description": "Direct provider proxy, base price" },
-    "/bankon/identity/provision":  { "max_amount_microusd": 20000, "description": "One-time vault provisioning + optional on-chain mint" }
+    "/permaweb/upload":            { "max_amount_microusd": 50000, "description": "Permanent Arweave storage (Turbo fulfillment desk); uploads <=100 KiB are free of credits but the gate still applies" },
+    "/dato/join":                  { "max_amount_microusd": 10000, "description": "Request-to-join a DAIO-owned dato (data-DAO); per-dato join fee. Modular extension — see dato/ (advertised price; only active once dato is governance-included)" }
   },
+  "_endpoints_note": "Removed orphaned /llm/chat, /llm/completion, /bankon/identity/provision in v2.0.0 — those routes do not exist (real LLM routes live under /api/llm/*). Re-add when the routes ship.",
 
   "rails": {
     "base": {
       "_comment": "USDC on Base. EIP-3009 transferWithAuthorization. Default fastest-cheapest EVM rail.",
       "scheme": "exact",
-      "network": "base",
+      "network": "eip155:8453",
       "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
       "payTo": "0x0000000000000000000000000000000000000000",
       "extra": {
         "chainId": 8453,
         "decimals": 6,
-        "facilitator": "https://mindx.pythai.net:4022"
+        "facilitator": "https://x402.org/facilitator"
       },
       "_payTo_note": "Replace 0x000…000 with the BankonPaymentRouter address on Base after deploy. Until then the facilitator rejects settlement attempts on this rail and clients should pick Tempo or Algorand."
     },
     "tempo": {
       "_comment": "USDC.e on Tempo. Multi-Party Payment chain. Used when settlement requires more than one signer (e.g. DAO-controlled treasury).",
       "scheme": "exact",
-      "network": "tempo",
+      "network": "eip155:4217",
       "asset": "0x0000000000000000000000000000000000000000",
       "payTo": "0x0000000000000000000000000000000000000000",
       "extra": {
         "chainId": 4217,
         "decimals": 6,
-        "facilitator": "https://mindx.pythai.net:4022"
+        "facilitator": "https://x402.org/facilitator"
       },
       "_payTo_note": "Tempo USDC.e contract + payee address pending Tempo mainnet deploy."
     },
     "algorand-mainnet": {
-      "_comment": "USDC ASA on Algorand Mainnet. Sub-second finality, $0.001 per transaction. Non-EVM rail.",
+      "_comment": "USDC ASA on Algorand Mainnet (Parsec / GoPlausible exact AVM scheme). Sub-second finality, atomic-group fee abstraction. Non-EVM rail.",
       "scheme": "exact",
-      "network": "algorand-mainnet",
+      "network": "algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
       "asset": "31566704",
       "payTo": "",
       "extra": {
         "assetId": 31566704,
         "decimals": 6,
-        "facilitator": "https://mindx.pythai.net:4022",
+        "facilitator": "https://facilitator.goplausible.xyz",
+        "feePayer": null,
         "multisigThreshold": null
       },
-      "_payTo_note": "Empty payTo means this rail is currently advertised but not yet settling. Fill in the Algorand payee address (58-char base32) after the aORC minter is deployed."
+      "_payTo_note": "Empty payTo means this rail is currently advertised but not yet settling. Fill in the Algorand payee address (58-char base32) after the aORC minter is deployed. Set extra.feePayer to the facilitator address to enable atomic-group fee abstraction (client needs no ALGO)."
+    },
+    "algorand-testnet": {
+      "_comment": "USDC ASA on Algorand TestNet (Parsec exact AVM scheme). For integration testing.",
+      "scheme": "exact",
+      "network": "algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=",
+      "asset": "10458941",
+      "payTo": "",
+      "extra": {
+        "assetId": 10458941,
+        "decimals": 6,
+        "facilitator": "https://facilitator.goplausible.xyz",
+        "feePayer": null
+      },
+      "_payTo_note": "TestNet USDC ASA 10458941. Empty payTo until a test payee is opted in."
     }
   },
 

@@ -14,6 +14,13 @@ env/
 mindx_backend_service/vault_bankon/
 data/governance/shadow_nonces.json
 data/governance/overseer_history.jsonl
+# x402 runtime state (permanent replay/settlement ledger + SIWx sessions)
+data/governance/x402_settlement_ledger.json
+data/governance/x402_siwx_sessions.json
+# dato suite — runtime state + Foundry build artifacts
+dato/data/
+dato/contracts/out/
+dato/contracts/cache/
 
 # mindX Environment
 .mindx_env/

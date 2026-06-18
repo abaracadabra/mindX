@@ -21,6 +21,24 @@ def test_detect_hardware_cpu_box_without_torch():
     assert profile.vendor == "cpu"
     assert profile.torch_runtime in ("absent", "cpu")
     assert profile.has_gpu is False
+    assert profile.is_accelerator is False
+
+
+def test_mps_xpu_profiles_resolve_and_fall_to_math():
+    """Apple/MPS and Intel/XPU are honest accelerators but have no SDPA race in
+    this layer: literals validate, has_gpu stays False (not tunable here),
+    is_accelerator is True, and the attention probe returns the math fallback."""
+    from autotune.probes.attention import _candidates, probe_attention
+
+    for vendor, runtime in (("apple", "mps"), ("intel", "xpu")):
+        prof = HardwareProfile(vendor=vendor, arch=runtime, gpu_count=1, torch_runtime=runtime)
+        assert prof.is_accelerator is True
+        assert prof.has_gpu is False  # no vendor kernel race ⇒ not "tunable" here
+        assert _candidates(prof) is None
+        assert probe_attention(profile=prof) == ("math", [])
+        # the reference plan for these accelerators is the CPU/math default
+        plan = run_autotune(dry_run=True, profile=prof)
+        assert plan.attention_backend == "math"
 
 
 # --- dry-run reference plan ------------------------------------------------

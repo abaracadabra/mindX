@@ -49,6 +49,13 @@ uv run python -c "import torch; print(torch.__version__, torch.cuda.is_available
 # -> 2.12.0+cpu False
 ```
 
+mindX captures this same torch build as **provenance** (version discipline — pin
+and revalidate on upgrade): the bridge probes the external env and exposes it as
+`capability.torch_build` (e.g. `2.12.0+cpu`) at
+[`/insight/godel/ascend`](https://mindx.pythai.net/insight/godel/ascend). The
+probe is TTL-cached and tolerates a torch-less base install (returns `null`).
+See [PYTORCH.md](PYTORCH.md) for how this fits mindX's torch-free core contract.
+
 **If CUDA torch was already pulled** (you ran `uv sync --extra ml` first — the
 common trap), repair it: uninstall, reinstall the CPU wheel, prune the orphaned
 CUDA libs. This is the exact sequence that brought the VPS venv from 5.0 GB to
@@ -115,4 +122,6 @@ uv run mindxtrain train run.yaml --out out/runs --cpu-percent 20 --cpu-nice 19
 ```
 
 See `docs/SCHMIDHUBER_ENGINE.md` for how this fits the knowledge→wisdom→weights
-ascent, and `mindx/godel/mindxtrain/` for the bridge that drives it.
+ascent, `mindx/godel/mindxtrain/` for the bridge that drives it, and
+[`docs/PYTORCH.md`](PYTORCH.md) for mindX's PyTorch usage, the torch-free core
+contract, and the framework-agnostic 2.x idioms it follows.

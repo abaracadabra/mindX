@@ -363,8 +363,16 @@ class X402RailsService:
         return dict(accepts[0])
 
     def _rail_for_network(self, network: str) -> str:
+        # CAIP-2-robust match: a rail registered with "base" also answers to
+        # "eip155:8453" and vice-versa (reference §5 unified network ids).
+        try:
+            from mindx_backend_service.x402_protocol import to_caip2
+        except Exception:  # pragma: no cover - keep rails usable without the server pkg
+            def to_caip2(n: str) -> str:  # type: ignore
+                return n
+        want = to_caip2(network)
         for name, nets in self._networks.items():
-            if network in nets:
+            if network in nets or want in {to_caip2(n) for n in nets}:
                 return name
         raise X402RailUnavailable(
             f"no rail registered for network {network!r}; "

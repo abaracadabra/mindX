@@ -16,8 +16,8 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-Vendor = Literal["amd", "nvidia", "cpu"]
-TorchRuntime = Literal["rocm", "cuda", "cpu", "absent"]
+Vendor = Literal["amd", "nvidia", "apple", "intel", "cpu"]
+TorchRuntime = Literal["rocm", "cuda", "mps", "xpu", "cpu", "absent"]
 
 
 class HardwareProfile(BaseModel):
@@ -39,7 +39,18 @@ class HardwareProfile(BaseModel):
 
     @property
     def has_gpu(self) -> bool:
+        """A GPU this autotune layer can race vendor SDPA kernels on.
+
+        Deliberately cuda/rocm only: the probes (attention/gemm/collective) are
+        AMD/NVIDIA-specific, so MPS/XPU correctly route to the reference plan.
+        Use :attr:`is_accelerator` for the honest "is there any accelerator?".
+        """
         return self.gpu_count > 0 and self.torch_runtime in ("rocm", "cuda")
+
+    @property
+    def is_accelerator(self) -> bool:
+        """True on any non-CPU torch accelerator (cuda/rocm/mps/xpu)."""
+        return self.torch_runtime in ("rocm", "cuda", "mps", "xpu")
 
 
 def _torch_available() -> bool:
@@ -49,8 +60,10 @@ def _torch_available() -> bool:
 def detect_hardware(device_index: int = 0) -> HardwareProfile:
     """Probe the local machine and return a :class:`HardwareProfile`.
 
-    Never raises. If torch is missing, or no CUDA/ROCm device is visible, the
-    returned profile describes a CPU-only box.
+    Never raises. If torch is missing, or no accelerator (CUDA/ROCm/MPS/XPU) is
+    visible, the returned profile describes a CPU-only box. Detection follows the
+    PyTorch 2.x device-agnostic order: CUDA/ROCm (the tunable path) first, then
+    Intel XPU, then Apple MPS.
     """
     if not _torch_available():
         return HardwareProfile()
@@ -58,35 +71,70 @@ def detect_hardware(device_index: int = 0) -> HardwareProfile:
     try:  # pragma: no cover - exercised only where torch is installed
         import torch
 
-        if not torch.cuda.is_available():
-            return HardwareProfile(torch_runtime="cpu")
+        # 1) CUDA / ROCm — the only path with vendor-specific tuned kernels.
+        if torch.cuda.is_available():
+            gpu_count = torch.cuda.device_count()
+            # torch reports ROCm builds via ``torch.version.hip``.
+            is_rocm = getattr(torch.version, "hip", None) is not None
+            vendor: Vendor = "amd" if is_rocm else "nvidia"
+            runtime: TorchRuntime = "rocm" if is_rocm else "cuda"
 
-        gpu_count = torch.cuda.device_count()
-        # torch reports ROCm builds via ``torch.version.hip``.
-        is_rocm = getattr(torch.version, "hip", None) is not None
-        vendor: Vendor = "amd" if is_rocm else "nvidia"
-        runtime: TorchRuntime = "rocm" if is_rocm else "cuda"
+            idx = device_index if 0 <= device_index < gpu_count else 0
+            props = torch.cuda.get_device_properties(idx)
+            device_name = getattr(props, "name", None)
+            total_mem_gb = round(getattr(props, "total_memory", 0) / (1024**3), 1) or None
 
-        idx = device_index if 0 <= device_index < gpu_count else 0
-        props = torch.cuda.get_device_properties(idx)
-        device_name = getattr(props, "name", None)
-        total_mem_gb = round(getattr(props, "total_memory", 0) / (1024**3), 1) or None
+            if is_rocm:
+                arch = getattr(props, "gcnArchName", None) or "gfx_unknown"
+            else:
+                major = getattr(props, "major", 0)
+                minor = getattr(props, "minor", 0)
+                arch = f"sm_{major}{minor}"
 
-        if is_rocm:
-            arch = getattr(props, "gcnArchName", None) or "gfx_unknown"
-        else:
-            major = getattr(props, "major", 0)
-            minor = getattr(props, "minor", 0)
-            arch = f"sm_{major}{minor}"
+            return HardwareProfile(
+                vendor=vendor,
+                arch=str(arch),
+                gpu_count=gpu_count,
+                total_mem_gb=total_mem_gb,
+                torch_runtime=runtime,
+                device_name=device_name,
+            )
 
-        return HardwareProfile(
-            vendor=vendor,
-            arch=str(arch),
-            gpu_count=gpu_count,
-            total_mem_gb=total_mem_gb,
-            torch_runtime=runtime,
-            device_name=device_name,
-        )
+        # 2) Intel XPU (oneAPI) — exposed as ``torch.xpu`` in 2.x.
+        xpu = getattr(torch, "xpu", None)
+        if xpu is not None and xpu.is_available():
+            gpu_count = xpu.device_count()
+            idx = device_index if 0 <= device_index < gpu_count else 0
+            device_name = None
+            total_mem_gb = None
+            try:
+                props = xpu.get_device_properties(idx)
+                device_name = getattr(props, "name", None)
+                total_mem_gb = round(getattr(props, "total_memory", 0) / (1024**3), 1) or None
+            except Exception:
+                pass
+            return HardwareProfile(
+                vendor="intel",
+                arch="xpu",
+                gpu_count=gpu_count,
+                total_mem_gb=total_mem_gb,
+                torch_runtime="xpu",
+                device_name=device_name,
+            )
+
+        # 3) Apple Silicon (Metal Performance Shaders) — unified memory, no
+        # per-device count API; report a single logical accelerator.
+        mps = getattr(torch.backends, "mps", None)
+        if mps is not None and mps.is_available():
+            return HardwareProfile(
+                vendor="apple",
+                arch="mps",
+                gpu_count=1,
+                torch_runtime="mps",
+                device_name="Apple MPS",
+            )
+
+        return HardwareProfile(torch_runtime="cpu")
     except Exception:  # pragma: no cover - defensive: any torch hiccup ⇒ CPU profile
         return HardwareProfile(torch_runtime="cpu")
 

@@ -326,7 +326,7 @@ async def docs_html_page():
                 categories["Memory & Knowledge"].append(entry)
             elif any(k in nl for k in ["deploy","production","monitor","performance","security","resource","survive","milestone"]):
                 categories["Deployment & Operations"].append(entry)
-            elif any(k in nl for k in ["api","mistral","gemini","ollama","model","inference","llm"]):
+            elif any(k in nl for k in ["api","mistral","gemini","ollama","model","inference","llm","torch","pytorch"]):
                 categories["API & Integration"].append(entry)
             elif any(k in nl for k in ["manifesto","thesis","whitepaper","press","philosophy","ataraxia","civilization","roadmap","todo","eval"]):
                 categories["Philosophy & Vision"].append(entry)
@@ -9863,6 +9863,47 @@ async def vllm_health():
         return await agent.health_check()
     except Exception as e:
         return {"healthy": False, "error": str(e)}
+
+@app.post("/permaweb/upload", tags=["x402"],
+          summary="Permanent Arweave storage (x402 fulfillment desk: pay USDC → Turbo upload)",
+          dependencies=[Depends(x402_required("/permaweb/upload"))])
+async def permaweb_upload(request: Request):
+    """x402-gated Arweave fulfillment desk (reference §4).
+
+    The x402 dependency settles the USDC payment (any EVM/AVM rail); this then
+    performs the permanent ANS-104 upload via the Turbo desk and returns the
+    Arweave id + gateway url. The raw request body is the payload to store.
+    """
+    try:
+        from tools.arweave_turbo import ArweaveTurboDesk, ArweaveTurboError
+    except Exception as e:
+        raise HTTPException(status_code=503, detail={"code": "permaweb_unavailable", "reason": str(e)})
+    data = await request.body()
+    if not data:
+        raise HTTPException(status_code=400, detail="empty body; POST the bytes to store")
+    content_type = request.headers.get("content-type", "application/octet-stream")
+    app_name = request.headers.get("x-app-name", "THOT")
+    try:
+        desk = ArweaveTurboDesk()
+        result = desk.upload(data, app_name=app_name, content_type=content_type)
+    except ArweaveTurboError as e:
+        raise HTTPException(status_code=503, detail={"code": "permaweb_desk_error", "reason": str(e)})
+    except Exception as e:
+        raise HTTPException(status_code=502, detail={"code": "permaweb_upload_failed", "reason": str(e)})
+    # Mirror the fulfillment into the unified settlement ledger (rail=arweave).
+    try:
+        from mindx_backend_service.x402_middleware import _append_settlement
+        import time as _t
+        _append_settlement({
+            "rail": "arweave", "network": "arweave:permaweb", "scheme": "fulfillment",
+            "tx_hash": result.get("arweaveId"), "amount_microusd": 0,
+            "payer": result.get("owner", ""), "payTo": "", "endpoint": "/permaweb/upload",
+            "replay_key": f"arweave:permaweb:{result.get('arweaveId')}",
+            "verified_at": _t.time(), "facilitator": "ardrive-turbo",
+        })
+    except Exception:
+        pass
+    return {"ok": True, **result}
 
 @app.post("/governance/execute", tags=["governance"], summary="Full DAIO governance chain: Boardroom → CEO → Mastermind")
 async def governance_execute_endpoint(directive: str, importance: str = "standard"):
