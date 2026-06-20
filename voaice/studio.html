@@ -101,16 +101,23 @@
       <button id="micRefresh" title="rescan devices" style="width:auto;margin:0;padding:6px 9px">⟳</button>
     </div>
     <button id="micConnect">🎙 CONNECT MIC</button>
-    <button class="alt" id="micRec">● REC 5s → CLONE</button>
     <div class="status" id="micStatus">live mic drives the Persona mouth / KITT directly</div>
 
     <h2 style="margin-top:18px">CLONE A VOICE</h2>
-    <label>reference clip (.wav)</label>
+    <label>reference transcript (what the clip says — improves the clone)</label>
+    <input type="text" id="reftext" placeholder="e.g. hello, this is my voice" />
+
+    <div class="cap" style="text-align:left;margin-top:10px;color:#0c9">① record a clip from your mic</div>
+    <button class="alt" id="recClip">● RECORD 5s</button>
+    <canvas id="clipCanvas" style="width:100%;height:48px;border:1px solid #063;border-radius:3px;background:#000308;margin-top:6px;display:none"></canvas>
+    <div class="status" id="clipInfo" style="min-height:0"></div>
+    <button class="alt" id="cloneRecorded" disabled>⌖ ② clone the recorded clip</button>
+
+    <div class="cap" style="text-align:left;margin-top:12px;color:#0c9">③ or upload a .wav</div>
     <input type="file" id="reffile" accept="audio/wav" style="font-size:11px;color:#0a6" />
-    <label>reference transcript (what the clip says — ZipVoice needs it)</label>
-    <input type="text" id="reftext" placeholder="transcript of the reference clip" />
-    <button class="alt" id="cloneBtn">⌖ CLONE FROM REFERENCE</button>
-    <button class="alt" id="cloneLast">⌖ CLONE THE LAST SPOKEN CLIP</button>
+    <button class="alt" id="cloneUploaded" disabled>⌖ ④ clone the uploaded file</button>
+
+    <div id="cloneProc" style="font-size:10px;color:#0fa;margin-top:10px;white-space:pre-line;min-height:14px"></div>
     <div class="status" id="cloneStatus"></div>
   </div>
 
@@ -315,28 +322,75 @@ function renderVoiceprint(j) {
     (j.embeddingId ? `<div class="meas" style="margin-top:8px"><span>embeddingId</span><span class="val">${j.embeddingId}</span></div>` : '') +
     (j.needsText ? `<div class="hash" style="color:#f80">⚠ ZipVoice wants a reference transcript — fill it in for a real clone.</div>` : '');
 }
-async function clone(buffer, refText) {
-  const cs = document.getElementById('cloneStatus');
-  cs.textContent = 'measuring voiceprint…';
-  const headers = { 'Content-Type':'audio/wav' };
-  if (refText) headers['X-Reference-Text'] = refText;
-  const res = await fetch('/clone', { method:'POST', headers, body: buffer });
-  if (!res.ok) { const e = await res.json().catch(()=>({})); cs.textContent = 'error: ' + (e.error||res.statusText); return; }
-  const j = await res.json();
-  renderVoiceprint(j);
-  activeEmbeddingId = j.embeddingId;     // future SPEAKs use the clone if available
-  cs.textContent = j.embeddingId
-    ? 'cloned ✓ — SPEAK now uses this voice (' + j.backend + ')'
-    : 'voiceprint measured (no clone weights — talks in preset voice)';
+// ── clip preview (visual feedback of the clip being cloned) ──
+const clipCv = document.getElementById('clipCanvas'), clipCtx = clipCv.getContext('2d');
+function drawClipWave(samples){
+  clipCv.style.display='block'; clipCv.width=clipCv.clientWidth; clipCv.height=clipCv.clientHeight;
+  clipCtx.clearRect(0,0,clipCv.width,clipCv.height); clipCtx.strokeStyle=accent(); clipCtx.lineWidth=1; clipCtx.beginPath();
+  const W=clipCv.width,H=clipCv.height,step=Math.max(1,(samples.length/W)|0);
+  for(let x=0;x<W;x++){ const v=samples[Math.min(samples.length-1,x*step)]||0; const y=H/2-v*H*0.45; x?clipCtx.lineTo(x,y):clipCtx.moveTo(x,y); }
+  clipCtx.stroke();
 }
-document.getElementById('cloneBtn').onclick = async () => {
-  const f = document.getElementById('reffile').files[0];
-  if (!f) { document.getElementById('cloneStatus').textContent = 'pick a .wav first'; return; }
-  clone(await f.arrayBuffer(), document.getElementById('reftext').value);
+
+// ── clone with processor feedback (a live event log + per-step timing) ──
+async function clone(buffer, refText, previewSamples){
+  const cs=document.getElementById('cloneStatus'), proc=document.getElementById('cloneProc');
+  if (previewSamples) drawClipWave(previewSamples);
+  const log=[], tick=m=>{ log.push(m); proc.textContent=log.join('\n'); };
+  const t0=performance.now();
+  tick('▸ clip → '+((buffer.byteLength/1024)|0)+' KB WAV'+(refText?' · transcript "'+refText.slice(0,22)+'…"':''));
+  tick('▸ POST /clone → measuring forensic voiceprint…'); cs.textContent='cloning…';
+  const headers={'Content-Type':'audio/wav'}; if(refText) headers['X-Reference-Text']=refText;
+  try {
+    const t1=performance.now();
+    const res=await fetch('/clone',{ method:'POST', headers, body:buffer });
+    if(!res.ok){ const e=await res.json().catch(()=>({})); tick('✗ '+(e.error||res.statusText)); cs.textContent='error'; return; }
+    const j=await res.json(); const ms=(performance.now()-t1)|0;
+    renderVoiceprint(j); activeEmbeddingId=j.embeddingId;
+    tick('▸ voiceprint measured in '+ms+'ms · backend '+j.backend);
+    tick('✓ done in '+((performance.now()-t0)|0)+'ms · sha256 '+j.voiceprint.hash.slice(0,18)+'…');
+    cs.textContent = j.embeddingId ? 'cloned ✓ — SPEAK now uses this voice ('+j.backend+')'
+                                   : 'voiceprint ✓ ('+j.backend+') — SPEAK uses a preset until neural clone weights load';
+  } catch(e){ tick('✗ '+e.message); cs.textContent='error: '+e.message; }
+}
+
+// ── ① record a clip (stores it; does NOT auto-clone) ──
+let recordedClip = null;
+async function recordClip(secs){
+  if(!micLive){ const ok=await connectMic(micSel.value); if(!ok) return null; }
+  const proc=audioCtx.createScriptProcessor(4096,1,1), sink=audioCtx.createGain(); sink.gain.value=0;
+  const chunks=[]; let total=0;
+  proc.onaudioprocess=e=>{ const d=e.inputBuffer.getChannelData(0); chunks.push(new Float32Array(d)); total+=d.length; };
+  micSource.connect(proc); proc.connect(sink); sink.connect(audioCtx.destination);
+  const ci=document.getElementById('clipInfo');
+  for(let t=secs;t>0;t--){ ci.textContent='● recording '+t+'s…'; await new Promise(r=>setTimeout(r,1000)); }
+  try{ proc.disconnect(); micSource.disconnect(proc); }catch{} micSource.connect(analyser);
+  const all=new Float32Array(total); let off=0; for(const c of chunks){ all.set(c,off); off+=c.length; }
+  return { samples:all, sampleRate:audioCtx.sampleRate };
+}
+document.getElementById('recClip').onclick = async () => {
+  const btn=document.getElementById('recClip'); btn.disabled=true; btn.textContent='● recording…';
+  const clip=await recordClip(5); btn.disabled=false; btn.textContent='● RECORD 5s';
+  if(!clip){ document.getElementById('clipInfo').textContent='connect a mic first'; return; }
+  recordedClip=clip; drawClipWave(clip.samples);
+  document.getElementById('clipInfo').textContent='✓ captured '+(clip.samples.length/clip.sampleRate).toFixed(2)+'s @ '+clip.sampleRate+'Hz — ready to clone';
+  document.getElementById('cloneRecorded').disabled=false;
 };
-document.getElementById('cloneLast').onclick = () => {
-  if (!lastWav) { document.getElementById('cloneStatus').textContent = 'speak something first'; return; }
-  clone(lastWav.slice(0), document.getElementById('reftext').value || document.getElementById('text').value);
+// ② clone the recorded clip
+document.getElementById('cloneRecorded').onclick = () => {
+  if(!recordedClip){ document.getElementById('cloneStatus').textContent='record a clip first'; return; }
+  clone(encodeWavPCM16(recordedClip.samples, recordedClip.sampleRate), document.getElementById('reftext').value, recordedClip.samples);
+};
+// ③ upload a .wav → enable ④
+document.getElementById('reffile').onchange = () => {
+  document.getElementById('cloneUploaded').disabled = !document.getElementById('reffile').files[0];
+};
+// ④ clone the uploaded file
+document.getElementById('cloneUploaded').onclick = async () => {
+  const f=document.getElementById('reffile').files[0]; if(!f){ document.getElementById('cloneStatus').textContent='pick a .wav first'; return; }
+  const ab=await f.arrayBuffer();
+  let preview=null; try{ const a=await audioCtx.decodeAudioData(ab.slice(0)); preview=a.getChannelData(0); }catch{}
+  clone(ab, document.getElementById('reftext').value, preview);
 };
 
 // ───────── KITT toggle ─────────
@@ -408,27 +462,6 @@ function encodeWavPCM16(float32, sampleRate) {
   let o = 44; for (let i = 0; i < n; i++) { const s = Math.max(-1, Math.min(1, float32[i])); dv.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true); o += 2; }
   return buf;
 }
-document.getElementById('micRec').onclick = async () => {
-  if (!micLive) { const ok = await connectMic(micSel.value); if (!ok) return; }
-  const ms = document.getElementById('micStatus');
-  const sr = audioCtx.sampleRate, secs = 5;
-  const proc = audioCtx.createScriptProcessor(4096, 1, 1);
-  const sink = audioCtx.createGain(); sink.gain.value = 0; // muted pump (no echo) yet keeps SP firing
-  const chunks = []; let total = 0;
-  proc.onaudioprocess = (e) => { const d = e.inputBuffer.getChannelData(0); chunks.push(new Float32Array(d)); total += d.length; };
-  micSource.connect(proc); proc.connect(sink); sink.connect(audioCtx.destination);
-  let t = secs; ms.textContent = 'recording ' + t + 's…';
-  const tick = setInterval(() => { t--; ms.textContent = t > 0 ? ('recording ' + t + 's…') : 'encoding…'; }, 1000);
-  await new Promise(r => setTimeout(r, secs * 1000));
-  clearInterval(tick);
-  try { proc.disconnect(); micSource.disconnect(proc); } catch {}
-  micSource.connect(analyser);
-  const all = new Float32Array(total); let off = 0; for (const c of chunks) { all.set(c, off); off += c.length; }
-  ms.textContent = 'cloning from mic (' + secs + 's @ ' + sr + 'Hz)…';
-  await clone(encodeWavPCM16(all, sr), document.getElementById('reftext').value || document.getElementById('text').value);
-  ms.textContent = 'mic clone done — voiceprint →, SPEAK now uses it if cloneable';
-};
-
 // ───────── render loop ─────────
 const cv = document.getElementById('face'); const ctx = cv.getContext('2d');
 function resize(){ cv.width = cv.clientWidth; cv.height = cv.clientHeight; }
