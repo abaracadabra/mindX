@@ -1512,11 +1512,21 @@ class MindXAgent:
             # Get next steps from analysis
             next_steps = result_analysis.improvement_opportunities.copy()
             
-            # Check if any improvement requires a restart (code promoted to main)
-            _restart_needed = any(
-                imp.get("code_updated_requires_restart") or imp.get("promoted_to_main")
-                for imp in improvements_made if isinstance(imp, dict)
-            )
+            # Check if any improvement requires a restart (code promoted to main).
+            # The SIA cycle result that sets these flags is nested INSIDE the
+            # campaign/result payloads, not at the top level, so a shallow .get()
+            # over improvements_made always missed it (the restart never fired).
+            # Scan recursively, and match `is True` strictly — external cycles
+            # set promoted_to_main="N/A" (a truthy string) which must NOT count.
+            def _needs_restart(obj) -> bool:
+                if isinstance(obj, dict):
+                    if obj.get("code_updated_requires_restart") is True or obj.get("promoted_to_main") is True:
+                        return True
+                    return any(_needs_restart(v) for v in obj.values())
+                if isinstance(obj, (list, tuple)):
+                    return any(_needs_restart(v) for v in obj)
+                return False
+            _restart_needed = _needs_restart(improvements_made)
             result = ImprovementResult(
                 goal=improvement_goal,
                 success=success,
@@ -3449,7 +3459,30 @@ class MindXAgent:
                 logger.debug(f"{self.log_prefix} Could not get resource metrics: {e}")
         
         return state
-    
+
+    @staticmethod
+    def _is_inference_error(response: Any) -> bool:
+        """True if an LLM response is an error/empty rather than usable text.
+
+        A timed-out or failed inference returns an "Error: ..." string or an
+        error envelope ({"error": "TimeoutError", ...}). Such a value must never
+        become an improvement "goal" that gets executed downstream — that is how
+        a {"error":"TimeoutError"} dict ended up as the autonomous loop's goal.
+        """
+        if response is None:
+            return True
+        if not isinstance(response, str):
+            return True  # dicts/objects (e.g. error envelopes) are not usable text
+        text = response.strip()
+        if len(text) <= 10:
+            return True
+        low = text.lower()
+        if low.startswith("error:"):
+            return True
+        markers = ("timeouterror", "connectionerror", '"error"', "'error'",
+                   "request timed out", "traceback (most recent")
+        return any(m in low for m in markers)
+
     async def _identify_improvement_opportunities(self, system_state: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Identify improvement opportunities from system state, backlog, and model intelligence."""
         opportunities = []
@@ -3484,7 +3517,11 @@ class MindXAgent:
                 api = self.ollama_chat_manager.ollama_api
                 if api:
                     response = await api.generate_text(prompt, model=self.llm_model, use_chat=True, max_tokens=100)
-                    if response and len(response) > 10:
+                    # Guard: never let a failed/timed-out inference become a goal.
+                    if self._is_inference_error(response):
+                        logger.warning(f"{self.log_prefix} Discarded inference error as improvement goal: {str(response)[:100]}")
+                        self._last_skip_reason = "inference error — local-model opportunity skipped"
+                    else:
                         opportunities.append({
                             "goal": response[:200],
                             "priority": 5,

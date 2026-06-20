@@ -885,18 +885,33 @@ class StrategicEvolutionAgent:
 
         # Execute actions through coordinator (seeding the improvement backlog)
         coordinator_tasks_created = 0
+        actions_skipped_no_target = 0
         for action_data in bdi_actions:
+            _meta = action_data.get("params", {}).get("_meta", {})
+            # The coordinator's _handle_component_improvement FAILs without a
+            # real target_component. Resolve it (file_path preferred) and skip
+            # actions that have none — counting them as skipped, NOT as failed
+            # tasks, so a campaign with genuinely no actionable target still
+            # concludes NO_OP honestly (vacuous-SUCCESS guard below stays valid).
+            target_component = _meta.get("target_component")
+            if not target_component or target_component in ("general", "system"):
+                actions_skipped_no_target += 1
+                continue
             try:
-                # Convert detailed actions to coordinator interactions
+                # Convert detailed actions to coordinator interactions. Mirror the
+                # working metadata contract from
+                # _sea_action_request_coordinator_for_sia_execution.
                 interaction_result = await self.coordinator_agent.handle_user_input(
-                    content=action_data.get("params", {}).get("_meta", {}).get("description", "Enhanced blueprint action"),
+                    content=_meta.get("description", "Enhanced blueprint action"),
                     user_id=self.agent_id,
                     interaction_type="COMPONENT_IMPROVEMENT",
                     metadata={
                         "source": "sea_enhanced_blueprint",
                         "campaign_id": self._current_campaign_run_id,
-                        "action_details": action_data.get("params", {}).get("_meta", {}),
-                        "priority": action_data.get("params", {}).get("_meta", {}).get("priority", 5)
+                        "target_component": target_component,
+                        "analysis_context": _meta.get("description"),
+                        "action_details": _meta,
+                        "priority": _meta.get("priority", 5)
                     }
                 )
                 if interaction_result.get("status") != "FAILED":
@@ -904,9 +919,13 @@ class StrategicEvolutionAgent:
             except Exception as e:
                 logger.error(f"{self.log_prefix} Failed to create coordinator task for action: {e}")
 
+        if actions_skipped_no_target:
+            logger.info(f"{self.log_prefix} Enhanced blueprint: skipped {actions_skipped_no_target} action(s) with no actionable target_component")
+
         logger.info(f"{self.log_prefix} Enhanced blueprint campaign created {coordinator_tasks_created} coordinator tasks")
 
         campaign_data["coordinator_tasks_created"] = coordinator_tasks_created
+        campaign_data["actions_skipped_no_target"] = actions_skipped_no_target
         # Vacuous-SUCCESS guard (2026-05-19): logging SUCCESS for 0 tasks created
         # turned `data/sea_campaign_history` into a 54-entry liar's ledger and
         # would have fired PublicationOrchestrator on every cycle. NO_OP keeps

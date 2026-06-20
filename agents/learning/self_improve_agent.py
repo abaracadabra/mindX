@@ -380,9 +380,16 @@ class SelfImprovementAgent:
 
         implemented, new_code_or_err, diff = await self.implement_improvement(effective_target_path, actual_imp_desc, orig_content_for_impl)
         cycle_res["diff_patch"] = diff
-        if not implemented: cycle_res.update({"error_message": new_code_or_err, "implementation_status": "FAILED_IMPLEMENTATION"}); 
-        if self._get_file_content(effective_target_path) != orig_content_for_impl: self._save_file_content(effective_target_path, orig_content_for_impl)
-        self._record_improvement_attempt(cycle_res); return cycle_res
+        if not implemented:
+            # Revert the working file ONLY on a failed implementation, then bail.
+            # This was a collapsed one-liner whose body lost its indentation, so
+            # the revert+record+return ran UNCONDITIONALLY — reverting every
+            # change and returning PENDING, leaving the entire evaluate→promote
+            # path below as dead code. That is why SIA never landed an edit.
+            cycle_res.update({"error_message": new_code_or_err, "implementation_status": "FAILED_IMPLEMENTATION"})
+            if self._get_file_content(effective_target_path) != orig_content_for_impl:
+                self._save_file_content(effective_target_path, orig_content_for_impl)
+            self._record_improvement_attempt(cycle_res); return cycle_res
         cycle_res["new_content"] = new_code_or_err; cycle_res["implementation_status"] = "SUCCESS_IMPLEMENTED"
 
         eval_data = await self.evaluate_improvement(effective_target_path, orig_content_for_impl, cycle_res["new_content"], actual_imp_desc, is_self_attempt)
@@ -395,6 +402,14 @@ class SelfImprovementAgent:
             else: cycle_res["error_message"] += " CRITICAL: Fail revert working file."
             self._record_improvement_attempt(cycle_res); return cycle_res
         cycle_res["implementation_status"] = "SUCCESS_EVALUATED"
+
+        # External targets persist the evaluated change in place (it is NOT
+        # reverted above). Record it so the improvement ledger reflects a real
+        # on-disk change rather than an ephemeral evaluation. (Self attempts
+        # land via the promotion step below instead.)
+        if not is_self_attempt:
+            cycle_res["persisted"] = True
+            cycle_res["persisted_path"] = str(effective_target_path)
 
         # Gödel kernel (Phase 2): emit a proof certificate that this accepted
         # change met its acceptance criteria, and let the trusted checker verify

@@ -664,6 +664,18 @@ class CoordinatorAgent:
         target_component = metadata.get("target_component")
         context = metadata.get("analysis_context")
 
+        # Defensive fallback: recover the target from the action payload before
+        # failing, so a recoverable COMPONENT_IMPROVEMENT (e.g. an SEA enhanced
+        # blueprint action carrying a file_path in its _meta/action_details)
+        # still proceeds instead of dead-ending on a missing top-level field.
+        if not target_component:
+            action_details = metadata.get("action_details") or {}
+            target_component = (
+                action_details.get("target_component")
+                or action_details.get("file_path")
+                or (action_details.get("_meta") or {}).get("target_component")
+            )
+
         if not target_component:
             interaction.status = InteractionStatus.FAILED
             interaction.error = "Missing 'target_component' in metadata."

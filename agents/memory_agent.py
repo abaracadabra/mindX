@@ -895,13 +895,38 @@ class MemoryAgent:
             input_text = f"Problem / perception:\n{problem}\n\nOptions considered:\n{options}"
             output_text = f"Chosen option:\n{chosen}\n\nRationale:\n{rationale}"
 
-            metric = GEval(
-                name="godel_rationale_coherence",
-                criteria=(
+            # Choice-type-aware rubric. A selection/routing choice (e.g. picking
+            # the right AGENT or model) is not itself a solution — judging it on
+            # "does the option directly address the problem" scored every such
+            # choice 0.0 (5138/5138 in data/logs/godel_choices.jsonl). Judge
+            # selection on *appropriateness among the options*; keep the
+            # solution rubric for solution-type choices.
+            choice_type = str(record.get("choice_type") or record.get("decision_type") or "").lower()
+            is_selection = any(
+                m in choice_type
+                for m in ("selection", "routing", "route", "agent_select", "model_select", "choose", "pick")
+            )
+            if is_selection:
+                metric_name = "godel_selection_appropriateness"
+                criteria = (
+                    "Given the perception/problem and the options considered, is the chosen "
+                    "option a well-justified SELECTION among those options — i.e. the most "
+                    "suitable available choice for the situation? Judge the appropriateness of "
+                    "the selection and whether the rationale is coherent and grounded in the "
+                    "options; do NOT penalize the option for not, by itself, solving the whole "
+                    "problem (selecting an agent/tool is a routing decision, not a solution)."
+                )
+            else:
+                metric_name = "godel_rationale_coherence"
+                criteria = (
                     "Does the chosen option directly address the stated problem? "
                     "Is the rationale internally coherent, free of contradiction, "
                     "and grounded in the options considered?"
-                ),
+                )
+
+            metric = GEval(
+                name=metric_name,
+                criteria=criteria,
                 evaluation_params=[SingleTurnParams.INPUT, SingleTurnParams.ACTUAL_OUTPUT],
                 threshold=0.5,
             )
