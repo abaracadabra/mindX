@@ -143,3 +143,25 @@ python -m vllm.entrypoints.openai.api_server \
 | `config/providers/vllm.env` | Configuration |
 | `models/vllm.yaml` | Model recommendations |
 | `scripts/start_vllm_embed.sh` | Startup script |
+
+## Future possibility: SGLang as an OpenAI-compatible backend
+
+[SGLang](https://github.com/sgl-project/sglang) (LMSYS, Apache-2.0) is a GPU
+inference *server* in the same class as vLLM — it exposes an
+**OpenAI-compatible `/v1` API**, so mindX can consume it the same way it
+consumes vLLM, with **no new handler code**. If a GPU host is available
+(e.g. the GPU server behind `MINDX_LLM__OLLAMA__BASE_URL`), serve a model with
+SGLang and point mindX at it:
+
+```bash
+# one-liner: serve any HF model with SGLang's OpenAI-compatible endpoint
+python -m sglang.launch_server --model-path <hf-model> --host 0.0.0.0 --port 30000
+# then mindX reuses the vLLM path:  export VLLM_BASE_URL=http://<host>:30000/v1
+```
+
+Why it could matter: SGLang's RadixAttention prefix caching + continuous
+batching give high throughput for repeated-prefix workloads (agent loops, RAG).
+GPU-only, so it stays a *future* option for the CPU VPS — adopt only when local
+GPU serving is on the table. A dedicated `llm/sglang_handler.py` (mirroring
+`vllm_handler.py`) is optional; the OpenAI-compatible reuse above is enough to
+start. Enterprise-adopter tribute graphics live in `gfx/enterprise/sglang/`.

@@ -16,9 +16,16 @@ logger = get_logger(__name__)
 
 class GroqHandler(LLMHandlerInterface): # pragma: no cover
     """LLM Handler for Groq Cloud models."""
-    def __init__(self, model_name_for_api: Optional[str], api_key: Optional[str], 
-                 base_url: Optional[str] = None): # base_url typically not used for Groq cloud
-        super().__init__("groq", model_name_for_api, api_key, base_url)
+    def __init__(self, model_name_for_api: Optional[str], api_key: Optional[str],
+                 base_url: Optional[str] = None,  # base_url typically not used for Groq cloud
+                 rate_limiter: Optional[Any] = None,
+                 config: Optional[Any] = None,
+                 execution_timeout_minutes: Optional[int] = None,
+                 **kwargs: Any):
+        super().__init__("groq", model_name_for_api, api_key, base_url,
+                         rate_limiter=rate_limiter,
+                         execution_timeout_minutes=execution_timeout_minutes)
+        self.config = config
         self.groq_sdk = None
         self.async_client = None
 
