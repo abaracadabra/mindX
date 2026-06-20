@@ -3537,6 +3537,18 @@ async def insight_improvement_timeline(limit: int = 50):
     return {"campaigns": data, "count": len(data)}
 
 
+@app.get("/insight/sentinel/status", tags=["insight"])
+@_insight_safe
+async def insight_sentinel_status(request: Request):
+    """Self-improvement SENTINEL target — a safe external module the autonomous
+    loop exercises end-to-end (effector → apply → judge) without touching
+    production. Reports the sentinel's health and, by comparing its content hash
+    against a recorded baseline, whether the loop has actually *changed* it —
+    concrete proof the improvement effector works on a safe target."""
+    from agents.sentinel.sentinel import status as _sentinel_status
+    return _maybe_h_text(request, _sentinel_status(), route_path="/insight/sentinel/status")
+
+
 @app.get("/insight/dialogue/recent", tags=["insight"])
 @_insight_safe
 async def insight_dialogue_recent(room: str = "thinking", limit: int = 50):

@@ -1614,8 +1614,35 @@ def render_self_diagnostic(d: dict) -> str:
     return out
 
 
+def render_sentinel_status(d: dict) -> str:
+    """Plain-text render of the self-improvement sentinel target status."""
+    if d.get("fallback"):
+        return "sentinel: unavailable\n"
+    health = "healthy" if d.get("healthy") else "UNHEALTHY"
+    out = "self-improvement sentinel\n"
+    out += f"  target     {d.get('target','?')}\n"
+    out += f"  status     {health} (v{d.get('version','?')}, {d.get('lines','?')} lines, sha {d.get('sha8','?')})\n"
+    if d.get("error"):
+        out += f"  error      {d['error']}\n"
+    if d.get("seeded"):
+        changed = d.get("changed_by_loop")
+        out += f"  baseline   {d.get('baseline_sha8','?')} — {'CHANGED by loop' if changed else 'unchanged'} ({d.get('change_count',0)} change(s))\n"
+    else:
+        out += "  baseline   not seeded yet\n"
+    bl = d.get("backlog") or {}
+    out += f"  backlog    {'present ('+str(bl.get('status'))+', prio '+str(bl.get('priority'))+')' if bl.get('present') else 'absent'}\n"
+    camp = d.get("campaigns") or {}
+    out += f"  campaigns  {camp.get('count',0)} targeting sentinel"
+    if camp.get("last"):
+        out += f" — last: {camp['last'].get('status','?')}"
+    out += "\n"
+    out += f"  note       {d.get('note','')}\n"
+    return out
+
+
 RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/self/diagnostic":     render_self_diagnostic,
+    "/insight/sentinel/status":     render_sentinel_status,
     "/insight/catalogue/recent":    render_catalogue_recent,
     "/insight/catalogue/search":    render_catalogue_search,
     "/insight/catalogue/entry":     render_catalogue_entry,

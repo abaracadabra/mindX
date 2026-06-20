@@ -345,6 +345,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
   <button class="tab-chip" data-target="sec-live">live<span class="badge" id="bg-live">·</span></button>
   <button class="tab-chip" data-target="sec-bdi">bdi<span class="badge" id="bg-bdi">·</span></button>
   <button class="tab-chip" data-target="sec-improvements">improvements<span class="badge" id="bg-improvements">·</span></button>
+  <button class="tab-chip" data-target="sec-sentinel">sentinel<span class="badge" id="bg-sentinel">·</span></button>
   <button class="tab-chip" data-target="sec-self-aware">self.aware<span class="badge" id="bg-self-aware">·</span></button>
   <button class="tab-chip" data-target="sec-boardroom">boardroom<span class="badge" id="bg-boardroom">·</span></button>
   <button class="tab-chip" data-target="sec-dreams">dreams<span class="badge" id="bg-dreams">·</span></button>
@@ -412,6 +413,18 @@ tr:hover td{background:rgba(121,192,255,.02)}
     The core evolution loop reading its <b>own objective eval</b> every cycle — the rolling campaign success rate and <a href="/doc/GODEL_EVAL_BLUEPRINT">alignment</a> mean — and deciding whether to act. <b style="color:var(--green)">improving</b> = succeeding; <b style="color:var(--amber)">stalled</b> = below target, watching; <b style="color:var(--red)">failing</b> = escalates a corrective campaign to <a href="/doc/agents/strategic_evolution_agent">SEA</a> naming the dominant failure mode; <b style="color:var(--amber)">resource_bound</b> = cycles deferring on a saturated CPU (the honest verdict — contention, not judgement — so it does <em>not</em> doom-loop more work onto a hot box). This is the feedback edge that was missing when 0/25 just sat on a dashboard. <a href="/insight/autonomous/feedback?h=true" target="_blank" rel="noopener">view raw</a>
   </p>
   <div id="selfEvalBox" class="card"><div class="empty">reading objective eval…</div></div>
+</section>
+
+<!-- 1c. Self-improvement sentinel — safe target proving the loop can actually act -->
+<section id="sec-sentinel">
+  <div class="sec-head">
+    <h2>self-improvement sentinel <span id="sentinelPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/sentinel/status · a safe target the autonomous loop exercises end-to-end</span>
+  </div>
+  <p class="sec-desc">
+    A deliberately <b>safe, self-contained module</b> (<code>agents/sentinel/sentinel_target.py</code>) the autonomous loop can rewrite, evaluate and persist freely — it imports nothing from production and is an <em>external</em> target, so a change never restarts the service. By comparing the file's content hash against a recorded <b>baseline</b>, this panel shows whether the loop has <b style="color:var(--green)">actually changed</b> it — concrete proof the reconnected effector (campaign → coordinator task → SIA apply) works on a target that can't break anything. <a href="/insight/sentinel/status?h=true" target="_blank" rel="noopener">view raw</a>
+  </p>
+  <div id="sentinelBox" class="card"><div class="empty">reading sentinel…</div></div>
 </section>
 
 <!-- 2. Live agent dialogue -->
@@ -1366,6 +1379,51 @@ async function refreshSelfEval() {
     box.innerHTML = html;
   } catch (e) {
     $('selfEvalBox').innerHTML = '<div class="empty">self-eval unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+async function refreshSentinel() {
+  try {
+    const r = await fetch('/insight/sentinel/status', { cache: 'no-store' });
+    const d = await r.json();
+    const pill = $('sentinelPill'), box = $('sentinelBox');
+    if (!pill || !box) return;
+    const healthy = !!d.healthy;
+    const changed = !!d.changed_by_loop;
+    // Pill: green when the loop has landed a change on the sentinel, amber while
+    // healthy-but-untouched, red if the sentinel itself is broken.
+    const pillCls = !healthy ? 'err' : (changed ? 'ok' : 'warn');
+    pill.textContent = !healthy ? 'BROKEN' : (changed ? 'IMPROVED' : 'WAITING');
+    pill.className = 'pill ' + pillCls;
+    const col = !healthy ? 'var(--red)' : (changed ? 'var(--green)' : 'var(--amber)');
+    let html = '<div style="font-family:var(--mono);font-size:12.5px">';
+    html += '<div style="font-size:1.3em;color:'+col+';font-weight:700;margin-bottom:6px">'
+          + (!healthy ? 'sentinel broken' : (changed ? 'loop improved the sentinel' : 'awaiting first improvement')) + '</div>';
+    html += '<div style="color:var(--text2)">target <b>'+escapeHtml(d.target||'?')+'</b>';
+    html += ' · <b style="color:'+(healthy?'var(--green)':'var(--red)')+'">'+(healthy?'healthy':'unhealthy')+'</b>';
+    if (d.version!=null) html += ' v'+escapeHtml(String(d.version));
+    if (d.lines!=null) html += ' · '+d.lines+' lines';
+    if (d.sha8) html += ' · sha '+escapeHtml(d.sha8);
+    html += '</div>';
+    if (d.seeded) {
+      html += '<div style="color:var(--text3);margin-top:8px">baseline <b>'+escapeHtml(d.baseline_sha8||'?')+'</b> · '
+            + (changed ? '<b style="color:var(--green)">changed '+(d.change_count||0)+'×</b>' : 'unchanged') + '</div>';
+    } else {
+      html += '<div style="color:var(--text3);margin-top:8px">baseline not seeded yet</div>';
+    }
+    const bl = d.backlog || {};
+    html += '<div style="color:var(--text3);margin-top:6px">backlog: '
+          + (bl.present ? '<b>present</b> ('+escapeHtml(String(bl.status||'pending'))+', prio '+escapeHtml(String(bl.priority))+')' : 'absent') + '</div>';
+    const camp = d.campaigns || {};
+    html += '<div style="color:var(--text3);margin-top:6px">campaigns targeting sentinel: <b>'+(camp.count||0)+'</b>';
+    if (camp.last && camp.last.status) html += ' · last <b>'+escapeHtml(camp.last.status)+'</b>';
+    html += '</div>';
+    if (d.error) html += '<div style="color:var(--red);margin-top:6px">⚠ '+escapeHtml(d.error)+'</div>';
+    html += '<div style="color:var(--text3);margin-top:8px;font-size:11px;line-height:1.5">'+escapeHtml(d.note||'')+'</div>';
+    html += '</div>';
+    box.innerHTML = html;
+  } catch (e) {
+    const box = $('sentinelBox'); if (box) box.innerHTML = '<div class="empty">sentinel unavailable: ' + escapeHtml(e.message) + '</div>';
   }
 }
 
@@ -2868,7 +2926,7 @@ async function boot() {
   _initTabbar();
   await seedDialogue();
   startSSE();
-  await Promise.allSettled([refreshCognition(), refreshGodelMachine(), refreshAscend(), refreshMilestones(), refreshSysPulse(), refreshStuck(), refreshSelfEval(), refreshBDI(), refreshLedger(), refreshSelfAware(), refreshBoardroom(), refreshBoardRollcall(), refreshBoardLeaderboard(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
+  await Promise.allSettled([refreshCognition(), refreshGodelMachine(), refreshAscend(), refreshMilestones(), refreshSysPulse(), refreshStuck(), refreshSelfEval(), refreshSentinel(), refreshBDI(), refreshLedger(), refreshSelfAware(), refreshBoardroom(), refreshBoardRollcall(), refreshBoardLeaderboard(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
   setInterval(refreshGodelMachine, 45000);
   setInterval(refreshAscend, 15000);  // 15s so the live training panel stays fresh
   setInterval(refreshMilestones, 60000);
@@ -2876,6 +2934,7 @@ async function boot() {
   setInterval(refreshSysPulse, 15000);
   setInterval(refreshStuck, 30000);
   setInterval(refreshSelfEval, 30000);
+  setInterval(refreshSentinel, 30000);
   setInterval(refreshBDI, 20000);
   setInterval(refreshLedger, 45000);
   setInterval(refreshSelfAware, 45000);
