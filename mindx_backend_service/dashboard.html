@@ -100,6 +100,8 @@ body.navdock-collapsed .wrap{padding:0!important}
 .sidebar.collapsed .sidebar-bar{border-bottom:none}
 .sidebar.collapsed .sb-caret{transform:rotate(-90deg)}
 .sb-caret{transition:transform .2s;display:inline-block}
+.sidebar.maximized{position:fixed;top:48px;left:1.5vw;right:1.5vw;bottom:1.5vh;width:auto;height:auto;max-height:none;z-index:400;border:1px solid var(--border);border-radius:8px;box-shadow:0 14px 64px rgba(0,0,0,.6)}
+.sidebar.maximized .conv{flex:1 1 auto}
 
 /* ── Layers ── */
 .layer{padding:32px 32px 40px;max-width:960px;margin:0 auto;opacity:0;transform:translateY(12px);transition:opacity .6s ease-out,transform .6s ease-out}
@@ -613,6 +615,7 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
     <span class="sb-grip">&#x283F;</span><span class="sb-title">mind<b>X</b> activity</span>
     <span class="sb-btn sb-caret" id="sb-collapse" title="collapse / expand">&#x25BE;</span>
     <span class="sb-btn" id="sb-dock" title="dock to right" style="display:none">&#x21E5;</span>
+    <span class="sb-btn" id="sb-maximize" title="maximize" style="margin-left:auto">&#x2922;</span>
   </div>
   <div class="tabs" id="tabstrip" title="drag tabs to reorder"></div>
   <div class="panel-tools">
@@ -951,6 +954,17 @@ function toggleSec(hdr){
   function toggleCollapse(){ sb.classList.toggle('collapsed'); save('mindx_sidebar_collapsed',sb.classList.contains('collapsed')?'1':'0'); }
   bar.addEventListener('dblclick',function(e){ if(e.target&&e.target.closest('.sb-btn'))return; toggleCollapse(); });
   if(caret) caret.addEventListener('click',function(e){ e.stopPropagation(); toggleCollapse(); });
+  // maximize: fill the viewport from the top bar; toggles from current state.
+  var maxBtn=document.getElementById('sb-maximize');
+  function setMaxIcon(on){ if(maxBtn){ maxBtn.innerHTML=on?'&#x2921;':'&#x2922;'; maxBtn.title=on?'restore':'maximize'; } }
+  function toggleMaximize(){
+    var on=!sb.classList.contains('maximized');
+    if(on){ sb.classList.remove('collapsed','floating'); sb.style.left=''; sb.style.top=''; }
+    sb.classList.toggle('maximized', on);
+    save('mindx_sidebar_maximized', on?'1':'0');
+    setMaxIcon(on);
+  }
+  if(maxBtn) maxBtn.addEventListener('click',function(e){ e.stopPropagation(); toggleMaximize(); });
   // dock back to the right
   if(dock) dock.addEventListener('click',function(e){ e.stopPropagation(); sb.classList.remove('floating'); sb.style.left=''; sb.style.top=''; try{localStorage.removeItem('mindx_sidebar_pos')}catch(_){} updDock(); });
   // restore saved state
@@ -958,6 +972,7 @@ function toggleSec(hdr){
     var pos=JSON.parse(localStorage.getItem('mindx_sidebar_pos')||'null');
     if(pos&&pos.l){ sb.classList.add('floating'); sb.style.left=pos.l; sb.style.top=pos.t; updDock(); }
     if(localStorage.getItem('mindx_sidebar_collapsed')==='1') sb.classList.add('collapsed');
+    if(localStorage.getItem('mindx_sidebar_maximized')==='1'){ sb.classList.add('maximized'); setMaxIcon(true); }
   }catch(e){}
 })();
 
