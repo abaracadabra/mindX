@@ -344,6 +344,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
   <button class="tab-chip" data-target="sec-loops">stuck<span class="badge" id="bg-loops">·</span></button>
   <button class="tab-chip" data-target="sec-live">live<span class="badge" id="bg-live">·</span></button>
   <button class="tab-chip" data-target="sec-bdi">bdi<span class="badge" id="bg-bdi">·</span></button>
+  <button class="tab-chip" data-target="sec-cognition-diag">pipeline<span class="badge" id="bg-cognition-diag">·</span></button>
   <button class="tab-chip" data-target="sec-improvements">improvements<span class="badge" id="bg-improvements">·</span></button>
   <button class="tab-chip" data-target="sec-sentinel">sentinel<span class="badge" id="bg-sentinel">·</span></button>
   <button class="tab-chip" data-target="sec-self-aware">self.aware<span class="badge" id="bg-self-aware">·</span></button>
@@ -449,6 +450,18 @@ tr:hover td{background:rgba(121,192,255,.02)}
     Each agent run grouped by <code>run_id</code>. Within a run, events render in narrative order: <span style="color:var(--violet)">PLAN_START</span> → <span style="color:var(--blue)">DELIBERATE</span> → <span style="color:var(--green)">ACTION ✓</span> (or <span style="color:var(--red)">ACTION ✗</span>). Click <code>⋯</code> on any event for the full <code>process_data</code> JSON. This is the actual cognitive trace, not a thinking-step summary.
   </p>
   <div id="bdi" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 3a-bis. Cognitive pipeline diagnostic: Mastermind → AGInt → BDI (cycle-by-cycle) -->
+<section id="sec-cognition-diag">
+  <div class="sec-head">
+    <h2>cognitive pipeline diagnostic <span id="cogDiagPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/cognition/diagnostic · Mastermind → AGInt → BDI · cycle-by-cycle</span>
+  </div>
+  <p class="sec-desc">
+    The autonomous loop, layer by layer: <b>Mastermind</b> picks a directive and runs an evolution campaign; <b>AGInt</b> (P-O-D-A) is the adaptive decision core; <b>BDI</b> executes it cycle-by-cycle. This shows <em>where it stalls</em> — each campaign's BDI cycle strip and final status, whether AGInt is engaged at all, and the plan signal (empty / <code>ANALYZE_FAILURE</code> plans that never reach a terminal state). <a href="/insight/cognition/diagnostic?h=true" target="_blank" rel="noopener">view raw</a>
+  </p>
+  <div id="cogDiag" class="card"><div class="empty">loading…</div></div>
 </section>
 
 <!-- 3b. Gödel Machine self-audit (GMI) -->
@@ -784,6 +797,70 @@ tr:hover td{background:rgba(121,192,255,.02)}
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
   } else { boot(); }
+})();
+</script>
+
+<script>
+/* Cognitive pipeline diagnostic — Mastermind → AGInt → BDI cycle-by-cycle (self-contained) */
+(function(){
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  function cycleStrip(cycles){
+    if(!cycles||!cycles.length) return '<span style="color:#888;font-size:11px">no BDI cycles</span>';
+    const total = cycles[cycles.length-1].total || cycles.length;
+    let bars='';
+    for(let i=1;i<=total;i++){
+      const c = cycles.find(x=>x.n===i);
+      const col = !c ? '#333' : (c.status==='RUNNING' ? '#e0a030' : (/(SUCCESS|COMPLETED|ACHIEVED)/.test(c.status)?'#3bbf6f':'#d05050'));
+      bars += `<span title="cycle ${i}: ${c?esc(c.status):'—'}" style="display:inline-block;width:7px;height:14px;margin-right:2px;border-radius:1px;background:${col}"></span>`;
+    }
+    return `<span style="vertical-align:middle">${bars}</span> <span style="color:#aaa;font-size:11px">${cycles.length}/${total}</span>`;
+  }
+  function statusBadge(s){
+    if(!s) return '<span style="color:#e0a030;font-weight:600">running…</span>';
+    const ok=/(SUCCESS|COMPLETED|ACHIEVED)/.test(s), bad=/(FAIL|MAX_CYCLES)/.test(s);
+    return `<span style="color:${ok?'#3bbf6f':(bad?'#d05050':'#e0a030')};font-weight:600">${esc(s)}</span>`;
+  }
+  function render(d){
+    const mm=d.mastermind||{}, ag=d.agint||{}, camp=mm.campaigns||[];
+    let h='<div style="font-weight:600;color:#9bd;margin-bottom:6px">MASTERMIND → BDI campaigns (cycle-by-cycle)</div>';
+    if(mm.note) h+=`<div style="color:#d05050;font-size:12px;margin-bottom:8px">⚠ ${esc(mm.note)}</div>`;
+    if(!camp.length) h+='<div class="empty">no campaigns in the log window</div>';
+    for(const c of camp){
+      const flags=[];
+      if(c.blueprint) flags.push('blueprint✓');
+      if(c.zero_action_plans) flags.push(`${c.zero_action_plans} empty-plan`);
+      if(c.analyze_failure) flags.push(`${c.analyze_failure} ANALYZE_FAILURE`);
+      h+=`<div style="padding:8px 0;border-bottom:1px solid #1a1a1a">
+        <div style="font-size:12px;color:#ccc;margin-bottom:4px">${c.backlog_idx!=null?`<span style="color:#789">#${c.backlog_idx}</span> `:''}${esc(c.directive)}</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          ${cycleStrip(c.cycles)} ${statusBadge(c.final_status)}
+          ${flags.length?`<span style="color:#c98;font-size:11px">${esc(flags.join(' · '))}</span>`:''}
+        </div></div>`;
+    }
+    h+='<div style="font-weight:600;color:#9bd;margin:14px 0 6px">AGInt · P-O-D-A cognitive core</div>';
+    if(!ag.active){
+      h+=`<div style="color:#d05050;font-size:12px">● DORMANT — ${esc(ag.note||'no cognitive cycles in the log window')}</div>`;
+    } else {
+      h+=`<div style="color:#3bbf6f;font-size:12px">● active — ${ag.cognitive_cycles} cognitive cycles</div><div style="margin-top:6px">`;
+      h+=(ag.recent||[]).map(c=>`<span style="display:inline-block;margin:2px 8px 2px 0;font-size:11px;color:#bbb">#${c.cycle} ${esc(c.decision||'?')}${c.action_type?'→'+esc(c.action_type):''} ${c.success===true?'<span style="color:#3bbf6f">✓</span>':(c.success===false?'<span style="color:#d05050">✗</span>':'')}</span>`).join('')+'</div>';
+    }
+    return h;
+  }
+  async function loadCogDiag(){
+    const el=document.getElementById('cogDiag'), pill=document.getElementById('cogDiagPill');
+    if(!el) return;
+    try{
+      const d=await fetch('/insight/cognition/diagnostic?limit=8',{cache:'no-store'}).then(r=>r.json());
+      el.innerHTML=render(d);
+      const camp=(d.mastermind&&d.mastermind.campaigns)||[], stalled=(d.mastermind&&d.mastermind.stalled_max_cycles)||0;
+      if(pill) pill.textContent = camp.length ? (stalled?`${stalled}/${camp.length} stalled`:`${camp.length} runs`) : 'idle';
+      const bg=document.getElementById('bg-cognition-diag'); if(bg) bg.textContent=String(camp.length);
+    }catch(e){ el.innerHTML=`<div class="empty">fetch failed: ${esc(e.message||e)}</div>`; if(pill) pill.textContent='error'; }
+  }
+  document.addEventListener('click',e=>{ if(e.target.closest&&e.target.closest('[data-target="sec-cognition-diag"]')) loadCogDiag(); });
+  function boot(){ if(document.getElementById('cogDiag')) loadCogDiag();
+    setInterval(()=>{ const tab=document.querySelector('.tab-chip.active'); if(tab&&tab.getAttribute('data-target')==='sec-cognition-diag') loadCogDiag(); },25000); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
 })();
 </script>
 

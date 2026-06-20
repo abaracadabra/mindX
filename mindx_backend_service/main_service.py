@@ -4301,6 +4301,99 @@ async def insight_bdi_recent(
         return {"agent_id": agent_id, "events": [], "count": 0, "error": str(e)}
 
 
+@app.get("/insight/cognition/diagnostic", tags=["insight"], summary="Cognitive pipeline diagnostic: Mastermind → AGInt → BDI, cycle-by-cycle")
+@_insight_safe
+async def insight_cognition_diagnostic(request: Request, limit: int = 8):
+    """Reconstruct the autonomous cognitive pipeline from the runtime log so feedback.html shows
+    WHERE the loop stalls across all three layers, not just pass/fail:
+
+      - MASTERMIND: strategic campaigns (directive, blueprint step, final status)
+      - AGInt:      P-O-D-A cognitive cycles (decision/action) — or DORMANT if the autonomous path bypasses it
+      - BDI:        per-campaign cycles (n/total + status) + the plan signal (0-action plans, ANALYZE_FAILURE)
+    """
+    import re
+    log = PROJECT_ROOT / "data" / "logs" / "mindx_runtime.log"
+    empty = {"mastermind": {"campaigns": [], "active": False}, "agint": {"active": False, "cognitive_cycles": 0, "recent": []}, "count": 0}
+    if not log.exists():
+        return {**empty, "note": "no runtime log"}
+    try:
+        with open(log, "rb") as f:
+            f.seek(0, 2); size = f.tell(); f.seek(max(0, size - 2_000_000))
+            lines = f.read().decode("utf-8", errors="replace").splitlines()
+    except Exception as e:
+        return {**empty, "error": str(e)}
+
+    ts_re = re.compile(r"^\[([\d :-]+)\]")
+    campaigns: dict[str, dict] = {}
+    bdi_to_campaign: dict[str, str] = {}
+    cur = None
+    agint_cycles: list[dict] = []
+    agint_cur = None
+
+    for ln in lines:
+        m = ts_re.match(ln); ts = m.group(1) if m else None
+        mc = re.search(r"Starting evolution campaign \(Run ID: (mastermind_run_[a-f0-9]+)\)\. Directive: '(.+?)'", ln)
+        if mc:
+            rid = mc.group(1)
+            mb = re.search(r"backlog_idx: (\d+)", mc.group(2))
+            cur = campaigns.setdefault(rid, {"run_id": rid, "directive": mc.group(2)[:220],
+                "backlog_idx": int(mb.group(1)) if mb else None, "started": ts, "blueprint": False,
+                "cycles": [], "final_status": None, "message": None, "zero_action_plans": 0, "analyze_failure": 0})
+            continue
+        if "Running SystemAnalyzerTool to generate a blueprint" in ln and cur is not None:
+            cur["blueprint"] = True; continue
+        mcyc = re.search(r"BDI \([^)]+\): Cycle (\d+)/(\d+) \| Status: (\w+) \(Run ID: ([a-f0-9]+)\)", ln)
+        if mcyc:
+            n, total, st, brid = int(mcyc.group(1)), int(mcyc.group(2)), mcyc.group(3), mcyc.group(4)
+            if cur is not None:
+                bdi_to_campaign.setdefault(brid, cur["run_id"])
+            tgt = campaigns.get(bdi_to_campaign.get(brid)) or cur
+            if tgt is not None:
+                tgt["bdi_run_id"] = brid; tgt["cycles"].append({"n": n, "total": total, "status": st})
+            continue
+        mp = re.search(r"Set plan ID '\w+' with (\d+) actions", ln)
+        if mp and cur is not None:
+            if int(mp.group(1)) == 0: cur["zero_action_plans"] += 1
+            continue
+        if "ANALYZE_FAILURE" in ln and cur is not None:
+            cur["analyze_failure"] += 1; continue
+        mf = re.search(r"Evolution campaign \(Run ID: (mastermind_run_[a-f0-9]+)\) finished\. BDI Message: (.+?)\. Overall: (\w+)", ln)
+        if mf:
+            r = campaigns.get(mf.group(1))
+            if r is not None:
+                r["message"] = mf.group(2)[:160]; r["final_status"] = mf.group(3); r["finished"] = ts
+            continue
+        # AGInt P-O-D-A cognitive cycles
+        mac = re.search(r"COGNITIVE CYCLE (\d+) ===", ln)
+        if mac:
+            agint_cur = {"cycle": int(mac.group(1)), "decision": None, "action_type": None, "success": None, "ts": ts}
+            agint_cycles.append(agint_cur); continue
+        md = re.search(r"Decision made: (\w+)", ln)
+        if md and agint_cur is not None:
+            agint_cur["decision"] = md.group(1); continue
+        ma = re.search(r"Action completed - Type: (\w+), Success: (\w+)", ln)
+        if ma and agint_cur is not None:
+            agint_cur["action_type"] = ma.group(1); agint_cur["success"] = (ma.group(2) == "True"); continue
+
+    camp = list(campaigns.values())[-max(1, min(limit, 40)):][::-1]
+    stalled = sum(1 for c in camp if c.get("final_status") == "MAX_CYCLES_REACHED")
+    result = {
+        "mastermind": {
+            "campaigns": camp, "active": bool(camp), "stalled_max_cycles": stalled,
+            "note": (f"{stalled}/{len(camp)} recent campaigns ended MAX_CYCLES_REACHED — BDI never reaches a "
+                     "terminal status (empty / ANALYZE_FAILURE plans)") if stalled else None,
+        },
+        "agint": {
+            "active": len(agint_cycles) > 0, "cognitive_cycles": len(agint_cycles),
+            "recent": agint_cycles[-12:][::-1],
+            "note": None if agint_cycles else ("AGInt P-O-D-A core is DORMANT in the autonomous path — "
+                     "Mastermind drives BDI directly (0 cognitive cycles in this log window)"),
+        },
+        "count": len(camp),
+    }
+    return _maybe_h_text(request, result, route_path="/insight/cognition/diagnostic")
+
+
 @app.get("/insight/godel/recent", tags=["insight"])
 @_insight_safe
 async def insight_godel_recent(request: Request, limit: int = 50):
