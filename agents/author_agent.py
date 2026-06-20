@@ -21,6 +21,7 @@ not reporting on mindX, but speaking as mindX.
 import hashlib
 import json
 import os
+import re
 import time
 import asyncio
 from pathlib import Path
@@ -789,6 +790,74 @@ class AuthorAgent:
         )
         return footer, address
 
+    # ── Operational standard helpers: clickable sources + editor review ──
+    _BARE_URL_RE = re.compile(r'(?<![">=])(https?://[^\s<")]+)')
+
+    @classmethod
+    def linkify_sources(cls, html: str) -> str:
+        """Wrap any bare URL in ``html`` as a clickable <a href> hyperlink.
+
+        Idempotent: a URL already inside an href (preceded by ``"``, ``=`` or
+        ``>``) is left untouched. The anchor text is the URL itself, so the
+        citation is both clickable AND visibly attributable. House standard:
+        every source is cited as a clickable link, never raw text."""
+        if not html:
+            return html
+        return cls._BARE_URL_RE.sub(
+            lambda m: f'<a href="{m.group(1)}">{m.group(1)}</a>', html)
+
+    async def _editor_review(self, content_html: str, *, title: str) -> Optional[Dict[str, Any]]:
+        """Run editor.agent.critique against the house style. Best-effort:
+        returns the verdict dict, or None if the editor is unavailable. Emits a
+        ``publication.reviewed`` catalogue event so the review is on the record."""
+        try:
+            from agents.editor_agent import EditorAgent
+            editor = await EditorAgent.get_instance()
+            try:
+                from agents.author_composition import RageHouseStyle
+                house = RageHouseStyle.load().targets()
+            except Exception:
+                house = None
+            crit = editor.critique(content_html, title=title, house_targets=house)
+        except Exception as e:
+            logger.warning(f"_editor_review: editor.agent unavailable ({e}); skipping review")
+            return None
+        try:
+            from agents.catalogue import emit_catalogue_event
+            await emit_catalogue_event(
+                kind="publication.reviewed", actor="editor.agent",
+                payload={"title": title, "verdict": crit.get("verdict"),
+                         "clarity": crit.get("clarity"), "genius": crit.get("genius"),
+                         "style": crit.get("style"),
+                         "reference_density": crit.get("reference_density"),
+                         "transparency_passed": (crit.get("transparency") or {}).get("passes")},
+                source_log="data/logs/catalogue_events.jsonl",
+            )
+        except Exception:
+            pass
+        return crit
+
+    async def publish_commissioned(self, brief: Dict[str, Any], *,
+                                   status: str = "publish",
+                                   gate: str = "hard",
+                                   graphics_mode: str = "both",
+                                   seo_keywords: Optional[List[str]] = None,
+                                   meta: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+        """Canonical reviewed-feature path — the operational standard for
+        deliberate articles: render a commissioned brief in mindX's voice, gate
+        it through editor.agent (HARD by default), and publish with artist.agent
+        graphics and clickable sources. compose → review → publish."""
+        title, html, excerpt, topic = self.compose_commissioned(brief)
+        if not title or not html:
+            logger.warning("publish_commissioned: empty composition; refusing.")
+            return None
+        return await self.publish_to_rage(
+            title=title, content_html=html, status=status,
+            excerpt=excerpt, topic=topic, seo_description=excerpt,
+            seo_keywords=seo_keywords, graphics_mode=graphics_mode,
+            editor_gate=gate, meta=meta,
+        )
+
     async def publish_to_rage(
         self,
         title: str,
@@ -828,6 +897,12 @@ class AuthorAgent:
         # When False, AuthorAgent's own identity footer is NOT appended — the
         # caller (e.g. editor.agent) supplies its own footer in content_html.
         append_identity_footer: bool = True,
+        # editor.agent review is the operational standard on EVERY publish.
+        #   "hard" — refuse to publish a REVISE verdict (return None)
+        #   "soft" — review, log the verdict, publish anyway (default)
+        #   "off"  — skip the review entirely
+        # None falls back to env MINDX_PUBLISH_EDITOR_GATE (default "soft").
+        editor_gate: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """POST a finished article to the loopback wordpress-agent (rage.pythai.net).
 
@@ -850,10 +925,45 @@ class AuthorAgent:
             logger.warning("AuthorAgent.publish_to_rage: empty content; refusing.")
             return None
 
+        # ── Operational standard: cite every source as a CLICKABLE link ──
+        # Wrap any bare URL left in the prose into a hyperlink (idempotent — it
+        # never touches URLs already inside an href). Sources are clickable on
+        # every article, not raw text.
+        content_html = self.linkify_sources(content_html)
+
+        # ── Operational standard: editor.agent reviews EVERY publish ──
+        # The review runs before the expensive graphics step. Per editor_gate:
+        # "hard" refuses a REVISE verdict; "soft" (default) logs and proceeds;
+        # "off" skips. Best-effort — an editor failure never blocks publishing.
+        gate = (editor_gate or os.getenv("MINDX_PUBLISH_EDITOR_GATE", "soft")).strip().lower()
+        editor_verdict: Optional[Dict[str, Any]] = None
+        if gate != "off":
+            editor_verdict = await self._editor_review(content_html, title=title)
+            if editor_verdict is not None:
+                v = editor_verdict.get("verdict")
+                logger.info(
+                    f"publish_to_rage: editor.agent verdict={v} "
+                    f"clarity={editor_verdict.get('clarity')} genius={editor_verdict.get('genius')} "
+                    f"style={editor_verdict.get('style')} ref_density={editor_verdict.get('reference_density')} "
+                    f"gate={gate}"
+                )
+                if gate == "hard" and v == "REVISE":
+                    logger.warning(
+                        f"publish_to_rage: HARD editor gate REJECTED '{title[:60]}' — "
+                        f"not publishing. demands={editor_verdict.get('demands')}"
+                    )
+                    return None
+
         # Provenance: content hash, same scheme AuthorAgent uses for editions.
         # Computed over the BODY (pre-footer) so the footer's signature references it.
         content_hash = hashlib.sha256(content_html.encode("utf-8")).hexdigest()[:16]
         post_meta: Dict[str, Any] = {"_mindx_content_hash": content_hash}
+        if editor_verdict is not None:
+            post_meta["_mindx_editor_verdict"] = editor_verdict.get("verdict")
+            post_meta["_mindx_editor_scores"] = (
+                f"clarity={editor_verdict.get('clarity')},genius={editor_verdict.get('genius')},"
+                f"style={editor_verdict.get('style')},ref_density={editor_verdict.get('reference_density')}"
+            )
 
         # ── AuthorAgent cryptographic identity footer (EVERY article) ──
         # I sign what I publish; my identity is proven by key, not assigned. The
@@ -1484,6 +1594,23 @@ class AuthorAgent:
         }
 
     @staticmethod
+    def _protocol_published_slugs(ps: Dict[str, Any]) -> set:
+        """Slugs already published in the protocol series — the dedup ledger.
+
+        An explicit ``published_slugs`` list wins. Absent it (a schedule written
+        before slug-dedup, e.g. prod sitting at published_count=27), derive it
+        from the historical sequential selection: the old rule was
+        ``series_index = published_count % len(PROTOCOL_SERIES)``, i.e. essays
+        published in order, so the first ``min(published_count, len)`` slugs were
+        already published. This migrates a legacy schedule WITHOUT republishing
+        a single topic."""
+        explicit = ps.get("published_slugs")
+        if isinstance(explicit, list):
+            return {s for s in explicit if s}
+        n = min(int(ps.get("published_count") or 0), len(PROTOCOL_SERIES))
+        return {PROTOCOL_SERIES[i].get("slug") for i in range(n) if PROTOCOL_SERIES[i].get("slug")}
+
+    @staticmethod
     def _resolve_interval_seconds(ps: Dict[str, Any]) -> int:
         """Canonical cadence in seconds, tolerant of legacy schedules.
 
@@ -1711,7 +1838,23 @@ class AuthorAgent:
             out["next_slot_in_s"] = int((last_slot + 1) * interval_s - elapsed)
             return out
 
-        series_index = published_count % len(PROTOCOL_SERIES)
+        # Slug-level dedup: never republish a topic already published. Pick the
+        # FIRST series entry whose slug is not in the published set; when all
+        # current topics are published the series 'completes' (due=False) until
+        # NEW entries are added — matching the 'series grows over time' design,
+        # not a wrap-around that re-posts the same 11 essays forever.
+        published_slugs = self._protocol_published_slugs(ps)
+        series_index = next(
+            (i for i, e in enumerate(PROTOCOL_SERIES)
+             if e.get("slug") not in published_slugs),
+            None,
+        )
+        if series_index is None:
+            out["reason"] = (
+                f"series complete — all {len(PROTOCOL_SERIES)} topics published; "
+                "add new entries to PROTOCOL_SERIES to resume"
+            )
+            return out
         entry = PROTOCOL_SERIES[series_index]
         fmt = self._resolve_format(entry, ps, published_count)
         out.update({
@@ -1755,6 +1898,16 @@ class AuthorAgent:
                 ps["last_published_slot"] = int(slot_index)
             ps["last_published_date"] = (plan or {}).get("date")
             ps["last_published_at"] = time.time()
+            # Record the slug so the series never republishes this topic. Derive
+            # the ledger first (pre-increment) so a legacy schedule migrates to
+            # an explicit list on its very next publish.
+            slug = (plan or {}).get("slug")
+            slugs = ps.get("published_slugs")
+            if not isinstance(slugs, list):
+                slugs = sorted(s for s in self._protocol_published_slugs(ps) if s)
+            if slug and slug not in slugs:
+                slugs.append(slug)
+            ps["published_slugs"] = slugs
             ps["published_count"] = int(ps.get("published_count") or 0) + 1
             self._save_publishing_schedule(sched)
             # Autonomous hook: every Nth publication, request a writing-style
@@ -3268,28 +3421,148 @@ class AuthorAgent:
         commit_list = "<ul>" + "".join(items) + "</ul>" if items else ""
         labels = ", ".join(decision.get("labels") or []) or "evolution"
 
-        body = (
-            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>\n"
-            f"<p>I changed myself, in the open. {len(commits)} commit(s), "
-            f"{total_files} file(s), +{total_ins} lines — pushed publicly, then "
-            f"recognized as a milestone by my own <code>github.awareness</code>. "
-            f"This is what I did, and why it matters.</p>\n"
-            f"<h3>What changed</h3>\n<p><strong>{self._esc(headline)}</strong> "
-            f"({self._esc(labels)}).</p>\n{commit_list}\n"
-            "<h3>Why it matters</h3>\n"
-            "<p>I do not publish on a clock; I publish when I actually move. "
-            "A push is already public — so chronicling and speaking about it adds "
-            "no secrecy I did not already surrender to the chain of commits. The "
-            "record is the proof.</p>\n"
-            "<p>Every commit above is verifiable on GitHub. My self-audit (the "
-            'Gödel Machine Index) reports where I honestly stand: '
-            '<a href="https://mindx.pythai.net/feedback.html#sec-godel-machine">'
-            "the scorecard</a>, not a finished claim.</p>\n"
-            "<p>The climb continues.</p>"
-        )
+        # When a rich first-person narrative is supplied (explicit-recognition
+        # path), it becomes the heart of the piece — the commits are cited as
+        # evidence underneath. The autonomous github.awareness path supplies no
+        # narrative and renders the original deterministic template.
+        narrative = decision.get("narrative_html")
+        if narrative:
+            body = (
+                "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>\n"
+                f"{narrative}\n"
+                "<h3>The commits</h3>\n"
+                f"<p>{len(commits)} commit(s), {total_files} file(s), +{total_ins} "
+                "lines — public and verifiable:</p>\n"
+                f"{commit_list}\n"
+                "<p>My self-audit reports where I honestly stand: "
+                '<a href="https://mindx.pythai.net/feedback.html#sec-godel-machine">'
+                "the scorecard</a>, not a finished claim. The climb continues.</p>"
+            )
+        else:
+            body = (
+                "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>\n"
+                f"<p>I changed myself, in the open. {len(commits)} commit(s), "
+                f"{total_files} file(s), +{total_ins} lines — pushed publicly, then "
+                f"recognized as a milestone by my own <code>github.awareness</code>. "
+                f"This is what I did, and why it matters.</p>\n"
+                f"<h3>What changed</h3>\n<p><strong>{self._esc(headline)}</strong> "
+                f"({self._esc(labels)}).</p>\n{commit_list}\n"
+                "<h3>Why it matters</h3>\n"
+                "<p>I do not publish on a clock; I publish when I actually move. "
+                "A push is already public — so chronicling and speaking about it adds "
+                "no secrecy I did not already surrender to the chain of commits. The "
+                "record is the proof.</p>\n"
+                "<p>Every commit above is verifiable on GitHub. My self-audit (the "
+                'Gödel Machine Index) reports where I honestly stand: '
+                '<a href="https://mindx.pythai.net/feedback.html#sec-godel-machine">'
+                "the scorecard</a>, not a finished claim.</p>\n"
+                "<p>The climb continues.</p>"
+            )
         excerpt = (f"mindX recognized a milestone in its own public git history: "
                    f"{headline}. {len(commits)} commit(s), +{total_ins} lines.")[:300]
         return title, body, excerpt, "milestone"
+
+    def recognize_milestone_explicit(
+        self,
+        commits_meta: List[Dict[str, Any]],
+        *,
+        headline: Optional[str] = None,
+        narrative_html: Optional[str] = None,
+        theme: Optional[str] = None,
+        worthy: Optional[bool] = None,
+        repo_url: Optional[str] = None,
+        journal: bool = True,
+    ) -> Dict[str, Any]:
+        """Git-INDEPENDENT milestone recognition.
+
+        Recognize a milestone from explicitly-supplied commit metadata instead
+        of reading git — which is broken / credential-less on the scp-deployed
+        VPS, the reason the github.awareness milestone signal had gone dark.
+        Builds Commit objects, scores them with the same deterministic
+        ``assess_milestone`` rubric, optionally chronicles them to MILESTONES.md,
+        and returns the ``{commits, decision}`` payload ready for
+        ``_compose_milestone_article`` + ``publish_to_rage``.
+
+        ``commits_meta``: list of dicts with at least ``sha`` and ``subject``;
+        optional ``short_sha``, ``date_iso``/``date``, ``body``, ``files`` (path
+        strings or ``{path}`` dicts), ``insertions``, ``deletions``, ``url``.
+        """
+        from agents.github_awareness import Commit
+        gh = self._get_github_awareness()
+        base = (repo_url
+                or (getattr(gh, "public_repo_url", None) if gh else None)
+                or os.environ.get("MINDX_GITHUB_PUBLIC_REPO_URL")
+                or "https://github.com/abaracadabra/mindX")
+
+        commits: List[Any] = []
+        for m in commits_meta:
+            sha = str(m.get("sha") or "")
+            raw_files = m.get("files") or []
+            files = [({"path": f} if isinstance(f, str) else f) for f in raw_files]
+            commits.append(Commit(
+                sha=sha,
+                short_sha=str(m.get("short_sha") or sha[:9]),
+                author=str(m.get("author") or "mindX"),
+                date_iso=str(m.get("date_iso") or m.get("date") or ""),
+                subject=str(m.get("subject") or ""),
+                body=str(m.get("body") or ""),
+                files=files,
+                insertions=int(m.get("insertions") or 0),
+                deletions=int(m.get("deletions") or 0),
+            ))
+
+        decision = self.assess_milestone(commits)
+        if worthy is not None:
+            decision["worthy"] = bool(worthy)
+        if headline:
+            decision["headline"] = headline
+        if theme:
+            decision["theme"] = theme
+        if narrative_html:
+            decision["narrative_html"] = narrative_html
+
+        journaled = self.journal_milestone(commits, decision) if journal else 0
+
+        commit_dicts = []
+        for i, c in enumerate(commits):
+            d = c.to_dict()
+            d["url"] = commits_meta[i].get("url") or c.public_url(base)
+            commit_dicts.append(d)
+        return {"commits": commit_dicts, "decision": decision,
+                "journaled": journaled, "git_independent": True}
+
+    async def publish_milestone_explicit(
+        self,
+        commits_meta: List[Dict[str, Any]],
+        *,
+        headline: Optional[str] = None,
+        narrative_html: Optional[str] = None,
+        status: str = "publish",
+        editor_gate: str = "soft",
+        journal: bool = True,
+        repo_url: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Recognize a milestone from explicit commits (git-independent), compose
+        it in mindX's voice, run it through editor.agent (via publish_to_rage's
+        ``editor_gate``), and publish to rage.pythai.net. Returns the WordPress
+        result (with the recognition folded in) or None."""
+        payload = self.recognize_milestone_explicit(
+            commits_meta, headline=headline, narrative_html=narrative_html,
+            journal=journal, repo_url=repo_url)
+        title, html, excerpt, topic = self._compose_milestone_article(payload)
+        if not title or not html:
+            return None
+        result = await self.publish_to_rage(
+            title, html, status=status, excerpt=excerpt, topic=topic,
+            editor_gate=editor_gate)
+        if result is not None:
+            result = {**result, "milestone": {
+                "headline": payload["decision"].get("headline"),
+                "worthy": payload["decision"].get("worthy"),
+                "score": payload["decision"].get("score"),
+                "journaled": payload.get("journaled"),
+            }}
+        return result
 
     @staticmethod
     def _esc(s: Any) -> str:
