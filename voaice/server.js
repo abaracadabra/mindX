@@ -15,10 +15,39 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { VoiceAnalyzer } from './src/VoiceAnalyzer.js';
 import { waveformPath, spectrumBars } from './src/Oscilloscope.js';
+import { NeuralVoiceEngine } from './src/NeuralVoiceEngine.js';
+import { EMOTION_LABELS, EMOTIONS, fanOut } from './src/emotion.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.VOAICE_PORT || '7350', 10);
 const analyzer = new VoiceAnalyzer({ sampleRate: 44100, fftSize: 1024 });
+
+// Neural voice engine — the in-house sidecar that voicey2 / faicey call over HTTP. Lazily
+// initialised (probes onnxruntime-node + model weights once); degrades to the dependency-free
+// fallback source when weights are absent, so /speak always returns valid WAV.
+let _neural = null;
+async function neural() {
+  if (!_neural) {
+    _neural = new NeuralVoiceEngine({ agentId: 'voaice-server' });
+    await _neural.init();
+  }
+  return _neural;
+}
+
+/** Read a full request body into a Buffer. */
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
+function sendJson(res, code, obj) {
+  res.writeHead(code, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(obj));
+}
 
 // Locate a local d3 browser build (no CDN). Try voaice, then sibling faicey node_modules.
 const d3Candidates = [
@@ -76,11 +105,125 @@ es.onmessage = (e) => {
 };
 </script></body></html>`;
 
-const server = createServer((req, res) => {
+const server = createServer(async (req, res) => {
+  const pathname = (req.url || '/').split('?')[0];
+
+  // CORS — let faicey (the FACE peer, different port) POST extracted video audio to /clone etc.
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Reference-Text');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
+  // Serve the in-house DSP ES modules to the browser (VoiceAnalyzer, Oscilloscope, fft, loudness,
+  // vad) so the Voice Lab does REAL analysis client-side — no CDN, same source as the server.
+  if (pathname.startsWith('/src/') && pathname.endsWith('.js')) {
+    const safe = join(__dirname, 'src', pathname.slice(5).replace(/\.\./g, ''));
+    if (existsSync(safe)) {
+      res.writeHead(200, { 'Content-Type': 'application/javascript' });
+      res.end(readFileSync(safe));
+      return;
+    }
+  }
+  // Voice Lab: mic-first scientific oscilloscope + spectrometer + voice editing + 18-dp cloning.
+  if (pathname === '/voice' || pathname === '/voicelab') {
+    const p = join(__dirname, 'voicelab.html');
+    if (existsSync(p)) { res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(readFileSync(p)); return; }
+  }
+
+  // ---- Neural voice engine routes (the in-house /speak sidecar) ----
+  if (pathname === '/voices' && req.method === 'GET') {
+    const eng = await neural();
+    sendJson(res, 200, { voices: eng.listVoices(), capability: eng.capability });
+    return;
+  }
+  // Emotion mapping: the engine-owned emotion model fanned out to voice params + faicey FACE.
+  if (pathname === '/emotions' && req.method === 'GET') {
+    const u = new URL(req.url, 'http://localhost');
+    if (u.searchParams.get('label')) {
+      // resolve one (label[,intensity]) → the full fan-out
+      sendJson(res, 200, fanOut({ label: u.searchParams.get('label'), intensity: Number(u.searchParams.get('intensity')) }));
+      return;
+    }
+    sendJson(res, 200, { labels: EMOTION_LABELS, table: EMOTIONS });
+    return;
+  }
+  if (pathname === '/speak' && req.method === 'POST') {
+    try {
+      const body = JSON.parse((await readBody(req)).toString() || '{}');
+      const eng = await neural();
+      const out = await eng.synthesize({
+        text: body.text,
+        voiceId: body.voiceId,
+        embeddingId: body.embeddingId,
+        speed: body.speed,
+        numSteps: body.numSteps,
+        emotion: body.emotion,
+        write: false,
+      });
+      res.writeHead(200, {
+        'Content-Type': 'audio/wav',
+        'X-Voaice-Backend': out.backend,
+        // the FACE descriptor + tags travel with the audio so consumers (faicey/studio) emote in sync
+        'X-Voaice-Emotion': JSON.stringify({ label: out.emotion.label, face: out.emotion.face, tags: out.tags }),
+      });
+      res.end(out.buffer);
+    } catch (err) {
+      sendJson(res, 400, { error: err.message, service: 'voaice/speak' });
+    }
+    return;
+  }
+  if (pathname === '/clone' && req.method === 'POST') {
+    try {
+      const ct = req.headers['content-type'] || '';
+      const raw = await readBody(req);
+      let cloneReq;
+      if (ct.includes('application/json')) {
+        const body = JSON.parse(raw.toString() || '{}');
+        cloneReq = body.wavBase64
+          ? { buffer: Buffer.from(body.wavBase64, 'base64'), text: body.referenceText }
+          : { wavPath: body.wavPath, text: body.referenceText };
+      } else {
+        // raw audio/wav upload; transcript (for ZipVoice cloning) via header or query
+        const u = new URL(req.url, 'http://localhost');
+        cloneReq = { buffer: raw, text: req.headers['x-reference-text'] || u.searchParams.get('referenceText') || '' };
+      }
+      const eng = await neural();
+      const result = await eng.cloneFromReference(cloneReq);
+      sendJson(res, 200, {
+        embeddingId: result.embeddingId,
+        backend: result.backend,
+        needsText: result.needsText,
+        voiceprint: { hash: result.voiceprint.hash, sampleRate: result.voiceprint.sampleRate },
+        registerArgs: eng.scientific.toRegisterArgs(result.voiceprint),
+      });
+    } catch (err) {
+      sendJson(res, 400, { error: err.message, service: 'voaice/clone' });
+    }
+    return;
+  }
+
   if (req.url === '/' || req.url === '/index.html') {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(PAGE);
     return;
+  }
+  // voaice studio: in-house Persona (oscilloscope-as-mouth) + KITT mode + 18-dp voiceprint.
+  if (pathname === '/studio' || pathname === '/studio.html') {
+    const studioPath = join(__dirname, 'studio.html');
+    if (existsSync(studioPath)) {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(readFileSync(studioPath));
+      return;
+    }
+  }
+  // emotions showcase: the Persona FACE morphed to every emotion (static grid).
+  if (pathname === '/faces' || pathname === '/faces.html') {
+    const facesPath = join(__dirname, 'faces.html');
+    if (existsSync(facesPath)) {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(readFileSync(facesPath));
+      return;
+    }
   }
   if (req.url === '/vendor/d3.min.js' && d3Path) {
     res.writeHead(200, { 'Content-Type': 'application/javascript' });

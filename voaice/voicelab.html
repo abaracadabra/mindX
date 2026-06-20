@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>voaice · voice lab — live scientific oscilloscope · voice editing · 18-dp cloning</title>
+<style>
+  :root { --grn:#0f8; --grn2:#0fa; --bg:#05060a; --panel:#001008; --amber:#ffb000; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--grn); font-family:'Courier New',monospace; }
+  h1 { text-align:center; letter-spacing:2px; font-size:18px; margin:10px; }
+  h1 small { display:block; color:#0a6; font-size:11px; letter-spacing:1px; }
+  .wrap { display:grid; grid-template-columns:300px 1fr 320px; gap:10px; padding:10px; height:calc(100vh - 60px); }
+  .panel { border:1px solid var(--grn); background:var(--panel); border-radius:4px; padding:12px; overflow:auto; }
+  .panel h2 { font-size:12px; color:var(--grn2); margin:0 0 8px; letter-spacing:1px; border-bottom:1px solid #063; padding-bottom:6px; }
+  label { display:block; font-size:11px; color:#0c9; margin:9px 0 3px; }
+  select, input[type=range] { width:100%; background:#000; color:var(--grn); border:1px solid #063; border-radius:3px; padding:5px; font-family:inherit; }
+  button { width:100%; background:#021; color:var(--grn); border:1px solid var(--grn); border-radius:3px; padding:8px; font-family:inherit; font-size:11px; letter-spacing:1px; cursor:pointer; margin-top:6px; }
+  button:hover { background:var(--grn); color:#000; }
+  button.alt { border-color:var(--amber); color:var(--amber); } button.alt:hover { background:var(--amber); color:#000; }
+  button.rec.on { border-color:#f33; color:#f33; }
+  .stage { display:grid; grid-template-rows:1fr 1fr; gap:8px; }
+  .scope { display:flex; flex-direction:column; min-height:0; }
+  .scope .lab { font-size:10px; color:#0a6; }
+  canvas { width:100%; flex:1; background:#000308; border:1px solid #063; border-radius:4px; }
+  .feat { font-size:11px; }
+  .feat .row { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dotted #052; }
+  .feat .row span:first-child { color:#0c9; } .feat b { color:#fff; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .status { font-size:11px; color:#0a6; margin-top:6px; min-height:14px; }
+  .badge { font-size:9px; padding:1px 6px; border:1px solid #063; border-radius:8px; color:#0a6; }
+  #clipcv { height:60px; flex:none; }
+  .vp { font-size:10px; } .vp .m { display:flex; justify-content:space-between; padding:2px 0; border-bottom:1px dotted #052; }
+  .vp .m span:first-child { color:#0c9; } .vp .v { color:#fff; font-size:9px; } .vp .h { color:var(--amber); font-size:8px; word-break:break-all; margin-top:6px; }
+</style>
+</head>
+<body>
+<h1>voaice · voice lab
+  <small>your microphone · real-time scientific oscilloscope + spectrometer · in-house voice editing · forensic 18-decimal cloning · no CDN</small>
+</h1>
+<select id="theme" style="position:fixed;top:10px;right:12px;z-index:9;background:#000;color:var(--grn);border:1px solid #063;border-radius:3px;font-family:inherit;font-size:11px;padding:3px"></select>
+<div class="wrap">
+  <!-- ── mic + live science ── -->
+  <div class="panel">
+    <h2>MICROPHONE <span id="micState" class="badge">opening…</span></h2>
+    <div class="grid2">
+      <select id="micDevice"><option>—</option></select>
+      <button id="micToggle" style="margin:0">■ stop</button>
+    </div>
+    <div class="status" id="micStatus">requesting your microphone…</div>
+
+    <h2 style="margin-top:16px">LIVE ANALYSIS <span class="badge">VoiceAnalyzer · FFT</span></h2>
+    <div class="feat" id="feat">
+      <div class="row"><span>pitch (F0)</span><b id="f_pitch">— Hz</b></div>
+      <div class="row"><span>dominant</span><b id="f_dom">— Hz</b></div>
+      <div class="row"><span>spectral centroid</span><b id="f_cen">— Hz</b></div>
+      <div class="row"><span>spectral rolloff</span><b id="f_rol">— Hz</b></div>
+      <div class="row"><span>flatness (tonality)</span><b id="f_flat">—</b></div>
+      <div class="row"><span>RMS / peak</span><b id="f_rms">—</b></div>
+      <div class="row"><span>zero-crossing rate</span><b id="f_zcr">—</b></div>
+    </div>
+  </div>
+
+  <!-- ── real oscilloscope + spectrometer ── -->
+  <div class="panel stage">
+    <div class="scope"><div class="lab">OSCILLOSCOPE · live waveform from your mic</div><canvas id="osc"></canvas></div>
+    <div class="scope"><div class="lab">SPECTROMETER · live magnitude spectrum (FFT)</div><canvas id="spec"></canvas></div>
+  </div>
+
+  <!-- ── record · edit · clone ── -->
+  <div class="panel">
+    <h2>RECORD &amp; EDIT</h2>
+    <div class="grid2">
+      <button class="rec" id="rec" style="margin:0">● record</button>
+      <button id="play" style="margin:0">▶ play</button>
+    </div>
+    <canvas id="clipcv"></canvas>
+    <div class="status" id="clipinfo">no clip — record from your mic</div>
+    <div class="grid2">
+      <button id="trim" style="margin:0">trim silence</button>
+      <button id="norm" style="margin:0">normalise −20 LUFS</button>
+      <button id="rev" style="margin:0">reverse</button>
+      <button id="fade" style="margin:0">fade in/out</button>
+    </div>
+    <label>gain <b id="gainv">0.0</b> dB</label>
+    <input type="range" id="gain" min="-24" max="24" step="0.5" value="0" />
+    <button id="applyGain">apply gain</button>
+    <label>pitch shift <b id="pitchv">0</b> semitones (duration-preserving OLA)</label>
+    <input type="range" id="pitch" min="-12" max="12" step="1" value="0" />
+    <button id="applyPitch">apply pitch shift</button>
+    <button class="alt" id="export">⤓ export WAV</button>
+
+    <h2 style="margin-top:16px">SCIENTIFIC CLONE <span id="cap" class="badge">…</span></h2>
+    <button class="alt" id="clone">⌖ clone this voice (18-dp voiceprint)</button>
+    <div id="cloneProc" style="font-size:10px;color:#0fa;margin-top:6px;white-space:pre-line;min-height:14px"></div>
+    <div class="vp" id="vp"><span style="color:#063;font-style:italic">record + clone to measure a forensic 18-decimal voiceprint.</span></div>
+    <button id="playClone" style="display:none">▶ play the cloned voice (your clip)</button>
+    <button id="speakClone" style="display:none">▶ speak NEW text in the neural clone</button>
+    <div class="status" id="clonest"></div>
+  </div>
+</div>
+
+<script type="module">
+import { VoiceAnalyzer } from '/src/VoiceAnalyzer.js';
+import { normalizeToLufs, integratedLoudness } from '/src/audio/loudness.js';
+import { trimSilence } from '/src/audio/vad.js';
+
+// ── visual themes (matrix green default + new palettes) ──
+const THEMES = { matrix:['#0f8','#0fa',150], amber:['#ffb000','#fd0',42], ice:['#0cf','#0ef',195], synthwave:['#f0a','#f6c',320], crimson:['#f44','#f77',2], mono:['#cfd','#fff',180] };
+let THEME_HUE = 150;
+function setTheme(n){ const t=THEMES[n]||THEMES.matrix; const r=document.documentElement.style; r.setProperty('--grn',t[0]); r.setProperty('--grn2',t[1]); THEME_HUE=t[2]; }
+function accent(){ return getComputedStyle(document.documentElement).getPropertyValue('--grn').trim()||'#0f8'; }
+{ const sel=document.getElementById('theme'); sel.innerHTML=Object.keys(THEMES).map(t=>`<option${t==='matrix'?' selected':''}>${t}</option>`).join(''); sel.onchange=e=>setTheme(e.target.value); }
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const analyser = audioCtx.createAnalyser();
+analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.7;
+const timeBuf = new Float32Array(analyser.fftSize);
+const freqBuf = new Uint8Array(analyser.frequencyBinCount);
+const va = new VoiceAnalyzer({ sampleRate: audioCtx.sampleRate, fftSize: analyser.fftSize });
+
+let micStream = null, micSource = null, micLive = false;
+let recording = false, recChunks = [], recProc = null, recSink = null;
+let clip = null;            // { samples: Float32Array, sampleRate }
+let activeEmbeddingId = null, lastVoiceprintWav = null;
+
+// ── microphone (opens on load; any device) ──
+const micSel = document.getElementById('micDevice');
+async function listMics(){ try { const ds=await navigator.mediaDevices.enumerateDevices(); const ins=ds.filter(d=>d.kind==='audioinput');
+  const cur=micSel.value; micSel.innerHTML=ins.length?ins.map((d,i)=>`<option value="${d.deviceId}">${d.label||('microphone '+(i+1))}</option>`).join(''):'<option value="">no input</option>'; if(cur)micSel.value=cur; } catch(e){} }
+async function openMic(deviceId){
+  await closeMic(false);
+  try { micStream = await navigator.mediaDevices.getUserMedia({ audio: deviceId?{deviceId:{exact:deviceId}}:true }); }
+  catch(e){ document.getElementById('micState').textContent='blocked'; document.getElementById('micStatus').textContent='mic error: '+e.name+' — click ■/▶ to retry'; return false; }
+  if (audioCtx.state==='suspended') await audioCtx.resume();
+  micSource = audioCtx.createMediaStreamSource(micStream); micSource.connect(analyser); // analyser only — no echo
+  micLive = true; document.getElementById('micState').textContent='live ●'; document.getElementById('micStatus').textContent='mic live — the oscilloscope is your actual voice';
+  document.getElementById('micToggle').textContent='■ stop'; await listMics(); return true;
+}
+async function closeMic(ui=true){ if(micSource){try{micSource.disconnect();}catch{}micSource=null;} if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null;} micLive=false;
+  if(ui){document.getElementById('micState').textContent='off';document.getElementById('micToggle').textContent='▶ start';document.getElementById('micStatus').textContent='mic stopped';} }
+document.getElementById('micToggle').onclick=()=>micLive?closeMic():openMic(micSel.value);
+micSel.onchange=()=>{ if(micLive) openMic(micSel.value); };
+if(navigator.mediaDevices?.addEventListener) navigator.mediaDevices.addEventListener('devicechange', listMics);
+
+// ── recording (raw PCM via ScriptProcessor, muted sink) ──
+document.getElementById('rec').onclick=async()=>{
+  if(!micLive){ const ok=await openMic(micSel.value); if(!ok)return; }
+  const btn=document.getElementById('rec');
+  if(!recording){ recording=true; recChunks=[]; btn.classList.add('on'); btn.textContent='■ stop';
+    recProc=audioCtx.createScriptProcessor(4096,1,1); recSink=audioCtx.createGain(); recSink.gain.value=0;
+    recProc.onaudioprocess=e=>recChunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+    micSource.connect(recProc); recProc.connect(recSink); recSink.connect(audioCtx.destination);
+    document.getElementById('cloneProc').textContent='● recording…';
+  } else { recording=false; btn.classList.remove('on'); btn.textContent='● record';
+    try{micSource.disconnect(recProc);recProc.disconnect();}catch{}
+    let n=recChunks.reduce((a,c)=>a+c.length,0); const s=new Float32Array(n); let o=0; for(const c of recChunks){s.set(c,o);o+=c.length;}
+    clip={samples:s,sampleRate:audioCtx.sampleRate}; drawClip();
+    // evidence the clip captured
+    document.getElementById('cloneProc').textContent='✓ captured '+(n/clip.sampleRate).toFixed(2)+'s · '+n.toLocaleString()+' samples @ '+clip.sampleRate+'Hz → click CLONE'; }
+};
+document.getElementById('play').onclick=()=>{ if(!clip)return; const b=audioCtx.createBuffer(1,clip.samples.length,clip.sampleRate); b.copyToChannel(clip.samples,0);
+  const src=audioCtx.createBufferSource(); src.buffer=b; src.connect(audioCtx.destination); src.start(); };
+
+// ── voice editing tools (in-house DSP) ──
+function setClip(s){ clip.samples=s; drawClip(); }
+document.getElementById('trim').onclick=()=>{ if(!clip)return; setClip(trimSilence(clip.samples,clip.sampleRate).samples); };
+document.getElementById('norm').onclick=()=>{ if(!clip)return; setClip(normalizeToLufs(clip.samples,clip.sampleRate,-20)); };
+document.getElementById('rev').onclick=()=>{ if(!clip)return; setClip(Float32Array.from(clip.samples).reverse()); };
+document.getElementById('fade').onclick=()=>{ if(!clip)return; const s=Float32Array.from(clip.samples),sr=clip.sampleRate,f=Math.min(0.05*sr,s.length/2|0);
+  for(let i=0;i<f;i++){s[i]*=i/f; s[s.length-1-i]*=i/f;} setClip(s); };
+document.getElementById('gain').oninput=e=>document.getElementById('gainv').textContent=(+e.target.value).toFixed(1);
+document.getElementById('applyGain').onclick=()=>{ if(!clip)return; const g=Math.pow(10,(+document.getElementById('gain').value)/20);
+  setClip(Float32Array.from(clip.samples,x=>Math.max(-1,Math.min(1,x*g)))); };
+document.getElementById('pitch').oninput=e=>document.getElementById('pitchv').textContent=e.target.value;
+document.getElementById('applyPitch').onclick=()=>{ if(!clip)return; const semis=+document.getElementById('pitch').value; if(!semis)return;
+  setClip(pitchShift(clip.samples,clip.sampleRate,semis)); };
+// duration-preserving pitch shift: OLA time-stretch by ratio, then resample by ratio
+function pitchShift(x,sr,semis){ const ratio=Math.pow(2,semis/12); const st=olaStretch(x,sr,ratio);
+  const out=new Float32Array(Math.round(st.length/ratio)); for(let i=0;i<out.length;i++){const s=i*ratio,i0=Math.floor(s),i1=Math.min(st.length-1,i0+1),fr=s-i0; out[i]=st[i0]*(1-fr)+st[i1]*fr;} return out; }
+function olaStretch(x,sr,S){ const G=Math.max(256,Math.round(0.05*sr)),Ha=Math.round(G/4),Hs=Math.round(Ha*S);
+  const outLen=Math.ceil(x.length*S)+G,out=new Float32Array(outLen),norm=new Float32Array(outLen);
+  const win=new Float32Array(G); for(let k=0;k<G;k++)win[k]=0.5*(1-Math.cos(2*Math.PI*k/(G-1)));
+  let a=0,p=0; while(a+G<=x.length){ for(let k=0;k<G;k++){out[p+k]+=x[a+k]*win[k];norm[p+k]+=win[k];} a+=Ha;p+=Hs; }
+  for(let i=0;i<outLen;i++) out[i]/=(norm[i]||1); return out.slice(0,Math.round(x.length*S)); }
+
+function encodeWav(x,sr){ const n=x.length,b=new ArrayBuffer(44+n*2),dv=new DataView(b),w=(o,s)=>{for(let i=0;i<s.length;i++)dv.setUint8(o+i,s.charCodeAt(i));};
+  w(0,'RIFF');dv.setUint32(4,36+n*2,true);w(8,'WAVE');w(12,'fmt ');dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);
+  dv.setUint32(24,sr,true);dv.setUint32(28,sr*2,true);dv.setUint16(32,2,true);dv.setUint16(34,16,true);w(36,'data');dv.setUint32(40,n*2,true);
+  let o=44; for(let i=0;i<n;i++){const s=Math.max(-1,Math.min(1,x[i]));dv.setInt16(o,s<0?s*0x8000:s*0x7fff,true);o+=2;} return b; }
+document.getElementById('export').onclick=()=>{ if(!clip)return; const blob=new Blob([encodeWav(clip.samples,clip.sampleRate)],{type:'audio/wav'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='voaice-clip.wav'; a.click(); };
+
+// ── scientific clone (server-side Scientific.js 18-dp + neural) ──
+async function loadCap(){ try{const j=await (await fetch('/voices')).json(); document.getElementById('cap').textContent='backend:'+(j.capability.backend||'?')+(j.capability.clone?' · clone':' · voiceprint');}catch(e){document.getElementById('cap').textContent='offline';} }
+function fmt18(s){ s=String(s).padStart(19,'0'); return s.slice(0,-18).replace(/^0+(?=\d)/,'')+'.'+s.slice(-18); }
+document.getElementById('clone').onclick=async()=>{ const st=document.getElementById('clonest'), proc=document.getElementById('cloneProc');
+  if(!clip){ proc.textContent='record something first'; return; }
+  // ── processor feedback: each step with timing, as evidence of the real pipeline ──
+  const log=[]; const tick=(m)=>{ log.push(m); proc.textContent=log.join('\n'); };
+  const t0=performance.now();
+  tick('▸ source clip: '+(clip.samples.length/clip.sampleRate).toFixed(2)+'s · '+clip.samples.length.toLocaleString()+' samples @ '+clip.sampleRate+'Hz');
+  lastVoiceprintWav=encodeWav(clip.samples,clip.sampleRate);
+  tick('▸ encoded PCM16 WAV ('+(lastVoiceprintWav.byteLength/1024).toFixed(0)+' KB) in '+(performance.now()-t0|0)+'ms');
+  tick('▸ POST /clone → Scientific.js measuring forensic voiceprint…'); st.textContent='cloning…';
+  try{ const t1=performance.now();
+    const res=await fetch('/clone',{method:'POST',headers:{'Content-Type':'audio/wav','X-Reference-Text':''},body:lastVoiceprintWav});
+    const j=await res.json(); const ms=(performance.now()-t1)|0;
+    const m=j.registerArgs.m, names=['dominantFreq','amplitude','spectralCentroid','spectralRolloff','zeroCrossRate','harmonicNoiseRatio'];
+    document.getElementById('vp').innerHTML = names.map((n,i)=>`<div class="m"><span>${n}</span><span class="v">${fmt18(m[i])}</span></div>`).join('')+
+      `<div class="m"><span>precision</span><span class="v">${fmt18(j.registerArgs.precisionScore)}</span></div>`+
+      `<div class="m"><span>measured from</span><span class="v">${(clip.samples.length/clip.sampleRate).toFixed(2)}s clip</span></div>`+
+      `<div class="h">sha256 ${j.voiceprint.hash}</div>`+ (j.embeddingId?`<div class="m"><span>embeddingId</span><span class="v">${j.embeddingId}</span></div>`:'');
+    tick('▸ voiceprint measured in '+ms+'ms · backend '+j.backend);
+    tick('✓ done in '+((performance.now()-t0)|0)+'ms · sha256 '+j.voiceprint.hash.slice(0,18)+'…');
+    activeEmbeddingId=j.embeddingId;
+    // the cloned voice IS this clip's identity — always offer playback of the actual voice that was cloned
+    document.getElementById('playClone').style.display='block';
+    document.getElementById('speakClone').style.display = j.embeddingId ? 'block' : 'none';
+    st.textContent = j.embeddingId ? 'cloned ✓ — neural voice ready (▶ speak NEW text) · or ▶ play your clip'
+                                   : 'voiceprint ✓ measured from your clip ('+j.backend+') — ▶ play the cloned voice (your clip)';
+  }catch(e){ tick('✗ '+e.message); st.textContent='clone error: '+e.message; } };
+// playback of the cloned voice = the ACTUAL recorded clip (evidence the voiceprint is of YOUR voice)
+document.getElementById('playClone').onclick=()=>{ if(!clip)return; const b=audioCtx.createBuffer(1,clip.samples.length,clip.sampleRate); b.copyToChannel(clip.samples,0);
+  const src=audioCtx.createBufferSource(); src.buffer=b; src.connect(analyser); analyser.connect(audioCtx.destination); src.start();
+  document.getElementById('clonest').textContent='▶ playing the cloned voice (your actual '+(clip.samples.length/clip.sampleRate).toFixed(2)+'s clip)'; };
+document.getElementById('speakClone').onclick=async()=>{ const res=await fetch('/speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'this is my cloned voice',embeddingId:activeEmbeddingId})});
+  const buf=await res.arrayBuffer(); const a=await audioCtx.decodeAudioData(buf); const src=audioCtx.createBufferSource(); src.buffer=a; src.connect(analyser); analyser.connect(audioCtx.destination); src.start(); };
+
+// ── render: real oscilloscope + spectrometer + live scientific readout ──
+const osc=document.getElementById('osc'),octx=osc.getContext('2d');
+const spec=document.getElementById('spec'),sctx=spec.getContext('2d');
+const clipcv=document.getElementById('clipcv'),cctx=clipcv.getContext('2d');
+function fit(c){ c.width=c.clientWidth; c.height=c.clientHeight; } addEventListener('resize',()=>[osc,spec,clipcv].forEach(fit));
+function drawClip(){ fit(clipcv); cctx.clearRect(0,0,clipcv.width,clipcv.height); if(!clip)return; const s=clip.samples,W=clipcv.width,H=clipcv.height,step=Math.max(1,(s.length/W)|0);
+  cctx.strokeStyle='#0fa';cctx.beginPath(); for(let x=0;x<W;x++){const v=s[Math.min(s.length-1,x*step)]||0; const y=H/2-v*H*0.45; x?cctx.lineTo(x,y):cctx.moveTo(x,y);} cctx.stroke();
+  const sec=(s.length/clip.sampleRate).toFixed(2), lufs=integratedLoudness(s,clip.sampleRate);
+  document.getElementById('clipinfo').textContent=`clip ${sec}s @ ${clip.sampleRate}Hz · ${isFinite(lufs)?lufs.toFixed(1)+' LUFS':'silent'}`; }
+let frame=0;
+function loop(){ requestAnimationFrame(loop); [osc,spec].forEach(c=>{ if(c.width!==c.clientWidth)fit(c); });
+  analyser.getFloatTimeDomainData(timeBuf); analyser.getByteFrequencyData(freqBuf);
+  // oscilloscope (real waveform)
+  let W=osc.width,H=osc.height; octx.clearRect(0,0,W,H); octx.strokeStyle='rgba(0,80,40,.3)';
+  for(let y=0;y<H;y+=H/4){octx.beginPath();octx.moveTo(0,y);octx.lineTo(W,y);octx.stroke();}
+  octx.strokeStyle=accent();octx.lineWidth=1.6;octx.beginPath();
+  for(let i=0;i<timeBuf.length;i++){const x=i/timeBuf.length*W,y=H/2-timeBuf[i]*H*0.45; i?octx.lineTo(x,y):octx.moveTo(x,y);} octx.stroke();
+  // spectrometer (real FFT bars, log-ish)
+  W=spec.width;H=spec.height; sctx.clearRect(0,0,W,H); const bars=96,bw=W/bars;
+  for(let i=0;i<bars;i++){const idx=Math.floor(Math.pow(i/bars,1.6)*freqBuf.length); const v=freqBuf[idx]/255; sctx.fillStyle=`hsl(${THEME_HUE-v*90},90%,${30+v*30}%)`; sctx.fillRect(i*bw,H-v*H,bw-1,v*H);}
+  // live scientific features (VoiceAnalyzer on the real mic frame)
+  if(++frame%6===0 && micLive){ const f=va.analyze(timeBuf);
+    set('f_pitch',f.pitch?f.pitch.toFixed(1)+' Hz':'—'); set('f_dom',f.dominantFrequency.toFixed(0)+' Hz');
+    set('f_cen',f.spectralCentroid.toFixed(0)+' Hz'); set('f_rol',f.spectralRolloff.toFixed(0)+' Hz');
+    set('f_flat',f.flatness.toFixed(3)); set('f_rms',f.rms.toFixed(3)+' / '+f.peak.toFixed(2)); set('f_zcr',f.zcr.toFixed(3)); }
+}
+function set(id,v){ document.getElementById(id).textContent=v; }
+[osc,spec,clipcv].forEach(fit); loop(); loadCap(); openMic(); // mic-first: open on load
+</script>
+</body>
+</html>

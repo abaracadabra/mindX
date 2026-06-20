@@ -9,12 +9,16 @@
     "./analyzer": "./src/VoiceAnalyzer.js",
     "./oscilloscope": "./src/Oscilloscope.js",
     "./voice": "./src/VoiceCreationEngine.js",
+    "./neural": "./src/NeuralVoiceEngine.js",
+    "./formant": "./src/tts/formant.js",
+    "./wav": "./src/audio/wav.js",
     "./fft": "./src/dsp/fft.js"
   },
   "scripts": {
     "serve": "node server.js",
     "demo": "node examples/spectrometer-demo.js",
-    "test": "node test/test.js"
+    "fetch-models": "node scripts/fetch-models.mjs",
+    "test": "node test/neural.test.js"
   },
   "keywords": [
     "voice",
@@ -28,13 +32,15 @@
     "mindx",
     "voaice"
   ],
-  "//deps": "Core DSP (FFT, spectrometer, frequency manipulation) is IN-HOUSE with zero external deps. d3 powers the oscilloscope. Optional analysers (meyda/audiomotion) and TTS I/O load lazily only when present — isolated builds stay minimal.",
+  "//deps": "Core DSP (FFT, spectrometer, frequency manipulation) is IN-HOUSE with zero external deps. d3 powers the oscilloscope. Optional analysers (meyda/audiomotion) and the neural engine's onnxruntime-node (CPU, torch-free) load lazily only when present — isolated builds stay minimal. NO torch, NO transformers, NO Python.",
   "dependencies": {
     "d3": "^7.9.0"
   },
   "optionalDependencies": {
+    "audiomotion-analyzer": "^4.5.4",
     "meyda": "^5.6.0",
-    "audiomotion-analyzer": "^4.5.4"
+    "onnxruntime-node": "^1.20.0",
+    "sherpa-onnx-node": "^1.13.3"
   },
   "engines": {
     "node": ">=18.0.0"

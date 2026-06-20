@@ -9,7 +9,9 @@
 
 import { EventEmitter } from 'events';
 // Voice concerns now live in the agnostic `voaice` peer package (separated from faicey).
+// `system` = OS TTS binaries (espeak-ng/festival); `neural` = torch-free ONNX TTS + cloning.
 import { VoiceCreationEngine } from '../../../voaice/src/VoiceCreationEngine.js';
+import { NeuralVoiceEngine } from '../../../voaice/src/NeuralVoiceEngine.js';
 
 export class VoiceyBridge extends EventEmitter {
     constructor(options = {}) {
@@ -20,12 +22,21 @@ export class VoiceyBridge extends EventEmitter {
         this.voiceyPath = options.voiceyPath || '/home/hacker/mindX/facerig/voicey2';
         this.faiceyPath = options.faiceyPath || '/home/hacker/mindX/faicey';
 
-        // Voice creation engine
-        this.voiceEngine = new VoiceCreationEngine({
-            agentId: this.agentId,
-            voiceId: options.voiceId || 'jaimla',
-            ttsEngine: options.ttsEngine || 'espeak-ng'
-        });
+        // Voice creation engine — `system` (OS TTS, default, unchanged) or `neural`
+        // (torch-free ONNX base voice + zero-shot cloning). Both expose init() and emit
+        // 'initialized'/'error', so the bridge consumes them identically.
+        this.engineType = options.engine || 'system';
+        this.voiceEngine = this.engineType === 'neural'
+            ? new NeuralVoiceEngine({
+                agentId: this.agentId,
+                voiceId: options.voiceId || 'jaimla',
+                modelDir: options.modelDir,
+            })
+            : new VoiceCreationEngine({
+                agentId: this.agentId,
+                voiceId: options.voiceId || 'jaimla',
+                ttsEngine: options.ttsEngine || 'espeak-ng'
+            });
 
         // Integration state
         this.integrationState = {
@@ -374,6 +385,25 @@ export class VoiceyBridge extends EventEmitter {
         console.log('🗣️ Processing generated speech through pipeline...');
 
         try {
+            // Authoritative emotion → FACE. The voice engine OWNS the emotion (Chatterbox-shaped:
+            // a continuous exaggeration intensity + a label) and fans it out to a faicey expression
+            // descriptor. Drive the face from that directly — do not guess from audio — and turn
+            // paralinguistic tags ([laugh]/[cough]) into timed expression pulses over the utterance.
+            if (speechData.emotion && speechData.emotion.face) {
+                const f = speechData.emotion.face;
+                this.currentExpression = { expression: f.expression, weight: f.weight, hue: f.hue, label: f.label };
+                this.emit('faceExpression', { ...this.currentExpression, tags: speechData.tags || [], source: 'emotion' });
+                if (this.faceInstance) {
+                    this.faceInstance.targetExpression = f.expression;
+                    this.faceInstance.expressionWeight = f.weight;
+                }
+                const tags = speechData.tags || [];
+                tags.forEach((t, i) => setTimeout(
+                    () => this.emit('faceExpression', { expression: t.face, weight: 0.9, label: t.tag, source: 'tag' }),
+                    (speechData.duration || 1000) * ((i + 1) / (tags.length + 1))
+                ));
+            }
+
             // Process through audio pipeline
             for (const step of this.audioPipeline.processingChain) {
                 const module = this.modules[step.module];
@@ -591,6 +621,13 @@ export class VoiceyBridge extends EventEmitter {
     }
 
     mapAudioToExpressions(audioAnalysis) {
+        // Authoritative: when the voice engine supplied an owned emotion, use its faicey expression
+        // (label + intensity) rather than guessing from frequency.
+        const emo = audioAnalysis.emotion || (audioAnalysis.analysis && audioAnalysis.analysis.emotion);
+        if (emo && emo.face) {
+            return [{ type: emo.face.expression, intensity: emo.face.weight }];
+        }
+
         const expressions = [];
 
         if (audioAnalysis.frequency?.dominantFreq > 500) {

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>voaice · faicey emotions showcase</title>
+<style>
+  body { margin:0; background:#05060a; color:#0f8; font-family:'Courier New',monospace; }
+  h1 { text-align:center; letter-spacing:2px; font-size:18px; margin:14px; }
+  h1 small { display:block; color:#0a6; font-size:11px; letter-spacing:1px; }
+  .grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; padding:14px; max-width:1080px; margin:0 auto; }
+  .cell { border:1px solid #063; border-radius:6px; background:#000308; padding:6px; text-align:center; }
+  .cell canvas { width:100%; height:230px; display:block; }
+  .cell .lbl { font-size:13px; letter-spacing:1px; margin-top:4px; }
+  .cell .sub { font-size:10px; color:#0a6; }
+</style>
+</head>
+<body>
+<h1>voaice · faicey emotions
+  <small>the Persona FACE morphs (brows · eyes · mouth-curve · hue) per emotion · oscilloscope-as-mouth · in-house</small>
+</h1>
+<div class="grid" id="grid"></div>
+<script>
+// ── emotion fan-out (mirrors src/emotion.js EMOTIONS) ──
+const EMOTIONS = {
+  neutral:{face:'neutral',exg:0.50,hue:150}, happy:{face:'happy',exg:0.65,hue:90},
+  excited:{face:'excited',exg:0.85,hue:60}, calm:{face:'smile',exg:0.45,hue:175},
+  sad:{face:'sad',exg:0.35,hue:215}, angry:{face:'angry',exg:0.88,hue:0},
+  surprised:{face:'surprised',exg:0.78,hue:45}, confused:{face:'confused',exg:0.52,hue:280},
+  thinking:{face:'thinking',exg:0.42,hue:195},
+};
+// expression → morph shape (mirrors studio EMO_FACE): c=mouth curve(+smile/-frown), b=brow(+angry inner-down), e=eye open
+const EMO_FACE = {
+  neutral:{c:0,b:0,e:1}, happy:{c:0.85,b:-0.1,e:1.05}, excited:{c:0.7,b:-0.2,e:1.28},
+  smile:{c:0.5,b:0,e:1}, sad:{c:-0.7,b:-0.45,e:0.8}, angry:{c:-0.2,b:0.8,e:0.85},
+  surprised:{c:0.05,b:-0.3,e:1.45}, confused:{c:-0.1,b:0.35,e:1}, thinking:{c:-0.05,b:0.12,e:0.95},
+};
+function exaggeration(def, intensity){ return Math.max(0, Math.min(1.2, 0.5 + (def.exg-0.5)*(intensity/0.6))); }
+
+// synthetic mouth waveform so the oscilloscope-mouth reads as "voiced" in the still
+function wave(N, seed){ const a = new Float32Array(N); for(let i=0;i<N;i++){
+  a[i] = 0.6*Math.sin(i*0.20+seed) + 0.25*Math.sin(i*0.51+seed*2) + 0.12*Math.sin(i*1.3+seed); } return a; }
+
+// the same Persona draw as studio.html drawFace(), static (amp + supplied waveform)
+function drawFace(ctx, W, H, emoLabel, intensity){
+  const def = EMOTIONS[emoLabel];
+  const expr = def.face, m = EMO_FACE[expr] || EMO_FACE.neutral, w = intensity;
+  const curve=m.c*w, browA=m.b*w, eyeScale=1+(m.e-1)*w, hue=def.hue;
+  const accent=`hsl(${hue},90%,55%)`, accentDim=`hsl(${hue},70%,38%)`;
+  const amp=0.22, tb=wave(256, hue*0.07);
+
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='rgba(0,80,40,.18)'; ctx.lineWidth=1;
+  for(let y=0;y<H;y+=22){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  ctx.strokeStyle=accentDim; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.ellipse(W/2,H/2,W*0.26,H*0.40,0,0,Math.PI*2); ctx.stroke();
+
+  const eyeY=H*0.40, eo=W*0.12;
+  ctx.strokeStyle=accent; ctx.lineWidth=2.5;
+  for(const s of [-1,1]){ const ex=W/2+s*eo, innerX=ex-s*12, outerX=ex+s*16;
+    const innerY=eyeY-20+browA*16, outerY=eyeY-20-Math.abs(browA)*4;
+    ctx.beginPath(); ctx.moveTo(innerX,innerY); ctx.lineTo(outerX,outerY); ctx.stroke(); }
+  const er=Math.max(2,(9*eyeScale)+amp*18);
+  ctx.strokeStyle='#0f8'; ctx.lineWidth=1.5;
+  for(const ex of [W/2-eo,W/2+eo]){ ctx.beginPath(); ctx.ellipse(ex,eyeY,13,er,0,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle='#0fa'; ctx.beginPath(); ctx.arc(ex,eyeY,3,0,Math.PI*2); ctx.fill(); }
+
+  const mY=H*0.66, mW=W*0.36, mX=W/2-mW/2, open=8+amp*H*0.30, depth=H*0.06;
+  const P0y=mY-curve*depth, P1y=mY+curve*depth, P2y=mY-curve*depth, N=tb.length, stepX=mW/N;
+  const baseY=(t)=>(1-t)*(1-t)*P0y+2*(1-t)*t*P1y+t*t*P2y;
+  ctx.strokeStyle=accentDim; ctx.lineWidth=1.5; ctx.beginPath();
+  for(let i=0;i<=N;i+=4){ const t=i/N,x=mX+i*stepX; i===0?ctx.moveTo(x,baseY(t)):ctx.lineTo(x,baseY(t)); } ctx.stroke();
+  ctx.strokeStyle='#0f8'; ctx.lineWidth=2; ctx.beginPath();
+  for(let i=0;i<N;i++){ const t=i/N,x=mX+i*stepX,y=baseY(t)+tb[i]*open; i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); } ctx.stroke();
+}
+
+const grid=document.getElementById('grid');
+for(const label of Object.keys(EMOTIONS)){
+  const intensity=0.9, def=EMOTIONS[label];
+  const cell=document.createElement('div'); cell.className='cell';
+  const cv=document.createElement('canvas'); cv.width=340; cv.height=230;
+  cell.appendChild(cv);
+  const lbl=document.createElement('div'); lbl.className='lbl'; lbl.textContent=label.toUpperCase();
+  lbl.style.color=`hsl(${def.hue},90%,60%)`;
+  const sub=document.createElement('div'); sub.className='sub';
+  sub.textContent='exaggeration '+exaggeration(def,intensity).toFixed(2)+' · face='+def.face;
+  cell.appendChild(lbl); cell.appendChild(sub); grid.appendChild(cell);
+  drawFace(cv.getContext('2d'), cv.width, cv.height, label, intensity);
+}
+document.title='ready';
+</script>
+</body>
+</html>

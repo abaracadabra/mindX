@@ -1,0 +1,11 @@
+node_modules/
+
+# MediaPipe runtime — re-vendored on demand (npm run vendor:mediapipe), not committed.
+# The bundle (vision_bundle.mjs) is small and IS committed; the large WASM binaries and the
+# face_landmarker.task weights are fetched locally (Apache-2.0 / Google), kept out of git.
+static/vendor/mediapipe/wasm/
+static/vendor/mediapipe/*.task
+
+# clone scratch / showcases are generated
+/tmp/voaice-neural/
+data/persona-faces/

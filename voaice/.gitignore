@@ -1,0 +1,8 @@
+node_modules/
+# Neural model weights are fetched on demand (scripts/fetch-models.mjs), never committed.
+# They carry their own upstream licenses — see MODELS.md.
+models/
+!models/.gitkeep
+# Neural engine scratch output
+/tmp/voaice-neural/
+*.wav

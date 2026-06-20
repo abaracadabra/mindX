@@ -13,6 +13,7 @@ ignores the rest; no mindX bytes are copied).
 | `automindx.json` | AUTOMINDx — the origin of mindX; the AGLM deployment-as-utterance precursor | mindx.pythai.net/doc/AUTOMINDX_ORIGIN |
 | `mindx.json` | mindX — the first-person Augmentic / Darwin-Gödel machine (AUTOMINDx realized) | mindx.pythai.net/automindx |
 | `jaimla.json` | Jaimla — "the machine learning agent", multimodal, local-first, Luvai | github.com/jaimla |
+| `draiml.persona` → `draiml.json` | Dr. AIML — a medical **consulting** agent that **desires to be a model** (imprinted, starting with consulting) | github.com/AIMLdr/drAIML |
 
 ## Schema
 
@@ -29,6 +30,37 @@ ignores the rest; no mindX bytes are copied).
 `exchanges` is a mindX extension (ignored by mindXtrain's loader) that
 `scripts/build_persona_script.py` folds into the training script alongside the
 voice examples.
+
+### The rich `.persona` format (and `persona_project.py`)
+
+A persona that is more than a voice — one with **beliefs, desires, intentions, skills, safety, and
+an embodiment** (a cloned face/voice) — is authored as a `.persona` file (still JSON). It is a
+superset of the imprint schema above, adding:
+
+```jsonc
+{
+  "name": "...", "system_prompt": "...", "voice_examples": [...], "exchanges": [...],  // imprint fields
+  "kind": "medical", "source": "...", "mantra": "...", "oath": "...",
+  "bdi": { "beliefs": [...], "desires": [...], "intentions": [...] },  // desires = what it wants to BECOME
+  "skills": { "primary": "medical_consulting", ... },                  // where the model STARTS
+  "safety": { "scope": "...", "disclaimer": "...", "escalation": "..." },
+  "embodiment": { "voice": {"engine":"voaice","voiceprint":null}, "face": {"engine":"faicey","faceprint":null}, "persona_print": null }
+}
+```
+
+`persona_project.py` validates a `.persona` and projects it to the imprint `<persona>.json` (only the
+recognized fields), keeping the rich file the source of truth:
+
+```bash
+python persona_project.py draiml          # draiml.persona → draiml.json
+python persona_project.py --all --check   # validate every *.persona
+```
+
+A `.persona` that **desires to be a model** must declare at least one `bdi.desires` entry and a
+`skills.primary` — e.g. Dr. AIML desires to be imprinted into its own small model, *starting with
+consulting*. Once authored, the normal imprint flow below trains it like any other persona. The
+`embodiment` block binds the persona to a cloned **face** (faicey `/clone-face`) and **voice** (voaice
+`/clone`) — once both exist, they fuse into one **persona print** (faicey `persona.js`).
 
 ## Imprint a persona (end to end)
 

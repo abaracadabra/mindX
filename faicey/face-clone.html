@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>faicey · face clone — single / perspective / video → wireframe + 18-dp faceprint</title>
+<style>
+  :root { --grn:#0f8; --grn2:#0fa; --bg:#05060a; --panel:#001008; --amber:#ffb000; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--grn); font-family:'Courier New',monospace; }
+  h1 { text-align:center; letter-spacing:2px; font-size:18px; margin:12px; }
+  h1 small { display:block; color:#0a6; font-size:11px; letter-spacing:1px; }
+  .wrap { display:grid; grid-template-columns:330px 1fr 320px; gap:10px; padding:10px; height:calc(100vh - 60px); }
+  .panel { border:1px solid var(--grn); background:var(--panel); border-radius:4px; padding:12px; overflow:auto; }
+  .panel h2 { font-size:12px; color:var(--grn2); margin:0 0 8px; letter-spacing:1px; border-bottom:1px solid #063; padding-bottom:6px; }
+  label { display:block; font-size:11px; color:#0c9; margin:10px 0 3px; }
+  input[type=file] { width:100%; font-size:11px; color:#0a6; }
+  button { width:100%; background:#021; color:var(--grn); border:1px solid var(--grn); border-radius:3px; padding:9px; font-family:inherit; font-size:12px; letter-spacing:1px; cursor:pointer; margin-top:8px; }
+  button:hover { background:var(--grn); color:#000; }
+  button.alt { border-color:var(--amber); color:var(--amber); }
+  .stage { display:flex; flex-direction:column; }
+  canvas { width:100%; flex:1; background:#000308; border:1px solid #063; border-radius:4px; }
+  .status { font-size:11px; color:#0a6; margin-top:6px; min-height:14px; }
+  .badge { display:inline-block; font-size:9px; padding:1px 6px; border:1px solid #063; border-radius:8px; color:#0a6; }
+  .fp { font-size:11px; }
+  .fp .meas { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dotted #052; }
+  .fp .meas span:first-child { color:#0c9; } .fp .val { color:#fff; font-size:10px; }
+  .fp .hash { color:var(--amber); font-size:9px; word-break:break-all; margin-top:8px; }
+  .fp .empty { color:#063; font-style:italic; }
+  .cap { font-size:10px; color:#063; text-align:center; padding:4px; }
+</style>
+</head>
+<body>
+<h1>faicey · face clone
+  <small>single image · perspective images · video clip → cloned wireframe + scientific 18-decimal faceprint · in-house, no CDN</small>
+</h1>
+<div class="wrap">
+  <div class="panel">
+    <h2>CLONE SOURCE <span id="cap" class="badge">…</span></h2>
+
+    <label>① single image</label>
+    <input type="file" id="single" accept="image/*" />
+    <button id="cloneSingle">⌖ CLONE FROM IMAGE</button>
+
+    <label>② perspective images (front / left / right …)</label>
+    <input type="file" id="persp" accept="image/*" multiple />
+    <button id="clonePersp">⌖ CLONE FROM PERSPECTIVES</button>
+
+    <label>③ webcam — capture front / left / right <span id="camState" class="badge">off</span></label>
+    <div style="display:flex;gap:5px;align-items:center">
+      <select id="camDevice" style="flex:1"><option value="">— camera (open to list) —</option></select>
+      <button id="camRescan" title="rescan cameras" style="width:auto;margin:0;padding:6px 9px">⟳</button>
+    </div>
+    <button id="camToggle" style="margin-top:6px">🎥 open webcam</button>
+    <video id="cam" autoplay playsinline muted style="width:100%;border:1px solid #063;border-radius:4px;margin-top:6px;display:none;background:#000"></video>
+    <div class="row" style="display:flex;gap:5px;margin-top:6px">
+      <button class="shot" data-a="front" style="margin:0;padding:6px;font-size:11px">📷 front</button>
+      <button class="shot" data-a="left" style="margin:0;padding:6px;font-size:11px">📷 left</button>
+      <button class="shot" data-a="right" style="margin:0;padding:6px;font-size:11px">📷 right</button>
+    </div>
+    <div id="shots" style="display:flex;gap:4px;margin-top:6px"></div>
+    <button id="cloneCam">⌖ CLONE FROM WEBCAM SHOTS</button>
+
+    <label>④ video clip — clone the whole PERSON (face + voice)</label>
+    <input type="file" id="video" accept="video/*" />
+    <button id="cloneVideo">⌖ CLONE FACE FROM VIDEO</button>
+    <button class="alt" id="clonePerson">⌖ CLONE PERSON · face + recognition + voice</button>
+
+    <button class="alt" id="demo">▶ DEMO (synthetic face, no model needed)</button>
+    <div class="status" id="status">pick a source · the FACE is cloned in-browser (MediaPipe WASM)</div>
+    <video id="vEl" style="display:none"></video>
+  </div>
+
+  <div class="panel stage">
+    <h2>CLONE · <span id="emoLabel">neutral</span>
+      <select id="theme" style="float:right;background:#000;color:#0f8;border:1px solid #063;border-radius:3px;font-family:inherit;font-size:10px"></select>
+    </h2>
+    <div style="display:grid;grid-template-rows:1fr 1fr;gap:6px;flex:1;min-height:0">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;min-height:0">
+        <div style="display:flex;flex-direction:column;min-height:0">
+          <div class="cap" style="text-align:left">SOURCE · the image being cloned</div>
+          <canvas id="src" style="flex:1"></canvas>
+        </div>
+        <div style="display:flex;flex-direction:column;min-height:0">
+          <div class="cap" style="text-align:left">478-landmark wireframe</div>
+          <canvas id="face" style="flex:1"></canvas>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;min-height:0">
+        <div class="cap" style="text-align:left">3D point cloud (three.js · cloned landmarks)
+          <select id="theme3d" style="background:#000;color:#0f8;border:1px solid #063;border-radius:3px;font-family:inherit;font-size:10px"></select>
+          <span id="cap3d" class="badge">…</span></div>
+        <canvas id="face3d" style="flex:1"></canvas>
+      </div>
+    </div>
+    <div class="status" id="meta">no clone yet</div>
+    <div id="emoRow" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px"></div>
+    <div style="display:flex;gap:5px;margin-top:6px">
+      <button id="live" style="margin:0;flex:1">▶ LIVE (webcam → face)</button>
+      <button id="talk" class="alt" style="margin:0;flex:1">🗣 TALK (cloned voice)</button>
+    </div>
+    <input type="text" id="sayText" value="hello, I am your clone" style="width:100%;background:#000;color:#0f8;border:1px solid #063;border-radius:3px;padding:5px;font-family:inherit;font-size:11px;margin-top:5px" />
+    <div class="status" id="persona" style="color:#ffb000"></div>
+  </div>
+
+  <div class="panel">
+    <h2>SCIENTIFIC FACEPRINT · 18-DECIMAL</h2>
+    <div class="fp" id="fp"><div class="empty">Clone a face to measure a forensic, 18-decimal faceprint (registerFacePrint-ready — the visual sibling of the voiceprint).</div></div>
+    <div class="cap">faceprint.js · inter-landmark ratios · sha256 · real×1e18</div>
+
+    <h2 style="margin-top:18px">GIVE THIS FACE TO A PERSONA</h2>
+    <label style="font-size:11px;color:#0c9">persona (.persona to wear this face)</label>
+    <input type="text" id="personaName" value="draiml" style="width:100%;background:#000;color:#0f8;border:1px solid #063;border-radius:3px;padding:6px;font-family:inherit" />
+    <button class="alt" id="useFace" style="width:100%;margin-top:8px">⌖ USE THIS FACE FOR THE PERSONA</button>
+    <div class="status" id="useFaceStatus" style="color:#ffb000"></div>
+    <div class="cap">writes embodiment.face (faceprint + cloneProportions) → the persona's faicey wears the cloned face</div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "@mediapipe/tasks-vision": "/static/vendor/mediapipe/vision_bundle.mjs" } }
+</script>
+<script type="module">
+import { FaceCloneEngine } from '/src/face_clone/face_clone_engine.js';
+import { drawFaceWireframe, drawFaceTheme, FACE_THEMES } from '/src/face_clone/contours.js';
+import { FACEPRINT_MEASURES } from '/src/face_clone/faceprint.js';
+import { applyExpression, EXPRESSION_LABELS } from '/src/face_clone/expressions.js';
+import { personaPrint } from '/src/face_clone/persona.js';
+// in-house three.js point-cloud / wireframe renderer of the CLONED geometry (PCD + morphtargets-webcam)
+import { Face3D, FACE3D_THEMES } from '/src/face_clone/face3d.js';
+import { audioMouth, rms as frameRms, applyMouthOpen } from '/src/face_clone/animate.js';
+
+const eng = await new FaceCloneEngine().init();
+document.getElementById('cap').textContent = eng.capability.mediapipe ? 'mediapipe ✓' : 'no model — demo only';
+
+// 3D point-cloud face (the cloned landmarks rendered in three.js, themed)
+let face3d = null;
+function init3d(profile){
+  const c3 = document.getElementById('face3d');
+  try {
+    if (!face3d) { face3d = new Face3D(c3); document.getElementById('theme3d').onchange = e => face3d.setTheme(e.target.value); }
+    face3d.setHue(parseInt(profile.faceprint.hash.slice(2,8),16) % 360);
+    face3d.setLandmarks(profile.landmarks);
+    document.getElementById('cap3d').textContent = '3D ✓ (point cloud · ' + face3d.theme + ')';
+  } catch(e){ document.getElementById('cap3d').textContent = '3D unavailable: ' + e.message; }
+}
+
+const cv = document.getElementById('face'), ctx = cv.getContext('2d');
+function resize(){ cv.width = cv.clientWidth; cv.height = cv.clientHeight; } window.addEventListener('resize', resize); resize();
+
+// show the SOURCE image being cloned (image / canvas / a video frame), letterboxed into #src
+const srcCv = document.getElementById('src'), sctx = srcCv.getContext('2d');
+function showSource(media){
+  try {
+    srcCv.width = srcCv.clientWidth; srcCv.height = srcCv.clientHeight;
+    sctx.fillStyle = '#000308'; sctx.fillRect(0,0,srcCv.width,srcCv.height);
+    const mw = media.videoWidth || media.naturalWidth || media.width;
+    const mh = media.videoHeight || media.naturalHeight || media.height;
+    if (!mw || !mh) return;
+    const s = Math.min(srcCv.width/mw, srcCv.height/mh);
+    const w = mw*s, h = mh*s;
+    sctx.drawImage(media, (srcCv.width-w)/2, (srcCv.height-h)/2, w, h);
+  } catch(e){}
+}
+const setStatus = s => document.getElementById('status').textContent = s;
+
+let lastProfile = null, currentEmotion = 'neutral', currentTheme = 'wireframe';
+// face render themes — the simple wireframe stays the default
+document.getElementById('theme').innerHTML = FACE_THEMES.map(t=>`<option${t==='wireframe'?' selected':''}>${t}</option>`).join('');
+document.getElementById('theme').onchange = (e)=>{ currentTheme = e.target.value; if(lastProfile) drawClone(); };
+document.getElementById('theme3d').innerHTML = FACE3D_THEMES.map(t=>`<option${t==='points'?' selected':''}>${t}</option>`).join('');
+
+// ── LIVE: webcam drives the cloned face in real time (morphtargets-webcam) ──
+let liveRAF=null;
+document.getElementById('live').onclick=async()=>{
+  const btn=document.getElementById('live');
+  if(liveRAF){ cancelAnimationFrame(liveRAF); liveRAF=null; btn.textContent='▶ LIVE (webcam → face)'; return; }
+  if(!camStream){ const ok=await openCam(camSel.value); if(!ok) return; }
+  if(!eng.capability.mediapipe){ setStatus('LIVE needs MediaPipe (vendored) + a webcam'); return; }
+  btn.textContent='■ stop LIVE';
+  const loop=async()=>{ liveRAF=requestAnimationFrame(loop);
+    try{ const f=await eng.landmarker.detectVideoFrame(camEl, performance.now());
+      if(f && f.landmarks){ if(face3d) face3d.update(f.landmarks); resize(); ctx.clearRect(0,0,cv.width,cv.height);
+        drawFaceTheme(ctx, f.landmarks, {W:cv.width,H:cv.height,hue:150,theme:currentTheme});
+        if(f.blendshapes && face3d){ const jaw=f.blendshapes.find(c=>c.categoryName==='jawOpen'); face3d.setMouth(jaw?jaw.score:0); } }
+    }catch(e){} };
+  loop(); setStatus('LIVE — your webcam is driving the cloned face');
+};
+
+// ── TALK: the cloned face lip-syncs to the cloned voice (voaice /speak) ──
+const VOAICE_URL = location.protocol+'//'+location.hostname+':7350';
+document.getElementById('talk').onclick=async()=>{
+  if(!lastProfile) return setStatus('clone a face first');
+  const text=document.getElementById('sayText').value||'hello';
+  setStatus('TALK — synthesising the cloned voice…');
+  try{
+    const ac=new (window.AudioContext||window.webkitAudioContext)();
+    const res=await fetch(VOAICE_URL+'/speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    const audio=await ac.decodeAudioData(await res.arrayBuffer());
+    const an=ac.createAnalyser(); an.fftSize=1024; const tb=new Float32Array(an.fftSize);
+    const src=ac.createBufferSource(); src.buffer=audio; src.connect(an); an.connect(ac.destination);
+    let raf=null; const base=lastProfile.landmarks;
+    const loop=()=>{ raf=requestAnimationFrame(loop); an.getFloatTimeDomainData(tb); const m=audioMouth(frameRms(tb),{gain:7});
+      if(face3d) face3d.setMouth(m);
+      resize(); ctx.clearRect(0,0,cv.width,cv.height);
+      drawFaceTheme(ctx, applyMouthOpen(base,m), {W:cv.width,H:cv.height,hue:90,theme:currentTheme}); };
+    src.onended=()=>{ cancelAnimationFrame(raf); if(face3d)face3d.setMouth(0); drawClone(); setStatus('TALK done'); };
+    src.start(); loop(); setStatus('TALK — the cloned face is speaking in the cloned voice');
+  }catch(e){ setStatus('TALK error (voaice offline?): '+e.message); }
+};
+
+// emotion buttons — make the CLONED face emote (in lockstep with the voice vocabulary)
+document.getElementById('emoRow').innerHTML = EXPRESSION_LABELS.map(l =>
+  `<button class="emo" data-emo="${l}" style="margin:0;padding:4px 6px;font-size:10px;width:auto">${l}</button>`).join('');
+document.querySelectorAll('button.emo').forEach(b => b.onclick = () => { currentEmotion = b.dataset.emo; if (lastProfile) drawClone(); });
+
+function drawClone(){
+  resize(); ctx.clearRect(0,0,cv.width,cv.height);
+  const { landmarks, hue } = applyExpression(lastProfile.landmarks, { label: currentEmotion, intensity: 0.95 });
+  drawFaceTheme(ctx, landmarks, { W: cv.width, H: cv.height, hue, theme: currentTheme });
+  document.getElementById('emoLabel').textContent = currentEmotion;
+}
+
+async function render(profile){
+  lastProfile = profile; currentEmotion = 'neutral';
+  drawClone();
+  init3d(profile); // reshape the branded 3D wireframe to the cloned proportions
+  document.getElementById('meta').textContent =
+    `${profile.source} · ${profile.frames} frame(s) · symmetry ${profile.quality.symmetry.toFixed(2)} · frontality ${profile.quality.frontality.toFixed(2)}` +
+    (profile.recognition ? ` · ✓ recognized 1 person (${profile.recognition.recognizedFrames} consistent, ${profile.recognition.droppedFrames} dropped)` : '');
+  // faceprint readout (18 decimals)
+  const m = profile.registerArgs.m;
+  document.getElementById('fp').innerHTML =
+    FACEPRINT_MEASURES.map((n,i)=>`<div class="meas"><span>${n}</span><span class="val">${fmt18(m[i])}</span></div>`).join('') +
+    `<div class="meas"><span>precision</span><span class="val">${fmt18(profile.registerArgs.precisionScore)}</span></div>` +
+    `<div class="hash">sha256 ${profile.faceprint.hash}</div>`;
+  // unified persona print (face-only here; pair with a voaice voiceprint to bind FACE+VOICE)
+  const persona = await personaPrint({ face: profile.faceprint, label: profile.source });
+  document.getElementById('persona').textContent = 'persona ' + persona.hash.slice(0,22) + '… (' + persona.modalities.join('+') + ' — add a voiceprint to bind FACE+VOICE)';
+  fetch('/api/persona', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ persona: persona.hash, modalities: persona.modalities, faceHash: profile.faceprint.hash }) }).catch(()=>{});
+  // persist faceprint (parallel to voaice /clone)
+  fetch('/api/clone-face', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ source: profile.source, faceprint: profile.faceprint.hash, registerArgs: profile.registerArgs, proportions: profile.proportions }) }).catch(()=>{});
+}
+function fmt18(s){ s=String(s); s=s.padStart(19,'0'); return s.slice(0,-18).replace(/^0+(?=\d)/,'')+'.'+s.slice(-18); }
+
+const imgFrom = f => new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(f); });
+
+document.getElementById('cloneSingle').onclick = async () => {
+  const f = document.getElementById('single').files[0]; if(!f) return setStatus('pick an image');
+  try { setStatus('detecting…'); const img = await imgFrom(f); showSource(img); render(await eng.cloneFromImage(img)); setStatus('cloned ✓'); }
+  catch(e){ setStatus('error: '+e.message); }
+};
+document.getElementById('clonePersp').onclick = async () => {
+  const fs=[...document.getElementById('persp').files]; if(!fs.length) return setStatus('pick images');
+  try { setStatus('detecting '+fs.length+' angles…'); const imgs=await Promise.all(fs.map(imgFrom)); showSource(imgs[0]); render(await eng.cloneFromPerspectives(imgs)); setStatus('cloned ✓'); }
+  catch(e){ setStatus('error: '+e.message); }
+};
+document.getElementById('cloneVideo').onclick = async () => {
+  const f = document.getElementById('video').files[0]; if(!f) return setStatus('pick a video');
+  const v=document.getElementById('vEl'); v.src=URL.createObjectURL(f); v.muted=true;
+  await new Promise(r=>{ v.onloadedmetadata=r; });
+  v.currentTime = Math.min(0.5, (v.duration||1)/2); await new Promise(r=>{ v.onseeked=r; }); showSource(v);
+  try { setStatus('sampling video…'); render(await eng.cloneFromVideo(v)); setStatus('cloned ✓'); }
+  catch(e){ setStatus('error: '+e.message); }
+};
+
+// ── webcam capture (front / left / right) with device selection ──
+let camStream=null; const camShots=[]; const camEl=document.getElementById('cam');
+const camSel=document.getElementById('camDevice');
+async function listCams(){ try{ const ds=await navigator.mediaDevices.enumerateDevices(); const cams=ds.filter(d=>d.kind==='videoinput');
+  const cur=camSel.value; camSel.innerHTML=cams.length?cams.map((d,i)=>`<option value="${d.deviceId}">${d.label||('camera '+(i+1))}</option>`).join(''):'<option value="">no camera found</option>';
+  if(cur) camSel.value=cur; }catch(e){} }
+async function openCam(deviceId){
+  await stopCam(false);
+  const camState=document.getElementById('camState');
+  camState.textContent='opening…';
+  // try the exact device; if that constraint can't be satisfied, retry loosely so we still get video
+  async function get(c){ return navigator.mediaDevices.getUserMedia(c); }
+  try{
+    try{ camStream = await get({ video: deviceId?{ deviceId:{exact:deviceId} }:{ facingMode:'user' }, audio:false }); }
+    catch(e1){ camStream = await get({ video: deviceId?{ deviceId } : true, audio:false }); } // loose fallback
+  }catch(e){ camState.textContent='error'; setStatus('camera error: '+e.name+' — '+e.message+' · try another from the list, then ⟳'); return false; }
+  camEl.srcObject=camStream;
+  camEl.style.display='block';
+  document.getElementById('camToggle').textContent='■ close webcam';
+  try{ await camEl.play(); }catch(e){}                                   // autoplay policies: force play
+  await new Promise(r=>{ if(camEl.readyState>=2) return r(); camEl.onloadeddata=r; setTimeout(r,1800); }); // wait for a real frame
+  const track=camStream.getVideoTracks()[0]; const set=track? track.getSettings():{};
+  const w=camEl.videoWidth||set.width||0, h=camEl.videoHeight||set.height||0;
+  await listCams();                                                       // labels now available; sync the dropdown
+  if(track && track.getSettings().deviceId) camSel.value=track.getSettings().deviceId;
+  if(!w){ camState.textContent='no image'; setStatus('“'+(track?track.label:'camera')+'” returned no image — pick a different camera above, then click open again'); return true; }
+  camState.textContent='live ● '+w+'×'+h;
+  setStatus('webcam live: '+(track?track.label:'camera')+' · '+w+'×'+h+' — turn your head and capture front / left / right (switch camera above if wrong)');
+  return true;
+}
+async function stopCam(ui=true){ if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
+  if(ui){ camEl.style.display='none'; document.getElementById('camToggle').textContent='🎥 open webcam'; document.getElementById('camState').textContent='off'; } }
+document.getElementById('camToggle').onclick=()=> camStream ? stopCam() : openCam(camSel.value);
+document.getElementById('camRescan').onclick=listCams;
+camSel.onchange=()=>{ if(camStream) openCam(camSel.value); };  // hot-switch camera, even after a blank one
+if(navigator.mediaDevices?.addEventListener) navigator.mediaDevices.addEventListener('devicechange', listCams);
+function grab(){ const c=document.createElement('canvas'); c.width=camEl.videoWidth||640; c.height=camEl.videoHeight||480; c.getContext('2d').drawImage(camEl,0,0,c.width,c.height); return c; }
+document.querySelectorAll('button.shot').forEach(b=>b.onclick=()=>{ if(!camStream) return setStatus('open the webcam first');
+  const a=b.dataset.a, c=grab(); const i=camShots.findIndex(s=>s.a===a); if(i>=0)camShots[i].canvas=c; else camShots.push({a,canvas:c}); drawShots(); setStatus('captured '+a+' ('+camShots.length+'/3)'); });
+function drawShots(){ const el=document.getElementById('shots'); el.innerHTML=''; camShots.forEach(s=>{ const t=document.createElement('canvas'); t.width=54;t.height=40;t.title=s.a;t.style.border='1px solid #0a6';t.style.borderRadius='3px'; t.getContext('2d').drawImage(s.canvas,0,0,54,40); el.appendChild(t); }); }
+document.getElementById('cloneCam').onclick=async()=>{ if(!camShots.length) return setStatus('capture front/left/right first');
+  try{ setStatus('detecting '+camShots.length+' webcam angles…'); showSource((camShots.find(s=>s.a==='front')||camShots[0]).canvas); render(await eng.cloneFromPerspectives(camShots.map(s=>s.canvas))); setStatus('cloned from webcam ✓ ('+camShots.map(s=>s.a).join('/')+')'); }
+  catch(e){ setStatus('error: '+e.message); } };
+
+// ── clone the whole PERSON from a video: face (with recognition) + voice (extracted audio) ──
+const VOAICE = location.protocol+'//'+location.hostname+':7350';   // the voaice peer
+function encodeWavFromBuffer(audio){ const n=audio.length, sr=audio.sampleRate, ch=audio.numberOfChannels, out=new Float32Array(n);
+  for(let c=0;c<ch;c++){ const d=audio.getChannelData(c); for(let i=0;i<n;i++) out[i]+=d[i]/ch; }
+  const buf=new ArrayBuffer(44+n*2),dv=new DataView(buf),w=(o,s)=>{for(let i=0;i<s.length;i++)dv.setUint8(o+i,s.charCodeAt(i));};
+  w(0,'RIFF');dv.setUint32(4,36+n*2,true);w(8,'WAVE');w(12,'fmt ');dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);
+  dv.setUint32(24,sr,true);dv.setUint32(28,sr*2,true);dv.setUint16(32,2,true);dv.setUint16(34,16,true);w(36,'data');dv.setUint32(40,n*2,true);
+  let o=44; for(let i=0;i<n;i++){const s=Math.max(-1,Math.min(1,out[i]));dv.setInt16(o,s<0?s*0x8000:s*0x7fff,true);o+=2;} return buf; }
+document.getElementById('clonePerson').onclick=async()=>{
+  const f=document.getElementById('video').files[0]; if(!f) return setStatus('pick a video');
+  try{
+    // 1) face from video, with person-recognition (consistency filter → one person)
+    setStatus('cloning face from video (recognition)…');
+    const v=document.getElementById('vEl'); v.src=URL.createObjectURL(f); v.muted=true; await new Promise(r=>{ v.onloadedmetadata=r; });
+    v.currentTime=Math.min(0.5,(v.duration||1)/2); await new Promise(r=>{ v.onseeked=r; }); showSource(v);
+    const profile=await eng.cloneFromVideo(v); render(profile);
+    // 2) extract the audio track → clone the VOICE in voaice
+    setStatus('extracting audio → cloning voice in voaice…');
+    let voiceReg=null, voiceBackend='';
+    try{
+      const ac=new (window.AudioContext||window.webkitAudioContext)();
+      const audio=await ac.decodeAudioData((await f.arrayBuffer()).slice(0));
+      const r=await fetch(VOAICE+'/clone',{method:'POST',headers:{'Content-Type':'audio/wav'},body:encodeWavFromBuffer(audio)});
+      const j=await r.json(); voiceReg=j.registerArgs; voiceBackend=j.backend;
+      document.getElementById('clonest').textContent='voice cloned ✓ '+voiceBackend+' · voiceprint '+j.voiceprint.hash.slice(0,14)+'…';
+    }catch(e){ document.getElementById('clonest').textContent='voice clone skipped (no audio / voaice offline): '+e.message; }
+    // 3) bind ONE persona: face + voice
+    const persona=await personaPrint({ face: profile.faceprint, voice: voiceReg||undefined, label:'video-person' });
+    const rec = profile.recognition ? ' · recognized '+profile.recognition.recognizedFrames+'/'+(profile.recognition.recognizedFrames+profile.recognition.droppedFrames)+' frames · 1 person' : '';
+    document.getElementById('persona').textContent='PERSONA '+persona.hash.slice(0,20)+'… ('+persona.modalities.join('+')+')'+rec;
+    fetch('/api/persona',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({persona:persona.hash,modalities:persona.modalities,faceHash:profile.faceprint.hash,voiceHash:voiceReg?voiceReg.hash:null})}).catch(()=>{});
+    setStatus('cloned PERSON ✓ — face'+(voiceReg?' + voice':'')+' bound into one persona');
+  }catch(e){ setStatus('error: '+e.message); }
+};
+
+// ── give the cloned face to a .persona (writes embodiment.face: faceprint + cloneProportions) ──
+document.getElementById('useFace').onclick=async()=>{
+  const st=document.getElementById('useFaceStatus');
+  if(!lastProfile) return st.textContent='clone a face first';
+  const persona=(document.getElementById('personaName').value||'draiml').trim();
+  try{
+    const r=await fetch('/api/persona/face',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ persona, faceprint:lastProfile.faceprint.hash, cloneProportions:lastProfile.proportions, registerArgs:lastProfile.registerArgs })});
+    const j=await r.json();
+    st.textContent = j.ok ? ('✓ '+persona+' now wears this face'+(j.personaUpdated?' — embodiment.face written to '+persona+'.persona':' (face artifact stored)')) : ('error: '+(j.error||'failed'));
+  }catch(e){ st.textContent='error: '+e.message; }
+};
+
+// DEMO: synthesize a plausible 478-landmark face so the pipeline is demonstrable without the model
+document.getElementById('demo').onclick = async () => {
+  setStatus('cloning synthetic face…');
+  const seed = (Math.sin(Date.now())*0.5+0.5);
+  render(await eng.cloneFromImage({ landmarks: syntheticFace(seed), matrix:[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1], confidence:0.9 }));
+  setStatus('cloned synthetic face ✓ (vendor MediaPipe for real photos)');
+};
+// a parametric pseudo-face across the full mesh so contours render (varies with seed)
+function syntheticFace(seed){
+  const L = new Array(478);
+  for (let i=0;i<478;i++){ const a=i*0.137+seed*6.28; L[i]={ x:0.5+0.30*Math.cos(a)*(0.4+0.6*Math.sin(i*0.05)), y:0.52+0.40*Math.sin(a)*(0.4+0.6*Math.cos(i*0.05)), z:0 }; }
+  const set=(i,x,y)=>L[i]={x,y,z:0}; const jaw=0.62+seed*0.18, eye=0.41+seed*0.04;
+  // feature anchors so proportions + contours are face-like and vary by seed
+  [[10,.5,.13],[152,.5,.92],[234,.22,.5],[454,.78,.5],[116,.27,.46],[345,.73,.46],
+   [172,.5-jaw/2,.78],[397,.5+jaw/2,.78],[133,.44,eye],[362,.56,eye],[33,.34,eye],[263,.66,eye],
+   [159,.39,eye-.02],[105,.39,eye-.06],[168,.5,eye],[6,.5,.48],[197,.5,.5],[195,.5,.53],[5,.5,.55],[4,.5,.57],[1,.5,.58],
+   [2,.5,.6],[98,.45,.6],[97,.47,.61],[326,.53,.61],[327,.55,.6],
+   [61,.42,.74],[291,.58,.74],[13,.5,.72],[14,.5,.76],[0,.5,.71],[17,.5,.78],[468,.39,eye],[473,.61,eye]
+  ].forEach(([i,x,y])=>set(i,x,y));
+  return L;
+}
+</script>
+</body>
+</html>
