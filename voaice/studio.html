@@ -491,7 +491,7 @@ function drawFace(W, H, amp, mirror, emo) {
   }
   // eyes — openness by emotion × a little life from amplitude
   const er = Math.max(2, (9 * eyeScale) + amp*22);
-  ctx.strokeStyle = accent(); ctx.lineWidth = 1.5;
+  ctx.strokeStyle = accent; ctx.lineWidth = 1.5;
   for (const ex of [W/2-eo, W/2+eo]) {
     ctx.beginPath(); ctx.ellipse(ex, eyeY, 13, er, 0, 0, Math.PI*2); ctx.stroke();
     ctx.fillStyle = '#0fa'; ctx.beginPath(); ctx.arc(ex, eyeY, 3, 0, Math.PI*2); ctx.fill();
@@ -510,7 +510,7 @@ function drawFace(W, H, amp, mirror, emo) {
   for (let i=0;i<=N;i+=4){ const t=i/N, x=mX+i*stepX; i===0?ctx.moveTo(x,baseY(t)):ctx.lineTo(x,baseY(t)); }
   ctx.stroke();
   // oscilloscope on the curve
-  ctx.strokeStyle = accent(); ctx.lineWidth = 2; ctx.beginPath();
+  ctx.strokeStyle = accent; ctx.lineWidth = 2; ctx.beginPath();
   for (let i=0;i<N;i++){ const t=i/N, x=mX+i*stepX, y=baseY(t)+timeBuf[i]*open; i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }
   ctx.stroke();
   // mirrortime: reflect the (mic) waveform across the curved lip line
