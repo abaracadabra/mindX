@@ -128,7 +128,7 @@ class MastermindAgent:
         # The agent's data directory is now managed by MemoryAgent
         self.data_dir: Path = self.memory_agent.get_agent_data_directory(self.agent_id)
 
-        self.tools_registry_file_path: Path = PROJECT_ROOT / self.config.get(f"mastermind_agent.{self.agent_id}.tools_registry_path", "data/config/official_tools_registry.json")
+        self.tools_registry_file_path: Path = PROJECT_ROOT / self.config.get(f"mastermind_agent.{self.agent_id}.tools_registry_path", "data/config/augmentic_tools_registry.json")
         self.tools_registry: Dict[str, Any] = self._load_tools_registry()
 
         self.llm_handler: Optional[LLMHandlerInterface] = None
@@ -238,7 +238,10 @@ class MastermindAgent:
             config_override=self.config
         )
         await self.strategic_evolution_agent._async_init()
-        
+        # Back-wire SEA into the BDI so EXECUTE_STRATEGIC_EVOLUTION_CAMPAIGN (the real-source effector) is
+        # actually reachable — the BDI is constructed above before SEA exists, so without this it stays None.
+        self.bdi_agent.strategic_evolution_agent = self.strategic_evolution_agent
+
         # Initialize lifecycle management agents
         await self._initialize_lifecycle_agents()
 

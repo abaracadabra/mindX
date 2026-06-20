@@ -819,8 +819,40 @@ class BDIAgent:
                 contextual_info = f"\n\nCONTEXT: Use 'tools' as the root path for tool-related operations."
 
         action_manifest = {}
-        internal_actions = {"ANALYZE_FAILURE": "Analyzes a failure. Requires params: 'failure' (string)."}
-        action_manifest.update(internal_actions)
+        # Curated docs for the EXECUTABLE internal action handlers. These are not BaseTools, so without
+        # this the planner never sees them and concludes "no actionable tool" — the keystone bug that left
+        # every autonomous campaign emitting ANALYZE_FAILURE and hitting MAX_CYCLES. The real-source effector
+        # is EXECUTE_STRATEGIC_EVOLUTION_CAMPAIGN; the SimpleCoder file ops are SANDBOX-only.
+        _INTERNAL_ACTION_DOCS = {
+            "EXECUTE_STRATEGIC_EVOLUTION_CAMPAIGN": "Delegate a code-change campaign to the StrategicEvolutionAgent (→ coordinator → Self-Improvement Agent) which edits REAL source files with versioned backups, a self-test, an LLM critique gate, and rollback. THIS is how you actually modify a target component/module to fulfil an 'improve X' directive. Requires params: 'campaign_goal_description' (string — restate the directive verbatim, keep any '[target: <path>]').",
+            "ANALYZE_FAILURE": "Analyze a failure to learn from it (LLM). Use ONLY when genuinely no progress is possible — never as a substitute for doing the work. Requires params: 'failure' (string).",
+            "ANALYZE_DATA": "Analyze provided data (LLM step). Requires params: 'context' (string).",
+            "SYNTHESIZE_INFO": "Synthesize information into a conclusion (LLM). Requires params: 'context' (string).",
+            "IDENTIFY_CRITERIA": "Identify decision criteria (LLM). Requires params: 'context' (string).",
+            "EVALUATE_OPTIONS": "Evaluate options against criteria (LLM). Requires params: 'context' (string).",
+            "MAKE_DECISION": "Decide between options (LLM). Requires params: 'context' (string).",
+            "GENERATE_REPORT": "Produce a summary report (LLM). Requires params: 'context' (string).",
+            "UPDATE_BELIEF": "Record a belief in the belief system. Requires params: 'key' (string), 'value'.",
+            "READ_FILE": "Read a file from the agent SANDBOX workspace only (cannot read real source). Requires params: 'path' (string).",
+            "WRITE_FILE": "Write a file into the agent SANDBOX workspace only — CANNOT edit real source (use EXECUTE_STRATEGIC_EVOLUTION_CAMPAIGN for that). Requires params: 'path' (string), 'content' (string).",
+            "LIST_FILES": "List files in the sandbox workspace. Requires params: 'path' (string).",
+            "ANALYZE_CODE": "Analyze code in the sandbox (LLM). Requires params: 'file_path' (string).",
+            "GENERATE_CODE": "Generate code into the sandbox (LLM). Requires params: 'description' (string).",
+            "GET_CODING_SUGGESTIONS": "Get coding suggestions (LLM). Requires params: 'current_task' (string).",
+            "EXECUTE_BASH_COMMAND": "Run a shell command in the sandbox. Requires params: 'command' (string).",
+            "NO_OP": "Do nothing — use only to end a plan cleanly when the goal is already satisfied.",
+        }
+        # Advertise every executable internal/registered action handler (skip the deliberate-failure stub).
+        # EXECUTE_STRATEGIC_EVOLUTION_CAMPAIGN only works when a StrategicEvolutionAgent is wired (the
+        # mastermind-strategy BDI), so don't advertise it to BDIs that can't run it.
+        _has_sea = getattr(self, "strategic_evolution_agent", None) is not None
+        for name in self._internal_action_handlers:
+            if name == "FAIL_ACTION":
+                continue
+            if name == "EXECUTE_STRATEGIC_EVOLUTION_CAMPAIGN" and not _has_sea:
+                continue
+            action_manifest[name] = _INTERNAL_ACTION_DOCS.get(name, f"Internal action '{name}'.")
+        # Plus the registry-loaded BaseTools.
         for tool_id, tool_instance in self.available_tools.items():
             description = inspect.getdoc(tool_instance) or f"Executes the {tool_id} tool."
             description = ' '.join(description.split())
@@ -829,13 +861,23 @@ class BDIAgent:
             if params: description += f" Requires params: {', '.join(params)}"
             action_manifest[tool_id] = description
         action_details_str = "\n".join([f"- {name}: {desc}" for name, desc in action_manifest.items()])
-        example_action_type = next(iter(self.available_tools.keys()), "NO_OP")
-        example_params = {}
-        if example_action_type != "NO_OP":
-            sig = inspect.signature(self.available_tools[example_action_type].execute)
-            for param_name, param in sig.parameters.items():
-                if param_name not in ['self', 'kwargs']: example_params[param_name] = f"<{param.annotation.__name__ if hasattr(param.annotation, '__name__') else 'value'}>"
-        few_shot_example = json.dumps([{"type": example_action_type, "params": example_params}], indent=2)
+        # Worked example. For an 'improve/evolve X' directive with a real effector available, show the
+        # strategic campaign so the planner stops dead-ending on ANALYZE_FAILURE; otherwise show a neutral
+        # example so non-mastermind BDIs aren't biased toward an action they can't run.
+        _improvement_goal = any(w in goal_description.lower() for w in ("improve", "evolve", "enhance", "harden", "refactor", "fix"))
+        if _has_sea and _improvement_goal:
+            few_shot_example = json.dumps([
+                {"type": "EXECUTE_STRATEGIC_EVOLUTION_CAMPAIGN", "params": {"campaign_goal_description": goal_description}}
+            ], indent=2)
+        else:
+            _ex_type = next(iter(self.available_tools.keys()), "NO_OP")
+            _ex_params = {}
+            if _ex_type != "NO_OP":
+                sig = inspect.signature(self.available_tools[_ex_type].execute)
+                for pn, p in sig.parameters.items():
+                    if pn not in ['self', 'kwargs']:
+                        _ex_params[pn] = f"<{p.annotation.__name__ if hasattr(p.annotation, '__name__') else 'value'}>"
+            few_shot_example = json.dumps([{"type": _ex_type, "params": _ex_params}], indent=2)
 
         # System-state preamble (psutil): plans should respect resource constraints
         sys_preamble = ""
