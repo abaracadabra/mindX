@@ -1,15 +1,17 @@
 """
-inference_ledger.py — append-only, hash-linked record of every LLM inference (tokens + price PER MODEL),
-in a format suitable for periodic publication to the blockchain (immutable cost provenance).
+inference_ledger.py — blockchain ANCHOR layer over the EXISTING precision-metrics ledger.
 
-Per the thesis/manifesto: mindX maximizes daily inference at the lowest cost, and keeps an immutable
-ledger of what each model cost it. Each entry is HASH-LINKED to the previous (sha256 over the canonical
-fields + prev_hash) — so the ledger is tamper-evident, a mini-chain. `anchor_digest()` rolls the whole
-ledger up to a single deterministic sha256 + per-model totals for on-chain anchoring (same pattern as the
-storage/anchor offload). This is memory-from-logs: rebuildable, and the head hash is what gets anchored.
+mindX already keeps the source-of-truth inference ledger in `llm/precision_metrics.py`
+(`PrecisionMetricsTracker` → `data/metrics/cloud_precision_metrics.json`): ACTUAL per-model tokens
+(eval_count / prompt_eval_count, 18-dp) that feed the boardroom value>cost upgrade trigger
+(BOARDROOM.md §3.X). This module does NOT duplicate that — it READS it and produces a deterministic,
+hash-linked ANCHOR CHAIN suitable for periodic publication to the blockchain (immutable cost provenance
+as mindX evolves into permanence).
 
-Disable with MINDX_INFERENCE_LEDGER_DISABLE=1. Best-effort + lock-guarded: a ledger failure NEVER breaks
-the inference it is recording.
+Each `anchor()` snapshots the ledger's accounting state → a `state_digest` (sha256), and appends a
+hash-linked anchor entry (`prev_hash` + state → `anchor_hash`) to `data/monitoring/inference_anchors.jsonl`.
+`anchor()` is idempotent on an unchanged ledger. The latest `anchor_hash` is what gets published on-chain.
+Disable with `MINDX_INFERENCE_LEDGER_DISABLE=1`.
 """
 from __future__ import annotations
 
@@ -23,13 +25,16 @@ from typing import Optional
 
 try:
     from utils.config import PROJECT_ROOT
-except Exception:  # pragma: no cover - import-order safety
+except Exception:  # pragma: no cover
     PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-LEDGER_PATH = PROJECT_ROOT / "data" / "monitoring" / "inference_ledger.jsonl"
+# Source-of-truth ledger (the existing precision-metrics tracker persists here).
+PRECISION_METRICS_PATH = PROJECT_ROOT / "data" / "metrics" / "cloud_precision_metrics.json"
+# The anchor chain — periodic immutable snapshots for on-chain publication.
+ANCHOR_PATH = PROJECT_ROOT / "data" / "monitoring" / "inference_anchors.jsonl"
 _GENESIS = "0" * 64
-_HASHED_FIELDS = ("seq", "ts", "agent", "provider", "model", "prompt_tokens",
-                  "completion_tokens", "cost_usd", "purpose", "prev_hash")
+_ANCHOR_HASHED = ("seq", "ts", "state_digest", "global_total_requests",
+                  "global_total_tokens", "global_total_cost_usd", "prev_hash")
 _lock = threading.Lock()
 
 
@@ -37,131 +42,141 @@ def _disabled() -> bool:
     return os.getenv("MINDX_INFERENCE_LEDGER_DISABLE") == "1"
 
 
-def _entry_hash(entry: dict) -> str:
-    canonical = json.dumps({k: entry[k] for k in _HASHED_FIELDS}, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
-
-def _last_entry() -> Optional[dict]:
-    """Read the tail line (the chain head) without loading the whole file."""
-    if not LEDGER_PATH.exists():
-        return None
+def _read_ledger() -> dict:
+    if not PRECISION_METRICS_PATH.exists():
+        return {}
     try:
-        with open(LEDGER_PATH, "rb") as f:
-            f.seek(0, 2)
-            size = f.tell()
-            f.seek(max(0, size - 8192))
-            lines = f.read().decode("utf-8", "replace").splitlines()
-        for ln in reversed(lines):
-            ln = ln.strip()
-            if ln:
-                return json.loads(ln)
+        return json.loads(PRECISION_METRICS_PATH.read_text(encoding="utf-8")) or {}
     except Exception:
-        return None
-    return None
+        return {}
 
 
-def record(*, agent: str, provider: str, model: str, prompt_tokens: int = 0,
-           completion_tokens: int = 0, cost_usd: float = 0.0, purpose: str = "",
-           ts: Optional[float] = None) -> Optional[dict]:
-    """Append one hash-linked inference entry. Returns the entry (or None if disabled/failed)."""
+def _state_digest(ledger: dict) -> str:
+    """Deterministic sha256 of the ledger's accounting state (order-independent)."""
+    models = ledger.get("models", {}) or {}
+    canon = {
+        "gr": ledger.get("global_total_requests", 0),
+        "ge": ledger.get("global_total_eval_tokens", 0),
+        "gp": ledger.get("global_total_prompt_tokens", 0),
+        "gc": str(ledger.get("global_total_cost_usd", "0")),
+        "m": {m: [d.get("total_requests", 0), d.get("total_eval_count", 0),
+                  d.get("total_prompt_eval_count", 0)]
+              for m, d in sorted(models.items())},
+    }
+    return hashlib.sha256(json.dumps(canon, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def _anchor_hash(entry: dict) -> str:
+    return hashlib.sha256(json.dumps({k: entry[k] for k in _ANCHOR_HASHED},
+                          sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def _read_anchors(limit: int = 0) -> list:
+    """limit=0 → full chain ascending; limit>0 → newest-first, capped."""
+    if not ANCHOR_PATH.exists():
+        return []
+    out = []
+    try:
+        with open(ANCHOR_PATH, "r", encoding="utf-8") as f:
+            for ln in f:
+                ln = ln.strip()
+                if not ln:
+                    continue
+                try:
+                    out.append(json.loads(ln))
+                except Exception:
+                    continue
+    except Exception:
+        return []
+    return out[-limit:][::-1] if limit else out
+
+
+def anchor(ts: Optional[float] = None) -> Optional[dict]:
+    """Snapshot the precision-metrics ledger into a hash-linked anchor (blockchain-publishable).
+    Idempotent: returns the existing head anchor unchanged if the ledger state hasn't moved."""
     if _disabled():
         return None
     try:
         with _lock:
-            prev = _last_entry()
+            ledger = _read_ledger()
+            digest = _state_digest(ledger)
+            head = _read_anchors(1)
+            prev = head[0] if head else None
+            if prev and prev.get("state_digest") == digest:
+                return prev  # nothing changed since last anchor
             entry = {
                 "seq": (prev["seq"] + 1) if prev else 0,
                 "ts": round(ts if ts is not None else time.time(), 3),
-                "agent": str(agent or "?")[:80],
-                "provider": str(provider or "?")[:40],
-                "model": str(model or "?")[:80],
-                "prompt_tokens": int(prompt_tokens or 0),
-                "completion_tokens": int(completion_tokens or 0),
-                "total_tokens": int(prompt_tokens or 0) + int(completion_tokens or 0),
-                "cost_usd": round(float(cost_usd or 0.0), 8),
-                "purpose": str(purpose or "")[:48],
-                "prev_hash": prev["hash"] if prev else _GENESIS,
+                "state_digest": digest,
+                "global_total_requests": ledger.get("global_total_requests", 0),
+                "global_total_tokens": ledger.get("global_total_eval_tokens", 0) + ledger.get("global_total_prompt_tokens", 0),
+                "global_total_cost_usd": str(ledger.get("global_total_cost_usd", "0")),
+                "models": sorted((ledger.get("models", {}) or {}).keys()),
+                "prev_hash": prev["anchor_hash"] if prev else _GENESIS,
             }
-            entry["hash"] = _entry_hash(entry)
-            LEDGER_PATH.parent.mkdir(parents=True, exist_ok=True)
-            with open(LEDGER_PATH, "a", encoding="utf-8") as f:
+            entry["anchor_hash"] = _anchor_hash(entry)
+            ANCHOR_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with open(ANCHOR_PATH, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry, separators=(",", ":")) + "\n")
             return entry
     except Exception:
         return None
 
 
-def _iter_entries():
-    if not LEDGER_PATH.exists():
-        return
-    with open(LEDGER_PATH, "r", encoding="utf-8") as f:
-        for ln in f:
-            ln = ln.strip()
-            if not ln:
-                continue
-            try:
-                yield json.loads(ln)
-            except Exception:
-                continue
-
-
-def summary(limit_tail: int = 20, since_ts: Optional[float] = None) -> dict:
-    """Per-model token/cost rollup + recent tail + the anchorable head hash."""
-    by_model: dict = {}
-    totals = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "cost_usd": 0.0, "count": 0}
-    tail: list = []
-    head_hash = _GENESIS
-    for e in _iter_entries():
-        head_hash = e.get("hash", head_hash)
-        if since_ts is not None and e.get("ts", 0) < since_ts:
-            continue
-        m = e.get("model", "?")
-        d = by_model.setdefault(m, {"provider": e.get("provider", "?"), "count": 0,
-                                     "prompt_tokens": 0, "completion_tokens": 0,
-                                     "total_tokens": 0, "cost_usd": 0.0})
-        d["count"] += 1
-        for k in ("prompt_tokens", "completion_tokens", "total_tokens"):
-            d[k] += e.get(k, 0)
-            totals[k] += e.get(k, 0)
-        d["cost_usd"] = round(d["cost_usd"] + e.get("cost_usd", 0.0), 8)
-        totals["cost_usd"] = round(totals["cost_usd"] + e.get("cost_usd", 0.0), 8)
-        totals["count"] += 1
-        tail.append(e)
+def summary(limit_tail: int = 20, do_anchor: bool = True) -> dict:
+    """Per-model token rollup from the precision-metrics ledger + the anchor chain.
+    By default also writes a fresh anchor when the ledger has changed (idempotent otherwise)."""
+    if do_anchor:
+        anchor()
+    ledger = _read_ledger()
+    models = ledger.get("models", {}) or {}
+    by_model = {}
+    for m, d in models.items():
+        ev, pr = d.get("total_eval_count", 0), d.get("total_prompt_eval_count", 0)
+        by_model[m] = {
+            "requests": d.get("total_requests", 0),
+            "eval_tokens": ev, "prompt_tokens": pr, "total_tokens": ev + pr,
+            "cost_usd": float(d.get("total_cost_usd", 0) or 0),
+        }
+    ge, gp = ledger.get("global_total_eval_tokens", 0), ledger.get("global_total_prompt_tokens", 0)
+    totals = {"requests": ledger.get("global_total_requests", 0),
+              "eval_tokens": ge, "prompt_tokens": gp, "total_tokens": ge + gp,
+              "cost_usd": float(ledger.get("global_total_cost_usd", 0) or 0)}
+    anchors = _read_anchors(max(0, min(limit_tail, 100)))
     return {
-        "entries": totals["count"],
+        "source": "precision_metrics",
+        "entries": totals["requests"],
         "by_model": by_model,
         "totals": totals,
-        "tail": tail[-limit_tail:][::-1] if limit_tail else [],
-        "head_hash": head_hash,
-        "ledger_path": str(LEDGER_PATH),
+        "state_digest": _state_digest(ledger),
+        "anchors": anchors,
+        "head_anchor": anchors[0]["anchor_hash"] if anchors else _GENESIS,
+        "anchor_count": len(_read_anchors(0)),
+        "ledger_path": str(PRECISION_METRICS_PATH),
     }
 
 
 def anchor_digest() -> dict:
-    """A compact, deterministic digest for periodic on-chain anchoring of the whole ledger to date."""
-    s = summary(limit_tail=0)
-    payload = {
-        "entries": s["entries"],
-        "head_hash": s["head_hash"],
-        "totals": s["totals"],
-        "by_model": {m: {"count": d["count"], "total_tokens": d["total_tokens"], "cost_usd": d["cost_usd"]}
-                     for m, d in s["by_model"].items()},
+    """The current publishable digest: live state digest + head anchor hash."""
+    ledger = _read_ledger()
+    head = _read_anchors(1)
+    return {
+        "digest_sha256": _state_digest(ledger),
+        "head_anchor": head[0]["anchor_hash"] if head else _GENESIS,
+        "anchored_seq": head[0]["seq"] if head else -1,
+        "global_total_requests": ledger.get("global_total_requests", 0),
     }
-    payload["digest_sha256"] = hashlib.sha256(
-        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
-    return payload
 
 
 def verify_chain() -> dict:
-    """Walk the chain and confirm every link (prev_hash + recomputed hash). Tamper-evidence proof."""
+    """Walk the anchor chain and confirm every hash link (tamper-evidence proof)."""
     prev_hash = _GENESIS
     ok = 0
-    broken_at = None
-    for e in _iter_entries():
-        if e.get("prev_hash") != prev_hash or _entry_hash(e) != e.get("hash"):
-            broken_at = e.get("seq")
+    broken = None
+    for e in _read_anchors(0):
+        if e.get("prev_hash") != prev_hash or _anchor_hash(e) != e.get("anchor_hash"):
+            broken = e.get("seq")
             break
-        prev_hash = e["hash"]
+        prev_hash = e["anchor_hash"]
         ok += 1
-    return {"valid": broken_at is None, "verified_entries": ok, "broken_at_seq": broken_at, "head_hash": prev_hash}
+    return {"valid": broken is None, "verified_anchors": ok, "broken_at_seq": broken, "head_anchor": prev_hash}

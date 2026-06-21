@@ -888,15 +888,16 @@ tr:hover td{background:rgba(121,192,255,.02)}
     let h=`<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px;font-size:12px">
       <span><b>${d.entries||0}</b> inferences</span>
       <span><b>${k(t.total_tokens)}</b> tokens</span>
-      <span><b>${usd(t.cost_usd)}</b> total</span>
+      <span><b>${usd(t.cost_usd)}</b> cost</span>
+      <span><b>${d.anchor_count||0}</b> anchors</span>
       <span style="color:${d.chain&&d.chain.valid?'#3bbf6f':'#d05050'}">chain ${d.chain&&d.chain.valid?'✓ valid':'✗ broken'}</span></div>`;
-    if(d.anchor) h+=`<div style="font-size:10px;color:#789;margin-bottom:8px">anchor sha256 <code>${esc((d.anchor.digest_sha256||'').slice(0,32))}…</code> · head <code>${esc((d.anchor.head_hash||'').slice(0,16))}…</code> (publishable on-chain)</div>`;
-    h+='<div style="font-weight:600;color:#9bd;margin:6px 0 4px">per model</div>';
-    if(!models.length) h+='<div class="empty">no inferences recorded yet</div>';
+    h+=`<div style="font-size:10px;color:#789;margin-bottom:8px">source <code>precision_metrics</code> · state <code>${esc((d.state_digest||'').slice(0,24))}…</code> · head anchor <code>${esc(((d.anchor&&d.anchor.head_anchor)||'').slice(0,16))}…</code> (publishable on-chain)</div>`;
+    h+='<div style="font-weight:600;color:#9bd;margin:6px 0 4px">per model (ACTUAL tokens)</div>';
+    if(!models.length) h+='<div class="empty">no inferences recorded yet — ledger fills as the loop runs</div>';
     for(const [m,v] of models){
       h+=`<div style="display:flex;align-items:center;gap:10px;padding:4px 0;border-bottom:1px solid #161616;font-size:12px">
-        <span style="flex:1;color:#ccc">${esc(m)} <span style="color:#678;font-size:10px">${esc(v.provider||'')}</span></span>
-        <span style="color:#9aa">${v.count}×</span><span style="color:#9aa">${k(v.total_tokens)} tok</span>
+        <span style="flex:1;color:#ccc">${esc(m)}</span>
+        <span style="color:#9aa">${v.requests}×</span><span style="color:#9aa">${k(v.total_tokens)} tok</span>
         <span style="color:#7c7;width:70px;text-align:right">${usd(v.cost_usd)}</span></div>`;
     }
     return h;
