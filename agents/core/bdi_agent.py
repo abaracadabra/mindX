@@ -852,12 +852,20 @@ class BDIAgent:
             if name == "EXECUTE_STRATEGIC_EVOLUTION_CAMPAIGN" and not _has_sea:
                 continue
             action_manifest[name] = _INTERNAL_ACTION_DOCS.get(name, f"Internal action '{name}'.")
-        # Plus the registry-loaded BaseTools.
+        # Plus the registry-loaded BaseTools. Skip any tool that isn't actually executable (no callable
+        # execute) — some registry entries are non-conforming (e.g. StrategicAnalysisTool has no execute);
+        # advertising one would let the planner pick it and crash the cycle on AttributeError.
         for tool_id, tool_instance in self.available_tools.items():
+            _exec = getattr(tool_instance, "execute", None)
+            if not callable(_exec):
+                continue
             description = inspect.getdoc(tool_instance) or f"Executes the {tool_id} tool."
             description = ' '.join(description.split())
-            sig = inspect.signature(tool_instance.execute)
-            params = [p.name for p in sig.parameters.values() if p.name not in ['self', 'kwargs'] and p.default == inspect.Parameter.empty]
+            try:
+                sig = inspect.signature(_exec)
+                params = [p.name for p in sig.parameters.values() if p.name not in ['self', 'kwargs'] and p.default == inspect.Parameter.empty]
+            except (ValueError, TypeError):
+                params = []
             if params: description += f" Requires params: {', '.join(params)}"
             action_manifest[tool_id] = description
         action_details_str = "\n".join([f"- {name}: {desc}" for name, desc in action_manifest.items()])
@@ -870,13 +878,20 @@ class BDIAgent:
                 {"type": "EXECUTE_STRATEGIC_EVOLUTION_CAMPAIGN", "params": {"campaign_goal_description": goal_description}}
             ], indent=2)
         else:
-            _ex_type = next(iter(self.available_tools.keys()), "NO_OP")
-            _ex_params = {}
-            if _ex_type != "NO_OP":
-                sig = inspect.signature(self.available_tools[_ex_type].execute)
-                for pn, p in sig.parameters.items():
-                    if pn not in ['self', 'kwargs']:
-                        _ex_params[pn] = f"<{p.annotation.__name__ if hasattr(p.annotation, '__name__') else 'value'}>"
+            # First executable tool (with a callable execute), else NO_OP — never crash on a broken tool.
+            _ex_type, _ex_params = "NO_OP", {}
+            for _tid, _ti in self.available_tools.items():
+                _e = getattr(_ti, "execute", None)
+                if not callable(_e):
+                    continue
+                _ex_type = _tid
+                try:
+                    for pn, p in inspect.signature(_e).parameters.items():
+                        if pn not in ['self', 'kwargs']:
+                            _ex_params[pn] = f"<{p.annotation.__name__ if hasattr(p.annotation, '__name__') else 'value'}>"
+                except (ValueError, TypeError):
+                    pass
+                break
             few_shot_example = json.dumps([{"type": _ex_type, "params": _ex_params}], indent=2)
 
         # System-state preamble (psutil): plans should respect resource constraints
