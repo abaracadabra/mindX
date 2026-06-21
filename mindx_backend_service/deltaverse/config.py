@@ -9,10 +9,12 @@ from __future__ import annotations
 import os
 from typing import Dict, List, Tuple
 
-# The cypherpunk2048 hierarchy. Privilege ascends with the index.
-# `member` = a paid-in *.bankon.eth subname holder (collection-from-payment by
-# the bankon.eth overlord). `overlord` = the owner of bankon.eth itself.
-REALM_ROLES: Tuple[str, ...] = ("public", "member", "model", "agent", "overseer", "overlord")
+# The cypherpunk2048 hierarchy now lives in the canonical, two-chain ladder
+# `mindx_backend_service/hierarchy.py` (one source of truth: bankon.eth EVM OVERLORD + mindx.algo
+# Algorand OVERSEER, with a coherent rank order + how-to-earn + the gate each tier protects).
+# REALM_ROLES / rank / can_grant defer to it.
+from mindx_backend_service.hierarchy import ORDER as _LADDER_ORDER
+REALM_ROLES: Tuple[str, ...] = tuple(_LADDER_ORDER)
 
 
 def is_enabled() -> bool:
@@ -25,16 +27,15 @@ def _env(name: str, default: str = "") -> str:
 
 
 def rank(role: str) -> int:
-    try:
-        return REALM_ROLES.index((role or "public").lower())
-    except ValueError:
-        return 0
+    from mindx_backend_service.hierarchy import rank as _rank
+    return _rank(role)
 
 
 def can_grant(role: str, needed: str) -> bool:
     """Privilege gate. Payment/tenure can lift a participant toward `needed`;
     callers offer an upgrade path rather than a dead end when this is False."""
-    return rank(role) >= rank(needed or "public")
+    from mindx_backend_service.hierarchy import can_grant as _can_grant
+    return _can_grant(role, needed)
 
 
 def known_addresses() -> Dict[str, str]:

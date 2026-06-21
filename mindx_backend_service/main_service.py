@@ -3262,6 +3262,20 @@ async def insight_improvement_summary(request: Request, window: str = "24h"):
     return _maybe_h_text(request, agg.improvement_summary(), route_path="/insight/improvement/summary")
 
 
+@app.get("/insight/hierarchy", tags=["insight"], summary="The mindX OVERLORD hierarchy ladder + recognize")
+@_insight_safe
+async def insight_hierarchy(request: Request, evm: Optional[str] = None, algo: Optional[str] = None):
+    """The canonical OVERLORD hierarchy — ONE ladder across both sovereignty chains: the EVM OVERLORD
+    (bankon.eth) and the Algorand OVERSEER (mindx.algo). Each tier names how it is earned and the mindX
+    surface it gates. Pass ?evm=<addr> and/or ?algo=<addr> to recognize a tier. Recognition IS the
+    protection boundary — DeltaVerse, inspired by mindX, now protects it."""
+    from mindx_backend_service import hierarchy as _h
+    out = _h.summary()
+    if evm or algo:
+        out["recognized"] = _h.recognize(evm_address=evm, algo_address=algo)
+    return _maybe_h_text(request, out, route_path="/insight/hierarchy")
+
+
 @app.get("/insight/godel/breakdown", tags=["insight"])
 @_insight_safe
 async def insight_godel_breakdown(request: Request, hours: int = 24):
