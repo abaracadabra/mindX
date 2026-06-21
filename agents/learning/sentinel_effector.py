@@ -67,10 +67,18 @@ async def _critique(directive: str, before: str, after: str, handler) -> float:
             "must still work). Reply with ONLY a number.\n\n"
             f"DIRECTIVE: {directive}\n\nBEFORE:\n{before}\n\nAFTER:\n{after}\n\nScore:"
         )
+        # gpt-oss is a reasoning model — it needs headroom to emit the answer (max_tokens=16 returns ''),
+        # so give it room and take the LAST in-range number it produces.
         out = await handler.generate_text(prompt, model=getattr(handler, "model_name_for_api", None),
-                                          max_tokens=16, temperature=0.0)
-        m = re.search(r"(\d*\.?\d+)", out or "")
-        return max(0.0, min(1.0, float(m.group(1)))) if m else 0.0
+                                          max_tokens=256, temperature=0.0)
+        for n in reversed(re.findall(r"\d*\.?\d+", out or "")):
+            try:
+                v = float(n)
+                if 0.0 <= v <= 1.0:
+                    return v
+            except ValueError:
+                continue
+        return 0.0
     except Exception:
         return 0.0
 
