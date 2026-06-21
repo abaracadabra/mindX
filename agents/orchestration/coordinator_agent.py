@@ -683,11 +683,26 @@ class CoordinatorAgent:
 
         # This is where the logic to call the SIA CLI would go.
         from tools.monitoring.system_analyzer_tool import SystemAnalyzerTool
+        # Route this HEAVY analysis task through the best-model selector → the capable
+        # reasoning/analysis model (task_scores rank gpt-oss:120b-cloud top for DATA_ANALYSIS),
+        # not the coordinator's default heartbeat handler which times out on CPU. Fail-safe:
+        # any selection failure falls back to the default handler so analysis still runs.
+        analysis_handler = self.llm_handler
+        try:
+            from llm.model_registry import get_model_registry_async
+            from llm.model_selector import TaskType
+            _reg = await get_model_registry_async(config=self.config)
+            _best = _reg.get_handler_for_purpose(TaskType.DATA_ANALYSIS) if _reg else None
+            if _best is not None:
+                analysis_handler = _best
+                self.logger.info(f"SystemAnalyzerTool: selected best DATA_ANALYSIS handler '{getattr(_best, 'model_name_for_api', '?')}' via model registry")
+        except Exception as _sel_e:
+            self.logger.debug(f"SystemAnalyzerTool: best-model selection failed, using default handler: {_sel_e}")
         analyzer = SystemAnalyzerTool(
             config=self.config,
             belief_system=self.belief_system,
             coordinator_ref=self,
-            llm_handler=self.llm_handler
+            llm_handler=analysis_handler
         )
         
         self.logger.info(f"Invoking SystemAnalyzerTool for target: {target_component}")
