@@ -42,6 +42,28 @@ RAGE_HUB = "https://rage.pythai.net/"
 BANKON_DOORWAY = "https://bankon.pythai.net"
 MINDX_DOCS = "https://mindx.pythai.net/docs.html"
 
+# ── Official hyperlink registry (general policy) ────────────────────────────────────────────────
+# editor.agent keeps an auditable LOG of the current, canonical mindX URLs — rage.pythai.net,
+# docs.html, and the live surfaces — so every piece it judges can cite real, official links. The set
+# is kept current here; `log_official_links()` records the canonical set + what each piece actually
+# cites to data/editor/official_links.json (append-only), so the official link map stays fresh and
+# auditable. This is house policy: cite the open web, and link only official, live mindX URLs.
+OFFICIAL_LINKS = {
+    "landing":     "https://mindx.pythai.net/",
+    "docs":        MINDX_DOCS,
+    "feedback":    "https://mindx.pythai.net/feedback.html",
+    "agentic":     "https://mindx.pythai.net/agentic.html",
+    "reference":   "https://mindx.pythai.net/reference",
+    "cognition":   "https://mindx.pythai.net/insight/cognition/diagnostic",
+    "inference_ledger": "https://mindx.pythai.net/insight/inference/ledger",
+    "improvement": "https://mindx.pythai.net/insight/improvement/summary",
+    "autonomous":  "https://mindx.pythai.net/insight/autonomous/feedback",
+    "rage":        RAGE_HUB,
+    "bankon":      BANKON_DOORWAY,
+    "gnugui":      GNUGUI_REPO,
+    "github":      "https://github.com/AgenticPlace/mindX",
+}
+
 # High bars, set high on purpose. 0..1. Clarity, genius, AND style.
 CLARITY_THRESHOLD = 0.90
 GENIUS_THRESHOLD = 0.90
@@ -83,6 +105,37 @@ class EditorAgent:
                 cls._instance = cls()
             return cls._instance
 
+    # ── official-links policy: keep an auditable log of the canonical mindX URLs ──
+    def log_official_links(self, content_html: str = "", *, title: Optional[str] = None) -> Dict[str, Any]:
+        """General policy: editor.agent keeps a LOG of the official mindX hyperlinks (rage.pythai.net,
+        docs.html, and the live surfaces in OFFICIAL_LINKS) plus the links a given piece actually cites.
+        Appends to data/editor/official_links.json (append-only, auditable). Flags any *.pythai.net link
+        that is NOT in the canonical set (possibly stale). Returns the official set + what was cited."""
+        import json as _json, re as _re, time as _time
+        try:
+            from utils.config import PROJECT_ROOT as _ROOT
+        except Exception:
+            from pathlib import Path as _P
+            _ROOT = _P(__file__).resolve().parents[1]
+        canon = {o.rstrip("/") for o in OFFICIAL_LINKS.values()}
+        hrefs = _re.findall(r'href=["\']([^"\']+)["\']', content_html or "")
+        cited_official = sorted({h for h in hrefs if h.rstrip("/") in canon or any(h.startswith(o) for o in OFFICIAL_LINKS.values())})
+        unknown_pythai = sorted({h for h in hrefs if "pythai.net" in h and h not in cited_official})
+        cited_external = sorted({h for h in hrefs if "pythai.net" not in h and not h.startswith("#")})
+        record = {"ts": _time.time(), "title": title, "official_registry": OFFICIAL_LINKS,
+                  "cited_official": cited_official, "unknown_pythai": unknown_pythai, "cited_external": cited_external}
+        try:
+            lp = _ROOT / "data" / "editor" / "official_links.json"
+            lp.parent.mkdir(parents=True, exist_ok=True)
+            with open(lp, "a", encoding="utf-8") as f:
+                f.write(_json.dumps(record, separators=(",", ":")) + "\n")
+        except Exception as e:
+            logger.debug(f"{self.AGENT_ID}: official-links log write failed: {e}")
+        if unknown_pythai:
+            logger.warning(f"{self.AGENT_ID}: non-canonical pythai link(s) in '{title}': {unknown_pythai}")
+        return {"official": sorted(OFFICIAL_LINKS.values()), "cited_official": cited_official,
+                "unknown_pythai": unknown_pythai, "cited_external": cited_external}
+
     # ── critique: clarity + genius + operational transparency ──────
     def critique(self, content_html: str, *, title: Optional[str] = None,
                  house_targets: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -97,14 +150,22 @@ class EditorAgent:
         ``author_composition.RageHouseStyle.targets()``) the editor additionally
         scores the draft against what rage.pythai.net already ships and demands
         it MATCH AND EXCEED the house — link density, length, and structure."""
+        # General policy: log the official mindX hyperlinks this piece cites (and flag stale ones).
+        try:
+            self.log_official_links(content_html, title=title)
+        except Exception:
+            pass
         text = self._strip_html(content_html or "")
-        clarity = self._score_clarity(text)
-        genius = self._score_genius(text)
-        style = self._score_style(text)
-        transparency = self._audit_transparency(text)
         # Reference density: links per 1000 words, counted on the raw HTML.
+        # Counted before genius so citation-density rewards real hyperlinks
+        # (href), not raw "http" left visible in the prose — clickable citations
+        # are the house standard.
         n_links = len(re.findall(r"href\s*=", content_html or "", flags=re.I))
         n_words = max(1, len(text.split()))
+        clarity = self._score_clarity(text)
+        genius = self._score_genius(text, link_count=n_links)
+        style = self._score_style(text)
+        transparency = self._audit_transparency(text)
         ref_density = round(n_links * 1000.0 / n_words, 2)
         house = (self._score_house_match(content_html or "", ref_density, n_words, house_targets)
                  if house_targets else None)
@@ -262,9 +323,13 @@ class EditorAgent:
         clarity = 0.7 * avg_score + 0.3 * (1.0 - long_frac)
         return max(0.0, min(1.0, clarity))
 
-    def _score_genius(self, text: str) -> float:
+    def _score_genius(self, text: str, *, link_count: int = 0) -> float:
         """Genius proxy: lexical diversity + idea-density signals (citations,
-        contrast/insight markers). Transparent; not a substitute for taste."""
+        contrast/insight markers). Transparent; not a substitute for taste.
+
+        Citation density counts real hyperlinks (``link_count`` = href count),
+        not raw "http" left visible in the prose — the house standard is to cite
+        every claim with a *clickable* link, so genius rewards that directly."""
         words = re.findall(r"[A-Za-z][A-Za-z'-]+", text.lower())
         if len(words) < 40:
             return 0.0
@@ -274,7 +339,10 @@ class EditorAgent:
                    "make no mistake")
         m = sum(1 for k in markers if k in text.lower())
         marker_score = min(1.0, m / 6.0)
-        cite_density = min(1.0, text.lower().count("http") / 6.0)
+        # Clickable hyperlinks (href) carry the citation signal; fall back to a
+        # visible-URL count only when no markup is present (plain-text drafts).
+        cites = link_count if link_count else text.lower().count("http")
+        cite_density = min(1.0, cites / 6.0)
         genius = 0.5 * min(1.0, ttr / 0.55) + 0.3 * marker_score + 0.2 * cite_density
         return max(0.0, min(1.0, genius))
 
