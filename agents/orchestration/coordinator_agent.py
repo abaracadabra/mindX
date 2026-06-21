@@ -683,21 +683,22 @@ class CoordinatorAgent:
 
         # This is where the logic to call the SIA CLI would go.
         from tools.monitoring.system_analyzer_tool import SystemAnalyzerTool
-        # Route this HEAVY analysis task through the best-model selector → the capable
-        # reasoning/analysis model (task_scores rank gpt-oss:120b-cloud top for DATA_ANALYSIS),
-        # not the coordinator's default heartbeat handler which times out on CPU. Fail-safe:
-        # any selection failure falls back to the default handler so analysis still runs.
+        # Route this HEAVY analysis task through the EXISTING Ollama Cloud path — the capable 120B
+        # reasoning model served via ollama.com, with the precision-metrics ledger + adaptive 429/quota
+        # backoff already built into ollama_handler (the free-first-maximal economics of BOARDROOM.md §3.X).
+        # The generic model_registry "metabolism" down-ranked the cloud model to a weak local one (qwen3:1.7b)
+        # that times out and produces no suggestions; the cloud handler maxes the free cloud quota instead.
+        # Fail-safe: any failure falls back to the default handler so analysis still runs.
         analysis_handler = self.llm_handler
         try:
-            from llm.model_registry import get_model_registry_async
-            from llm.model_selector import TaskType
-            _reg = await get_model_registry_async(config=self.config)
-            _best = _reg.get_handler_for_purpose(TaskType.DATA_ANALYSIS) if _reg else None
-            if _best is not None:
-                analysis_handler = _best
-                self.logger.info(f"SystemAnalyzerTool: selected best DATA_ANALYSIS handler '{getattr(_best, 'model_name_for_api', '?')}' via model registry")
+            from llm.llm_factory import create_llm_handler
+            _cloud_model = self.config.get("self_improvement.analysis_cloud_model", "gpt-oss:120b-cloud")
+            _h = await create_llm_handler("ollama", _cloud_model)
+            if _h is not None:
+                analysis_handler = _h
+                self.logger.info(f"SystemAnalyzerTool: routed to Ollama Cloud '{_cloud_model}' (quota-managed, 429-backoff) — free-first-maximal self-improvement inference")
         except Exception as _sel_e:
-            self.logger.debug(f"SystemAnalyzerTool: best-model selection failed, using default handler: {_sel_e}")
+            self.logger.debug(f"SystemAnalyzerTool: Ollama Cloud routing failed, using default handler: {_sel_e}")
         analyzer = SystemAnalyzerTool(
             config=self.config,
             belief_system=self.belief_system,
