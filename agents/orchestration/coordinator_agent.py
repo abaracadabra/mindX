@@ -784,32 +784,27 @@ class CoordinatorAgent:
                 await self._check_and_backup_architectural_changes(target_component)
             return
 
-        # Real directive — proceed with auto-execute, decorated with backlog context.
-        target = top_suggestion.get("target_component_path", "system")
-        priority = int(top_suggestion.get("priority", 5))
-        directive = f"{raw_directive.strip()} [target: {target}, priority: {priority}, source: coordinator_auto_execute]"[:500]
-
-        self.logger.info(f"Attempting to auto-execute top improvement suggestion: {directive}")
-
-        try:
-            from agents.orchestration.mastermind_agent import MastermindAgent
-            mastermind = await MastermindAgent.get_instance(coordinator_agent_instance=self)
-
-            # Run the evolution campaign in the background
-            asyncio.create_task(mastermind.manage_mindx_evolution(top_level_directive=directive))
-
-            interaction.response = {"status": "SUCCESS", "message": f"Successfully generated {len(suggestions)} suggestions and initiated evolution campaign for the top suggestion: '{directive}'"}
-            interaction.status = InteractionStatus.COMPLETED
-        except Exception as e:
-            self.logger.error(f"Failed to initiate auto-evolution campaign: {e}", exc_info=True)
-            interaction.response = {"status": "PARTIAL_SUCCESS", "message": f"Generated {len(suggestions)} suggestions, but failed to start evolution campaign.", "error": str(e)}
-            interaction.status = InteractionStatus.COMPLETED  # The analysis part was done.
-
+        # Real directive — the suggestions are already in the backlog (added above). Do NOT recurse via
+        # manage_mindx_evolution: that monopolised the loop. Each COMPONENT_IMPROVEMENT kicked off ANOTHER
+        # campaign → which generated more suggestions → which recursed again, spinning forever on one item
+        # and starving the sentinel (and every other backlog item) of a turn. The Mastermind autonomous loop
+        # is the single orderly driver — it selects backlog items by priority with 24h dedup, so the sentinel
+        # and the rest each get picked in turn. (The actual APPLY happens in this handler for allowlisted
+        # targets via the sentinel effector above.)
+        self.logger.info(
+            f"Generated {len(suggestions)} suggestions ({added} new in backlog); deferring execution to the "
+            f"Mastermind autonomous loop (no recursion). Top: '{raw_directive[:80]}'"
+        )
+        interaction.response = {
+            "status": "SUCCESS",
+            "message": f"Generated {len(suggestions)} suggestions ({added} new in backlog); Mastermind loop selects by priority.",
+        }
+        interaction.status = InteractionStatus.COMPLETED
         await self.publish_event(
             "component.improvement.success",
             {"interaction_id": interaction.interaction_id, "metadata": interaction.metadata, "suggestions_generated": len(suggestions)}
         )
-        
+
         # Check for architectural changes and trigger backup if needed
         if target_component and any(indicator in target_component for indicator in ["orchestration", "core", "agents", "tools", "learning", "evolution"]):
             await self._check_and_backup_architectural_changes(target_component)
