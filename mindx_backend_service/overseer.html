@@ -61,25 +61,70 @@ async function load(){
   document.getElementById('net').textContent = data.network;
   const list = document.getElementById('list');
   list.innerHTML = '';
-  (data.suites||[]).forEach(s=>{
+  window.__NET = data.network; window.__ALGOD = data.algod;
+  (data.deployable||[]).forEach(s=>{
     const row = document.createElement('div'); row.className='suite';
-    row.innerHTML = '<div><span class="name">'+s.name+'</span> <span class="meta">'+s.file+' · '+s.size+'b</span></div>';
+    row.innerHTML = '<div><span class="name">'+s.name+'</span> <span class="meta">'+s.approval_bytes+'b · '+s.methods+' methods · G['+(s.schema.global?(s.schema.global.ints+'i,'+s.schema.global.bytes+'b'):'')+']</span></div>';
     const wrap = document.createElement('div');
     const dry = document.createElement('button'); dry.textContent='dry-run';
-    dry.onclick = ()=>deploy(s.name, true, false);
+    dry.onclick = ()=>dryRun(s.name);
     const dep = document.createElement('button'); dep.className='deploy'; dep.textContent='deploy';
-    dep.onclick = ()=>{ if(confirm('Deploy '+s.name+' to '+data.network+'? This is a real on-chain action.')) deploy(s.name, false, true); };
+    dep.onclick = ()=>{ if(confirm('Deploy '+s.name+' to '+data.network+'?\nYour wallet (mindx.algo) signs and submits. This is a real on-chain action.')) realDeploy(s.name); };
     wrap.appendChild(dry); wrap.appendChild(dep); row.appendChild(wrap); list.appendChild(row);
   });
-  if(!(data.suites||[]).length) list.innerHTML='<div class="suite">No Algorand suites found.</div>';
+  (data.source_suites||[]).forEach(s=>{
+    const row = document.createElement('div'); row.className='suite'; row.style.opacity='.55';
+    row.innerHTML = '<div><span class="name">'+s.name+'</span> <span class="meta">source · not compiled</span></div>';
+    list.appendChild(row);
+  });
+  if(!(data.deployable||[]).length && !(data.source_suites||[]).length) list.innerHTML='<div class="suite">No Algorand suites found.</div>';
 }
-async function deploy(suite, dry_run, confirm){
+async function dryRun(suite){
   const res = await fetch(apiBase()+'/overseer/algorand/deploy', {
     method:'POST', headers:{ 'Authorization':'Bearer '+JWT, 'Content-Type':'application/json' },
-    body: JSON.stringify({ suite, dry_run, confirm })
+    body: JSON.stringify({ suite })
   });
   const data = await res.json();
   show(res.ok ? data : ('error '+res.status+': '+(data.detail||'')));
+}
+// Real CLIENT-SIGNED deploy: the browser builds the ApplicationCreate txn from the compiled artifact, the
+// Parsec/Pera wallet (the mindx.algo key) signs it, and it is submitted to algod. The key never leaves the wallet.
+async function realDeploy(suite){
+  show('Preparing '+suite+'…');
+  try {
+    const art = await (await fetch(apiBase()+'/overseer/algorand/artifact/'+encodeURIComponent(suite),
+      { headers:{ 'Authorization':'Bearer '+JWT } })).json();
+    if(art.status!=='success'){ show('artifact: '+(art.detail||'error')); return; }
+    const [algosdkMod, peraMod] = await Promise.all([
+      import('https://cdn.jsdelivr.net/npm/algosdk@2.9.0/+esm'),
+      import('https://cdn.jsdelivr.net/npm/@perawallet/connect@1.4.1/+esm')
+    ]);
+    const algosdk = algosdkMod.default || algosdkMod;
+    const PeraWalletConnect = peraMod.PeraWalletConnect || peraMod.default?.PeraWalletConnect || peraMod.default;
+    const b64 = s => new Uint8Array(atob(s).split('').map(c=>c.charCodeAt(0)));
+    const algod = new algosdk.Algodv2('', window.__ALGOD, '');
+    const sp = await algod.getTransactionParams().do();
+    const txn = algosdk.makeApplicationCreateTxnFromObject({
+      from: ADDR, suggestedParams: sp, onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      approvalProgram: b64(art.approval_b64), clearProgram: b64(art.clear_b64),
+      numGlobalInts: art.global_ints, numGlobalByteSlices: art.global_bytes,
+      numLocalInts: art.local_ints, numLocalByteSlices: art.local_bytes
+    });
+    const pera = new PeraWalletConnect();
+    try { await pera.reconnectSession(); } catch(_) { try { await pera.connect(); } catch(__){} }
+    show('Sign in your wallet to deploy '+suite+'…');
+    const signed = await pera.signTransaction([[{ txn }]]);
+    const { txId } = await algod.sendRawTransaction(signed).do();
+    show('Submitted '+txId+' — awaiting confirmation…');
+    await algosdk.waitForConfirmation(algod, txId, 6);
+    const ptx = await algod.pendingTransactionInformation(txId).do();
+    const appId = ptx['application-index'];
+    await fetch(apiBase()+'/overseer/algorand/record', {
+      method:'POST', headers:{ 'Authorization':'Bearer '+JWT, 'Content-Type':'application/json' },
+      body: JSON.stringify({ suite, app_id: appId, txid: txId, network: window.__NET })
+    });
+    show('✓ DEPLOYED '+suite+'\napp id: '+appId+'\ntxid: '+txId+'\nnetwork: '+window.__NET);
+  } catch(e){ show('deploy failed: '+(e.message||e)); }
 }
 load();
 </script>

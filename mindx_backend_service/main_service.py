@@ -9604,52 +9604,73 @@ async def algorand_overseer_verify(request: Request):
 
 @app.get("/overseer/algorand/suites", summary="List Algorand deployment suites (OVERSEER)", tags=["overseer"])
 async def overseer_algorand_suites(overseer: str = Depends(require_overseer)):
-    """OVERSEER-gated: enumerate the Algorand deployment suites (daio/contracts/algorand)."""
-    from pathlib import Path as _P
-    base = _P(__file__).resolve().parents[1] / "daio" / "contracts" / "algorand"
-    suites = []
-    if base.is_dir():
-        for f in sorted(base.glob("*.algo.ts")):
-            suites.append({"name": f.stem.replace(".algo", ""), "file": f.name, "size": f.stat().st_size})
+    """OVERSEER-gated: deployable compiled artifacts (arc56) + the TealScript source suites."""
+    from mindx_backend_service import algorand_suites as _as
+    artifacts = _as.discover_artifacts()
     return {"status": "success", "overseer": overseer,
             "network": os.environ.get("MINDX_ALGORAND_NETWORK", "testnet"),
-            "count": len(suites), "suites": suites}
+            "algod": os.environ.get("MINDX_ALGOD_URL",
+                                    "https://testnet-api.algonode.cloud" if os.environ.get("MINDX_ALGORAND_NETWORK", "testnet") != "mainnet"
+                                    else "https://mainnet-api.algonode.cloud"),
+            "deployable": [a for a in artifacts if a["deployable"]],
+            "source_suites": _as.list_source_suites(),
+            "count": len(artifacts)}
+
+
+@app.get("/overseer/algorand/artifact/{name}", summary="Compiled program for a deployable suite (OVERSEER)", tags=["overseer"])
+async def overseer_algorand_artifact(name: str, overseer: str = Depends(require_overseer)):
+    """OVERSEER-gated: the compiled approval/clear programs (base64) + state schema for one artifact.
+    The browser builds the ApplicationCreate txn from this; the wallet signs it (the key stays sovereign)."""
+    from mindx_backend_service import algorand_suites as _as
+    art = _as.load_artifact(name)
+    if not art:
+        raise HTTPException(status_code=404, detail=f"no deployable artifact named {name!r}")
+    return {"status": "success", "overseer": overseer,
+            "network": os.environ.get("MINDX_ALGORAND_NETWORK", "testnet"), **art}
+
+
+@app.post("/overseer/algorand/record", summary="Record a completed Algorand deploy (OVERSEER)", tags=["overseer"])
+async def overseer_algorand_record(request: Request, overseer: str = Depends(require_overseer)):
+    """OVERSEER-gated: after the wallet submits the signed deploy to algod, the browser reports the
+    resulting app id + txid here so the deploy is logged to the catalogue stream (audit trail)."""
+    body = await request.json()
+    rec = {"suite": str(body.get("suite") or ""), "app_id": body.get("app_id"),
+           "txid": str(body.get("txid") or ""), "network": str(body.get("network") or "")}
+    try:
+        from agents.catalogue.events import emit_catalogue_event
+        await emit_catalogue_event(kind="admin.algorand_deployed", actor=f"overseer:{overseer}",
+                                   payload=rec, source_log="overseer_algorand_record")
+    except Exception:
+        pass
+    return {"status": "recorded", "overseer": overseer, **rec}
 
 
 @app.post("/overseer/algorand/deploy", summary="Deploy an Algorand suite (OVERSEER; dry-run default)", tags=["overseer"])
 async def overseer_algorand_deploy(request: Request, overseer: str = Depends(require_overseer)):
-    """OVERSEER-gated. ``dry_run=true`` (default) returns the deploy PLAN without touching chain;
-    ``dry_run=false`` requires ``confirm=true`` and the configured deploy harness. The authorized
-    intent is always logged — on-chain actions are never silent."""
-    from pathlib import Path as _P
+    """OVERSEER-gated dry-run: returns the real compiled deploy PLAN for a deployable artifact (no chain
+    write). Actual execution is CLIENT-SIGNED — the browser builds the ApplicationCreate txn from
+    /overseer/algorand/artifact/{name}, the wallet signs it, and submits to algod (the key stays sovereign)."""
+    from mindx_backend_service import algorand_suites as _as
     body = await request.json()
     suite = str(body.get("suite") or "").strip()
-    dry_run = bool(body.get("dry_run", True))
-    confirm = bool(body.get("confirm", False))
     network = os.environ.get("MINDX_ALGORAND_NETWORK", "testnet")
-    base = _P(__file__).resolve().parents[1] / "daio" / "contracts" / "algorand"
-    target = (base / f"{suite}.algo.ts") if suite else None
-    if not suite or target is None or not target.exists():
-        raise HTTPException(status_code=404, detail=f"unknown Algorand suite: {suite!r}")
+    art = _as.load_artifact(suite)
+    if not art:
+        raise HTTPException(status_code=404, detail=f"no deployable artifact named {suite!r}")
     try:
         from agents.catalogue.events import emit_catalogue_event
-        await emit_catalogue_event(kind="admin.algorand_deploy", actor=f"overseer:{overseer}",
-                                   payload={"suite": suite, "network": network, "dry_run": dry_run, "confirm": confirm},
-                                   source_log="overseer_algorand_deploy")
+        await emit_catalogue_event(kind="admin.algorand_deploy_planned", actor=f"overseer:{overseer}",
+                                   payload={"suite": suite, "network": network}, source_log="overseer_algorand_deploy")
     except Exception:
         pass
-    plan = {"suite": suite, "file": target.name, "network": network,
-            "steps": ["compile TealScript → approval/clear TEAL", "create application",
-                      "fund + opt-in", "verify global state"]}
-    if dry_run:
-        return {"status": "dry_run", "overseer": overseer, "plan": plan,
-                "note": "No on-chain state changed. Set dry_run=false + confirm=true to execute."}
-    if not confirm:
-        raise HTTPException(status_code=400, detail="real deploy requires confirm=true")
-    # Real on-chain deploy needs the Algorand deploy harness (algokit + a vaulted deploy key), not yet
-    # configured in the backend. The OVERSEER-authorized intent is logged above for the operator.
-    raise HTTPException(status_code=503, detail="Algorand deploy harness not configured "
-                        "(needs algokit + vaulted deploy key); authorized intent logged")
+    plan = {"suite": art["name"], "network": network,
+            "approval_bytes": len(__import__("base64").b64decode(art["approval_b64"])),
+            "global_schema": {"ints": art["global_ints"], "bytes": art["global_bytes"]},
+            "local_schema": {"ints": art["local_ints"], "bytes": art["local_bytes"]},
+            "steps": ["fetch compiled artifact", "browser builds ApplicationCreate txn",
+                      "wallet (Parsec/Pera) signs", "submit to algod", "record app id"]}
+    return {"status": "dry_run", "overseer": overseer, "plan": plan,
+            "note": "No on-chain state changed. Execute from the OVERSEER page — the wallet signs and submits."}
 
 
 @app.get("/users/session/validate", summary="Validate session token (vault-backed)")
