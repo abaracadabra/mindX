@@ -681,7 +681,35 @@ class CoordinatorAgent:
             interaction.error = "Missing 'target_component' in metadata."
             return
 
-        # This is where the logic to call the SIA CLI would go.
+        # THE HANDS — close the self-improvement loop's missing apply step. If this campaign targets the
+        # SAFE sentinel, actually APPLY an improvement: SimpleCoder (cloud-routed) generates the edit,
+        # wrapped in SIA-style safety (backup → write → the sentinel's own verify() self-test → critique
+        # gate → rollback on any failure). Allowlisted to sentinel_target.py only. This turns the loop from
+        # "generate suggestions forever" into a campaign that actually CHANGES code and can succeed.
+        if target_component.endswith("sentinel_target.py"):
+            try:
+                from agents.learning.sentinel_effector import apply_sentinel_improvement
+                from llm.llm_factory import create_llm_handler
+                _codegen_model = self.config.get("self_improvement.codegen_cloud_model", "gpt-oss:120b-cloud")
+                _coder = await create_llm_handler("ollama", _codegen_model)  # SimpleCoder's coding model
+                _directive = (context or metadata.get("directive")
+                              or "Improve the sentinel target module: clarify docstrings, add type hints, "
+                                 "harden add() for edge cases, and bump SENTINEL_VERSION.")
+                result = await apply_sentinel_improvement(_directive, llm_handler=_coder, logger=self.logger)
+                self.logger.info(f"SentinelEffector result: {result}")
+                interaction.response = {"status": "SUCCESS" if result.get("applied") else "FAILURE",
+                                        "effector": "simple_coder+sia_safety", **result}
+                interaction.status = InteractionStatus.COMPLETED if result.get("applied") else InteractionStatus.FAILED
+                await self.publish_event(
+                    "component.improvement.applied" if result.get("applied") else "component.improvement.rolled_back",
+                    {"interaction_id": interaction.interaction_id, "target": target_component,
+                     **{k: v for k, v in result.items() if k in ("applied", "critique", "reason", "backup")}})
+                return
+            except Exception as _eff_e:
+                self.logger.error(f"SentinelEffector failed ({_eff_e}); falling through to analysis", exc_info=True)
+
+        # For non-sentinel targets: generate suggestions (the apply effector for real components is gated
+        # off until the sentinel proof is green — see sentinel_effector allowlist).
         from tools.monitoring.system_analyzer_tool import SystemAnalyzerTool
         # Route this HEAVY analysis task through the EXISTING Ollama Cloud path — the capable 120B
         # reasoning model served via ollama.com, with the precision-metrics ledger + adaptive 429/quota
