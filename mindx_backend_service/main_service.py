@@ -3217,6 +3217,23 @@ async def insight_fitness_trajectory(agent_id: str, window: str = "7d"):
     return {"agent_id": agent_id, "window_days": days, "points": agg.trajectory(agent_id, days)}
 
 
+@app.get("/insight/inference/ledger", tags=["insight"], summary="Inference ledger — tokens + price per model (blockchain-publishable)")
+@_insight_safe
+async def insight_inference_ledger(request: Request, limit: int = 20):
+    """Append-only, hash-linked ledger of every LLM inference — tokens + price PER MODEL, with a
+    deterministic anchor digest (sha256) for periodic on-chain publication. Per the thesis/manifesto:
+    mindX maximizes daily inference at the lowest cost and keeps an immutable record of what each model
+    cost it as it evolves into permanence + blockchain integration."""
+    try:
+        from agents.monitoring.inference_ledger import summary as _ledger_summary, anchor_digest, verify_chain
+        s = _ledger_summary(limit_tail=max(0, min(limit, 200)))
+        s["anchor"] = anchor_digest()
+        s["chain"] = verify_chain()
+    except Exception as e:
+        s = {"entries": 0, "by_model": {}, "totals": {}, "tail": [], "error": str(e)}
+    return _maybe_h_text(request, s, route_path="/insight/inference/ledger")
+
+
 @app.get("/insight/improvement/summary", tags=["insight"])
 @_insight_safe
 async def insight_improvement_summary(request: Request, window: str = "24h"):

@@ -345,6 +345,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
   <button class="tab-chip" data-target="sec-live">live<span class="badge" id="bg-live">·</span></button>
   <button class="tab-chip" data-target="sec-bdi">bdi<span class="badge" id="bg-bdi">·</span></button>
   <button class="tab-chip" data-target="sec-cognition-diag">pipeline<span class="badge" id="bg-cognition-diag">·</span></button>
+  <button class="tab-chip" data-target="sec-inference-ledger">ledger<span class="badge" id="bg-inference-ledger">·</span></button>
   <button class="tab-chip" data-target="sec-improvements">improvements<span class="badge" id="bg-improvements">·</span></button>
   <button class="tab-chip" data-target="sec-sentinel">sentinel<span class="badge" id="bg-sentinel">·</span></button>
   <button class="tab-chip" data-target="sec-self-aware">self.aware<span class="badge" id="bg-self-aware">·</span></button>
@@ -462,6 +463,18 @@ tr:hover td{background:rgba(121,192,255,.02)}
     The autonomous loop, layer by layer: <b>Mastermind</b> picks a directive and runs an evolution campaign; <b>AGInt</b> (P-O-D-A) is the adaptive decision core; <b>BDI</b> executes it cycle-by-cycle. This shows <em>where it stalls</em> — each campaign's BDI cycle strip and final status, whether AGInt is engaged at all, and the plan signal (empty / <code>ANALYZE_FAILURE</code> plans that never reach a terminal state). <a href="/insight/cognition/diagnostic?h=true" target="_blank" rel="noopener">view raw</a>
   </p>
   <div id="cogDiag" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 3a-ter. Inference ledger — tokens + price per model, blockchain-publishable -->
+<section id="sec-inference-ledger">
+  <div class="sec-head">
+    <h2>inference ledger <span id="ledgerPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/inference/ledger · tokens + price per model · hash-linked · blockchain-publishable</span>
+  </div>
+  <p class="sec-desc">
+    Every LLM inference, recorded immutably: tokens and price <b>per model</b>, hash-linked into a tamper-evident chain (each entry sha256-bound to the previous). A deterministic <code>anchor</code> digest rolls the whole ledger to one hash for periodic on-chain publication — mindX's cost provenance as it evolves into permanence. Per the manifesto: maximize daily inference at the lowest cost, and keep the receipt. <a href="/insight/inference/ledger?h=true" target="_blank" rel="noopener">view raw</a>
+  </p>
+  <div id="inferenceLedger" class="card"><div class="empty">loading…</div></div>
 </section>
 
 <!-- 3b. Gödel Machine self-audit (GMI) -->
@@ -860,6 +873,47 @@ tr:hover td{background:rgba(121,192,255,.02)}
   document.addEventListener('click',e=>{ if(e.target.closest&&e.target.closest('[data-target="sec-cognition-diag"]')) loadCogDiag(); });
   function boot(){ if(document.getElementById('cogDiag')) loadCogDiag();
     setInterval(()=>{ const tab=document.querySelector('.tab-chip.active'); if(tab&&tab.getAttribute('data-target')==='sec-cognition-diag') loadCogDiag(); },25000); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+})();
+</script>
+
+<script>
+/* Inference ledger — tokens + price per model, blockchain-publishable (self-contained) */
+(function(){
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  function usd(n){ n=+n||0; return n<0.01 && n>0 ? '$'+n.toFixed(6) : '$'+n.toFixed(4); }
+  function k(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(1)+'k' : String(n); }
+  function render(d){
+    const t=d.totals||{}, bm=d.by_model||{}, models=Object.entries(bm).sort((a,b)=>b[1].total_tokens-a[1].total_tokens);
+    let h=`<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px;font-size:12px">
+      <span><b>${d.entries||0}</b> inferences</span>
+      <span><b>${k(t.total_tokens)}</b> tokens</span>
+      <span><b>${usd(t.cost_usd)}</b> total</span>
+      <span style="color:${d.chain&&d.chain.valid?'#3bbf6f':'#d05050'}">chain ${d.chain&&d.chain.valid?'✓ valid':'✗ broken'}</span></div>`;
+    if(d.anchor) h+=`<div style="font-size:10px;color:#789;margin-bottom:8px">anchor sha256 <code>${esc((d.anchor.digest_sha256||'').slice(0,32))}…</code> · head <code>${esc((d.anchor.head_hash||'').slice(0,16))}…</code> (publishable on-chain)</div>`;
+    h+='<div style="font-weight:600;color:#9bd;margin:6px 0 4px">per model</div>';
+    if(!models.length) h+='<div class="empty">no inferences recorded yet</div>';
+    for(const [m,v] of models){
+      h+=`<div style="display:flex;align-items:center;gap:10px;padding:4px 0;border-bottom:1px solid #161616;font-size:12px">
+        <span style="flex:1;color:#ccc">${esc(m)} <span style="color:#678;font-size:10px">${esc(v.provider||'')}</span></span>
+        <span style="color:#9aa">${v.count}×</span><span style="color:#9aa">${k(v.total_tokens)} tok</span>
+        <span style="color:#7c7;width:70px;text-align:right">${usd(v.cost_usd)}</span></div>`;
+    }
+    return h;
+  }
+  async function loadLedger(){
+    const el=document.getElementById('inferenceLedger'), pill=document.getElementById('ledgerPill');
+    if(!el) return;
+    try{
+      const d=await fetch('/insight/inference/ledger?limit=12',{cache:'no-store'}).then(r=>r.json());
+      el.innerHTML=render(d);
+      if(pill) pill.textContent=(d.entries||0)+' · '+usd((d.totals||{}).cost_usd);
+      const bg=document.getElementById('bg-inference-ledger'); if(bg) bg.textContent=String(d.entries||0);
+    }catch(e){ el.innerHTML=`<div class="empty">fetch failed: ${esc(e.message||e)}</div>`; if(pill) pill.textContent='error'; }
+  }
+  document.addEventListener('click',e=>{ if(e.target.closest&&e.target.closest('[data-target="sec-inference-ledger"]')) loadLedger(); });
+  function boot(){ if(document.getElementById('inferenceLedger')) loadLedger();
+    setInterval(()=>{ const tab=document.querySelector('.tab-chip.active'); if(tab&&tab.getAttribute('data-target')==='sec-inference-ledger') loadLedger(); },25000); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
 })();
 </script>

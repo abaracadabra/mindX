@@ -758,7 +758,17 @@ class TokenCalculatorTool(BaseTool):
                     "tracking_version": "2.0"
                 }
             }
-            
+
+            # Immutable inference ledger — hash-linked, blockchain-publishable record of tokens + price
+            # PER MODEL PER inference (best-effort; a ledger failure never breaks usage tracking).
+            try:
+                from agents.monitoring.inference_ledger import record as _ledger_record
+                _ledger_record(agent=agent_id, provider=provider, model=model,
+                               prompt_tokens=input_tokens, completion_tokens=output_tokens,
+                               cost_usd=float(cost_decimal), purpose=operation)
+            except Exception:
+                pass
+
             # Thread-safe log operations with production error handling
             try:
                 with self._main_lock:
