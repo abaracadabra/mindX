@@ -2641,8 +2641,41 @@ class MindXAgent:
                     metadata={"autonomous_mode": True, "previous_session": self.current_session.session_id if self.current_session else None}
                 )
         
+        # ── Engage AGInt — the P-O-D-A cognitive core ("the soul") ──────────────────────────────────
+        # Was dormant (0 cognitive cycles). Run a bounded set of Perceive-Orient-Decide-Act cycles once at
+        # loop start (before the Mastermind loop's 60s campaign warmup, so it doesn't contend on the shared
+        # BDI). AGInt perceives system state and decides BDI_DELEGATION / RESEARCH / SELF_REPAIR / COOLDOWN —
+        # the adaptive decision layer above the BDI. Flag-gated + fail-safe: an AGInt error never stops the loop.
+        import os as _os_agint
+        if _os_agint.getenv("MINDX_ENABLE_AGINT", "1") == "1" and getattr(self, "_agint", None) is None:
+            try:
+                mm = self.mastermind_agent
+                mm_bdi = getattr(mm, "bdi_agent", None) if mm else None
+                mm_reg = getattr(mm, "model_registry", None) if mm else None
+                if mm_bdi is not None and mm_reg is not None:
+                    from agents.core.agint import AGInt
+                    self._agint = AGInt(
+                        agent_id="agint_soul_of_mindx",
+                        bdi_agent=mm_bdi,
+                        model_registry=mm_reg,
+                        belief_system=self.belief_system,
+                        coordinator_agent=self.coordinator_agent,
+                        memory_agent=self.memory_agent,
+                        config=self.config,
+                    )
+                    self._agint.set_max_cycles(int(self.config.get("agint.max_cycles", 3)))
+                    self._agint.start(
+                        "Assess mindX system health and strategic self-improvement priorities; perceive the "
+                        "state of the autonomous loop and decide whether to delegate, research, repair, or cool down."
+                    )
+                    logger.info(f"{self.log_prefix} AGInt (P-O-D-A soul) engaged — {self.config.get('agint.max_cycles', 3)} bounded cognitive cycles")
+                else:
+                    logger.info(f"{self.log_prefix} AGInt not engaged: mastermind BDI/registry unavailable")
+            except Exception as _ag_e:
+                logger.warning(f"{self.log_prefix} AGInt engage failed (loop continues): {_ag_e}")
+
         cycle_count = 0
-        
+
         while self.running and self.autonomous_mode:
             try:
                 cycle_count += 1
