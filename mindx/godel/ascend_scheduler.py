@@ -148,5 +148,21 @@ def _emit(result) -> None:
         asyncio.create_task(emit_catalogue_event(
             kind=kind, actor="ascend_scheduler", payload=payload,
             source_log="mindx.godel.ascend_scheduler.run_ascent_if_due"))
+        # A model passed FROM IMPRESSION: `promoted` means a positive imprint (proof-of-recall) served the
+        # generation to Ollama. Publish it on the coordinator bus so AuthorAgent writes a mindXtrain report.
+        if getattr(result, "promoted", False):
+            asyncio.create_task(_emit_imprint_accepted(payload, getattr(result, "recall", None)))
+    except Exception:
+        pass
+
+
+async def _emit_imprint_accepted(payload: dict, recall) -> None:
+    """Fire 'mindxtrain.imprint.accepted' on the coordinator pub/sub (→ PublicationOrchestrator)."""
+    try:
+        from agents.orchestration.coordinator_agent import CoordinatorAgent
+        coord = await CoordinatorAgent.get_instance()
+        delta = (recall or {}).get("delta") if isinstance(recall, dict) else None
+        await coord.publish_event("mindxtrain.imprint.accepted",
+                                  {**payload, "accepted": True, "delta": delta})
     except Exception:
         pass

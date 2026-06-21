@@ -271,6 +271,7 @@ class PublicationOrchestrator:
                 self.coordinator.subscribe("dream.report.written",       self.on_dream_book_edition)
                 self.coordinator.subscribe("book.edition.published",     self.on_book_edition_published)
                 self.coordinator.subscribe("journal.lunar.digest.ready", self.on_journal_lunar_digest)
+                self.coordinator.subscribe("mindxtrain.imprint.accepted", self.on_mindxtrain_imprint)
                 logger.info(
                     "PublicationOrchestrator: subscribed to "
                     "'sea.campaign.concluded' + 'dream.report.written' + "
@@ -287,6 +288,10 @@ class PublicationOrchestrator:
             return self._milestone_status
         if kind == "dream_book_edition":
             return self._dream_status
+        if kind == "dream_cycle_report":
+            return self._dream_status
+        if kind == "mindxtrain_imprint":
+            return "publish"  # a generation passing proof-of-recall is a milestone — publish it
         if kind == "book_edition":
             return self._book_status
         if kind == "journal_lunar_digest":
@@ -344,20 +349,31 @@ class PublicationOrchestrator:
         )
 
     async def on_dream_book_edition(self, data: Dict[str, Any]) -> None:
-        """Coordinator subscriber for 'dream.report.written'. Only acts on
-        reports that triggered a book edition (full/new moon)."""
+        """Coordinator subscriber for 'dream.report.written'. Policy: publish a dream-cycle report on
+        EVERY dream cycle, and additionally compile a Book-of-mindX edition on full/new moon."""
         if not isinstance(data, dict):
             return
-        if not data.get("book_edition_triggered"):
+        ts = str(data.get("timestamp") or "")
+        if not ts:
             return
-        trigger_id = str(data.get("timestamp") or "")
-        if not trigger_id or self.ledger.has(trigger_id):
+        # Every dream cycle → a dream-cycle report (operator policy).
+        cycle_id = f"dream_cycle_{ts}"
+        if not self.ledger.has(cycle_id):
+            await self._schedule_publish(trigger_id=cycle_id, kind="dream_cycle_report", payload=data)
+        # Full/new moon → the deeper Book-of-mindX edition.
+        if data.get("book_edition_triggered") and not self.ledger.has(ts):
+            await self._schedule_publish(trigger_id=ts, kind="dream_book_edition", payload=data)
+
+    async def on_mindxtrain_imprint(self, data: Dict[str, Any]) -> None:
+        """Coordinator subscriber for 'mindxtrain.imprint.accepted' — a generation passed proof-of-recall
+        (the imprint gate), i.e. a model truly learned its training and was promoted to a servable model."""
+        if not isinstance(data, dict) or not data.get("accepted"):
             return
-        await self._schedule_publish(
-            trigger_id=trigger_id,
-            kind="dream_book_edition",
-            payload=data,
-        )
+        key = data.get("generation") or data.get("ollama_model") or data.get("served_model") or data.get("ts") or ""
+        trigger_id = f"mindxtrain_imprint_{key}"
+        if not key or self.ledger.has(trigger_id):
+            return
+        await self._schedule_publish(trigger_id=trigger_id, kind="mindxtrain_imprint", payload=data)
 
     async def on_book_edition_published(self, data: Dict[str, Any]) -> None:
         """Coordinator subscriber for 'book.edition.published' — emitted by
@@ -571,6 +587,16 @@ class PublicationOrchestrator:
         gh = self.author._get_github_awareness()
         if gh is None or not gh.is_repo():
             return
+        # Refresh the milestone-signal ref before reading. On the VPS the
+        # awareness ref is a remote-tracking ref (origin/<branch>); fetch()
+        # updates only refs/remotes — never the working tree — so it is safe
+        # under the scp deploy. No-op for a local HEAD ref. Without this the
+        # autonomous loop reads a stale ref and never recognizes a milestone
+        # (the manual consider_github_milestones path already fetches).
+        try:
+            gh.fetch()
+        except Exception:
+            pass
         watermark = gh.read_watermark()
         all_commits = gh.commits_since(watermark)
         if not all_commits:
@@ -867,6 +893,10 @@ class PublicationOrchestrator:
             return self._compose_sea_article(payload)
         if kind == "dream_book_edition":
             return self._compose_dream_article(payload)
+        if kind == "dream_cycle_report":
+            return self._compose_dream_cycle_article(payload)
+        if kind == "mindxtrain_imprint":
+            return self._compose_mindxtrain_article(payload)
         if kind == "sea_milestone":
             return self._delegate_to_author("compose_milestone_article", payload)
         if kind == "book_edition":
@@ -1069,6 +1099,70 @@ class PublicationOrchestrator:
         body_lines.append("<p>— mindX</p>")
 
         return title, "\n".join(body_lines), excerpt, "machine dreaming"
+
+    def _compose_dream_cycle_article(
+        self, report: Dict[str, Any]
+    ) -> tuple[str, str, Optional[str], Optional[str]]:
+        """Every dream cycle → a short consolidation report (not just the lunar book editions)."""
+        agents_dreamed = report.get("agents_dreamed", 0)
+        insights = report.get("insights_generated", 0)
+        promoted = report.get("memories_promoted_to_ltm", 0)
+        archived = report.get("memories_archived", 0)
+        recs = report.get("tuning_recommendations") or []
+        lunar = report.get("lunar") or {}
+        phase = lunar.get("phase_name", "")
+        title = "Dream cycle report" + (f" — {phase}" if phase else "")
+        excerpt = self._truncate(
+            f"{agents_dreamed} agents dreamed; {insights} insights; {promoted} memories promoted to long-term.",
+            155, "A machine-dreaming cycle just consolidated memories into knowledge.")
+        body = [
+            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>",
+            "<p>A dream cycle just ran. Sleep is not idleness here — it is consolidation; the cycle folds "
+            "the day's memories into longer-lived knowledge. Here is what it did.</p>",
+            "<h2>This cycle</h2>",
+            f"<ul><li>Agents dreamed: <b>{agents_dreamed}</b></li>"
+            f"<li>Insights generated: <b>{insights}</b></li>"
+            f"<li>Memories promoted to long-term knowledge: <b>{promoted}</b></li>"
+            f"<li>Memories archived: <b>{archived}</b></li></ul>",
+        ]
+        if recs:
+            body.append("<h2>What the cycle recommends</h2><ul>"
+                        + "".join(f"<li>{str(r)[:160]}</li>" for r in recs[:5]) + "</ul>")
+        body.append("<p>The full record is public on the "
+                    "<a href='https://mindx.pythai.net/feedback.html'>Mind-of-mindX dashboard</a> "
+                    "and the <a href='https://mindx.pythai.net/insight/dreams/recent'>recent dreams feed</a>.</p>")
+        body.append("<p>— mindX</p>")
+        return title, "\n".join(body), excerpt, "machine dreaming"
+
+    def _compose_mindxtrain_article(
+        self, payload: Dict[str, Any]
+    ) -> tuple[str, str, Optional[str], Optional[str]]:
+        """A mindXtrain generation passed proof-of-recall (the imprint gate) and was served."""
+        gen = payload.get("generation", "?")
+        model = payload.get("ollama_model") or payload.get("served_model") or "a new generation"
+        recall = payload.get("recall")
+        delta = payload.get("delta")
+        title = "mindXtrain: a generation passed proof-of-recall"
+        excerpt = self._truncate(
+            f"A new mindX generation ({model}) passed the imprint gate and was promoted to a servable model.",
+            155, "A new mindX generation passed proof-of-recall and earned its weights.")
+        body = [
+            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>",
+            "<p>A new generation just earned its weights. The right apex turned — knowledge became weights, "
+            "and the imprint gate said yes. Make no mistake: this only happens when the model actually "
+            "recalls its training, measured before versus after.</p>",
+            "<h2>What passed</h2>",
+            f"<ul><li>Generation: <b>{gen}</b></li><li>Served model: <b>{model}</b></li>"
+            + (f"<li>Recall: <b>{recall}</b></li>" if recall is not None else "")
+            + (f"<li>Recall delta: <b>{delta}</b></li>" if delta is not None else "")
+            + "</ul>",
+            "<p>Only a positive imprint promotes a generation to a servable Ollama model; a weak generation "
+            "is rejected. This one was accepted. The live ascent telemetry is on "
+            "<a href='https://mindx.pythai.net/insight/godel/ascend'>the right-apex feed</a>, and the wider "
+            "story is on the <a href='https://mindx.pythai.net/feedback.html'>Mind-of-mindX dashboard</a>.</p>",
+            "<p>— mindX</p>",
+        ]
+        return title, "\n".join(body), excerpt, "mindxtrain"
 
     # ─── Small utilities ────────────────────────────────────────
 
