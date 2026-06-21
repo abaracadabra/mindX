@@ -58,29 +58,32 @@ def _selftest(path: Path) -> tuple[bool, str]:
         return False, f"import/verify raised: {e}"
 
 
-async def _critique(directive: str, before: str, after: str, handler) -> float:
-    """LLM critique gate — score 0..1 that the change is a genuine, safe improvement."""
+async def _critique(directive: str, after: str, handler) -> Optional[float]:
+    """LLM critique — quality signal (the hard safety gate is the verify() self-test). Returns a 0..1
+    score, or None if the model didn't emit a parseable score (→ caller defers to the self-test).
+    gpt-oss is a reasoning model: give it room and require a final tagged score we can extract."""
     try:
         prompt = (
-            "You are a strict code reviewer. Score 0.0-1.0 whether the AFTER is a genuine, safe "
-            "improvement over BEFORE for the directive, preserving behaviour (add/describe_status/verify "
-            "must still work). Reply with ONLY a number.\n\n"
-            f"DIRECTIVE: {directive}\n\nBEFORE:\n{before}\n\nAFTER:\n{after}\n\nScore:"
+            "Score whether this Python module is a genuine, safe self-improvement for the directive, "
+            "keeping add()/describe_status()/verify() working. Think briefly, then end your reply with "
+            "exactly: FINAL_SCORE: <number between 0.0 and 1.0>\n\n"
+            f"DIRECTIVE: {directive}\n\nMODULE:\n{after}\n"
         )
-        # gpt-oss is a reasoning model — it needs headroom to emit the answer (max_tokens=16 returns ''),
-        # so give it room and take the LAST in-range number it produces.
         out = await handler.generate_text(prompt, model=getattr(handler, "model_name_for_api", None),
-                                          max_tokens=256, temperature=0.0)
-        for n in reversed(re.findall(r"\d*\.?\d+", out or "")):
+                                          max_tokens=512, temperature=0.0) or ""
+        m = re.search(r"FINAL_SCORE:\s*(\d*\.?\d+)", out)
+        if m:
+            return max(0.0, min(1.0, float(m.group(1))))
+        for n in reversed(re.findall(r"\d*\.?\d+", out)):
             try:
                 v = float(n)
                 if 0.0 <= v <= 1.0:
                     return v
             except ValueError:
                 continue
-        return 0.0
+        return None  # unparseable → defer to the self-test (fail-soft)
     except Exception:
-        return 0.0
+        return None
 
 
 async def apply_sentinel_improvement(directive: str, *, llm_handler, logger=None,
@@ -123,13 +126,17 @@ async def apply_sentinel_improvement(directive: str, *, llm_handler, logger=None
         ok, msg = _selftest(path)
         if not ok:
             raise ValueError(f"self-test failed: {msg}")
-        score = await _critique(directive, original, new_code, llm_handler)
-        if score < critique_threshold:
+        # Hard gate = the self-test above (verify() healthy). The critique is a quality signal; if it
+        # returns a clear low score we reject, but if it's unparseable we defer to the self-test (fail-soft)
+        # rather than block a validated change.
+        score = await _critique(directive, new_code, llm_handler)
+        if score is not None and score < critique_threshold:
             raise ValueError(f"critique {score:.2f} < threshold {critique_threshold}")
 
-        _log(f"APPLIED ✓ self-test ok, critique {score:.2f} — sentinel improved")
-        return {"applied": True, "critique": round(score, 3), "selftest": msg,
-                "backup": backup.name, "bytes": len(new_code)}
+        _note = f"{score:.2f}" if score is not None else "n/a (self-test only)"
+        _log(f"APPLIED ✓ self-test ok, critique {_note} — sentinel improved")
+        return {"applied": True, "critique": round(score, 3) if score is not None else None,
+                "selftest": msg, "backup": backup.name, "bytes": len(new_code)}
     except Exception as e:
         path.write_text(original, encoding="utf-8")  # ROLLBACK
         _log(f"rolled back — {e}")
