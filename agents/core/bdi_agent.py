@@ -462,7 +462,9 @@ class BDIAgent:
         if not self.strategic_evolution_agent: return False, "StrategicEvolutionAgent not available."
         campaign_goal = action.get("params", {}).get("campaign_goal_description")
         if not campaign_goal: return False, "Missing 'campaign_goal_description'."
-        return True, await self.strategic_evolution_agent.run_campaign(campaign_goal)
+        # SEA's method is run_evolution_campaign (run_campaign never existed → AttributeError aborted the
+        # effector action). This is the call that drives SEA → coordinator COMPONENT_IMPROVEMENT → effector.
+        return True, await self.strategic_evolution_agent.run_evolution_campaign(campaign_goal)
 
     async def _execute_no_op(self, action: Dict[str, Any]) -> Tuple[bool, Any]:
         return True, "No operation performed."
