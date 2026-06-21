@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OVERSEER — Algorand Deployment Suites — mindX</title>
+<style>
+  :root { --bg:#0a0a12; --panel:#11131c; --line:rgba(120,140,200,.18); --text:#dbe4ff; --text2:#9aa6c8; --accent:#58a6ff; --green:#56d364; --amber:#e3b341; --red:#f85149; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:radial-gradient(circle at 50% -10%, #161a2e 0%, var(--bg) 60%); color:var(--text); font:15px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; min-height:100vh; }
+  .wrap { max-width:880px; margin:0 auto; padding:32px 18px 64px; }
+  h1 { font-size:1.5rem; margin:0 0 4px; letter-spacing:.5px; }
+  .sub { color:var(--text2); margin:0 0 22px; font-size:.92rem; }
+  .who { font-size:.82rem; color:var(--text2); margin-bottom:18px; word-break:break-all; }
+  .who b { color:var(--green); }
+  .gate { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:22px; text-align:center; }
+  .gate a { color:var(--accent); }
+  .suite { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .suite .name { font-weight:600; }
+  .suite .meta { color:var(--text2); font-size:.8rem; }
+  button { background:#1b2233; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 14px; cursor:pointer; font:inherit; font-size:.85rem; }
+  button:hover { border-color:var(--accent); }
+  button.deploy { border-color:rgba(227,179,65,.5); color:var(--amber); }
+  pre { background:#0c0e16; border:1px solid var(--line); border-radius:8px; padding:12px; overflow:auto; font-size:.8rem; color:var(--text2); white-space:pre-wrap; }
+  .net { display:inline-block; padding:2px 8px; border-radius:6px; background:rgba(88,166,255,.12); color:var(--accent); font-size:.74rem; margin-left:8px; }
+  .err { color:var(--red); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>OVERSEER</h1>
+  <p class="sub">Algorand deployment suites &mdash; <code>daio/contracts/algorand</code> <span class="net" id="net">…</span></p>
+  <div class="who" id="who"></div>
+  <div id="gate" class="gate" hidden>
+    <p>OVERSEER sign-in required.</p>
+    <p><a href="/login">→ Connect the mindx.algo wallet (Pera / Parsec)</a></p>
+  </div>
+  <div id="list"></div>
+  <pre id="out" hidden></pre>
+</div>
+<script>
+function apiBase(){ const h=location; if(h.host.endsWith('pythai.net')) return 'https://mindx.pythai.net';
+  if(h.host.includes('localhost')||h.host.startsWith('127.')) return `http://localhost:${window.MINDX_BACKEND_PORT||'8000'}`; return h.origin; }
+const JWT = localStorage.getItem('mindx_overseer_jwt');
+const ADDR = localStorage.getItem('mindx_overseer_address') || '';
+const out = document.getElementById('out');
+function show(o){ out.hidden=false; out.textContent = typeof o==='string'?o:JSON.stringify(o,null,2); }
+
+async function load(){
+  if(!JWT){ document.getElementById('gate').hidden=false; return; }
+  document.getElementById('who').innerHTML = 'OVERSEER &middot; <b>'+ADDR+'</b>';
+  let res;
+  try { res = await fetch(apiBase()+'/overseer/algorand/suites', { headers:{ 'Authorization':'Bearer '+JWT } }); }
+  catch(e){ show('network error: '+e); return; }
+  const data = await res.json();
+  if(!res.ok){
+    document.getElementById('gate').hidden=false;
+    document.getElementById('gate').querySelector('p').innerHTML = 'OVERSEER: '+(data.detail||'access denied');
+    return;
+  }
+  document.getElementById('net').textContent = data.network;
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  (data.suites||[]).forEach(s=>{
+    const row = document.createElement('div'); row.className='suite';
+    row.innerHTML = '<div><span class="name">'+s.name+'</span> <span class="meta">'+s.file+' · '+s.size+'b</span></div>';
+    const wrap = document.createElement('div');
+    const dry = document.createElement('button'); dry.textContent='dry-run';
+    dry.onclick = ()=>deploy(s.name, true, false);
+    const dep = document.createElement('button'); dep.className='deploy'; dep.textContent='deploy';
+    dep.onclick = ()=>{ if(confirm('Deploy '+s.name+' to '+data.network+'? This is a real on-chain action.')) deploy(s.name, false, true); };
+    wrap.appendChild(dry); wrap.appendChild(dep); row.appendChild(wrap); list.appendChild(row);
+  });
+  if(!(data.suites||[]).length) list.innerHTML='<div class="suite">No Algorand suites found.</div>';
+}
+async function deploy(suite, dry_run, confirm){
+  const res = await fetch(apiBase()+'/overseer/algorand/deploy', {
+    method:'POST', headers:{ 'Authorization':'Bearer '+JWT, 'Content-Type':'application/json' },
+    body: JSON.stringify({ suite, dry_run, confirm })
+  });
+  const data = await res.json();
+  show(res.ok ? data : ('error '+res.status+': '+(data.detail||'')));
+}
+load();
+</script>
+</body>
+</html>

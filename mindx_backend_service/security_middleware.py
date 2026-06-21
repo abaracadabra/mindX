@@ -349,6 +349,23 @@ async def require_admin_access(request: Request) -> str:
     claims = verify_jwt(authorization[7:], required_scope=SCOPE_AUTH)
     return str(claims.get("sub", ""))
 
+async def require_overseer(request: Request) -> str:
+    """Dependency that requires an OVERSEER JWT (Algorand mindx.algo sign-in, SCOPE_OVERSEER).
+
+    The OVERSEER tier sits beside shadow-overlord: a verified signature from the configured
+    mindx.algo Algorand address (Pera or Parsec wallet) grants a scope-bound OVERSEER JWT that
+    unlocks the Algorand deployment suites. Returns the OVERSEER's Algorand address.
+    """
+    try:
+        from mindx_backend_service.overseer_auth import verify_overseer_jwt
+    except Exception as exc:  # pragma: no cover
+        raise HTTPException(status_code=503, detail=f"overseer gate unavailable: {exc}")
+    authorization = request.headers.get("Authorization", "")
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="OVERSEER JWT required (Authorization: Bearer <jwt>)")
+    claims = verify_overseer_jwt(authorization[7:])
+    return str(claims.get("sub", ""))
+
 def create_api_key_auth() -> HTTPBearer:
     """Create API key authentication scheme"""
     return HTTPBearer(scheme_name="API Key")

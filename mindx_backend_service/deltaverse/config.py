@@ -48,6 +48,12 @@ def known_addresses() -> Dict[str, str]:
     overseers: List[str] = [a.strip().lower() for a in _env("MINDX_OVERSEER_ADDRESSES").split(",") if a.strip()]
     for a in overseers:
         out.setdefault(a, "overseer")
+    # mindx.algo — the Algorand OVERSEER address (case-preserved; Algorand addresses are
+    # case-sensitive base32). Real privilege is the signed OVERSEER JWT (overseer_auth.py);
+    # this entry is only the unverified visual hint, like the others above.
+    algo = _env("MINDX_ALGO_ADDRESS").strip()
+    if algo:
+        out.setdefault(algo, "overseer")
     return out
 
 

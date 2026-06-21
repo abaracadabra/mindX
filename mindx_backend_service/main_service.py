@@ -35,7 +35,7 @@ from api.command_handler import CommandHandler
 from utils.logging_config import setup_logging, get_logger, LOG_DIR, LOG_FILENAME
 from mindx_backend_service.vault_manager import get_vault_manager
 # require_admin_access: session-token gated by security.admin_addresses
-from mindx_backend_service.security_middleware import require_admin_access
+from mindx_backend_service.security_middleware import require_admin_access, require_overseer
 # x402_required: per-endpoint paywall dependency. Contract documented in
 # docs/services/x402_as_a_service.md. Applied on cost-center routes below.
 from mindx_backend_service.x402_middleware import x402_required
@@ -1317,6 +1317,7 @@ async def improvement_journal_page():
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
 _FEEDBACK_HTML_PATH = Path(__file__).parent / "feedback.html"
 _NETSTAT_HTML_PATH = Path(__file__).parent / "netstat.html"
+_OVERSEER_HTML_PATH = Path(__file__).parent / "overseer.html"
 _AGENTIC_HTML_PATH = Path(__file__).parent / "agentic.html"
 _REFERENCE_HTML_PATH = Path(__file__).parent / "reference.html"
 _THOT_HTML_PATH = Path(__file__).parent / "THOT.html"
@@ -2082,6 +2083,15 @@ async def public_dashboard():
     return _DashResponse(content="<h1>mindX</h1><p>Dashboard loading...</p>")
 
 
+@app.get("/overseer", response_class=_DashResponse, include_in_schema=False)
+@app.get("/overseer.html", response_class=_DashResponse, include_in_schema=False)
+async def overseer_page():
+    """OVERSEER surface — Algorand deployment suites. Public shell; data gated by the OVERSEER JWT."""
+    if _OVERSEER_HTML_PATH.exists():
+        return _DashResponse(content=_OVERSEER_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>OVERSEER</h1><p>Page not deployed.</p>")
+
+
 @app.get("/netstat", response_class=_DashResponse, include_in_schema=False)
 @app.get("/netstat.html", response_class=_DashResponse, include_in_schema=False)
 async def netstat_page():
@@ -2317,6 +2327,7 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/mindx-wordpress-plugin",         # public distribution page for mindx-publish-auth WP plugin
     "/netstat", "/netstat.html",       # Phase 1.2+ — smartphone-class VPS vitals (public diagnostics)
+    "/overseer", "/overseer.html",     # OVERSEER shell — Algorand deploy suites (data gated by OVERSEER JWT)
     # Mind-of-mindX feedback surfaces — public BY DESIGN (CLAUDE.md): the live
     # self-diagnostic pages + plain-text snapshot + redacted agentic console.
     # The strict-gate cutover omitted them and they 401'd publicly until the
@@ -2345,6 +2356,8 @@ _PUBLIC_PREFIXES_STRICT = (
     "/automindx/",                     # automindx subpages
     "/admin/shadow/",                  # shadow-overlord ECDSA + JWT (gated at handler level)
     "/overlord/",                      # overlord/overseer login (flag + signature gated at handler level)
+    "/auth/algorand/",                 # Algorand (Pera/Parsec) OVERSEER login — challenge + signature verify
+    "/overseer/",                      # OVERSEER deployment-suite surface — gated at handler level (require_overseer)
     "/reference/",                     # reference corpus — gated at handler level (_require_reference_access)
     "/deltaverse/",                    # DeltaVerse fabric reads (recognize/story/bubblerooms public; weave/wish role-aware)
     "/users/challenge",                # auth handshake — challenge issuance
@@ -2365,7 +2378,7 @@ _PUBLIC_PREFIXES_STRICT = (
 
 _PUBLIC_EXACT_LEGACY = frozenset({
     "/reference", "/reference.html",
-    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/netstat", "/netstat.html", "/insight/narrative/recent", "/agentic", "/agentic.html", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html", "/mindx-wordpress-plugin",
+    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/netstat", "/netstat.html", "/overseer", "/overseer.html", "/insight/narrative/recent", "/agentic", "/agentic.html", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html", "/mindx-wordpress-plugin",
     "/keeperhub", "/keeperhub.html", "/uniswap", "/uniswap.html", "/bankon-ens", "/bankon-ens.html", "/bankonminter", "/bankonminter.html", "/zerog", "/zerog.html", "/conclave", "/conclave.html", "/agentregistry", "/agentregistry.html",
     "/api/uniswap/quote", "/api/uniswap/check_approval", "/api/uniswap/decisions", "/api/uniswap/skills",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
@@ -2386,6 +2399,8 @@ _PUBLIC_PREFIXES_LEGACY = (
     "/dojo/agent/", "/bankon", "/agenticplace/", "/chat/docs",
     "/actions/export", "/diagnostics/export", "/api/rage/embed",
     "/users/challenge", "/users/register", "/error-pages/", "/static/",
+    "/auth/algorand/",                 # Algorand (Pera/Parsec) OVERSEER login — challenge + verify
+    "/overseer/",                      # OVERSEER deployment-suite surface — gated at handler level
     "/insight/",
     "/marketing/",
     "/p2p/keeperhub/",
@@ -9562,6 +9577,80 @@ async def generate_challenge(payload: ChallengeRequestPayload):
         "action": payload.action,
         "challenge_message": challenge
     }
+
+# ── OVERSEER: Algorand (Pera/Parsec) sign-in → deployment suites ──────────────────────
+@app.get("/auth/algorand/challenge", summary="Issue an Algorand OVERSEER-LOGIN challenge", tags=["auth"])
+async def algorand_overseer_challenge():
+    """Public: mint a single-use challenge for the operator to sign with the mindx.algo wallet."""
+    from mindx_backend_service import overseer_auth
+    return {"status": "success", **overseer_auth.issue_challenge()}
+
+
+@app.post("/auth/algorand/verify", summary="Verify an Algorand OVERSEER signature → OVERSEER JWT", tags=["auth"])
+async def algorand_overseer_verify(request: Request):
+    """Public: verify a Pera/Parsec signature over the stored challenge; if the signing address is the
+    configured mindx.algo / OVERSEER address, return a short-lived scope-bound OVERSEER JWT."""
+    from mindx_backend_service import overseer_auth
+    body = await request.json()
+    nonce = str(body.get("nonce") or "")
+    signature = str(body.get("signature") or "")
+    address = str(body.get("address") or "")
+    wallet = str(body.get("wallet") or "pera")
+    if not (nonce and signature and address):
+        raise HTTPException(status_code=400, detail="nonce, signature, and address are required")
+    result = overseer_auth.consume_overseer_login(nonce, signature, address, wallet)
+    return {"status": "success", "role": "overseer", **result}
+
+
+@app.get("/overseer/algorand/suites", summary="List Algorand deployment suites (OVERSEER)", tags=["overseer"])
+async def overseer_algorand_suites(overseer: str = Depends(require_overseer)):
+    """OVERSEER-gated: enumerate the Algorand deployment suites (daio/contracts/algorand)."""
+    from pathlib import Path as _P
+    base = _P(__file__).resolve().parents[1] / "daio" / "contracts" / "algorand"
+    suites = []
+    if base.is_dir():
+        for f in sorted(base.glob("*.algo.ts")):
+            suites.append({"name": f.stem.replace(".algo", ""), "file": f.name, "size": f.stat().st_size})
+    return {"status": "success", "overseer": overseer,
+            "network": os.environ.get("MINDX_ALGORAND_NETWORK", "testnet"),
+            "count": len(suites), "suites": suites}
+
+
+@app.post("/overseer/algorand/deploy", summary="Deploy an Algorand suite (OVERSEER; dry-run default)", tags=["overseer"])
+async def overseer_algorand_deploy(request: Request, overseer: str = Depends(require_overseer)):
+    """OVERSEER-gated. ``dry_run=true`` (default) returns the deploy PLAN without touching chain;
+    ``dry_run=false`` requires ``confirm=true`` and the configured deploy harness. The authorized
+    intent is always logged — on-chain actions are never silent."""
+    from pathlib import Path as _P
+    body = await request.json()
+    suite = str(body.get("suite") or "").strip()
+    dry_run = bool(body.get("dry_run", True))
+    confirm = bool(body.get("confirm", False))
+    network = os.environ.get("MINDX_ALGORAND_NETWORK", "testnet")
+    base = _P(__file__).resolve().parents[1] / "daio" / "contracts" / "algorand"
+    target = (base / f"{suite}.algo.ts") if suite else None
+    if not suite or target is None or not target.exists():
+        raise HTTPException(status_code=404, detail=f"unknown Algorand suite: {suite!r}")
+    try:
+        from agents.catalogue.events import emit_catalogue_event
+        await emit_catalogue_event(kind="admin.algorand_deploy", actor=f"overseer:{overseer}",
+                                   payload={"suite": suite, "network": network, "dry_run": dry_run, "confirm": confirm},
+                                   source_log="overseer_algorand_deploy")
+    except Exception:
+        pass
+    plan = {"suite": suite, "file": target.name, "network": network,
+            "steps": ["compile TealScript → approval/clear TEAL", "create application",
+                      "fund + opt-in", "verify global state"]}
+    if dry_run:
+        return {"status": "dry_run", "overseer": overseer, "plan": plan,
+                "note": "No on-chain state changed. Set dry_run=false + confirm=true to execute."}
+    if not confirm:
+        raise HTTPException(status_code=400, detail="real deploy requires confirm=true")
+    # Real on-chain deploy needs the Algorand deploy harness (algokit + a vaulted deploy key), not yet
+    # configured in the backend. The OVERSEER-authorized intent is logged above for the operator.
+    raise HTTPException(status_code=503, detail="Algorand deploy harness not configured "
+                        "(needs algokit + vaulted deploy key); authorized intent logged")
+
 
 @app.get("/users/session/validate", summary="Validate session token (vault-backed)")
 async def validate_session(

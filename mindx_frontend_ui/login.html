@@ -346,6 +346,49 @@
             if (!msg) { el.classList.remove('show'); el.textContent = ''; return; }
             el.textContent = msg; el.classList.add('show');
         }
+
+        // ── Algorand (Pera / Parsec) OVERSEER sign-in ─────────────────────────────────
+        // A signature from the mindx.algo address is recognized as OVERSEER and unlocks the
+        // Algorand deployment suites. Pera + Parsec both produce a raw Ed25519 signature over the
+        // challenge bytes; the backend (overseer_auth.verify_algorand_signature) accepts either the
+        // raw or MX-prefixed convention, so the same flow serves both wallets.
+        window.connectAlgorand = async function() {
+            const apiBaseUrl = mindxApiBase();
+            showError('');
+            try {
+                const ch = await (await fetch(`${apiBaseUrl}/auth/algorand/challenge`)).json();
+                if (!ch || !ch.nonce) throw new Error('could not obtain challenge');
+                let PeraWalletConnect;
+                try {
+                    const mod = await import('https://cdn.jsdelivr.net/npm/@perawallet/connect@1.4.1/+esm');
+                    PeraWalletConnect = mod.PeraWalletConnect || mod.default?.PeraWalletConnect || mod.default;
+                } catch (e) { showError('Algorand wallet library failed to load. Refresh and retry.'); return; }
+                const pera = new PeraWalletConnect();
+                let accounts = [];
+                try { accounts = await pera.connect(); }
+                catch (e) { try { accounts = await pera.reconnectSession(); } catch (_) {} }
+                const address = accounts && accounts[0];
+                if (!address) { showError('No Algorand account connected (Pera / Parsec).'); return; }
+                const msgBytes = new TextEncoder().encode(ch.message);
+                const sigArr = await pera.signData([{ data: msgBytes, message: 'mindX OVERSEER-LOGIN' }], address);
+                const s0 = sigArr[0];
+                const sigBytes = s0 instanceof Uint8Array ? s0 : new Uint8Array(Object.values(s0));
+                let bin = ''; sigBytes.forEach(b => bin += String.fromCharCode(b));
+                const sigB64 = btoa(bin);
+                const vRes = await fetch(`${apiBaseUrl}/auth/algorand/verify`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nonce: ch.nonce, signature: sigB64, address, wallet: 'pera' })
+                });
+                const data = await vRes.json();
+                if (!vRes.ok) { showError('OVERSEER: ' + (data.detail || 'verification failed')); return; }
+                localStorage.setItem('mindx_overseer_jwt', data.jwt);
+                localStorage.setItem('mindx_overseer_address', data.address);
+                showError('');
+                window.location.href = '/overseer';   // reveal the Algorand deployment suites
+            } catch (e) {
+                showError('Algorand sign-in failed: ' + (e.message || e));
+            }
+        };
     </script>
 </head>
 <body>
@@ -359,11 +402,15 @@
             <div class="denied" id="deniedBox" hidden>
                 <img src="/gfx/OVERLORD.png" alt="" class="denied-gfx">
                 <div class="denied-title">ACCESS DENIED</div>
-                <div class="denied-sub" id="deniedSub">Connect your wallet and sign in to continue.</div>
+                <div class="denied-sub" id="deniedSub">Connect your wallet to enter. Your signature proves who you are &mdash;</div>
             </div>
 
             <p class="tagline" id="tagline">
                 <em>pioneering</em> self-building cognitive architecture
+            </p>
+
+            <p class="connect-msg" id="connectMsg" style="text-align:center;max-width:580px;margin:0 auto 10px;color:var(--text2,#cbd5e1);font-size:.98rem">
+                Connect your wallet to enter. Your signature proves who you are &mdash;
             </p>
 
             <div class="auth-controls">
@@ -373,6 +420,12 @@
                         <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
                     </svg>
                     CONNECT WALLET
+                </button>
+                <button id="algorandConnectBtn" class="btn-primary" onclick="connectAlgorand()" title="mindx.algo OVERSEER sign-in via Pera or Parsec">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="9"/><path d="M8 16l4-9 4 9M9.5 13h5"/>
+                    </svg>
+                    CONNECT &middot; ALGORAND (PERA / PARSEC)
                 </button>
             </div>
 
@@ -425,7 +478,7 @@
         var tag = document.getElementById('tagline');
         var clean = from.split('?')[0];
         if (box) box.hidden = false;
-        if (sub) sub.textContent = 'Connect your wallet and sign in to reach ' + clean + '.';
+        if (sub) sub.textContent = 'Connect your wallet to enter ' + clean + '. Your signature proves who you are —';
         if (tag) tag.style.display = 'none';
         document.title = 'ACCESS DENIED — mindX';
     })();
