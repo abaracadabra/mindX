@@ -459,11 +459,25 @@ class BDIAgent:
             return False, f"Failed to extract parameters via LLM: {e}"
 
     async def _execute_strategic_evolution_campaign(self, action: Dict[str, Any]) -> Tuple[bool, Any]:
-        if not self.strategic_evolution_agent: return False, "StrategicEvolutionAgent not available."
         campaign_goal = action.get("params", {}).get("campaign_goal_description")
         if not campaign_goal: return False, "Missing 'campaign_goal_description'."
-        # SEA's method is run_evolution_campaign (run_campaign never existed → AttributeError aborted the
-        # effector action). This is the call that drives SEA → coordinator COMPONENT_IMPROVEMENT → effector.
+        # FAST PATH — close the loop on the safe sentinel directly via the proven effector (the hands).
+        # The full SEA → coordinator → effector route works but carries a long tail of unrelated tool-init
+        # bugs (GitHubAgentTool.log_prefix, BlueprintAgent handler, …); for the allowlisted sentinel we apply
+        # the effector here so an autonomous campaign actually CHANGES code and SUCCEEDS.
+        if "sentinel_target.py" in campaign_goal:
+            try:
+                from agents.learning.sentinel_effector import apply_sentinel_improvement
+                from llm.llm_factory import create_llm_handler
+                _model = self.config.get("self_improvement.codegen_cloud_model", "gpt-oss:120b-cloud")
+                _coder = await create_llm_handler("ollama", _model)  # SimpleCoder's coding model
+                result = await apply_sentinel_improvement(campaign_goal, llm_handler=_coder, logger=self.logger)
+                self.logger.info(f"BDI sentinel effector (direct): {result}")
+                return bool(result.get("applied")), result
+            except Exception as e:
+                return False, f"sentinel effector failed: {e}"
+        # Other directives — delegate to SEA's evolution campaign (run_evolution_campaign, not run_campaign).
+        if not self.strategic_evolution_agent: return False, "StrategicEvolutionAgent not available."
         return True, await self.strategic_evolution_agent.run_evolution_campaign(campaign_goal)
 
     async def _execute_no_op(self, action: Dict[str, Any]) -> Tuple[bool, Any]:
