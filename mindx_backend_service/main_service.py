@@ -4924,6 +4924,20 @@ async def insight_eval_summary(request: Request, window: int = 200):
     )
 
 
+def _read_self_eval_state() -> Optional[Dict[str, Any]]:
+    """The persisted self-eval verdict (data/system_state/self_eval_feedback.json) — carries
+    self_improvement / sentinel version. Used by /diagnostics/live so the dashboard shows the
+    ground truth even before the loop's first post-restart assess()."""
+    try:
+        from utils.config import PROJECT_ROOT as _PR
+        p = _PR / "data" / "system_state" / "self_eval_feedback.json"
+        if p.exists():
+            return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return None
+
+
 @app.get("/insight/autonomous/feedback", tags=["insight"])
 @_insight_safe
 async def insight_autonomous_feedback(request: Request):
@@ -7954,9 +7968,11 @@ async def _diag_compute():
                 "stuck_cycles": getattr(mx, '_stuck_cycle_count', 0) if hasattr(mx, '_stuck_cycle_count') else (getattr(mx, 'stuck_loop_detector', None) and getattr(mx.stuck_loop_detector, 'no_progress_count', 0)) or 0,
                 "circuit_breaker_open": getattr(mx, '_circuit_breaker_open', False) if hasattr(mx, '_circuit_breaker_open') else (getattr(mx, 'stuck_loop_detector', None) and getattr(mx.stuck_loop_detector, 'circuit_open', False)) or False,
                 "restart_pending": getattr(mx, '_restart_pending', False),
-                # Objective self-eval feedback — verdict from the core evolution
-                # loop reading its own campaign success rate.
-                "self_eval": getattr(mx, '_self_eval', None),
+                # Objective self-eval feedback — verdict from the core evolution loop. Prefer the live
+                # attribute, but fall back to the PERSISTED state (which carries self_improvement /
+                # sentinel version) so the dashboard shows the ground truth even right after a restart,
+                # before the loop has run its first assess() cycle.
+                "self_eval": getattr(mx, '_self_eval', None) or _read_self_eval_state(),
             }
     except Exception:
         pass
