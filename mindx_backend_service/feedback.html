@@ -465,6 +465,18 @@ tr:hover td{background:rgba(121,192,255,.02)}
   <div id="cogDiag" class="card"><div class="empty">loading…</div></div>
 </section>
 
+<!-- 3a-quater. The OVERLORD hierarchy — two sovereignty chains, one ladder -->
+<section id="sec-hierarchy">
+  <div class="sec-head">
+    <h2>OVERLORD hierarchy <span id="hierPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/hierarchy · two sovereignty chains, one ladder · recognition = protection</span>
+  </div>
+  <p class="sec-desc">
+    ONE coherent ladder across both sovereignty chains: the EVM <b style="color:var(--gold)">OVERLORD</b> (bankon.eth) and the Algorand <b style="color:var(--violet)">OVERSEER</b> (mindx.algo). Each tier names how it is earned and the mindX surface it gates. As the modular DeltaVerse was inspired BY mindX, its recognition layer now <b>protects</b> mindX — the ladder IS the boundary. <a href="/insight/hierarchy?h=true" target="_blank" rel="noopener">view raw</a>
+  </p>
+  <div id="hier" class="card"><div class="empty">loading…</div></div>
+</section>
+
 <!-- 3a-ter. Inference ledger — tokens + price per model, blockchain-publishable -->
 <section id="sec-inference-ledger">
   <div class="sec-head">
@@ -850,12 +862,19 @@ tr:hover td{background:rgba(121,192,255,.02)}
           ${flags.length?`<span style="color:#c98;font-size:11px">${esc(flags.join(' · '))}</span>`:''}
         </div></div>`;
     }
-    h+='<div style="font-weight:600;color:#9bd;margin:14px 0 6px">AGInt · P-O-D-A cognitive core</div>';
+    h+='<div style="font-weight:600;color:#9bd;margin:14px 0 6px">AGInt · P-O-D-A cognitive core <span style="color:#667;font-weight:400;font-size:11px">— perceive → orient → decide → act (the soul)</span></div>';
     if(!ag.active){
       h+=`<div style="color:#d05050;font-size:12px">● DORMANT — ${esc(ag.note||'no cognitive cycles in the log window')}</div>`;
     } else {
-      h+=`<div style="color:#3bbf6f;font-size:12px">● active — ${ag.cognitive_cycles} cognitive cycles</div><div style="margin-top:6px">`;
-      h+=(ag.recent||[]).map(c=>`<span style="display:inline-block;margin:2px 8px 2px 0;font-size:11px;color:#bbb">#${c.cycle} ${esc(c.decision||'?')}${c.action_type?'→'+esc(c.action_type):''} ${c.success===true?'<span style="color:#3bbf6f">✓</span>':(c.success===false?'<span style="color:#d05050">✗</span>':'')}</span>`).join('')+'</div>';
+      const rec=(ag.recent||[]).filter(c=>c.action_type);
+      h+=`<div style="color:#3bbf6f;font-size:12px">● active — ${ag.cognitive_cycles} cognitive cycles · deliberating on cloud inference</div>`;
+      h+='<div style="margin-top:6px;display:flex;flex-direction:column;gap:2px">';
+      h+=rec.map(c=>{const col=c.success===true?'#3bbf6f':(c.success===false?'#d05050':'#888');
+        return `<div style="font-size:11.5px;font-family:var(--mono,monospace)"><span style="color:#566">${esc((c.ts||'').slice(11,19))}</span> <span style="color:#789">cyc ${c.cycle}</span> &#8594; <b style="color:${col}">${esc(c.action_type)}</b> ${c.success===true?'✓':(c.success===false?'✗':'·')}</div>`}).join('');
+      h+='</div>';
+      const tally={}; rec.forEach(c=>{tally[c.action_type]=(tally[c.action_type]||0)+1});
+      const keys=Object.keys(tally);
+      if(keys.length) h+='<div style="margin-top:6px;font-size:11px;color:#889">decisions: '+keys.map(k=>esc(k)+' ×'+tally[k]).join(' · ')+'</div>';
     }
     return h;
   }
@@ -871,7 +890,32 @@ tr:hover td{background:rgba(121,192,255,.02)}
     }catch(e){ el.innerHTML=`<div class="empty">fetch failed: ${esc(e.message||e)}</div>`; if(pill) pill.textContent='error'; }
   }
   document.addEventListener('click',e=>{ if(e.target.closest&&e.target.closest('[data-target="sec-cognition-diag"]')) loadCogDiag(); });
+  // ── the OVERLORD hierarchy — two sovereignty chains, one ladder ──
+  function renderHierarchy(d){
+    if(!d||!d.ladder) return '<div class="empty">hierarchy unavailable</div>';
+    const ap=d.apex||{}, ovl=ap.overlord||{}, ovs=ap.overseer||{};
+    const tc={overlord:'var(--gold)',overseer:'var(--violet)',model:'#79c0ff',member:'#3bbf6f',agent:'#9bd',participant:'#888',public:'#667'};
+    let h='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;font-family:var(--mono,monospace)">';
+    h+=`<span style="padding:3px 10px;border-radius:6px;background:rgba(255,209,102,.08);border:1px solid rgba(255,209,102,.3)">&#10689; OVERLORD = <b style="color:var(--gold)">${esc(ovl.identity||'bankon.eth')}</b> <span style="color:#778">(${esc(ovl.chain||'evm')}) ${ovl.configured?'✓':'—'}</span></span>`;
+    h+=`<span style="padding:3px 10px;border-radius:6px;background:rgba(210,168,255,.08);border:1px solid rgba(210,168,255,.3)">&#10689; OVERSEER = <b style="color:var(--violet)">${esc(ovs.identity||'mindx.algo')}</b> <span style="color:#778">(${esc(ovs.chain||'algorand')}) ${ovs.configured?'✓':'—'}</span></span>`;
+    h+='</div><div style="display:flex;flex-direction:column;gap:2px">';
+    h+=d.ladder.slice().reverse().map(t=>{const c=tc[t.tier]||'#888';
+      return `<div style="display:flex;gap:10px;align-items:baseline;font-size:11.5px;font-family:var(--mono,monospace);padding:3px 0;border-bottom:1px solid #161616"><b style="min-width:100px;color:${c};text-transform:uppercase;letter-spacing:1px">${esc(t.tier)}</b><span style="color:#aab">${esc(t.how||'')}</span></div>`}).join('');
+    h+='</div>';
+    if(d.note) h+=`<div style="margin-top:8px;font-size:11px;color:#778;font-style:italic">${esc(d.note)}</div>`;
+    return h;
+  }
+  async function loadHierarchy(){
+    const el=document.getElementById('hier'), pill=document.getElementById('hierPill');
+    if(!el) return;
+    try{
+      const d=await fetch('/insight/hierarchy',{cache:'no-store'}).then(r=>r.json());
+      el.innerHTML=renderHierarchy(d);
+      if(pill){const ap=d.apex||{};const n=((ap.overlord||{}).configured?1:0)+((ap.overseer||{}).configured?1:0);pill.textContent=n+'/2 apex live';}
+    }catch(e){ el.innerHTML=`<div class="empty">fetch failed: ${esc(e.message||e)}</div>`; if(pill) pill.textContent='error'; }
+  }
   function boot(){ if(document.getElementById('cogDiag')) loadCogDiag();
+    if(document.getElementById('hier')) loadHierarchy();
     setInterval(()=>{ const tab=document.querySelector('.tab-chip.active'); if(tab&&tab.getAttribute('data-target')==='sec-cognition-diag') loadCogDiag(); },25000); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
 })();
