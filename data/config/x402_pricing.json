@@ -1,26 +1,51 @@
 {
-  "_comment": "x402 paywall pricing per endpoint. Values are in microUSDC (1e6 == $1). Hot-reloadable: changes take effect on next request. Contract documented in docs/services/x402_as_a_service.md §6. v2 (CAIP-2 networks + PAYMENT-* headers, v1 X-PAYMENT fallback).",
+  "_comment": "x402 paywall pricing per endpoint. Values are in microUSDC (1e6 == $1). Hot-reloadable: changes take effect on next request. Contract documented in docs/services/x402_as_a_service.md \u00a76. v2 (CAIP-2 networks + PAYMENT-* headers, v1 X-PAYMENT fallback).",
   "_version": "2.0.0",
   "_updated": "2026-06-17",
-
   "free_quota": {
     "_comment": "Per-wallet free-call allowance on cost-center endpoints. Resets every 24h rolling window. Anonymous callers get 0 free calls (must pay every time).",
     "calls_per_24h": 10,
     "anonymous_calls_per_24h": 0
   },
-
   "endpoints": {
-    "/coordinator/query":          { "max_amount_microusd": 2000, "description": "Single LLM call, single provider" },
-    "/coordinator/analyze":        { "max_amount_microusd": 2000, "description": "Multi-step but bounded" },
-    "/coordinator/improve":        { "max_amount_microusd": 2000, "description": "BDI deliberation, bounded" },
-    "/coordinator/backlog/process":{ "max_amount_microusd": 3000, "description": "Pops + processes one item, may chain calls" },
-    "/agents/{agent_id}/evolve":   { "max_amount_microusd": 5000, "description": "Full directive loop, up to N LLM calls" },
-    "/boardroom/convene":          { "max_amount_microusd": 5000, "description": "7-agent deliberation, 7 LLM calls" },
-    "/permaweb/upload":            { "max_amount_microusd": 50000, "description": "Permanent Arweave storage (Turbo fulfillment desk); uploads <=100 KiB are free of credits but the gate still applies" },
-    "/dato/join":                  { "max_amount_microusd": 10000, "description": "Request-to-join a DAIO-owned dato (data-DAO); per-dato join fee. Modular extension — see dato/ (advertised price; only active once dato is governance-included)" }
+    "/coordinator/query": {
+      "max_amount_microusd": 2000,
+      "description": "Single LLM call, single provider"
+    },
+    "/coordinator/analyze": {
+      "max_amount_microusd": 2000,
+      "description": "Multi-step but bounded"
+    },
+    "/coordinator/improve": {
+      "max_amount_microusd": 2000,
+      "description": "BDI deliberation, bounded"
+    },
+    "/coordinator/backlog/process": {
+      "max_amount_microusd": 3000,
+      "description": "Pops + processes one item, may chain calls"
+    },
+    "/agents/{agent_id}/evolve": {
+      "max_amount_microusd": 5000,
+      "description": "Full directive loop, up to N LLM calls"
+    },
+    "/boardroom/convene": {
+      "max_amount_microusd": 5000,
+      "description": "7-agent deliberation, 7 LLM calls"
+    },
+    "/permaweb/upload": {
+      "max_amount_microusd": 50000,
+      "description": "Permanent Arweave storage (Turbo fulfillment desk); uploads <=100 KiB are free of credits but the gate still applies"
+    },
+    "/dato/join": {
+      "max_amount_microusd": 10000,
+      "description": "Request-to-join a DAIO-owned dato (data-DAO); per-dato join fee. Modular extension \u2014 see dato/ (advertised price; only active once dato is governance-included)"
+    },
+    "/reference/file": {
+      "max_amount_microusd": 5000,
+      "description": "Reference corpus file read \u2014 x402 file-system privilege from payment (WISDOM model). Privilege (OVERSEER/OVERLORD JWT, session, or API key) bypasses; otherwise a 402 settlement grants the `paid` tier read-access."
+    }
   },
-  "_endpoints_note": "Removed orphaned /llm/chat, /llm/completion, /bankon/identity/provision in v2.0.0 — those routes do not exist (real LLM routes live under /api/llm/*). Re-add when the routes ship.",
-
+  "_endpoints_note": "Removed orphaned /llm/chat, /llm/completion, /bankon/identity/provision in v2.0.0 \u2014 those routes do not exist (real LLM routes live under /api/llm/*). Re-add when the routes ship.",
   "rails": {
     "base": {
       "_comment": "USDC on Base. EIP-3009 transferWithAuthorization. Default fastest-cheapest EVM rail.",
@@ -33,7 +58,7 @@
         "decimals": 6,
         "facilitator": "https://x402.org/facilitator"
       },
-      "_payTo_note": "Replace 0x000…000 with the BankonPaymentRouter address on Base after deploy. Until then the facilitator rejects settlement attempts on this rail and clients should pick Tempo or Algorand."
+      "_payTo_note": "Replace 0x000\u2026000 with the BankonPaymentRouter address on Base after deploy. Until then the facilitator rejects settlement attempts on this rail and clients should pick Tempo or Algorand."
     },
     "tempo": {
       "_comment": "USDC.e on Tempo. Multi-Party Payment chain. Used when settlement requires more than one signer (e.g. DAO-controlled treasury).",
@@ -78,14 +103,12 @@
       "_payTo_note": "TestNet USDC ASA 10458941. Empty payTo until a test payee is opted in."
     }
   },
-
   "facilitator": {
     "url": "https://mindx.pythai.net:4022",
     "verify_endpoint": "/verify",
     "supported_endpoint": "/supported",
     "_comment": "mindX-hosted facilitator. Callers may verify with any compatible facilitator and present the proof; mindX re-verifies on-chain before honoring it."
   },
-
   "idempotency": {
     "settlement_cache_ttl_seconds": 60,
     "_comment": "Verified settlements are cached for 60s so a network retry (same X-PAYMENT) within the window does not double-charge."

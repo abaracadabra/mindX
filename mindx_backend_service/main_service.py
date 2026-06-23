@@ -1053,9 +1053,19 @@ async def reference_catalog(request: Request):
 async def reference_file(relpath: str, request: Request):
     """Serve any docs/ file to an authenticated caller — handles the
     space/apostrophe-named reference files /doc/'s sanitizer cannot."""
-    _gate_redirect = await _reference_gate(request, "/reference")
-    if _gate_redirect:
-        return _gate_redirect
+    # Privilege OR payment (the WISDOM model). Privilege — a session, API key, or OVERSEER/OVERLORD JWT —
+    # bypasses payment. Otherwise the file is the entitlement surface: an x402 settlement grants read
+    # (the `paid` tier). Browsers with no payment intent get the login doorway; x402 clients get a 402.
+    if not await _reference_access_ok(request):
+        accept = request.headers.get("accept", "")
+        has_pay = bool(request.headers.get("X-PAYMENT") or request.headers.get("PAYMENT-SIGNATURE")
+                       or request.headers.get("X-SIWX-SESSION"))
+        if ("text/html" in accept) and not has_pay:
+            from starlette.responses import RedirectResponse
+            return RedirectResponse(url="/login?from=/reference", status_code=302)
+        from mindx_backend_service.x402_middleware import x402_required
+        from starlette.responses import Response as _Resp402
+        await x402_required("/reference/file")(request, _Resp402())   # settles + grants, or raises 402 with the price
     docs_dir = (PROJECT_ROOT / "docs").resolve()
     try:
         target = (docs_dir / relpath).resolve()
@@ -2452,13 +2462,29 @@ async def _require_reference_access(request: Request) -> str:
         valid_keys.discard("")
         if bearer in valid_keys:
             return "api_key"
+        # OVERLORD (bankon.eth) — the shadow-overlord JWT; privilege bypasses payment.
         try:
             from mindx_backend_service.bankon_vault.shadow_overlord import verify_jwt, SCOPE_AUTH
             claims = verify_jwt(bearer, required_scope=SCOPE_AUTH)
-            return str(claims.get("sub", "shadow"))
+            return "overlord:" + str(claims.get("sub", "bankon.eth"))
         except Exception:
             pass
-    raise HTTPException(status_code=401, detail="Reference corpus requires a session token (X-Session-Token or ?session_token=), API key, or shadow-overlord JWT")
+        # OVERSEER (mindx.algo) — the Algorand JWT; privilege bypasses payment.
+        try:
+            from mindx_backend_service.overseer_auth import verify_overseer_jwt
+            oc = verify_overseer_jwt(bearer)
+            return "overseer:" + str(oc.get("sub", "mindx.algo"))
+        except Exception:
+            pass
+    # the `paid` tier — privilege FROM payment (the WISDOM model): a wallet that settled an x402 payment
+    # carries an X-SIWX-SESSION; that read-access IS the entitlement. The same wallet pays as signs in.
+    try:
+        from mindx_backend_service.x402_middleware import _siwx_session_ok
+        if _siwx_session_ok(request):
+            return "paid:" + (request.headers.get("X-SIWX-SESSION", "x402") or "x402")[:24]
+    except Exception:
+        pass
+    raise HTTPException(status_code=401, detail="Reference corpus requires a session token (X-Session-Token or ?session_token=), API key, an OVERSEER/OVERLORD JWT, or a settled x402 payment (X-SIWX-SESSION) — privilege OR payment")
 
 
 async def _reference_access_ok(request: Request) -> bool:

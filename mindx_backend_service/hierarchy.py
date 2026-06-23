@@ -31,6 +31,8 @@ LADDER: List[Dict[str, str]] = [
      "gate": "public diagnostics, docs, feedback — read-only, redacted"},
     {"tier": "participant", "how": "connect a wallet — recognized at the floor",
      "gate": "a recognized identity; the floor of the hierarchy"},
+    {"tier": "paid",        "how": "settle an x402 payment — privilege FROM payment (WISDOM model)",
+     "gate": "x402-gated files — read-access to the reference corpus, the same wallet pays as signs in"},
     {"tier": "agent",       "how": "a sovereign mindX agent identity (BANKON Vault wallet) — agentic DAIO voting",
      "gate": "agentic DAIO voting + A2A; an agent acts under its own key"},
     {"tier": "member",      "how": "own a subname.bankon.eth — your name IS your membership",
@@ -84,7 +86,7 @@ def _overseer_algo_addrs() -> set:
 
 
 def recognize(*, evm_address: Optional[str] = None, algo_address: Optional[str] = None,
-              role: Optional[str] = None, is_member: bool = False) -> Dict[str, Any]:
+              role: Optional[str] = None, is_member: bool = False, paid: bool = False) -> Dict[str, Any]:
     """Resolve an identity to its tier across BOTH sovereignty chains.
 
     overlord   ⟸ evm_address == bankon.eth (SHADOW_OVERLORD_ADDRESS)
@@ -104,6 +106,8 @@ def recognize(*, evm_address: Optional[str] = None, algo_address: Optional[str] 
         tier = role.lower()
     elif is_member:
         tier = "member"
+    elif paid:
+        tier = "paid"            # privilege FROM payment — an x402-settled reader
     elif evm or algo:
         tier = "participant"
     return {
