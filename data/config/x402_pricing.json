@@ -52,13 +52,13 @@
       "scheme": "exact",
       "network": "eip155:8453",
       "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-      "payTo": "0x0000000000000000000000000000000000000000",
+      "payTo": "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169",
       "extra": {
         "chainId": 8453,
         "decimals": 6,
         "facilitator": "https://x402.org/facilitator"
       },
-      "_payTo_note": "Replace 0x000\u2026000 with the BankonPaymentRouter address on Base after deploy. Until then the facilitator rejects settlement attempts on this rail and clients should pick Tempo or Algorand."
+      "_payTo_note": "bankon.eth fee recipient (direct collection; swap to BankonPaymentRouter once deployed)."
     },
     "tempo": {
       "_comment": "USDC.e on Tempo. Multi-Party Payment chain. Used when settlement requires more than one signer (e.g. DAO-controlled treasury).",
@@ -78,7 +78,7 @@
       "scheme": "exact",
       "network": "algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
       "asset": "31566704",
-      "payTo": "",
+      "payTo": "L24WEG3KK6QDSQGQGXCJIYR46HHDFK5IJ7HOZF3YDDTHTREGYPDWY74KG4",
       "extra": {
         "assetId": 31566704,
         "decimals": 6,
@@ -86,21 +86,21 @@
         "feePayer": null,
         "multisigThreshold": null
       },
-      "_payTo_note": "Empty payTo means this rail is currently advertised but not yet settling. Fill in the Algorand payee address (58-char base32) after the aORC minter is deployed. Set extra.feePayer to the facilitator address to enable atomic-group fee abstraction (client needs no ALGO)."
+      "_payTo_note": "mindx.algo (OVERSEER). MUST be opted in to USDC ASA 31566704 to settle."
     },
     "algorand-testnet": {
       "_comment": "USDC ASA on Algorand TestNet (Parsec exact AVM scheme). For integration testing.",
       "scheme": "exact",
       "network": "algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=",
       "asset": "10458941",
-      "payTo": "",
+      "payTo": "L24WEG3KK6QDSQGQGXCJIYR46HHDFK5IJ7HOZF3YDDTHTREGYPDWY74KG4",
       "extra": {
         "assetId": 10458941,
         "decimals": 6,
         "facilitator": "https://facilitator.goplausible.xyz",
         "feePayer": null
       },
-      "_payTo_note": "TestNet USDC ASA 10458941. Empty payTo until a test payee is opted in."
+      "_payTo_note": "mindx.algo (testnet). Must be opted in to testnet USDC ASA 10458941."
     }
   },
   "facilitator": {
@@ -112,5 +112,6 @@
   "idempotency": {
     "settlement_cache_ttl_seconds": 60,
     "_comment": "Verified settlements are cached for 60s so a network retry (same X-PAYMENT) within the window does not double-charge."
-  }
+  },
+  "default_rail": "algorand-mainnet"
 }
