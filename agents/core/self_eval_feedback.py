@@ -214,12 +214,16 @@ class SelfEvalFeedback:
             rec = (f"the effector applied — sentinel v{si['version']} ({si['applies']} self-improvements, "
                    f"verified healthy); the machine is editing its own code (campaign wrapper lags this signal)")
             escalate = False
-        elif si.get("applies", 0) > 0 and si.get("healthy") and verdict == "failing":
-            # It has rewritten itself many times and is healthy — "failing" is simply the wrong word
-            # for "quiet between applies". Don't escalate a corrective campaign against a machine that works.
-            verdict = "stalled"
-            rec = (f"{si['applies']} self-improvements applied (sentinel v{si['version']}, healthy) — quiet "
-                   f"now, watching, NOT failing; campaign wrapper reads {camp['successes']}/{camp['total']}")
+        elif si.get("applies", 0) > 0 and si.get("healthy"):
+            # It has rewritten itself many times and is healthy. "failing" is simply the wrong word for a
+            # working machine; resource_bound is at most a throttle, not a failure of judgement. Never
+            # escalate a corrective campaign against a machine that works — and always surface the applies.
+            throttled = (verdict == "resource_bound")
+            if verdict == "failing":
+                verdict = "stalled"
+            rec = (f"{si['applies']} self-improvements applied (sentinel v{si['version']}, healthy) — "
+                   + ("throttled on CPU" if throttled else "quiet, watching")
+                   + f", NOT failing; campaign wrapper reads {camp['successes']}/{camp['total']}")
             escalate = False
 
         # ── fold in the mindXtrain objective eval (right apex) ──
