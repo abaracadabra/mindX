@@ -440,6 +440,35 @@ class AGInt:
         return perception_data
 
     async def _execute_cognitive_task(self, prompt: str, task_type: TaskType, **kwargs) -> Optional[str]:
+        # ── Cloud fast-path: route AGInt's cognition through the Ollama Cloud tool (gpt-oss:120b-cloud) ──
+        # The model_registry + model_selector path below is brittle (empty capabilities / selection
+        # failures → llm_operational=False → the P-O-D-A loop COOLDOWNs instead of deliberating). The cloud
+        # handler is the SAME free-first-maximal route the effector/analyzer use and it reliably answers.
+        # Flag-gated (MINDX_AGINT_CLOUD=1 default) + fail-soft: on any error, fall through to the registry.
+        import os as _os_agint
+        if _os_agint.getenv("MINDX_AGINT_CLOUD", "1") == "1":
+            try:
+                from llm.llm_factory import create_llm_handler
+                _model = (self.config.get("agint.cloud_model", "gpt-oss:120b-cloud")
+                          if self.config else "gpt-oss:120b-cloud")
+                _h = await create_llm_handler("ollama", _model)
+                _gk = {k: v for k, v in kwargs.items() if k in ("json_mode", "max_tokens", "temperature")}
+                _gk.setdefault("max_tokens", 1024)   # reasoning models return '' at tiny budgets
+                resp = await _h.generate_text(prompt, model=_model, **_gk)
+                if resp and resp.strip():
+                    ok = True
+                    if kwargs.get("json_mode"):
+                        import json as _json_agint
+                        try:
+                            _json_agint.loads(resp)
+                        except Exception:
+                            ok = False   # not valid JSON — let the registry path try
+                    if ok:
+                        self.state_summary["llm_operational"] = True
+                        self.state_summary["llm_status"] = f"Online - Ollama Cloud ({_model})"
+                        return resp
+            except Exception as _e:
+                logger.warning(f"{self.log_prefix} cloud cognition fast-path failed ({_e}); falling back to registry")
         # Enhanced logic to properly detect and use Mistral API
         if not self.model_registry:
             logger.warning(f"{self.log_prefix} No model registry available")
