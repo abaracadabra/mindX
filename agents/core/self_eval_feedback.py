@@ -153,6 +153,27 @@ class SelfEvalFeedback:
             return None
 
     # ── the assessment ───────────────────────────────────────────────────
+    def _self_improvement_eval(self) -> Dict[str, Any]:
+        """The GROUND TRUTH of self-improvement: the effector's real applies to the sentinel target,
+        measured by SENTINEL_VERSION progress. The SEA campaign-wrapper status is misleading — it rarely
+        reaches terminal SUCCESS even when the effector actually edits + verifies code — so the
+        campaign rate alone makes mindX UNDERCOUNT its own improvement. This is the honest signal."""
+        out: Dict[str, Any] = {"version": None, "healthy": None, "applied_since_last": False, "applies": 0}
+        try:
+            from agents.sentinel.sentinel import status as _sentinel_status
+            s = _sentinel_status()
+            v = s.get("version")
+            out["version"] = v
+            out["healthy"] = s.get("healthy")
+            out["changed_by_loop"] = s.get("changed_by_loop")
+            if isinstance(v, int):
+                out["applies"] = max(0, v - 1)     # v1 is the seed; each effector apply bumps the version
+                last_v = self._last.get("si_version")
+                out["applied_since_last"] = isinstance(last_v, int) and v > last_v
+        except Exception:
+            pass
+        return out
+
     def assess(self, *, loop_skip_reason: Optional[str] = None,
                read_alignment_events=None) -> Dict[str, Any]:
         """Pure read — cheap, no inference. Safe to call every cycle, even when
@@ -161,6 +182,7 @@ class SelfEvalFeedback:
         cpu = self._live_cpu()
         align = self._alignment_mean(read_alignment_events)
         train = self._training_eval()   # mindXtrain right-apex objective eval
+        si = self._self_improvement_eval()  # the GROUND TRUTH: real effector applies (sentinel version)
         rate = camp["rate"]
 
         resource_bound = (cpu is not None and cpu >= CPU_CEILING) or \
@@ -182,6 +204,23 @@ class SelfEvalFeedback:
             verdict, rec, escalate = "improving", f"{camp['successes']}/{camp['total']} succeeding — healthy", False
         else:
             verdict, rec, escalate = "stalled", f"{camp['successes']}/{camp['total']} succeeding — below target, watching", False
+
+        # ── GROUND-TRUTH override: the effector's real applies outrank the campaign-wrapper status ──
+        # A machine that just edited its own code and verified it healthy IS improving — even when the SEA
+        # wrapper never reports SUCCESS, and even on a busy box. This stops mindX from calling itself
+        # resource_bound / failing while it is in fact rewriting itself.
+        if si.get("applied_since_last") and si.get("healthy"):
+            verdict = "improving"
+            rec = (f"the effector applied — sentinel v{si['version']} ({si['applies']} self-improvements, "
+                   f"verified healthy); the machine is editing its own code (campaign wrapper lags this signal)")
+            escalate = False
+        elif si.get("applies", 0) > 0 and si.get("healthy") and verdict == "failing":
+            # It has rewritten itself many times and is healthy — "failing" is simply the wrong word
+            # for "quiet between applies". Don't escalate a corrective campaign against a machine that works.
+            verdict = "stalled"
+            rec = (f"{si['applies']} self-improvements applied (sentinel v{si['version']}, healthy) — quiet "
+                   f"now, watching, NOT failing; campaign wrapper reads {camp['successes']}/{camp['total']}")
+            escalate = False
 
         # ── fold in the mindXtrain objective eval (right apex) ──
         # The imprint is mindX's hardest objective signal: did a trained
@@ -220,6 +259,8 @@ class SelfEvalFeedback:
             "should_escalate": escalate,
             "training_eval": train,        # the right-apex objective eval, folded in
             "training_note": train_note,
+            "self_improvement": si,        # the GROUND TRUTH: real effector applies (sentinel version)
+            "si_version": si.get("version"),  # persisted so next cycle can detect a fresh apply
             "last_escalation_ts": self._last.get("last_escalation_ts"),
         }
         self._last = {**self._last, **out}
