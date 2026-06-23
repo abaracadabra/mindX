@@ -1063,9 +1063,15 @@ async def reference_file(relpath: str, request: Request):
         if ("text/html" in accept) and not has_pay:
             from starlette.responses import RedirectResponse
             return RedirectResponse(url="/login?from=/reference", status_code=302)
-        from mindx_backend_service.x402_middleware import x402_required
-        from starlette.responses import Response as _Resp402
-        await x402_required("/reference/file")(request, _Resp402())   # settles + grants, or raises 402 with the price
+        try:
+            from mindx_backend_service.x402_middleware import x402_required
+            from starlette.responses import Response as _Resp402
+            await x402_required("/reference/file")(request, _Resp402())   # settles + grants, or raises 402 with the price
+        except HTTPException:
+            raise                                                        # 402 (pay) / 503 (no rails) — propagate
+        except Exception:
+            # x402 not available/configured on this deployment → fall back to privilege-required.
+            raise HTTPException(status_code=401, detail="Reference corpus requires privilege (OVERSEER/OVERLORD JWT, session, or API key); x402 pay-to-read is not configured here")
     docs_dir = (PROJECT_ROOT / "docs").resolve()
     try:
         target = (docs_dir / relpath).resolve()
