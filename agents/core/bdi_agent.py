@@ -488,23 +488,40 @@ class BDIAgent:
 
     # Enhanced Simple Coder Action Handlers
     async def _execute_bash_command(self, action: Dict[str, Any]) -> Tuple[bool, Any]:
-        """Execute a bash command via enhanced simple coder."""
+        """Execute a shell command via the (sandboxed) enhanced simple coder.
+
+        Bug fixed: the command string was passed as the OPERATION NAME to the coder's dispatch
+        (``execute(operation=<full command>)``) → every command resolved to "Unknown operation". The coder
+        runs an ALLOWLISTED program with argv (no shell features). We now split the command into prog+args
+        and route to the ``run_shell`` operation, and refuse shell-feature commands (heredoc/pipe/redirect)
+        with a clear, actionable message instead of a spurious failure that fixates AGInt's RESEARCH loop.
+        """
         if not self.enhanced_simple_coder:
             return False, "Enhanced Simple Coder not available"
-        
+
         params = action.get("params", {})
-        operation = params.get("command", params.get("operation"))
-        
-        if not operation:
+        command = params.get("command", params.get("operation"))
+        if not command or not str(command).strip():
             return False, "No command specified"
-        
-        # Remove 'command' and 'operation' from params to avoid duplication
-        clean_params = {k: v for k, v in params.items() if k not in ["command", "operation"]}
-        
+
+        cmd_str = str(command)
+        # The sandbox execs argv directly — shell features cannot run. Refuse them with guidance so the
+        # planner stops generating heredocs (e.g. `python3 - <<'PY' …`) for this action.
+        if any(tok in cmd_str for tok in ("<<", "|", ">", "<", "&&", "||", ";", "$(", "`")):
+            return False, ("sandbox runs ONE allowlisted program with arguments — no shell features "
+                           "(heredoc / pipe / redirect / chaining). Re-plan as a single allowlisted command.")
+        import shlex
         try:
-            return await self.enhanced_simple_coder.execute(operation=operation, **clean_params)
+            argv = shlex.split(cmd_str)
+        except Exception:
+            argv = cmd_str.split()
+        if not argv:
+            return False, "Empty command"
+        prog, args = argv[0], argv[1:]
+        try:
+            return await self.enhanced_simple_coder.execute(operation="run_shell", command=prog, args=args)
         except Exception as e:
-            self.logger.error(f"Enhanced Simple Coder execution error: {e}")
+            self.logger.error(f"Enhanced Simple Coder run_shell error: {e}")
             return False, f"Command execution failed: {e}"
 
     async def _execute_llm_bash_task(self, action: Dict[str, Any]) -> Tuple[bool, Any]:
@@ -855,7 +872,7 @@ class BDIAgent:
             "ANALYZE_CODE": "Analyze code in the sandbox (LLM). Requires params: 'file_path' (string).",
             "GENERATE_CODE": "Generate code into the sandbox (LLM). Requires params: 'description' (string).",
             "GET_CODING_SUGGESTIONS": "Get coding suggestions (LLM). Requires params: 'current_task' (string).",
-            "EXECUTE_BASH_COMMAND": "Run a shell command in the sandbox. Requires params: 'command' (string).",
+            "EXECUTE_BASH_COMMAND": "Run ONE allowlisted program with arguments in the sandbox (argv only — NO shell features: no heredocs, pipes, redirects, or chaining; NOT for arbitrary python/scripts). Requires params: 'command' (string).",
             "NO_OP": "Do nothing — use only to end a plan cleanly when the goal is already satisfied.",
         }
         # Advertise every executable internal/registered action handler (skip the deliberate-failure stub).
