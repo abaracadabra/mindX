@@ -7976,6 +7976,10 @@ async def _diag_compute():
             }
     except Exception:
         pass
+    # Always surface the persisted self-eval (self_improvement / sentinel version) — the ground truth
+    # must not vanish while the meta-agent is still initializing after a restart.
+    if not autonomous_data.get("self_eval"):
+        autonomous_data["self_eval"] = _read_self_eval_state()
     author_data = {}
     def _wp_last_authorized_by():
         try:
