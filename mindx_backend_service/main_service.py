@@ -2357,6 +2357,7 @@ _PUBLIC_PREFIXES_STRICT = (
     "/admin/shadow/",                  # shadow-overlord ECDSA + JWT (gated at handler level)
     "/overlord/",                      # overlord/overseer login (flag + signature gated at handler level)
     "/auth/algorand/",                 # Algorand (Pera/Parsec) OVERSEER login — challenge + signature verify
+    "/auth/evm/",                      # EVM (bankon.eth) OVERLORD login — challenge + signature verify
     "/overseer/",                      # OVERSEER deployment-suite surface — gated at handler level (require_overseer)
     "/reference/",                     # reference corpus — gated at handler level (_require_reference_access)
     "/deltaverse/",                    # DeltaVerse fabric reads (recognize/story/bubblerooms public; weave/wish role-aware)
@@ -2400,6 +2401,7 @@ _PUBLIC_PREFIXES_LEGACY = (
     "/actions/export", "/diagnostics/export", "/api/rage/embed",
     "/users/challenge", "/users/register", "/error-pages/", "/static/",
     "/auth/algorand/",                 # Algorand (Pera/Parsec) OVERSEER login — challenge + verify
+    "/auth/evm/",                      # EVM (bankon.eth) OVERLORD login — challenge + verify
     "/overseer/",                      # OVERSEER deployment-suite surface — gated at handler level
     "/insight/",
     "/marketing/",
@@ -9634,6 +9636,29 @@ async def algorand_overseer_verify(request: Request):
         raise HTTPException(status_code=400, detail="nonce, signature, and address are required")
     result = overseer_auth.consume_overseer_login(nonce, signature, address, wallet)
     return {"status": "success", "role": "overseer", **result}
+
+
+@app.get("/auth/evm/challenge", summary="Issue an EVM OVERLORD-LOGIN challenge", tags=["auth"])
+async def evm_overlord_challenge():
+    """Public: mint a single-use challenge for the operator to sign with the bankon.eth (EVM) wallet."""
+    from mindx_backend_service import overlord_auth
+    return {"status": "success", **overlord_auth.issue_challenge()}
+
+
+@app.post("/auth/evm/verify", summary="Verify an EVM OVERLORD signature → OVERLORD (admin) JWT", tags=["auth"])
+async def evm_overlord_verify(request: Request):
+    """Public: verify an EIP-191 signature over the stored challenge; if the recovered signer is bankon.eth
+    (the OVERLORD / shadow-overlord), return the scope-bound OVERLORD admin JWT — the EVM mirror of the
+    Algorand OVERSEER flow. bankon.eth is the EVM admin for mindX's contracts and deployment."""
+    from mindx_backend_service import overlord_auth
+    body = await request.json()
+    nonce = str(body.get("nonce") or "")
+    signature = str(body.get("signature") or "")
+    address = str(body.get("address") or "")
+    if not (nonce and signature):
+        raise HTTPException(status_code=400, detail="nonce and signature are required")
+    result = overlord_auth.consume_overlord_login(nonce, signature, address, wallet="evm")
+    return {"status": "success", **result}
 
 
 @app.get("/overseer/algorand/suites", summary="List Algorand deployment suites (OVERSEER)", tags=["overseer"])

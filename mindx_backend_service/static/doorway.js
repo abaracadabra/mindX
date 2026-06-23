@@ -69,16 +69,24 @@
       var addr = conn.address, chain = conn.chain, tier = 'participant';
 
       if (chain === 'algorand') {
-        // full OVERSEER flow — mindX challenge -> sign -> verify -> scope-bound JWT (real privilege)
+        // full OVERSEER flow — mindX challenge -> Ed25519 sign -> verify -> scope-bound JWT (real privilege)
         var ch = await fetch(api() + '/auth/algorand/challenge').then(function (r) { return r.json(); });
         var sig = await window.DVWalletIdentity.sign(ch.message, conn);
         var v = await fetch(api() + '/auth/algorand/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ nonce: ch.nonce, signature: b64(sig), address: addr, wallet: conn.wallet || 'parsec' }) });
         if (v.ok) { var d = await v.json(); tier = 'overseer';
           try { localStorage.setItem('mindx_overseer_jwt', d.jwt); localStorage.setItem('mindx_overseer_address', addr); } catch (e) {} }
+      } else if (chain === 'evm') {
+        // full OVERLORD flow — mindX challenge -> EIP-191 personal_sign -> verify -> admin JWT (bankon.eth)
+        var che = await fetch(api() + '/auth/evm/challenge').then(function (r) { return r.json(); });
+        var sige = await window.DVWalletIdentity.sign(che.message, conn);   // EVM → hex signature string
+        var ve = await fetch(api() + '/auth/evm/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nonce: che.nonce, signature: (typeof sige === 'string' ? sige : b64(sige)), address: addr }) });
+        if (ve.ok) { var de = await ve.json(); tier = 'overlord';
+          try { localStorage.setItem('mindx_overlord_jwt', de.jwt); localStorage.setItem('mindx_overlord_address', addr); } catch (e) {} }
       }
-      // cosmetic recognition via the hierarchy (covers the EVM OVERLORD by address; the server enforces the real gate)
-      if (tier !== 'overseer') {
+      // cosmetic recognition via the hierarchy (fallback when no JWT was minted; the server enforces the real gate)
+      if (tier !== 'overseer' && tier !== 'overlord') {
         var rq = chain === 'algorand' ? ('algo=' + encodeURIComponent(addr)) : ('evm=' + encodeURIComponent(addr));
         var h = await fetch(api() + '/insight/hierarchy?' + rq).then(function (r) { return r.json(); }).catch(function () { return null; });
         if (h && h.recognized && h.recognized.tier) tier = h.recognized.tier;
