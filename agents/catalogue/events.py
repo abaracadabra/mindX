@@ -37,6 +37,7 @@ EventKind = Literal[
     "train.promoted",        # ascended generation accepted + served as Ollama model
     "board.session",         # boardroom session completion
     "board.vote",            # individual vote within a session
+    "dojo.decision",         # DojoArbiter consensus decision (boardroom/warcouncil/mindXtrain/DAIO → one verdict)
     "tool.invoke",           # BaseTool.execute() entry (opt-in)
     "tool.result",           # BaseTool.execute() exit (opt-in)
     "skill.invoke",          # future: skill registry

@@ -70,6 +70,23 @@ class AscentResult:
 Verdict = Callable[[ForgeResult], Awaitable[dict]]
 
 
+async def _dojo_advisory(generation: int, verdict: dict, notes: list) -> None:
+    """Record the mindXtrain imprint verdict as a Dojo consensus decision —
+    ADVISORY ONLY: it never changes promotion (the imprint gate above remains the
+    authority). Reserve ``MINDX_DOJO_GATES_IMPRINT`` for the future authoritative
+    mode. Best-effort; never raises into the ascent. Honors MINDX_DOJO_ARBITER_ENABLED."""
+    try:
+        from daio.governance import dojo_arbiter as _A
+        if not _A._enabled():
+            return
+        rec = await _A.decide(subject=f"imprint:{generation}",
+                              ballots=_A.from_mindxtrain(verdict),
+                              consensus_model="weighted_confidence", council="dojo")
+        notes.append(f"dojo advisory: {rec.get('decision')} ({rec.get('record_hash','')[:14]})")
+    except Exception as e:  # pragma: no cover - defensive
+        notes.append(f"dojo advisory skipped: {e}")
+
+
 async def ascend(
     *,
     dreams_dir: Path,
@@ -179,6 +196,7 @@ async def ascend(
         v = await verdict(fr)
         result.recall = {k: v.get(k) for k in ("recall_before", "recall_after", "delta")
                          if v.get(k) is not None}
+        await _dojo_advisory(generation, v, notes)  # advisory record, non-gating
         if v.get("accepted"):
             result.stage = "accepted"
             notes.append(f"generation {generation} accepted: {v.get('reason','')}")
@@ -311,6 +329,7 @@ async def ascend_recipe(
         v = await verdict(None)
         result.recall = {k: v.get(k) for k in ("recall_before", "recall_after", "delta", "imprinted")
                          if v.get(k) is not None}
+        await _dojo_advisory(generation, v, notes)  # advisory record, non-gating
         if not v.get("accepted"):
             result.stage = "proof_rejected"
             notes.append(f"imprint verdict: {v.get('reason')}")

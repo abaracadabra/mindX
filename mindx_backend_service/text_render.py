@@ -446,6 +446,31 @@ def render_boardroom_recent(d: dict) -> str:
     )
 
 
+def render_dojo_decisions(d: dict) -> str:
+    """Plain-text rendering of /insight/dojo/decisions — the Dojo's consensus
+    arbitration ledger (boardroom/warcouncil/mindXtrain/DAIO → one verdict)."""
+    rows = d.get("decisions") or []
+    if not rows:
+        models = ", ".join(d.get("consensus_models") or [])
+        return f"no dojo decisions yet\nconsensus models: {models}\n"
+    def _origins(ballots: Any) -> str:
+        if not isinstance(ballots, list):
+            return ""
+        return ",".join(sorted(set(str(b.get("origin", "?")) for b in ballots)))
+    return render_table(
+        rows,
+        [
+            ("ts",       "ts_utc",     lambda v: str(v)[:19]),
+            ("decision", "decision",   lambda v: str(v).upper()),
+            ("model",    "model",      None),
+            ("score",    "score",      lambda v: f"{float(v):.3f}" if isinstance(v, (int, float)) else "?"),
+            ("from",     "ballots",    _origins),
+            ("subject",  "subject",    lambda v: human_hash(v, 46)),
+        ],
+        max_col=80,
+    )
+
+
 def render_boardroom_session(d: dict) -> str:
     """Plain-text rendering of /insight/boardroom/session/<id> — full record
     of one boardroom decision (CEO + 7 soldiers). For terminal monitoring."""
@@ -1267,11 +1292,13 @@ def render_eval_health(d: dict) -> str:
     sr_s = f"{sr * 100:.1f}%" if isinstance(sr, (int, float)) else "—"
     lines = [
         f"eval gate:       {gate_s}",
-        f"in-process:      hits={human_count(in_p.get('hits', 0))} "
+        f"actual eval:     hits={human_count(in_p.get('hits', 0))} "
         f"misses={human_count(in_p.get('misses', 0))} "
         f"rate={sr_s} "
         f"window_n={human_count(in_p.get('scores_in_window', 0))} "
-        f"mean={mean_s}",
+        f"mean={mean_s}  (LLM-judged only)",
+        f"deferred proxy:  {human_count(in_p.get('heuristic_hits', 0))} "
+        f"(heuristic fallback when CPU-throttled — NOT counted as actual eval)",
         f"last score:      {human_ts_with_rel(in_p.get('last_score_ts'))}",
         f"last miss:       {human_ts_with_rel(in_p.get('last_miss_ts'))}",
         f"on-disk (tail):  scanned={human_count(on_d.get('scanned', 0))} "
@@ -1281,6 +1308,57 @@ def render_eval_health(d: dict) -> str:
     err = in_p.get("error") or on_d.get("error")
     if err:
         lines.append(f"error:           {err}")
+    return "\n".join(lines) + "\n"
+
+
+def render_inference_appetite(d: dict) -> str:
+    b = d.get("daily_budget") or {}
+    mh = (d.get("model_health") or {}).get("summary") or {}
+    providers = d.get("providers") or {}
+    lt = d.get("lifetime_tokens") or {}
+    ceiling = b.get("ceiling_per_day")
+    used = b.get("used_today")
+    util = b.get("utilization_pct")
+    lines = ["mindX inference appetite (free-tier)", "─" * 60]
+    if lt.get("total") is not None:
+        lines.append(
+            f"lifetime tokens: {human_count(lt.get('total'))} ingested  "
+            f"(seed {human_count(lt.get('seed'))} + {human_count(lt.get('ingested_since_seed'))} actual)"
+        )
+        lines.append(
+            f"  split:         {human_count(lt.get('cpu_tokens', 0))} CPU/local · "
+            f"{human_count(lt.get('cloud_tokens', 0))} cloud  over {human_count(lt.get('calls_since_seed', 0))} calls"
+        )
+        lines.append("─" * 60)
+    lines += [
+        f"daily ceiling:   {human_count(ceiling) if ceiling is not None else '—'} calls/day "
+        f"(target max-1 = {human_count(b.get('target_per_day')) if b.get('target_per_day') is not None else '—'})",
+        f"used today:      {human_count(used) if used is not None else '—'}  "
+        f"({util if util is not None else '—'}% of ceiling)  "
+        f"remaining {human_count(b.get('remaining_today')) if b.get('remaining_today') is not None else '—'}",
+        f"conversation:    {b.get('conversational_floor_per_hour','—')}/hr = "
+        f"{b.get('conversational_floor_per_day','—')}/day per thread  "
+        f"(~{human_count(b.get('concurrent_conversations_supported', 0))} threads/day supported)",
+        "─" * 60,
+        f"models:          {mh.get('live', 0)} live · {mh.get('dead', 0)} dead · "
+        f"{mh.get('probing', 0)} probing  ·  "
+        f"{human_count(mh.get('total_tokens', 0))} tokens over {human_count(mh.get('total_calls', 0))} calls",
+        "per-provider connections + tokens/min:",
+    ]
+    if providers:
+        for name, p in sorted(providers.items()):
+            lines.append(
+                f"  {name:14s} conns={human_count(p.get('total_req', 0))} "
+                f"429={human_count(p.get('total_429', 0))} "
+                f"tok/min={human_count(p.get('tokens_min', 0))} "
+                f"headroom={p.get('headroom', '—')}"
+                + (f" backoff={p.get('backoff_s')}s" if p.get('backoff_s') else "")
+            )
+    else:
+        lines.append("  (no provider activity recorded yet)")
+    dead = (d.get("model_health") or {}).get("dead_slugs") or []
+    if dead:
+        lines.append(f"dead slugs:      {', '.join(dead[:8])}" + (" …" if len(dead) > 8 else ""))
     return "\n".join(lines) + "\n"
 
 
@@ -1662,7 +1740,9 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/model_selector/recent": render_model_selector_recent,
     "/insight/eval/recent":         render_eval_recent,
     "/insight/eval/summary":        render_eval_summary,
+    "/insight/inference/appetite":  render_inference_appetite,
     "/insight/boardroom/recent":    render_boardroom_recent,
+    "/insight/dojo/decisions":      render_dojo_decisions,
     "/insight/boardroom/session":   render_boardroom_session,
     "/insight/boardroom/roles":     render_boardroom_roles,
     "/insight/memory/audit":        render_memory_audit,

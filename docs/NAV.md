@@ -101,6 +101,7 @@ The boardroom is mindX's multi-agent consensus mechanism — deeper than SwarmCl
 - [Boardroom Self-Adaptation](agents/boardroom_self_adaptation.md) — pattern→action recovery registry (5 patterns)
 - [Boardroom Members](agents/boardroom_members.md) — three-file role architecture
 - **Agent Roster**: [`ceo.agent`](../agents/boardroom/ceo.agent), [`ciso.agent`](../agents/boardroom/ciso.agent), [`cfo.agent`](../agents/boardroom/cfo.agent), [`cro.agent`](../agents/boardroom/cro.agent), [`clo.agent`](../agents/boardroom/clo.agent), [`cpo.agent`](../agents/boardroom/cpo.agent), [`cto.agent`](../agents/boardroom/cto.agent), [`coo.agent`](../agents/boardroom/coo.agent)
+- [**Dojo Arbiter**](DOJO_ARBITER.md) — the blackbox consensus-arbitration service (Boardroom t1 → **Dojo t2** → War Council t3). Ingests boardroom / war-council / mindXtrain-imprint / DAIO verdicts → resolves under a variable consensus model → one verifiable decision (hash-linked VotingBooth + `dojo.decision` event). Callable in-process, over HTTP (`POST /dojo/decide`, `GET /insight/dojo/decisions`), and from the CLI (`scripts/dojo.py`). Impl: [`daio/governance/dojo_arbiter.py`](../daio/governance/dojo_arbiter.py)
 
 #### Soldier marketing capabilities
 

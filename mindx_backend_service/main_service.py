@@ -812,7 +812,7 @@ def _doc_page(title: str, body_html: str, meta: str = "", description: str = "",
     canon = f'https://mindx.pythai.net{canonical_path}' if canonical_path else ''
     canon_tag = f'<link rel="canonical" href="{canon}">' if canon else ''
     nav = '''<div class="nav">
-<div class="nav-row"><span class="brand">mind<b>X</b></span><a href="/">dashboard</a><span class="sep">/</span><a href="/docs.html">docs</a><span class="sep">/</span><a href="/book">book</a><span class="sep">/</span><a href="/journal">journal</a><span class="sep">/</span><a href="/redoc" class="dim">api</a><span class="sep">/</span><a href="/dojo/standings" class="dim">dojo</a><span class="sep">/</span><a href="/inference/status" class="dim">inference</a><span class="sep">/</span><a href="/governance/status" class="dim">governance</a><span class="sep">/</span><a href="/automindx" class="dim" style="color:#d2a8ff">origin</a></div>
+<div class="nav-row"><span class="brand">mind<b>X</b></span><a href="/">dashboard</a><span class="sep">/</span><a href="/docs.html">docs</a><span class="sep">/</span><a href="/book">book</a><span class="sep">/</span><a href="/journal">journal</a><span class="sep">/</span><a href="/redoc" class="dim">api</a><span class="sep">/</span><a href="/dojo/standings" class="dim">dojo</a><span class="sep">/</span><a href="/inference/status" class="dim">inference</a><span class="sep">/</span><a href="/governance/status" class="dim">governance</a><span class="sep">/</span><a href="/insight/gitmind?h=true" class="dim">gitmind</a><span class="sep">/</span><a href="/automindx" class="dim" style="color:#d2a8ff">origin</a></div>
 <div class="nav-row"><span class="grp">philosophy</span><a href="/doc/MANIFESTO" class="dim">manifesto</a><a href="/doc/THESIS" class="dim">thesis</a><a href="/doc/AUTOMINDX_ORIGIN" class="dim">origin</a><a href="/doc/whitepaper" class="dim">whitepaper</a><a href="/doc/ATARAXIA" class="dim">ataraxia</a><a href="/doc/roadmap" class="dim">roadmap</a><a href="/doc/PRESS" class="dim">press</a><span class="sep">|</span><span class="grp">arch</span><a href="/doc/TECHNICAL" class="dim">overview</a><a href="/doc/ORCHESTRATION" class="dim">orchestration</a><a href="/doc/codebase_map" class="dim">codebase</a><a href="/doc/hierarchy" class="dim">hierarchy</a><a href="/doc/CORE" class="dim">core</a><span class="sep">|</span><span class="grp">agents</span><a href="/doc/mindXagent" class="dim">mindXagent</a><a href="/doc/CEO" class="dim">ceo</a><a href="/doc/ORCHESTRATION" class="dim">mastermind</a><a href="/doc/bdi_parameter_processing" class="dim">bdi</a><a href="/doc/AUTONOMOUS" class="dim">evolution</a><a href="/doc/AUTHOR_AGENT" class="dim">author</a><a href="/doc/AGENTS" class="dim">all</a></div>
 <div class="nav-row"><span class="grp">gov</span><a href="/doc/DAIO" class="dim">daio</a><a href="/doc/DAIO_CIVILIZATION_GOVERNANCE" class="dim">civilization</a><a href="/doc/IDENTITY" class="dim">identity</a><a href="/doc/SECURITY_VULNERABILITIES" class="dim">security</a><span class="sep">|</span><span class="grp">memory</span><a href="/doc/pgvectorscale_memory_integration" class="dim">pgvector</a><a href="/doc/EMBEDDING_SYSTEM" class="dim">embed</a><a href="/doc/aglm" class="dim">aglm</a><a href="/doc/memory" class="dim">memory</a><span class="sep">|</span><span class="grp">inference</span><a href="/doc/VLLM_INTEGRATION" class="dim">vllm</a><a href="/doc/ollama_api_integration" class="dim">ollama</a><a href="/doc/mistral_api" class="dim">mistral</a><a href="/doc/gemini_handler" class="dim">gemini</a><span class="sep">|</span><span class="grp">time</span><a href="/doc/TIME_ORACLE" class="dim">oracle</a></div>
 <div class="nav-row"><span class="grp">tools</span><a href="/doc/TOOLS_INDEX" class="dim">index</a><a href="/doc/TOOLS" class="dim">tools</a><a href="/doc/a2a_tool" class="dim">a2a</a><a href="/doc/mcp_tool" class="dim">mcp</a><a href="/doc/shell_command_tool" class="dim">shell</a><span class="sep">|</span><span class="grp">publish</span><a href="/doc/AUTHOR_AGENT" class="dim">authoragent</a><a href="/book" class="dim">book</a><a href="/journal" class="dim">journal</a><span class="sep">|</span><span class="grp">deploy</span><a href="/doc/DEPLOYMENT_MINDX_PYTHAI_NET" class="dim">production</a><a href="/doc/security" class="dim">security</a><a href="/doc/performance_monitor" class="dim">monitoring</a><span class="sep">|</span><span class="grp">api</span><a href="/redoc" class="dim">reference</a><a href="/docs" class="dim">swagger</a><span class="sep">|</span><span class="grp">learn</span><a href="/doc/USAGE" class="dim">usage</a><a href="/doc/INSTRUCTIONS" class="dim">guide</a><a href="/doc/hackathon" class="dim">hackathon</a></div>
@@ -2281,6 +2281,21 @@ async def feedback_text(request: Request):
         from mindx_backend_service.self_diagnostic import get_cached as _sd_cached
         sd = await _sd_cached()
         rc = sd.get("real_changes") or {}
+        # LEAD with the honest verdict (real change first, not the campaign 0/X).
+        vline = (sd.get("verdict") or {}).get("line")
+        if vline:
+            lines.append(f"verdict  {vline[:180]}")
+        # Real self-improvement: sentinel applies + dream→mindXtrain imprints.
+        si = rc.get("self_improvement") or {}
+        tr = rc.get("training") or {}
+        si_bits = []
+        if si.get("applies"):
+            si_bits.append(f"sentinel v{si.get('version')} ({si['applies']} self-improvements"
+                           + (", healthy" if si.get("healthy") else "") + ")")
+        if tr.get("total"):
+            si_bits.append(f"mindXtrain imprints {tr.get('accepted', 0)}/{tr['total']} from dreams")
+        if si_bits:
+            lines.append("improve  " + " · ".join(si_bits))
         ms = (rc.get("milestones") or [{}])[0]
         if ms.get("subject"):
             lines.append(
@@ -2293,7 +2308,25 @@ async def feedback_text(request: Request):
             f"campaigns 7d  {c7.get('succeeded', 0)} ok · {c7.get('failed', 0)} failed · "
             f"{c7.get('max_cycles_reached', 0)} max_cycles · backlog {bl.get('unique', 0)} unique"
             + (" (dedup live)" if bl.get("dedup_live") else f" of {bl.get('size', 0)}")
+            + "  [campaign wrapper under-reports — see verdict]"
         )
+        # Inference appetite — connections + tokens + utilization (public hunger).
+        ap = (sd.get("process_health") or {}).get("inference_appetite") or {}
+        bud = ap.get("budget") or {}
+        mods = ap.get("models") or {}
+        lt = ap.get("lifetime") or {}
+        if lt.get("total") is not None:
+            lines.append(
+                f"tokens  {text_render.human_count(lt.get('total'))} ingested lifetime "
+                f"(seed {text_render.human_count(lt.get('seed'))} + {text_render.human_count(lt.get('ingested_since_seed'))} actual · "
+                f"{text_render.human_count(lt.get('cpu_tokens', 0))} CPU/{text_render.human_count(lt.get('cloud_tokens', 0))} cloud)"
+            )
+        if bud.get("ceiling_per_day"):
+            lines.append(
+                f"appetite  {bud.get('used_today', 0)}/{bud.get('ceiling_per_day')} calls/day "
+                f"({bud.get('utilization_pct', 0)}%) · models {mods.get('live', 0)} live/"
+                f"{mods.get('dead', 0)} dead · {text_render.human_count(mods.get('total_tokens', 0))} tokens"
+            )
     except Exception as e:
         lines.append(f"changed  (self-diagnostic unavailable: {e})")
 
@@ -2344,6 +2377,7 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/mindx-wordpress-plugin",         # public distribution page for mindx-publish-auth WP plugin
     "/netstat", "/netstat.html",       # Phase 1.2+ — smartphone-class VPS vitals (public diagnostics)
     "/overseer", "/overseer.html",     # OVERSEER shell — Algorand deploy suites (data gated by OVERSEER JWT)
+    "/inft", "/inft.html",             # iNFT builder shell — client-side mint via MetaMask (on-chain); reached from the public landing BUILDER (archetype prefill). No server-side write; safe public shell.
     # Mind-of-mindX feedback surfaces — public BY DESIGN (CLAUDE.md): the live
     # self-diagnostic pages + plain-text snapshot + redacted agentic console.
     # The strict-gate cutover omitted them and they 401'd publicly until the
@@ -2625,6 +2659,23 @@ async def api_access_gate(request: Request, call_next):
         "from": path,
         "docs": "https://mindx.pythai.net/docs.html",
     })
+
+# Dynamic surfaces must never be browser-cached: the dashboard HTML can update
+# while a separately-cached /insight/* XHR keeps serving a stale verdict (the
+# "stale self-diagnosis" bug, 2026-06). Force no-store on live data + HTML pages;
+# /static/ and images stay cacheable.
+@app.middleware("http")
+async def _no_store_dynamic(request: Request, call_next):
+    resp = await call_next(request)
+    try:
+        p = request.url.path
+        ct = resp.headers.get("content-type", "")
+        if p.startswith(("/insight/", "/diagnostics/")) or ct.startswith("text/html"):
+            resp.headers["Cache-Control"] = "no-store, must-revalidate"
+            resp.headers["Pragma"] = "no-cache"
+    except Exception:
+        pass
+    return resp
 
 # Inbound metrics and optional rate control (both directions: see docs/monitoring_rate_control.md)
 try:
@@ -3281,6 +3332,41 @@ async def insight_inference_ledger(request: Request, limit: int = 20):
     except Exception as e:
         s = {"entries": 0, "by_model": {}, "totals": {}, "tail": [], "error": str(e)}
     return _maybe_h_text(request, s, route_path="/insight/inference/ledger")
+
+
+@app.get("/insight/inference/appetite", tags=["insight"], summary="Inference appetite — daily budget, connections, tokens, per-model health")
+@_insight_safe
+async def insight_inference_appetite(request: Request):
+    """Public display of mindX's inference APPETITE (operator directive): the
+    daily call ceiling (sum of free-tier caps, target max-1), how much is
+    consumed today, the conversational floor (3/hr=72/day per thread), live
+    per-provider connections + tokens/min, and per-MODEL interaction health
+    (live/dead/probing slugs, the dead-roster pruner). This is the honest mirror
+    of how hungry mindX actually is vs. how much capacity it has — utilization is
+    typically a rounding error, which is the point: the limiter was never the
+    bottleneck, dead models were."""
+    out: Dict[str, Any] = {}
+    try:
+        from llm.inference_budget import daily_budget, snapshot as _budget_snapshot
+        out["daily_budget"] = daily_budget()
+        out["providers"] = _budget_snapshot()  # per-provider connections (total_req), tokens_min, backoff
+    except Exception as e:
+        out["daily_budget"] = {}
+        out["providers"] = {}
+        out["budget_error"] = str(e)
+    try:
+        from llm.model_health import snapshot as _mh_snapshot
+        out["model_health"] = _mh_snapshot()
+    except Exception as e:
+        out["model_health"] = {}
+        out["model_health_error"] = str(e)
+    try:
+        from llm.token_appetite import snapshot as _ta_snapshot
+        out["lifetime_tokens"] = _ta_snapshot()  # seeded 347M, monotonic, incl. CPU
+    except Exception as e:
+        out["lifetime_tokens"] = {}
+        out["lifetime_error"] = str(e)
+    return _maybe_h_text(request, out, route_path="/insight/inference/appetite")
 
 
 @app.get("/insight/improvement/summary", tags=["insight"])
@@ -4747,6 +4833,94 @@ async def insight_self_diagnostic(request: Request):
     from mindx_backend_service.self_diagnostic import get_cached
     data = await get_cached()
     return _maybe_h_text(request, data, route_path="/insight/self/diagnostic")
+
+
+async def require_overlord_or_overseer(request: Request) -> str:
+    """gitmind access via the OVERLORD hierarchy: a shadow-OVERLORD admin JWT OR
+    an OVERSEER (mindx.algo) JWT both unlock privileged THOT/iNFT detail. Either
+    sovereign tier suffices; raises 401 only if neither is presented."""
+    try:
+        return await require_admin_access(request)   # OVERLORD admin
+    except Exception:
+        pass
+    return await require_overseer(request)           # OVERSEER (raises if also absent)
+
+
+@app.get("/insight/gitmind", tags=["insight"])
+@_insight_safe
+async def insight_gitmind(request: Request):
+    """gitmind: self-contained git state monitor + multi-source backup/rollback.
+
+    Reports current git state (HEAD/branch/dirty/commit count), recent repo
+    backups (git bundles replicated to variable sources — local filesystem,
+    IPFS via Lighthouse, Arweave), and the rollback ledger separating ordinary
+    rollbacks from self-initiated ones. See docs/GITMIND.md. `?h=true` for text.
+    """
+    try:
+        from mindx.gitmind import get_gitmind
+        data = await asyncio.to_thread(get_gitmind().report)   # public: redacted
+    except Exception as e:
+        data = {"error": f"gitmind unavailable: {e}"}
+    return _maybe_h_text(request, data, route_path="/insight/gitmind")
+
+
+@app.get("/gitmind/anchors", tags=["gitmind"], summary="Full gitmind THOT/iNFT anchor detail (OVERSEER-gated)")
+async def gitmind_anchors(request: Request, _addr: str = Depends(require_overlord_or_overseer)):
+    """OVERLORD-hierarchy gated: the full THOT/iNFT anchor records (dataset ids,
+    raw source refs) plus the access-control mapping. THOT (transferable
+    hyper-optimized tensor backups) and iNFT (directory/code backups) anchor the
+    backup CIDs on-chain; this privileged view exposes the internals the public
+    /insight/gitmind redacts. Requires an OVERSEER JWT (mindx.algo sign-in)."""
+    try:
+        from mindx.gitmind import get_gitmind
+        data = await asyncio.to_thread(lambda: get_gitmind().report(privileged=True))
+        data["overseer"] = _addr
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"gitmind unavailable: {e}")
+    return _maybe_h_text(request, data, route_path="/gitmind/anchors")
+
+
+@app.get("/insight/war_council", tags=["insight"])
+@_insight_safe
+async def insight_war_council(request: Request):
+    """War Council: the live-message → decision → blueprint bridge. 13 prime-weighted
+    seats voting under an accelerating prime-ratio majority that guarantees a decisive
+    outcome (no deadlock). Shows the council configuration + recent verdicts. The
+    second room beside the Boardroom — see docs/WAR_COUNCIL.md. `?h=true` for text."""
+    try:
+        from mindx.war_council_bridge import wire   # wire vote_fn → boardroom soldiers
+        wc = wire()
+        data = {"config": wc.config(), "recent": wc.recent(),
+                "vote_source": "boardroom (in-process soldiers)" if wc.vote_fn else "unwired",
+                "blueprint_wired": bool(wc.blueprint_fn)}
+    except Exception as e:
+        data = {"error": f"war_council unavailable: {e}"}
+    return _maybe_h_text(request, data, route_path="/insight/war_council")
+
+
+class WarCouncilProposal(BaseModel):
+    """Body for POST /war_council/decide — a live proposal to put to the council."""
+    title: str = Field(..., min_length=1)
+    context: Optional[str] = None
+    source: Optional[str] = "live"
+    stakes: int = Field(default=0, ge=0, le=2)  # 0 simple → 2 max prime majority
+
+
+@app.post("/war_council/decide", tags=["war_council"], summary="Convene the War Council on a live proposal (boardroom soldiers vote)")
+async def war_council_decide(req: WarCouncilProposal, _addr: str = Depends(require_overlord_or_overseer)):
+    """OVERLORD/OVERSEER-gated. Wires the War Council's vote source to the live
+    Boardroom soldiers, convenes them on the proposal, reaches a guaranteed
+    prime-accelerating-majority verdict, and (when a blueprint_fn is wired) fires
+    a blueprint run on approval. Spends boardroom inference — gated by design."""
+    try:
+        from mindx.war_council_bridge import wire
+        wc = wire()
+        result = await wc.decide(
+            {"id": f"wc_{int(time.time())}", "title": req.title,
+             "context": req.context, "source": req.source}, stakes=req.stakes)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"war_council decide failed: {e}")
 
 
 @app.get("/insight/milestones/recent", tags=["insight"])
@@ -10319,6 +10493,65 @@ async def dojo_update(agent_id: str, delta: int, event_type: str = "manual", rea
         return dojo.update_reputation(agent_id, delta, event_type, reason)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class DojoDecidePayload(BaseModel):
+    """A settlement request for the Dojo consensus-arbitration service. Supply
+    pre-normalized `ballots` and/or any of the typed source inputs (boardroom
+    session, war-council seat votes, mindXtrain imprint verdict, DAIO groups) —
+    the Dojo normalizes, resolves them under `consensus_model`, and records one
+    verifiable decision."""
+    subject: str
+    ballots: list = Field(default_factory=list)
+    consensus_model: str = "supermajority"
+    stakes: int = 0
+    council: str = "dojo"
+    boardroom: Optional[dict] = None      # a BoardroomSession dict
+    warcouncil: Optional[list] = None     # [{seat,vote,role?}]
+    mindxtrain: Optional[dict] = None      # imprint verdict {accepted,delta,...}
+    daio: Optional[dict] = None            # {group:{voter:bool}}
+    record: bool = True
+
+
+@app.post("/dojo/decide", tags=["governance"], summary="Dojo consensus arbitration — settle a decision")
+async def dojo_decide(payload: DojoDecidePayload):
+    """The Dojo as a service to boardroom / warcouncil / mindXtrain: resolve
+    (possibly disagreeing) verdicts into one recorded decision."""
+    try:
+        from daio.governance import dojo_arbiter as A
+        ballots = list(payload.ballots or [])
+        if payload.boardroom:
+            ballots += A.from_boardroom(payload.boardroom)
+        if payload.warcouncil:
+            ballots += A.from_warcouncil(payload.warcouncil)
+        if payload.mindxtrain:
+            ballots += A.from_mindxtrain(payload.mindxtrain)
+        if payload.daio:
+            ballots += A.from_daio(payload.daio)
+        if not ballots:
+            raise HTTPException(status_code=400, detail="no ballots supplied")
+        return await A.decide(subject=payload.subject, ballots=ballots, stakes=payload.stakes,
+                              consensus_model=payload.consensus_model, council=payload.council,
+                              record=payload.record)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/insight/dojo/decisions", tags=["insight"], summary="Recent Dojo consensus decisions")
+@_insight_safe
+async def insight_dojo_decisions(request: Request, limit: int = 20, council: Optional[str] = None):
+    """Tail of the Dojo decision ledger (`data/governance/dojo_decisions.jsonl`).
+    Plain-text with `?h=true`."""
+    from daio.governance import dojo_arbiter as A
+    arb = await A.DojoArbiter.get_instance()
+    decisions = arb.recent(min(limit, 200), council=council)
+    models = sorted(A.CONSENSUS_MODELS.keys())
+    return _maybe_h_text(request, {"count": len(decisions), "consensus_models": models,
+                                   "decisions": decisions}, route_path="/insight/dojo/decisions")
 
 @app.post("/inference/multi-stream", tags=["inference"], summary="Multi-stream parallel inference query")
 async def multi_stream_query(prompt: str, strategy: str = "fastest_wins", level: int = 2):
