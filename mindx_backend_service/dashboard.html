@@ -550,9 +550,8 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
     <div class="section-hdr open" onclick="toggleSec(this)" id="hdr-ledger" style="display:none"><span>Self-Improvement Ledger <span class="insight-sub">mastermind campaigns &middot; hover pill for directive</span></span><span style="display:flex;align-items:center;gap:8px"><span class="fresh" id="fresh-ledger"></span><span class="arrow">&#x25B8;</span></span></div>
     <div class="section-body open" id="sec-ledger"><div class="ledger-row" id="ledger-row"></div></div>
 
-    <!-- Per-Agent Fitness Leaderboard -->
-    <div class="section-hdr open" onclick="toggleSec(this)" id="hdr-fitness" style="display:none"><span>Per-Agent Fitness &middot; Darwinian Leaderboard <span class="insight-sub">weighted rollup of 7 axes &middot; 0&ndash;100 scale &middot; /insight/fitness</span></span><span style="display:flex;align-items:center;gap:8px"><span class="fresh" id="fresh-fitness"></span><span class="arrow">&#x25B8;</span></span></div>
-    <div class="section-body open" id="sec-fitness"></div>
+    <!-- Per-Agent Fitness / Darwinian Leaderboard removed 2026-06 — per-agent usage
+         was low-signal noise on the public dashboard (the /insight/fitness endpoint stays). -->
 
     <!-- Selection Events -->
     <div class="section-hdr open" onclick="toggleSec(this)" id="hdr-selection" style="display:none"><span>Selection Events <span class="insight-sub" id="sel-mode">mode: shadow</span></span><span style="display:flex;align-items:center;gap:8px"><span class="fresh" id="fresh-selection"></span><span class="arrow">&#x25B8;</span></span></div>
@@ -897,7 +896,7 @@ document.getElementById('content').addEventListener('scroll',function(){
 
 // ── Section toggle ──
 // Loader-backed sections (filled by their own fetch, not render(d)).
-var _SEC_LOADERS={'sec-dreams':'loadDreams','sec-logs':'loadMemoryStream','sec-ledger':'loadLedger','sec-fitness':'loadFitness','sec-selection':'loadSelection'};
+var _SEC_LOADERS={'sec-dreams':'loadDreams','sec-logs':'loadMemoryStream','sec-ledger':'loadLedger','sec-selection':'loadSelection'};
 // Populate a section the instant its heading is expanded, from the last good data —
 // so clicking a heading always reveals content instead of a blank box.
 function _refreshSec(bodyId){
@@ -1038,17 +1037,24 @@ function toggleSec(hdr){
 
 // ── Helpers ──
 let cpuH=[],curT=0,seenTs=new Set(),pendingNew=[];
+// ── RHS panel data cache ──────────────────────────────────────────────
+// The right-hand panel reads from one cache. `live` is the 6s /diagnostics/live
+// payload (carries actions/interactions/agents/godel/thesis/autonomous/inference/
+// model_perf/recent_logs); `cog`/`dreams`/`ascend`/`mem` are slower side-fetches
+// for the data /diagnostics/live does not carry. Every panel degrades to a
+// Freshness chip ("no data"/"STALE") instead of a blank when its source is empty.
+var RHS={live:null,cog:null,dreams:null,ascend:null,mem:null};
 // Activity-feed tabs. Dojo removed — reputation/standings now live on the
 // mastermind.pythai.net war council, governed by the dojo there. Order is
 // user-draggable and persisted to localStorage.
-var _TAB_DEFAULT=['dialogue','actions','agents','feed'];
+var _TAB_DEFAULT=['live','improve','mind','dreams','agents','infer'];
 var _TABS=_TAB_DEFAULT.slice();
 try{
-  var _saved=JSON.parse(localStorage.getItem('mindx_taborder')||'null');
+  var _saved=JSON.parse(localStorage.getItem('mindx_taborder_v2')||'null');
   if(Array.isArray(_saved)&&_saved.length===_TAB_DEFAULT.length&&_saved.every(function(t){return _TAB_DEFAULT.indexOf(t)>=0})){_TABS=_saved;}
 }catch(_e){}
 var _feedCount=0,_dragI=null;
-function _tabLabel(name){return name==='feed'&&_feedCount?'feed ('+_feedCount+')':name;}
+function _tabLabel(name){return name==='live'&&_feedCount?'live ('+_feedCount+')':name;}
 function _buildTabs(){
   var c=document.getElementById('tabstrip');if(!c)return;
   c.innerHTML='';
@@ -1071,10 +1077,10 @@ function _reorderTabs(from,to){
   var moved=_TABS.splice(from,1)[0];
   _TABS.splice(to,0,moved);
   curT=Math.max(0,_TABS.indexOf(curName));
-  try{localStorage.setItem('mindx_taborder',JSON.stringify(_TABS));}catch(_e){}
+  try{localStorage.setItem('mindx_taborder_v2',JSON.stringify(_TABS));}catch(_e){}
   _buildTabs();if(LD)rpnl(LD);
 }
-function _updateFeedTabLabel(){var t=document.querySelector('.tab[data-name="feed"]');if(t)t.textContent=_tabLabel('feed');}
+function _updateFeedTabLabel(){var t=document.querySelector('.tab[data-name="live"]');if(t)t.textContent=_tabLabel('live');}
 _buildTabs();
 
 // ── Fmt: shared, safe humanization (global; used by render() + insight IIFE) ──
@@ -1632,7 +1638,9 @@ function render(d){
   // /insight/memory/recent — the catalogue memory.write stream). Machine
   // Dreaming by loadDreams(). Neither reads from /diagnostics/live.
 
-  // Render sidebar panel
+  // Render sidebar panel (RHS). 'rlive' freshness tracks the /diagnostics/live
+  // feed that backs the agents/infer tabs and the improve verdict.
+  if(window.Freshness)Freshness.mark('rlive','ok');
   rpnl(d);
 }
 
@@ -1665,131 +1673,204 @@ function _renderStateCtx(ctx){
   if(!chips.length)return '';
   return `<div style="margin:4px 0 6px 0;font-size:10px"><span style="color:var(--text3);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-right:4px">injected state</span>${chips.join('')}</div>`;
 }
+// ── Right-hand panel: dispatch + per-tab renderers ──────────────────────
+// Reads from the RHS cache (RHS.live = /diagnostics/live, plus the slower
+// side-fetches RHS.cog/dreams/ascend/mem). Each renderer returns an HTML string
+// and prepends a Freshness chip so staleness is always visible — the core fix
+// for "the dashboard is not showing actual events". Unique fresh-* keys avoid
+// duplicate-id collisions with the landing-page sections.
+function _rhsHdr(key,label){
+  return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);background:rgba(5,8,12,.5)"><span>'+label+'</span><span id="fresh-'+key+'">'+(window.Freshness?Freshness.badge(key):'')+'</span></div>';
+}
+function _tierColor(t){t=t||0;return t>=6?'#e6edf3':t>=5?'#79c0ff':t>=4?'#c9a0ff':t>=3?'#3fb950':t>=2?'#58a6ff':t>=1?'#d29922':'#f85149';}
+
 function rpnl(d){
-  const p=document.getElementById('pnl');
-  const _tab=_TABS[curT]||'dialogue';
-  if(_tab==='dialogue'){
-    const ms=d.interactions||[];
-    if(!ms.length){p.innerHTML='<div class="msg msg-ai"><div class="msg-txt" style="color:var(--text3)">mindX is initializing. Dialogues will appear as agents communicate.</div></div>';return}
-    const recentKeys=new Set(pendingNew.map(pn=>pn.m.timestamp+'_'+(pn.m.prompt||'').slice(0,20)));
-    let h='';ms.forEach(m=>{
-      const ts=m.timestamp||'',td=ts.length>10?ts.slice(5,19).replace('T',' '):ts;
-      const key=ts+'_'+(m.prompt||'').slice(0,20);
-      const cls=recentKeys.has(key)?' msg-new':'';
-      const prompt=(m.prompt||'').replace(/</g,'&lt;');
-      const response=(m.response||'').replace(/</g,'&lt;');
-      const promptShort=prompt.length>120?prompt.slice(0,120)+'...':prompt;
-      const responseShort=response.length>200?response.slice(0,200)+'...':response;
-      const hasMore=prompt.length>120||response.length>200;
-      // Scientific depth: when the entry has state_context (new heartbeat
-      // format), surface the injected facts as a chip-row above the response.
-      // Old entries (qwen3:0.6b platitudes) don't have state_context → no chips.
-      const stateChips=_renderStateCtx(m.state_context);
-      // Model badge: distinguish openrouter vs ollama vs fallback at a glance.
-      const modelLabel=m.model||'?';
-      const isOR=modelLabel.indexOf('openrouter')===0;
-      const isFallback=modelLabel.indexOf('fallback')!==-1;
-      const modelColor=isFallback?'var(--amber)':(isOR?'var(--violet)':'var(--green)');
-      h+=`<div class="msg msg-usr${cls}"><div class="msg-hdr"><span style="color:var(--violet);font-weight:600">${m.agent||'mindX'}</span><span>${td}</span></div><div class="msg-txt">${promptShort}</div></div>`;
-      h+=`<div class="msg msg-ai${cls}"><div class="msg-hdr"><span style="color:${modelColor};font-weight:600;font-family:var(--mono);font-size:10px">${modelLabel}</span><span>${m.latency_ms?m.latency_ms+'ms':''} ${m.tokens_est?'&#183; '+m.tokens_est+' tok':''}</span></div>${stateChips}<div class="msg-txt">${responseShort}</div>`;
-      if(hasMore||m.state_context){
-        let detailsBody=`<div style="padding:6px 0;font-size:12px;line-height:1.6">`;
-        detailsBody+=`<div style="color:var(--violet);font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">${m.agent||'mindX'} PROMPT (rendered with injected state)</div>`;
-        detailsBody+=`<div style="color:var(--text);white-space:pre-wrap;word-break:break-word;padding:6px 8px;background:rgba(22,16,32,.3);border-left:2px solid var(--violet);border-radius:2px;margin-bottom:8px">${prompt}</div>`;
-        if(m.state_context&&typeof m.state_context==='object'){
-          detailsBody+=`<div style="color:var(--blue);font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">STATE CONTEXT (mindX facts injected at heartbeat time)</div>`;
-          detailsBody+=`<pre style="font-size:10px;line-height:1.5;background:rgba(10,18,32,.3);border-left:2px solid var(--blue);border-radius:2px;padding:6px 8px;margin-bottom:8px;white-space:pre-wrap;word-break:break-word">${(JSON.stringify(m.state_context,null,1)||'').replace(/</g,'&lt;')}</pre>`;
-        }
-        detailsBody+=`<div style="color:${modelColor};font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">${modelLabel} RESPONSE</div>`;
-        detailsBody+=`<div style="color:var(--text);white-space:pre-wrap;word-break:break-word;padding:6px 8px;background:rgba(10,32,18,.3);border-left:2px solid ${modelColor};border-radius:2px">${response}</div>`;
-        detailsBody+=`</div>`;
-        h+=`<details style="margin-top:4px"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">full dialogue${m.state_context?' + injected state':''}</summary>${detailsBody}</details>`;
-      }
-      h+=`</div>`;
-    });p.innerHTML=h;p.scrollTop=p.scrollHeight;
-  } else if(_tab==='actions'){
-    const acts=d.actions||[];const thesis=d.thesis||{};const godels=d.godel_choices||[];
-    if(!acts.length){p.innerHTML='<div style="padding:12px;color:var(--text3)">No actions yet.</div>';return}
-    let h=`<div style="padding:4px 8px;font-size:10px;color:var(--text2);font-family:var(--mono);border-bottom:1px solid rgba(8,11,16,.3)">${acts.length} actions${thesis.improvement_rate!==undefined?' &#183; '+((thesis.improvement_rate*100).toFixed(1))+'% success':''}</div>`;
-    acts.forEach(a=>{
-      const sc=a.status==='completed'?'var(--green)':a.status==='failed'?'var(--red)':'var(--amber)';
-      const scBg=a.status==='completed'?'rgba(13,51,33,.1)':a.status==='failed'?'rgba(51,13,13,.1)':'rgba(51,43,13,.1)';
-      const ts=(a.created_at||'').slice(5,19).replace('T',' ');
-      const tsShort=(a.created_at||'').slice(11,16);
-      const desc=(a.description||'').replace(/</g,'&lt;');
-      // Parse structured info from description
-      const agentMatch=desc.match(/Agents?:\s*([^.]+)/);
-      const agentList=agentMatch?agentMatch[1].split(',').map(s=>s.trim()):[a.agent_id];
-      const cycleMatch=desc.match(/Cycle\s*(\d+)/);
-      const goalMatch=desc.match(/(?:Cycle\s*\d+[^:]*:\s*)(.+?)(?:\.\s*Agents|$)/);
-      const goal=goalMatch?goalMatch[1]:desc.slice(0,100);
-      // Find related Godel choices by time proximity
-      const actionTime=new Date(a.created_at||0).getTime()/1000;
-      const relatedGodels=godels.filter(g=>{const gt=new Date(g.timestamp||0).getTime()/1000;return Math.abs(gt-actionTime)<300});
-      h+=`<details style="margin:2px 0;background:${scBg};border-left:2px solid ${sc};border-radius:0 3px 3px 0">`;
-      h+=`<summary style="cursor:pointer;padding:6px 10px;font-size:12px;display:flex;justify-content:space-between;align-items:center">`;
-      h+=`<span><span style="color:${sc};font-weight:700;font-size:10px;text-transform:uppercase;font-family:var(--mono);margin-right:6px">${a.status}</span>`;
-      h+=`<span style="color:var(--text)">${cycleMatch?'Cycle '+cycleMatch[1]+' ':''}${a.action_type||''}</span></span>`;
-      h+=`<span style="color:var(--text3);font-size:10px;font-family:var(--mono)">${tsShort}</span></summary>`;
-      h+=`<div style="padding:8px 12px;font-size:12px;border-top:1px solid rgba(8,11,16,.2)">`;
-      // Goal
-      h+=`<div style="color:var(--text);font-weight:600;margin-bottom:6px">${goal}</div>`;
-      // Agent pipeline
-      if(agentList.length>1||agentList[0]!==a.agent_id){
-        h+=`<div style="margin-bottom:6px;padding:4px 0;border-bottom:1px solid rgba(8,11,16,.15);font-size:10px;font-family:var(--mono);color:var(--text3)">PIPELINE: `;
-        agentList.forEach((ag,j)=>{
-          const c=ag.includes('strategic')?'var(--violet)':ag.includes('bdi')?'var(--blue)':ag.includes('mastermind')?'var(--green)':'var(--text2)';
-          h+=`<span style="color:${c};font-weight:600">${ag}</span>`;
-          if(j<agentList.length-1)h+=` <span style="color:var(--text3)">\u2192</span> `;
-        });
-        h+=`</div>`;
-      }
-      // Metrics
-      h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:6px;font-size:11px">`;
-      h+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">source</span> <span style="color:var(--text2)">${a.source||'?'}</span></div>`;
-      h+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">agent</span> <span style="color:var(--violet)">${a.agent_id||'?'}</span></div>`;
-      h+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">type</span> <span style="color:var(--blue)">${a.action_type||'?'}</span></div>`;
-      h+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">time</span> <span style="color:var(--text2)">${ts}</span></div>`;
-      h+=`</div>`;
-      // Full description
-      h+=`<details style="margin:4px 0"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">full description</summary><div style="color:var(--text);padding:6px 8px;white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.6;background:rgba(5,8,16,.3);border-radius:2px;margin-top:4px">${desc}</div></details>`;
-      // Related Godel choices
-      if(relatedGodels.length){
-        h+=`<details style="margin:4px 0"><summary style="cursor:pointer;color:var(--amber);font-size:10px;font-family:var(--mono)">related decisions (${relatedGodels.length})</summary><div style="padding:4px 0">`;
-        relatedGodels.forEach(g=>{
-          const gts=(g.timestamp||'').slice(11,19);
-          const oc=g.outcome==='success'?'var(--green)':g.outcome?'var(--amber)':'var(--text3)';
-          h+=`<div style="padding:3px 0;border-bottom:1px solid rgba(8,11,16,.15);font-size:11px"><span style="color:${oc};font-family:var(--mono)">[${(g.outcome||'?').slice(0,3)}]</span> <span style="color:var(--blue)">${g.agent}</span> <span style="color:var(--text2)">${g.type}</span> <span style="color:var(--text3);font-size:9px">${gts}</span>`;
-          if(g.chosen)h+=`<div style="color:var(--green);padding-left:12px;font-size:11px">\u2192 ${(g.chosen||'')}</div>`;
-          if(g.rationale)h+=`<div style="color:var(--text3);padding-left:12px;font-style:italic;font-size:11px">${g.rationale}</div>`;
-          h+=`</div>`;
-        });
-        h+=`</div></details>`;
-      }
-      // Result
-      if(a.result){
-        h+=`<div style="color:var(--green);margin-top:6px;padding:6px 8px;border-top:1px solid rgba(8,11,16,.15);background:rgba(10,32,18,.2);border-radius:2px;font-size:12px">`;
-        h+=`<span style="color:var(--text3);font-size:10px;font-family:var(--mono)">RESULT</span><br>${(a.result+'').replace(/</g,'&lt;')}</div>`;
-      }
-      h+=`</div></details>`;
-    });
-    p.innerHTML=h;
-  } else if(_tab==='agents'){
-    const ai=d.agent_interactions||[];
-    let h='';
-    if(ai.length){
-      h+='<div style="font-size:9px;color:var(--text3);padding:6px 0;font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px">INTERACTIONS</div>';
-      ai.slice(0,12).forEach(i=>{h+=`<div style="padding:4px 0;border-bottom:1px solid rgba(8,11,16,.3);font-size:11px"><span style="color:var(--blue);font-weight:600">${i.from}</span> &#8594; ${i.to} <span style="color:var(--violet)">${i.type}</span> <span style="color:var(--text3);font-size:9px">${i.ts}</span></div>`});
-    }
-    p.innerHTML=h||'<div style="padding:12px;color:var(--text3)">No interactions yet.</div>';
-  } else if(_tab==='feed'){
-    if(!window._afFeedEvents||!window._afFeedEvents.length){
-      p.innerHTML='<div style="padding:12px;color:var(--text3)">Connecting to activity stream...</div>';
-    } else {
-      window._afRenderToPanel&&window._afRenderToPanel(p);
-    }
+  if(d)RHS.live=d;
+  var p=document.getElementById('pnl'); if(!p)return;
+  var _tab=_TABS[curT]||'live';
+  try{
+    if(_tab==='live')          return rhsLive(p);
+    else if(_tab==='improve')  p.innerHTML=rhsImprove();
+    else if(_tab==='mind')     p.innerHTML=rhsMind();
+    else if(_tab==='dreams')   p.innerHTML=rhsDreams();
+    else if(_tab==='agents')   p.innerHTML=rhsAgents();
+    else if(_tab==='infer')    p.innerHTML=rhsInfer();
+    else                       return rhsLive(p);
+  }catch(err){
+    p.innerHTML='<div style="padding:12px;color:var(--red);font-size:11px">panel render error: '+Fmt.esc((err&&err.message)||String(err))+'</div>';
   }
 }
+
+// ── live: enriched SSE activity feed (kind-classified cards) ──
+function rhsLive(p){
+  var ev=window._afFeedEvents||[];
+  var h=_rhsHdr('rfeed','live activity · /activity/stream');
+  if(!ev.length){ p.innerHTML=h+'<div style="padding:12px;color:var(--text3);font-size:11px">connecting to activity stream…</div>'; return; }
+  h+=ev.slice(0,50).map(window._afRenderCard).join('');
+  p.innerHTML=h;
+}
+
+// ── improve: the honest self-improvement reality ──
+function rhsImprove(){
+  var d=RHS.live||{}, cog=RHS.cog||{}, se=(d.autonomous&&d.autonomous.self_eval)||{};
+  var camps=(cog.mastermind&&cog.mastermind.campaigns)||[];
+  var isOk=function(c){return /SUCC|COMPLETE/i.test(c.final_status||'')};
+  var okC=camps.filter(isOk).length, nC=camps.length, failC=nC-okC;
+  var si=se.self_improvement||{}, te=se.training_eval||{};
+  var logs=(d.recent_logs||[]).join(' ');
+  var inferBroken=/no longer available|\b404\b|throttl|ClientConnector|Expecting value/i.test(logs);
+  var h=_rhsHdr('rcog','self-improvement · real path vs sentinel loop');
+  if(nC>0 && okC===0 && (inferBroken||nC)){
+    h+='<div style="margin:6px;padding:8px;border:1px solid rgba(248,81,73,.4);background:rgba(51,13,13,.25);border-radius:4px;font-size:11px;line-height:1.55">'
+      +'<div style="color:var(--red);font-weight:700;font-family:var(--mono);font-size:10px;letter-spacing:.5px">⚠ CAPABILITY PATH STALLED</div>'
+      +'<div style="color:var(--text2);margin-top:4px">Every Mastermind→BDI campaign dies at <b style="color:var(--amber)">PROPOSE_TOOL_STRATEGY</b> — the tool-strategy LLM returns empty/non-JSON. Primary free model decommissioned (OpenRouter 404); fallback <b>qwen3:0.6b</b> is CPU-throttled. No real code change is landing through this path.</div></div>';
+  }
+  var vc=se.verdict==='improving'?'var(--green)':se.verdict==='failing'?'var(--red)':'var(--amber)';
+  h+='<div style="padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border)">'
+    +'<span style="font-family:var(--mono);color:'+vc+';font-weight:700;text-transform:uppercase">'+Fmt.esc(se.verdict||'—')+'</span>'
+    +' <span style="color:var(--text3)">self-eval</span> <b>'+Fmt.esc(se.sample||'—')+'</b> campaigns'
+    +(se.top_failure?' · top failure <span style="color:var(--red)">'+Fmt.esc(se.top_failure)+'</span>':'')
+    +(se.recommendation?'<div style="color:var(--text3);font-style:italic;margin-top:3px">'+Fmt.esc(Fmt.ellipsis(se.recommendation,200))+'</div>':'')
+    +'</div>';
+  h+='<div style="padding:7px 8px 2px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.5px">real capability path · '+okC+'/'+nC+' ok</div>';
+  if(!nC){ h+='<div style="padding:0 10px 8px;color:var(--text3);font-size:11px">no recent campaigns in window.</div>'; }
+  camps.slice(0,8).forEach(function(c){
+    var ok=isOk(c), col=ok?'var(--green)':'var(--red)';
+    h+='<details style="margin:2px 6px;background:'+(ok?'rgba(13,51,33,.12)':'rgba(51,13,13,.12)')+';border-left:2px solid '+col+';border-radius:0 3px 3px 0">'
+      +'<summary style="cursor:pointer;padding:6px 8px;font-size:11px"><span style="color:'+col+';font-family:var(--mono);font-size:9px;font-weight:700">'+Fmt.esc(c.final_status||'?')+'</span> <span style="color:var(--text)">'+Fmt.esc(Fmt.ellipsis(c.directive,68))+'</span></summary>'
+      +'<div style="padding:4px 10px 8px;font-size:10.5px;color:var(--text2);line-height:1.5">'
+      +(c.message?'<div style="color:var(--amber);font-family:var(--mono);font-size:10px;word-break:break-word">'+Fmt.esc(Fmt.ellipsis(c.message,220))+'</div>':'')
+      +'<div style="color:var(--text3);margin-top:3px">'+Fmt.esc(c.started||'')+(c.finished?' → '+Fmt.esc((c.finished||'').slice(11,19)):'')+'</div>'
+      +'</div></details>';
+  });
+  h+='<div style="padding:9px 8px 2px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.5px">safe sentinel loop · proves act→apply</div>';
+  h+='<div style="padding:4px 10px 10px;font-size:11px;color:var(--text2);line-height:1.6">'
+    +'mindx_meta_agent improvement cycles report success on the meta-goal “Improve improvement success rate” and bump a sentinel version. This proves the act→apply chain works — it is <i>not</i> a real capability change.'
+    +'<div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap">'
+    +'<span style="background:rgba(121,192,255,.08);border:1px solid rgba(121,192,255,.25);border-radius:3px;padding:2px 6px;font-family:var(--mono);font-size:10px">sentinel v<b style="color:var(--blue)">'+(si.version!=null?si.version:'—')+'</b></span>'
+    +'<span style="background:rgba(121,192,255,.08);border:1px solid rgba(121,192,255,.25);border-radius:3px;padding:2px 6px;font-family:var(--mono);font-size:10px"><b style="color:var(--green)">'+(si.applies!=null?si.applies:'—')+'</b> applies</span>'
+    +'<span style="background:rgba(121,192,255,.08);border:1px solid rgba(121,192,255,.25);border-radius:3px;padding:2px 6px;font-family:var(--mono);font-size:10px">imprints <b style="color:var(--violet)">'+(te.accepted!=null?te.accepted:'—')+'/'+(te.total!=null?te.total:'—')+'</b> '+Fmt.esc(te.trend||'')+'</span>'
+    +'</div></div>';
+  return h;
+}
+
+// ── mind: cognitive pipeline + honest latest heartbeat ──
+function rhsMind(){
+  var d=RHS.live||{}, cog=RHS.cog||{};
+  var mm=cog.mastermind||{}, ag=cog.agint||{};
+  var h=_rhsHdr('rcog','cognition · Mastermind → AGInt → BDI');
+  h+='<div style="padding:8px 10px;font-size:11px;line-height:1.7">';
+  h+='<div><span style="color:var(--green);font-weight:600">Mastermind</span> '+(mm.active?'<span style="color:var(--green)">▶ active</span>':'<span style="color:var(--text3)">idle</span>')+((mm.campaigns&&mm.campaigns.length)?' · '+mm.campaigns.length+' campaigns':'')+'</div>';
+  h+='<div style="color:var(--text3);padding-left:10px">↓ drives BDI directly</div>';
+  h+='<div><span style="color:var(--violet);font-weight:600">AGInt (P-O-D-A)</span> '+(ag.active?'<span style="color:var(--green)">▶ '+(ag.cognitive_cycles||0)+' cycles</span>':'<span style="color:var(--amber)">DORMANT</span>')+'</div>';
+  if(ag.note)h+='<div style="color:var(--text3);font-style:italic;font-size:10px;padding-left:10px">'+Fmt.esc(Fmt.ellipsis(ag.note,140))+'</div>';
+  h+='<div style="color:var(--text3);padding-left:10px">↓</div>';
+  h+='<div><span style="color:var(--blue);font-weight:600">BDI</span> <span style="color:var(--text3)">reason → plan → act</span></div>';
+  h+='</div>';
+  var it=(d.interactions||[])[0];
+  h+='<div style="padding:6px 8px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.5px;border-top:1px solid var(--border)">latest heartbeat</div>';
+  if(it){
+    var model=it.model||'?', fb=/fallback/i.test(model), age=Fmt.timeAgo(it.timestamp);
+    h+='<div style="padding:0 10px 10px;font-size:11px">'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">'
+      +'<span style="font-family:var(--mono);font-size:10px;color:'+(fb?'var(--amber)':'var(--green)')+'">'+Fmt.esc(Fmt.ellipsis(model,46))+'</span>'
+      +'<span style="font-family:var(--mono);font-size:10px;color:var(--text3)">'+age+'</span>'
+      +(fb?'<span style="background:rgba(227,179,65,.12);color:var(--amber);border:1px solid rgba(227,179,65,.3);border-radius:3px;padding:1px 5px;font-size:9px;font-family:var(--mono)">FALLBACK</span>':'')
+      +'</div>'
+      +'<div style="color:var(--text2);line-height:1.5;word-break:break-word">'+Fmt.esc(Fmt.ellipsis(it.response||it.prompt||'',280))+'</div></div>';
+  } else { h+='<div style="padding:0 10px 10px;color:var(--text3);font-size:11px">no heartbeat dialogue yet.</div>'; }
+  return h;
+}
+
+// ── dreams: machine.dreaming + mindXtrain + memory.write stream ──
+function rhsDreams(){
+  var dr=RHS.dreams||{}, asc=RHS.ascend||{}, mem=RHS.mem||{};
+  var dreams=dr.dreams||[];
+  var cap=asc.capability||{}, reg=(asc.settings&&asc.settings.regimen)||{}, tr=asc.training||{};
+  var h=_rhsHdr('rdreams','substrate evolution · dreams + training');
+  var last=dreams[0];
+  if(last){
+    var lunar=last.lunar||{};
+    h+='<div style="padding:8px 10px;font-size:11px;line-height:1.6;border-bottom:1px solid var(--border)">'
+      +'<span style="color:var(--violet);font-weight:600">machine.dreaming</span> · '+Fmt.esc(lunar.phase_name||'lunar')
+      +'<div style="margin-top:3px;color:var(--text2)"><b style="color:var(--green)">'+(last.agents_dreamed||0)+'</b> agents · <b style="color:var(--blue)">'+(last.insights_generated||0)+'</b> insights · <b style="color:var(--amber)">'+(last.memories_promoted_to_ltm||0)+'</b> → LTM'
+      +(last.timestamp?' · '+Fmt.timeAgo(last.timestamp):'')+'</div></div>';
+  } else { h+='<div style="padding:8px 10px;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">no dream cycles yet · mindX dreams on the lunar cycle</div>'; }
+  h+='<div style="padding:8px 10px;font-size:11px;line-height:1.6;border-bottom:1px solid var(--border)">'
+    +'<span style="color:var(--blue);font-weight:600">mindXtrain</span> '+(cap.cpu_train_active?'<span style="color:var(--green)">▶ training</span>':'<span style="color:var(--text3)">idle</span>')+' · v'+Fmt.esc(cap.version||'?')+' · '+Fmt.esc(cap.level||'cpu')
+    +(reg.model?'<div style="margin-top:3px;color:var(--text2)">'+Fmt.esc(reg.model)+(reg.served_ollama_tag?' → '+Fmt.esc(reg.served_ollama_tag):'')+(reg.cpu_percent?' · '+reg.cpu_percent+'% / '+reg.wall_hours+'h≈'+reg.effective_hours+'h':'')+'</div>':'')
+    +(tr.recipe?'<div style="color:var(--text3);font-size:10px;margin-top:2px">last: '+Fmt.esc(Fmt.ellipsis(tr.recipe,60))+' · '+Fmt.esc(tr.state||'')+'</div>':'')
+    +'</div>';
+  h+='<div style="padding:6px 8px 2px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.5px">logs → memories</div>';
+  var ms=mem.events||mem.memories||[];
+  if(ms.length){
+    ms.slice(0,14).forEach(function(m){
+      h+='<div style="padding:3px 10px;border-bottom:1px solid rgba(8,11,16,.25);font-size:10.5px;display:flex;justify-content:space-between;gap:6px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="color:var(--violet)">'+Fmt.esc(m.actor||m.agent||'?')+'</span> <span style="color:var(--text3)">'+Fmt.esc(m.memory_type||m.type||'')+'</span></span><span style="color:var(--text3);font-size:9px;flex-shrink:0">'+Fmt.timeAgo(m.ts||m.timestamp)+'</span></div>';
+    });
+  } else { h+='<div style="padding:0 10px 8px;color:var(--text3);font-size:11px">memory stream warming up…</div>'; }
+  return h;
+}
+
+// ── agents: sovereign roster + interactions ──
+function rhsAgents(){
+  var d=RHS.live||{};
+  var ags=d.agents||[], ai=d.agent_interactions||[];
+  var h=_rhsHdr('rlive','agent roster · '+ags.length+' sovereign');
+  ags.forEach(function(a){
+    var c=_tierColor(a.verification_tier);
+    h+='<div style="padding:5px 10px;border-bottom:1px solid rgba(8,11,16,.25);font-size:11px">'
+      +'<span style="color:'+c+';font-weight:600">'+Fmt.esc(a.entity_id||'?')+'</span> <span style="font-family:var(--mono);font-size:9px;color:'+c+'">T'+(a.verification_tier||0)+'</span>'
+      +'<div style="color:var(--text3);font-size:10px">'+Fmt.esc(Fmt.ellipsis(a.role||'',92))+'</div></div>';
+  });
+  if(ai.length){
+    h+='<div style="padding:6px 8px 2px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.5px">recent interactions</div>';
+    ai.slice(0,12).forEach(function(i){ h+='<div style="padding:3px 10px;font-size:10.5px"><span style="color:var(--blue)">'+Fmt.esc(i.from)+'</span> → '+Fmt.esc(i.to)+' <span style="color:var(--violet)">'+Fmt.esc(i.type)+'</span></div>'; });
+  }
+  return h||'<div style="padding:12px;color:var(--text3)">no agents.</div>';
+}
+
+// ── infer: inference reality — why campaigns fail, made visible ──
+function rhsInfer(){
+  var d=RHS.live||{};
+  var inf=d.inference||{}, perf=d.model_perf||[], logs=d.recent_logs||[];
+  var h=_rhsHdr('rlive','inference · '+(inf.available||0)+'/'+(inf.total||0)+' providers');
+  var src=inf.sources||{};
+  Object.keys(src).forEach(function(k){ var s=src[k], ok=s.status==='available';
+    h+='<div style="padding:3px 10px;font-size:10.5px;border-bottom:1px solid rgba(8,11,16,.2)"><span style="color:'+(ok?'var(--green)':'var(--red)')+'">'+(ok?'●':'○')+'</span> <span style="color:var(--text2)">'+Fmt.esc(k)+'</span> <span style="color:var(--text3);font-size:9px">'+Fmt.esc(s.type||'')+(s.score!=null?' · '+s.score:'')+'</span></div>';
+  });
+  if(perf.length){
+    h+='<div style="padding:6px 8px 2px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.5px">recent inferences</div>';
+    perf.slice(0,8).forEach(function(m){ var slow=(m.latency_ms||0)>8000||(m.cpu_at_query||0)>90;
+      h+='<div style="padding:2px 10px;font-size:10px;font-family:var(--mono);color:'+(slow?'var(--amber)':'var(--text2)')+'">'+Fmt.esc(m.model||'?')+' · '+(m.latency_ms||0)+'ms · '+(m.tps||0)+'tps'+(m.cpu_at_query!=null?' · cpu '+m.cpu_at_query+'%':'')+'</div>';
+    });
+  }
+  var warns=logs.filter(function(l){return /WARNING|ERROR|\b404\b|throttl/i.test(l)}).slice(0,6);
+  if(warns.length){
+    h+='<div style="padding:6px 8px 2px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--red);letter-spacing:.5px">why it fails · recent warnings</div>';
+    warns.forEach(function(l){ h+='<div style="padding:3px 10px;font-size:9.5px;color:var(--text3);font-family:var(--mono);line-height:1.4;border-bottom:1px solid rgba(8,11,16,.2);word-break:break-word">'+Fmt.esc(Fmt.ellipsis(l,200))+'</div>'; });
+  }
+  return h;
+}
+
+// ── RHS side-fetches (data /diagnostics/live does not carry) ──
+function _rhsRerenderIf(){ var t=_TABS[curT]; if(LD&&(t==='dreams'))rpnl(LD); }
+function pollRHSExtras(){
+  // cog (campaigns + agint) is populated by _wireAgint's existing 15s fetch.
+  var jobs=[
+    ['/insight/dreams/recent?limit=6','rdreams',function(j){RHS.dreams=j}],
+    ['/insight/godel/ascend','rascend',function(j){RHS.ascend=j}],
+    ['/insight/memory/recent?limit=24','rmem',function(j){RHS.mem=j}]
+  ];
+  jobs.forEach(function(job){
+    fetch(job[0],{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){
+      if(j&&!j.error){ job[2](j); if(window.Freshness)Freshness.mark(job[1],'ok'); }
+      else if(window.Freshness)Freshness.mark(job[1],'empty');
+      _rhsRerenderIf();
+    }).catch(function(){ if(window.Freshness)Freshness.mark(job[1],'error'); });
+  });
+}
+if(window.Freshness){Freshness.cadence('rdreams',20000).cadence('rascend',20000).cadence('rmem',20000).cadence('rcog',15000).cadence('rlive',6000).cadence('rfeed',6000);}
+pollRHSExtras(); setInterval(pollRHSExtras,20000);
 
 // ── Force layers visible immediately ──
 document.querySelectorAll('.layer').forEach(function(l){l.classList.add('vis')});
@@ -1801,6 +1882,8 @@ var _bootStart=Date.now();
 // ── top-right: AGInt P-O-D-A decisions (the soul) + the OVERLORD hierarchy (two chains, one ladder) ──
 function _wireAgint(){
   fetch('/insight/cognition/diagnostic').then(function(r){return r.json()}).then(function(d){
+    // Feed the RHS cache too (improve + mind tabs read RHS.cog) — one fetch, two uses.
+    if(d&&!d.error){RHS.cog=d; if(window.Freshness)Freshness.mark('rcog','ok'); var _t=_TABS[curT]; if(LD&&(_t==='improve'||_t==='mind'))rpnl(LD);}
     var a=(d&&d.agint)||{}; var rec=(a.recent||[]).filter(function(x){return x.action_type}).slice(0,6);
     var el=document.getElementById('hdr-agint'); if(!el)return;
     if(a.active && rec.length){
@@ -2056,7 +2139,32 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
   let feedEvents=[];
   window._afFeedEvents=feedEvents;
   function ago(ts){const s=Math.floor(Date.now()/1000-ts);if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m';return Math.floor(s/3600)+'h'}
+  // Classify an event into a kind chip {label,color,icon} so the live feed reads
+  // at a glance instead of as an undifferentiated stream of thinking_steps.
+  function kindOf(e){
+    const r=e.room||'', t=e.type||'', c=(e.content||'');
+    if(r==='boardroom'||t.indexOf('board')===0) return {label:'board',color:'#c9a0ff',icon:'⚖'};
+    if(r==='godel'||t.indexOf('godel')===0)     return {label:'gödel',color:'#e3b341',icon:'◈'};
+    if(r==='dream'||t.indexOf('dream')===0)      return {label:'dream',color:'#d2a8ff',icon:'☾'};
+    if(t.indexOf('alignment')===0)               return {label:'align',color:'#79c0ff',icon:'⊕'};
+    if(r==='memory'||t.indexOf('memory')===0)    return {label:'memory',color:'#58a6ff',icon:'◉'};
+    if(t.indexOf('improvement')===0||/improvement|cycle\s*\d|self-improv/i.test(c)) return {label:'improve',color:'#56d364',icon:'⚙'};
+    if(t.indexOf('publication')===0||t.indexOf('marketing')===0) return {label:'publish',color:'#79c0ff',icon:'✎'};
+    if(t==='thinking_step')                       return {label:'think',color:'#b1bac4',icon:'⋯'};
+    return {label:(r||t||'evt'),color:'#6e7681',icon:'·'};
+  }
+  // Pulse the substrate (kept canvas nodes/edges) on high-signal real events.
+  function pulseSubstrate(kind){
+    try{ if(typeof nodes==='undefined'||!nodes.length)return;
+      if(kind==='improve'||kind==='gödel'||kind==='dream'||kind==='board'){
+        for(var i=0;i<Math.min(5,nodes.length);i++){var n=nodes[(Math.random()*nodes.length)|0];n.act=1;}
+        if(typeof flashE==='function')flashE(0,(3)%nodes.length);
+      }
+    }catch(_){}
+  }
   function renderCard(e){
+    const K=kindOf(e);
+    const kindChip=`<span style="color:${K.color};font-family:var(--mono);font-size:9px;font-weight:700;background:rgba(255,255,255,.03);border:1px solid ${K.color}44;border-radius:3px;padding:0 4px">${K.icon} ${K.label}</span>`;
     const badge=`<span style="color:${TCOL[e.agent_tier]||TCOL[0]};font-weight:700;font-size:9px;font-family:var(--mono)">[${TIER[e.agent_tier]||'UN'}]</span>`;
     let detailHtml='';
     if(e.detail){
@@ -2073,21 +2181,23 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
         detailHtml=`<details style="margin-top:4px"><summary style="cursor:pointer;color:var(--text3);font-size:9px">detail</summary><pre style="font-size:9px;color:var(--text3);max-height:80px;overflow:auto;padding:4px;margin-top:4px;background:rgba(5,8,16,.4);border-radius:3px;white-space:pre-wrap">${JSON.stringify(d,null,2).slice(0,400)}</pre></details>`;
       }
     }
-    return`<div style="padding:8px;border-bottom:1px solid rgba(8,11,16,.3)"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>${badge} <span style="color:#e6edf3;font-size:11px;font-weight:600">${e.agent||'system'}</span></span><span style="color:var(--text3);font-size:9px;font-family:var(--mono)">${ago(e.timestamp)} #${e.room}</span></div><div style="color:var(--text);font-size:11px;line-height:1.5">${(e.content||'').replace(/</g,'&lt;').slice(0,300)}</div>${detailHtml}</div>`;
+    return`<div style="padding:8px;border-bottom:1px solid rgba(8,11,16,.3)"><div style="display:flex;justify-content:space-between;margin-bottom:3px;gap:6px"><span>${kindChip} ${badge} <span style="color:#e6edf3;font-size:11px;font-weight:600">${(e.agent||'system').replace(/</g,'&lt;')}</span></span><span style="color:var(--text3);font-size:9px;font-family:var(--mono);flex-shrink:0">${ago(e.timestamp)} #${e.room}</span></div><div style="color:var(--text);font-size:11px;line-height:1.5">${(e.content||'').replace(/</g,'&lt;').slice(0,300)}</div>${detailHtml}</div>`;
   }
+  window._afRenderCard=renderCard;
   window._afRenderToPanel=function(panel){
     if(!feedEvents.length){panel.innerHTML='<div style="padding:12px;color:var(--text3)">Activity stream loading...</div>';return}
-    panel.innerHTML=feedEvents.slice(0,40).map(renderCard).join('');
+    panel.innerHTML=feedEvents.slice(0,50).map(renderCard).join('');
   };
   function updateBadge(){
     _feedCount=feedEvents.length;_updateFeedTabLabel();
-    if((_TABS[curT]||'')==='feed'){const p=document.getElementById('pnl');if(p)window._afRenderToPanel(p)}
+    if(window.Freshness)Freshness.mark('rfeed',feedEvents.length?'ok':'empty');
+    if((_TABS[curT]||'')==='live'){const p=document.getElementById('pnl');if(p&&typeof rhsLive==='function')rhsLive(p);}
   }
   function connectSSE(){
     const es=new EventSource('/activity/stream');
-    es.addEventListener('activity',function(e){try{const ev=JSON.parse(e.data);feedEvents.unshift(ev);if(feedEvents.length>100)feedEvents.length=100;window._afFeedEvents=feedEvents;updateBadge()}catch(err){}});
+    es.addEventListener('activity',function(e){try{const ev=JSON.parse(e.data);feedEvents.unshift(ev);if(feedEvents.length>100)feedEvents.length=100;window._afFeedEvents=feedEvents;pulseSubstrate(kindOf(ev).label);updateBadge()}catch(err){}});
     es.addEventListener('heartbeat',function(){updateBadge()});
-    es.onerror=function(){setTimeout(()=>{es.close();connectSSE()},5000)};
+    es.onerror=function(){if(window.Freshness)Freshness.mark('rfeed','error');setTimeout(()=>{es.close();connectSSE()},5000)};
   }
   connectSSE();
 })();
@@ -2366,151 +2476,10 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
     }
   },8000);
 
-  // ════════════════════════════════════════════════════════════════════
-  //  Participant interaction log  +  voice oscilloscope → Fabric
-  //  Every motion and click the participant makes is logged live; an
-  //  opt-in microphone drives the same Fabric the mouse does. dv,
-  //  particles, nodes, flashE, W, H are all in this IIFE's scope.
-  // ════════════════════════════════════════════════════════════════════
-
-  // ── DOM: log panel (bottom-left) + oscilloscope/mic (above it) ──
-  var ixWrap=document.createElement('div');
-  ixWrap.style.cssText='position:fixed;left:12px;bottom:12px;z-index:21;width:300px;max-width:42vw;font-family:var(--mono);pointer-events:auto';
-  ixWrap.innerHTML=
-    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
-    + '<button id="osc-mic" style="background:rgba(10,14,20,.92);border:1px solid var(--border);border-radius:5px;color:var(--text2);font-family:var(--mono);font-size:9px;padding:5px 9px;cursor:pointer;letter-spacing:.5px">&#9679; VOICE</button>'
-    + '<canvas id="osc" width="200" height="34" style="background:rgba(8,12,18,.85);border:1px solid var(--border);border-radius:5px;flex:1;height:34px"></canvas>'
-    + '</div>'
-    + '<div id="ix-log-hdr" style="display:flex;justify-content:space-between;align-items:center;background:rgba(10,14,20,.92);border:1px solid var(--border);border-bottom:none;border-radius:6px 6px 0 0;padding:5px 9px;cursor:pointer;font-size:9px;color:var(--violet);letter-spacing:.5px">'
-    + '<span>PARTICIPANT INTERACTION</span><span id="ix-live" style="color:var(--text3)">&mdash;</span></div>'
-    + '<div id="ix-log" style="background:rgba(8,12,18,.88);border:1px solid var(--border);border-radius:0 0 6px 6px;height:150px;overflow:hidden;font-size:9px;line-height:1.5;padding:5px 9px"></div>';
-  document.body.appendChild(ixWrap);
-
-  var ixLog=document.getElementById('ix-log');
-  var ixLive=document.getElementById('ix-live');
-  var IX_MAX=60, ixLines=[];
-  function ixPush(txt,col){
-    var t=new Date(),ts=('0'+t.getMinutes()).slice(-2)+':'+('0'+t.getSeconds()).slice(-2)+'.'+('00'+t.getMilliseconds()).slice(-3);
-    ixLines.unshift('<div><span style="color:var(--text3)">'+ts+'</span> <span style="color:'+(col||'var(--text2)')+'">'+txt+'</span></div>');
-    if(ixLines.length>IX_MAX)ixLines.pop();
-    ixLog.innerHTML=ixLines.join('');
-  }
-  var ixOpen=true;
-  document.getElementById('ix-log-hdr').addEventListener('click',function(){
-    ixOpen=!ixOpen;ixLog.style.display=ixOpen?'block':'none';
-  });
-
-  // ── Every motion: live readout (per-frame), throttled discrete entries ──
-  var _lastMoveLog=0;
-  dv.on('move',function(d){
-    var sp=Math.round(d.speed||0);
-    ixLive.textContent='('+Math.round(d.x)+','+Math.round(d.y)+') '+sp+'px/s '+(d.direction||'·');
-    var now=Date.now();
-    if(sp>40 && now-_lastMoveLog>140){ // log only meaningful motion, ~7/s cap
-      _lastMoveLog=now;
-      ixPush('move '+(d.direction||'')+' '+sp+'px/s','var(--blue)');
-    }
-  });
-  dv.on('click',function(d){ixPush('click ('+Math.round(d.x)+','+Math.round(d.y)+')','var(--green)')});
-  dv.on('mousedown',function(d){ixPush('press ('+Math.round(d.x)+','+Math.round(d.y)+')','var(--text2)')});
-  dv.on('drag',function(d){ixPush('drag ('+Math.round(d.x)+','+Math.round(d.y)+')','var(--amber)')});
-  dv.on('tap',function(d){ixPush('tap ×'+(d.count||1),'var(--green)')});
-  dv.on('gesture',function(d){ixPush('gesture: '+d.type+(d.direction?' '+d.direction:''),'var(--violet)')});
-  dv.on('depth',function(d){ixPush('scroll '+((d.delta||0)>0?'↓':'↑')+' d='+(d.depth!=null?Math.round(d.depth):'?'),'var(--text2)')});
-  dv.on('key',function(d){ixPush('key: '+(d.key||'?'),'var(--text2)')});
-  dv.on('momentum_stop',function(d){ixPush('momentum stop ('+(d.sustained||0).toFixed(1)+'s)','var(--amber)')});
-  dv.on('rank_up',function(){ixPush('▲ RANK UP','var(--violet)')});
-  dv.on('achievement',function(d){ixPush('✨ '+d.name,'var(--violet)')});
-  dv.on('konami',function(){ixPush('✨ KONAMI','var(--green)')});
-  ixPush('listening to mouse + touch — click VOICE to add audio','var(--text3)');
-
-  // ── Voice oscilloscope → Fabric ─────────────────────────────────────
-  // The microphone CANNOT be opened without the participant's consent —
-  // browsers gate getUserMedia behind a permission prompt and there is no
-  // way around it (nor should there be). The VOICE button requests it; once
-  // granted, the live waveform drives the same particles/nodes the mouse
-  // does. Until then (or if denied) the scope visualizes the Fabric's own
-  // interaction energy, so it is never dead.
-  var oc=document.getElementById('osc'),ocx=oc.getContext('2d');
-  var micBtn=document.getElementById('osc-mic');
-  var audioOn=false, analyser=null, timeBuf=null, freqBuf=null, actx=null, micStream=null;
-  var _prevRMS=0;
-  var _hasShock=(typeof shockwaves!=='undefined');
-
-  micBtn.addEventListener('click',async function(){
-    if(audioOn){ // toggle off
-      try{micStream&&micStream.getTracks().forEach(function(t){t.stop()});actx&&actx.close()}catch(e){}
-      audioOn=false;analyser=null;micStream=null;actx=null;
-      micBtn.style.color='var(--text2)';micBtn.style.borderColor='var(--border)';
-      ixPush('voice off','var(--text3)');return;
-    }
-    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-      ixPush('voice: getUserMedia unavailable in this browser','var(--red)');return;
-    }
-    try{
-      micStream=await navigator.mediaDevices.getUserMedia({audio:true});
-      actx=new (window.AudioContext||window.webkitAudioContext)();
-      var srcN=actx.createMediaStreamSource(micStream);
-      analyser=actx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.75;
-      srcN.connect(analyser);
-      timeBuf=new Uint8Array(analyser.fftSize);
-      freqBuf=new Uint8Array(analyser.frequencyBinCount);
-      audioOn=true;
-      micBtn.style.color='var(--green)';micBtn.style.borderColor='rgba(86,211,100,.5)';
-      ixPush('voice ON — mic now drives the Fabric','var(--green)');
-    }catch(err){
-      ixPush('voice denied ('+(err&&err.name||'error')+') — mic needs permission','var(--red)');
-    }
-  });
-
-  function drawOsc(){
-    ocx.clearRect(0,0,oc.width,oc.height);
-    ocx.strokeStyle=audioOn?'#56d364':'rgba(121,192,255,.5)';ocx.lineWidth=1;ocx.beginPath();
-    if(audioOn&&analyser){
-      analyser.getByteTimeDomainData(timeBuf);
-      var step=timeBuf.length/oc.width, rms=0;
-      for(var x=0;x<oc.width;x++){
-        var v=(timeBuf[Math.floor(x*step)]-128)/128;
-        rms+=v*v;
-        var y=oc.height/2+v*oc.height/2;
-        x?ocx.lineTo(x,y):ocx.moveTo(x,y);
-      }
-      ocx.stroke();
-      rms=Math.sqrt(rms/oc.width);
-      analyser.getByteFrequencyData(freqBuf);
-      var peak=0,peakBin=0,sum=0;
-      for(var f=0;f<freqBuf.length;f++){sum+=freqBuf[f];if(freqBuf[f]>peak){peak=freqBuf[f];peakBin=f}}
-      var bright=sum/freqBuf.length/255;             // overall loudness 0..1
-      var tone=peakBin/freqBuf.length;               // dominant pitch 0..1
-      var transient=Math.max(0,rms-_prevRMS);_prevRMS=rms;
-      if(particles.length){
-        for(var p=0;p<particles.length;p++){
-          particles[p].vx+=(Math.random()-.5)*bright*.6;
-          particles[p].vy+=((tone-.5)*-.4 + (Math.random()-.5)*bright*.6);
-        }
-      }
-      if(nodes.length){
-        for(var n=0;n<nodes.length;n++)nodes[n].act=Math.max(nodes[n].act,bright*.5);
-      }
-      if(transient>.06&&nodes.length>1){            // a beat / consonant → flash + shockwave
-        var nf=Math.min(6,Math.floor(transient*40));
-        for(var i=0;i<nf;i++)flashE(Math.floor(Math.random()*nodes.length),Math.floor(Math.random()*nodes.length));
-        if(_hasShock)shockwaves.push({x:W/2,y:H/2,r:0,life:1,col:'rgba(86,211,100,'});
-      }
-    }else{
-      // fallback: trace the Fabric's own interaction energy so it lives
-      var energy=(dv.pressure&&dv.pressure.intensity||0);
-      var amp=Math.min(1,energy+(dv.momentum&&dv.momentum.sustained||0)*.05);
-      for(var x2=0;x2<oc.width;x2++){
-        var ph=x2/oc.width*6.28*3 + Date.now()/200;
-        var y2=oc.height/2+Math.sin(ph)*amp*oc.height/2*.8;
-        x2?ocx.lineTo(x2,y2):ocx.moveTo(x2,y2);
-      }
-      ocx.stroke();
-    }
-    requestAnimationFrame(drawOsc);
-  }
-  drawOsc();
+  // Participant-experience widget (voice oscilloscope + motion tracker + interaction
+  // log) removed 2026-06 — low-signal on a diagnostics page; the interactive
+  // experience is handed off to the voicey + faicey projects. deltaverse.js
+  // Fabric background + quote engine stay.
 })();
 </script>
 
@@ -2707,41 +2676,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
   function heatColor(v){ if(v>=80)return'var(--green)'; if(v>=60)return'#7ee787'; if(v>=45)return'var(--violet)'; if(v>=30)return'var(--amber)'; return'var(--red)'; }
   function barColor(v){ return v>=70?'var(--green)':v>=50?'var(--blue)':v>=30?'var(--amber)':'var(--red)'; }
 
-  function loadFitness(){
-    fetch('/insight/fitness').then(function(r){return r.ok?r.json():null;}).then(function(d){
-      if(!d || d.fallback){ hideSec('sec-fitness','hdr-fitness'); Freshness.mark('fitness','empty'); return; }
-      var agents=(d.agents||[]).slice(0,8);
-      if(!agents.length){ hideSec('sec-fitness','hdr-fitness'); Freshness.mark('fitness','empty'); return; }
-      showSec('sec-fitness','hdr-fitness');
-      Freshness.mark('fitness','ok');
-      var axes=['campaign_success','trace_reliability','latency_score','consensus_alignment','reputation_momentum','learning_velocity','godel_selection_rate'];
-      var rows=agents.map(function(a,i){
-        var bar='<div class="fit-bar-wrap"><div class="fit-bar" style="width:'+a.fitness+'%;background:'+barColor(a.fitness)+'"></div></div>';
-        var dots=axes.map(function(k){
-          var v=(a.axes||{})[k]; if(v==null)v=50;
-          return '<div class="axis-dot" title="'+k+': '+v.toFixed(0)+'" style="background:'+heatColor(v)+'"></div>';
-        }).join('');
-        var td=a.trend_7d||0;
-        var tcls=td>1?'up':td<-1?'dn':'flat';
-        var ts=td>0?'+'+td.toFixed(1):td.toFixed(1);
-        return '<tr>'
-          +'<td class="fit-rank">'+(i+1)+'</td>'
-          +'<td class="fit-agent">'+esc(a.agent_id||'')+'</td>'
-          +'<td class="fit-score">'+a.fitness.toFixed(1)+'</td>'
-          +'<td>'+bar+'</td>'
-          +'<td><div class="axes-heat">'+dots+'</div></td>'
-          +'<td class="fit-trend '+tcls+'">'+ts+'</td>'
-          +'</tr>';
-      }).join('');
-      document.getElementById('sec-fitness').innerHTML='<table class="fit-table">'
-        +'<thead><tr><th></th><th>agent</th><th style="text-align:right">fit</th><th></th><th>axes</th><th>&Delta;7d</th></tr></thead>'
-        +'<tbody>'+rows+'</tbody></table>';
-    }).catch(function(){
-      Freshness.mark('fitness','error'); showSec('sec-fitness','hdr-fitness');
-      var b=document.getElementById('sec-fitness');
-      if(b && !b.querySelector('.fit-table')) b.innerHTML='<div class="panel-banner">fitness feed error &mdash; retrying every 30s</div>';
-    });
-  }
+  // loadFitness() removed 2026-06 — per-agent fitness was low-signal noise; section deleted.
 
   function loadSelection(){
     fetch('/insight/selection/events?limit=5').then(function(r){return r.ok?r.json():null;}).then(function(d){
@@ -2990,7 +2925,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
   // The honest "what is mindX actually improving?" surface: real changes with
   // substance, the agent→agent interaction flow, process-health truth.
   function loadSelfDiag(){
-    fetch('/insight/self/diagnostic').then(function(r){return r.ok?r.json():null;}).then(function(d){
+    fetch('/insight/self/diagnostic',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
       if(!d || d.fallback){ return; }
       var rel=function(ts){
         if(!ts) return '';
@@ -3005,7 +2940,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
       var v=d.verdict||{};
       var vh='<b style="color:var(--text)">'+esc(v.line||'')+'</b>';
       (v.evidence||[]).forEach(function(e){ vh+='<br><span style="color:var(--text3)">&middot; '+esc(e)+'</span>'; });
-      document.getElementById('selfdiag-verdict').innerHTML=vh;
+      // (verdict element is rendered below, once the real-change channels are known)
       // What actually changed — merged substance feed, newest first.
       var rc=d.real_changes||{}; var rows=[];
       (rc.milestones||[]).forEach(function(m){ rows.push({ts:m.ts,h:'<span style="color:var(--green)">[milestone]</span> '+esc((m.sha||'')+' '+(m.subject||''))}); });
@@ -3014,9 +2949,33 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
       (rc.code_change_events||[]).forEach(function(c){ rows.push({ts:c.ts,h:'<span style="color:var(--green)">['+esc(c.kind||'change')+']</span> '+esc(c.detail||'')}); });
       rows.sort(function(a,b){ return (Date.parse(b.ts)||b.ts||0)-(Date.parse(a.ts)||a.ts||0); });
       var ch=rows.slice(0,8).map(function(r){ return '<div>'+r.h+' <span style="color:var(--text3)">'+rel(r.ts)+'</span></div>'; }).join('');
+      // Real self-improvement channels the code-diff counter can't see: the
+      // sentinel effector (version applies) + dream→mindXtrain MODEL imprints.
+      // LEAD with these so the panel never reads "nothing happened" when v187
+      // sat on disk. (from mindX events: data/system_state/sentinel.json +
+      // data/logs/ascend_log.jsonl)
+      var si=rc.self_improvement||{}, tr=rc.training||{};
+      var siHead='';
+      if(si.applies>0){ siHead+='<div style="color:var(--green)">[self-improve] sentinel v'+esc(si.version)+' &middot; '+si.applies+' improvements applied'+(si.healthy?', verified':'')+'</div>'; }
+      if(tr.total>0){ siHead+='<div style="color:'+(tr.accepted>0?'var(--green)':'var(--amber)')+'">[imprint] '+(tr.accepted||0)+'/'+tr.total+' model trainings took (from its own dreams)'+(tr.last_delta!=null?' &middot; &Delta;'+esc(tr.last_delta):'')+'</div>'; }
       var sia=rc.sia_diffs||{};
-      ch+='<div style="margin-top:6px;color:'+(sia.count>0?'var(--green)':'var(--amber)')+'">autonomous code diffs: '+(sia.count||0)+(sia.note?' — '+esc(sia.note):'')+'</div>';
+      ch=siHead+ch;
+      ch+='<div style="margin-top:6px;color:'+(sia.count>0?'var(--green)':'var(--text3)')+'">free-form code diffs: '+(sia.count||0)+(sia.count===0?' (self-improvement runs via the sentinel effector above)':'')+'</div>';
       document.getElementById('selfdiag-changes').innerHTML=ch||'--';
+      // Verdict accent encodes the truth (structure is information): the left
+      // bar goes green when ANY real-change channel is active (code/model/
+      // memory), amber when only consolidating, red when genuinely idle — so the
+      // color is never a fixed decoration that lies under a working machine.
+      var realCh=(si.applies>0)||(tr.accepted>0)||(sia.count>0);
+      var vbar=realCh?'var(--green)':(((d.consolidation||{}).ltm_promotions>0)?'var(--amber)':'var(--red)');
+      var vEl=document.getElementById('selfdiag-verdict');
+      vEl.style.borderLeftColor=vbar;
+      // Channel strip — the three ways mindX actually changes, as a compact
+      // header above the verdict prose. Encodes the real content structure.
+      var ltm=(d.consolidation||{}).ltm_promotions||0;
+      var chip=function(on,label,val){return '<span style="display:inline-block;padding:1px 7px;margin-right:6px;border-radius:9px;border:1px solid '+(on?'var(--green)':'var(--line)')+';color:'+(on?'var(--green)':'var(--text3)')+';font-size:10px;font-family:var(--mono)">'+label+' '+val+'</span>';};
+      var strip='<div style="margin-bottom:8px">'+chip(si.applies>0,'code',(si.applies||0))+chip(tr.accepted>0,'model',(tr.accepted||0)+'/'+(tr.total||0))+chip(ltm>0,'memory',ltm)+'</div>';
+      vEl.innerHTML=strip+vh;
       // Interaction flow strip — top edges as weighted chips.
       var edges=((d.self_interaction||{}).matrix||{}).edges||[];
       var maxC=edges.length?edges[0].count:1;
@@ -3036,6 +2995,19 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
       (ph.top_failure_shapes||[]).slice(0,2).forEach(function(s){ hh+='<br><span style="color:var(--text3)">shape &times;'+s.count+': '+esc(s.shape)+'</span>'; });
       (ph.looped_directives||[]).slice(0,1).forEach(function(l){ hh+='<br><span style="color:var(--amber)">LOOP &times;'+l.count+': '+esc(l.directive)+'</span><br><span style="color:var(--text3)">diagnosis: '+esc(l.diagnosis)+'</span>'; });
       hh+='<br>stuck loops: '+((ph.stuck_loops||{}).count||0)+' &middot; eval gate: '+(((ph.eval_gate||{}).gate_open)?'open':'closed');
+      // Inference appetite — the public display of how hungry mindX is vs its
+      // free-tier ceiling. Utilization is a rounding error: the limiter was
+      // never the bottleneck, dead models were.
+      var ap=ph.inference_appetite||{}, bud=ap.budget||{}, mods=ap.models||{}, lt=ap.lifetime||{};
+      if(lt.total!=null){
+        var fmtN=function(n){ n=Number(n)||0; return n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'k':String(n); };
+        hh+='<br>tokens ingested (lifetime): <span style="color:var(--green);font-weight:700">'+fmtN(lt.total)+'</span> <span style="color:var(--text3)">(seed '+fmtN(lt.seed)+' + '+fmtN(lt.ingested_since_seed)+' actual &middot; '+fmtN(lt.cpu_tokens)+' CPU/'+fmtN(lt.cloud_tokens)+' cloud)</span>';
+      }
+      if(bud.ceiling_per_day){
+        hh+='<br>appetite: <span style="color:var(--green)">'+(bud.used_today||0)+'</span>/'+bud.ceiling_per_day+' calls/day ('+(bud.utilization_pct||0)+'%) &middot; floor '+(bud.conversational_floor_per_hour||3)+'/hr=conversation';
+        hh+='<br>models: <span style="color:var(--green)">'+(mods.live||0)+' live</span> &middot; <span style="color:'+((mods.dead||0)>0?'var(--red)':'var(--text3)')+'">'+(mods.dead||0)+' dead</span>'+((mods.probing||0)>0?' &middot; '+mods.probing+' probing':'')+' &middot; '+(mods.total_tokens||0)+' tokens';
+        if((ap.dead_slugs||[]).length){ hh+='<br><span style="color:var(--text3)">retired: '+esc((ap.dead_slugs||[]).slice(0,4).join(', '))+'</span>'; }
+      }
       document.getElementById('selfdiag-health').innerHTML=hh;
     }).catch(function(){ /* leave previous render */ });
   }
@@ -3045,14 +3017,13 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
            .cadence('logs',30000).cadence('dreams',60000).cadence('think',15000);
   connectThinkStream();
   loadLedger();       setInterval(loadLedger,      60000);
-  loadFitness();      setInterval(loadFitness,     30000);
   loadSelection();    setInterval(loadSelection,   60000);
   loadMemoryStream(); setInterval(loadMemoryStream,30000);
   loadDreams();       setInterval(loadDreams,      60000);
   loadSelfDiag();     setInterval(loadSelfDiag,    60000);
   // Expose the insight loaders so toggleSec (outside this IIFE) can refresh a
   // loader-backed section the moment its heading is expanded.
-  window.loadLedger=loadLedger; window.loadFitness=loadFitness;
+  window.loadLedger=loadLedger;
   window.loadSelection=loadSelection; window.loadMemoryStream=loadMemoryStream;
   window.loadDreams=loadDreams; window.loadSelfDiag=loadSelfDiag;
 })();
@@ -3107,5 +3078,15 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
 <script>window.DOORWAY_FOR='live diagnostics';</script>
 <script src="/static/identity.js"></script>
 <script src="/static/doorway.js"></script>
+
+<!-- signal/noise depth toolbar (shared) -->
+<script src="/static/signal_noise.js"></script>
+
+<!-- BUILDER emergence — archetype → AgenticPlace iNFT avatar (SSOT shared with /inft) -->
+<script src="/static/archetypes.js"></script>
+<script src="/static/builder_button.js"></script>
+
+<!-- live activity dockable/resizable panel -->
+<script src="/static/dock_panel.js"></script>
 </body>
 </html>
