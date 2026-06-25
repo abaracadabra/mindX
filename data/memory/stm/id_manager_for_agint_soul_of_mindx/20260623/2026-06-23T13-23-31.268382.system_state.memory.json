@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-06-23T13:23:31.268382",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "id_manager_for_agint_soul_of_mindx",
+  "content": {
+    "process_name": "id_manager_wallet_created",
+    "data": {
+      "entity_id": "agint_soul_of_mindx",
+      "address": "0xf8dFc1A088d317a35C191c5822Cd38Bb5B788e23",
+      "env_var": "MINDX_WALLET_PK_AGINT_SOUL_OF_MINDX",
+      "success": true,
+      "key_stored": true,
+      "path": "legacy"
+    }
+  },
+  "context": {
+    "agent_id": "id_manager_for_agint_soul_of_mindx"
+  },
+  "tags": [
+    "id_manager_wallet_created",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "db6794b01703f97f"
+}

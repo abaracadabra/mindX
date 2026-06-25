@@ -1,0 +1,42 @@
+{
+  "timestamp": "2026-06-24T16:11:48.514540",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "agint_soul_of_mindx",
+  "content": {
+    "process_name": "godel_core_choice",
+    "data": {
+      "source_agent": "agint_soul_of_mindx",
+      "cycle_id": 1,
+      "choice_type": "agint_decision",
+      "perception_summary": "{\"timestamp\": 1782342585.3775232, \"llm_status\": \"Initializing...\", \"llm_operational\": false, \"llm_suggestion\": \"Checking LLM availability\"}",
+      "options_considered": [
+        "BDI_DELEGATION",
+        "RESEARCH",
+        "COOLDOWN",
+        "SELF_REPAIR",
+        "IDLE",
+        "PERFORM_TASK",
+        "SELF_IMPROVEMENT",
+        "STRATEGIC_EVOLUTION",
+        "RECOGNIZE_MILESTONE"
+      ],
+      "chosen_option": "COOLDOWN",
+      "rationale": "System starting up.",
+      "outcome": "success",
+      "timestamp_utc": "2026-06-24T23:11:18.512093Z",
+      "eval_score": 0.6844,
+      "eval_reason": "heuristic: grounded=1.0 rationale=0.2 refs=0.5 consistency=1.0",
+      "eval_model": "heuristic"
+    }
+  },
+  "context": {
+    "agent_id": "agint_soul_of_mindx"
+  },
+  "tags": [
+    "godel_core_choice",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "f0ae2f9b0a74b6c9"
+}

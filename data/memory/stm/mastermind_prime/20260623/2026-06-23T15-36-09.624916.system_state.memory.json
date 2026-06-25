@@ -1,0 +1,61 @@
+{
+  "timestamp": "2026-06-23T15:36:09.624916",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mastermind_prime",
+  "content": {
+    "process_name": "godel_core_choice",
+    "data": {
+      "source_agent": "mastermind_prime",
+      "choice_type": "backlog_directive_selection",
+      "task_class": "improvement",
+      "importance": "standard",
+      "perception": {
+        "backlog_size": 11,
+        "eligible_count": 5,
+        "recent_directive_count": 6
+      },
+      "options_considered": [
+        {
+          "slug": "backlog_0",
+          "priority": 8,
+          "target": "llm.ollama_handler"
+        },
+        {
+          "slug": "backlog_7",
+          "priority": 6,
+          "target": "evaluation.boardroom_confidence"
+        },
+        {
+          "slug": "backlog_8",
+          "priority": 6,
+          "target": "evaluation.reasoning_quality_axis"
+        },
+        {
+          "slug": "backlog_6",
+          "priority": 5,
+          "target": "fine_tuning.lora"
+        },
+        {
+          "slug": "backlog_5",
+          "priority": 0,
+          "target": "evaluation.framework"
+        }
+      ],
+      "chosen_option": "backlog_7",
+      "rationale": "backlog_idx=7 priority=6 target=evaluation.boardroom_confidence reason: Boardroom soldier confidence is currently a heuristic stamp, not a measurement. Calibrating with GEval (agents/eval/) wi",
+      "confidence": "standard",
+      "outcome": "pending",
+      "timestamp_utc": "2026-06-23T22:35:39.621253Z"
+    }
+  },
+  "context": {
+    "agent_id": "mastermind_prime"
+  },
+  "tags": [
+    "godel_core_choice",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "0dfbee0dc871252c"
+}

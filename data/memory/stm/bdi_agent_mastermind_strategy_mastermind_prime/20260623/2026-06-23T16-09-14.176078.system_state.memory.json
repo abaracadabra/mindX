@@ -1,0 +1,79 @@
+{
+  "timestamp": "2026-06-23T16:09:14.176078",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_deliberation",
+    "data": {
+      "selected_goal": {
+        "id": "3a98858e",
+        "goal": "Implement the following evolution: Add output validation checks to ensure expected formats and data types [target: validation.output_validator, priority: 8, backlog_idx: 3]",
+        "priority": 1,
+        "status": "pending",
+        "added_at": 1782246371.1769412,
+        "is_primary": true
+      },
+      "full_desire_queue": [
+        {
+          "id": "3a98858e",
+          "goal": "Implement the following evolution: Add output validation checks to ensure expected formats and data types [target: validation.output_validator, priority: 8, backlog_idx: 3]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1782246371.1769412,
+          "is_primary": true
+        },
+        {
+          "id": "fbb01c6e",
+          "goal": "Implement the following evolution: Improve the sentinel target module: clarify docstrings and add type hints, harden add() for edge cases, and bump SENTINEL_VERSION. [target: agents/sentinel/sentinel_target.py, priority: 8, backlog_idx: 10]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1782248326.2092614,
+          "is_primary": true
+        },
+        {
+          "id": "8a7b068e",
+          "goal": "Implement the following evolution: Implement fallback provider selection when primary LLM fails [target: llm.model_registry, priority: 7, backlog_idx: 1]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1782250286.1729422,
+          "is_primary": true
+        },
+        {
+          "id": "903fce40",
+          "goal": "Implement the following evolution: Enhance model input validation with specific checks for LLM providers [target: validation.model_input_validator, priority: 7, backlog_idx: 4]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1782252240.3445241,
+          "is_primary": true
+        },
+        {
+          "id": "0223a6f6",
+          "goal": "Implement the following evolution: Phase 2: Replace hardcoded soldier-confidence ladder (0.3/0.5/0.6) in daio/governance/boardroom.py:259-275 with GEval scoring of (directive, vote, reasoning) [target: evaluation.boardroom_confidence, priority: 6, backlog_idx: 7]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1782254200.1732924,
+          "is_primary": true
+        },
+        {
+          "id": "eb708aa4",
+          "goal": "Implement the following evolution: Phase 3: Add an 8th 'reasoning_quality' axis to the fitness leaderboard in mindx_backend_service/insight_aggregator.py \u2014 calibrated campaign-verdict scoring via GEval (agents/eval/) [target: evaluation.reasoning_quality_axis, priority: 6, backlog_idx: 8]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1782256154.1736236,
+          "is_primary": true
+        }
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+    "run_id": "ace5fb6b"
+  },
+  "tags": [
+    "bdi_deliberation",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "60b69debfe0a0fe8"
+}

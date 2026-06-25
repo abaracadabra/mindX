@@ -1,0 +1,40 @@
+{
+  "_doc": "AgenticPlace iNFT mint deployment registry, read by /inft (inft_mint.js). The iNFT is the DeltaVerse ERC-7857 iNFT_7857, deployed via ~/DeltaVerse/deploy and SECONDED by the SCIEN·TIFIC first-light canary. Addresses are DETERMINISTIC (CREATE2 via Nick's factory) — identical on every chain, computed offline from salt+initCode, so they already equal the eventual mainnet address. Status is `create2_predicted_awaiting_overlord_signature`: the OVERLORD (bankon.eth) must sign the real deploy via ~/DeltaVerse/pages/deployer.html (an agent cannot sign mainnet). The mint path is the AgenticPlace hand-off: AgenticPlace owns the ERC-7857 mintAgent + IPFS payload pipeline (agent card + sealed key); /inft packages the archetype spec (incl. avatar) and hands off.",
+  "agenticplace": {
+    "chainId": null,
+    "chainName": "agenticplace",
+    "handoffMintUrl": "https://agenticplace.pythai.net/inft",
+    "mintMode": "handoff",
+    "explorer": null,
+    "create2": {
+      "factory": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+      "owner": "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169",
+      "ownerEns": "bankon.eth",
+      "deterministic": true,
+      "chains": ["moonbeam-1284", "blast-81457", "0g-16602", "ethereum-1", "base-8453", "polygon-137"]
+    },
+    "contracts": {
+      "IntelligentNFT": {
+        "name": "iNFT_7857",
+        "standard": "ERC-7857",
+        "address": "0x8F880281aaa6D163552eBb11825e43f133188fD9",
+        "salt": "deltaverse.inft.v1",
+        "mintFn": "mintAgent",
+        "mintSig": "mintAgent(address,bytes32,string,bytes32,uint32,uint8,bytes32,string)",
+        "mintSelector": "0xbabb11b9",
+        "abiPath": "DeltaVerse/deploy/artifacts/inft/iNFT_7857.json",
+        "deployed": false
+      },
+      "Scientific": {
+        "name": "Scientific",
+        "role": "first-light canary — seconds the iNFT deploy",
+        "address": "0x428222a63809C98FcA59fd0ca36619F551Ff67c0",
+        "salt": "deltaverse.scientific.v1",
+        "abiPath": "DeltaVerse/deploy/artifacts/settlement-tokens/Scientific.json",
+        "deployed": false
+      }
+    }
+  },
+  "_status": "create2_predicted_awaiting_overlord_signature",
+  "_activation": "OVERLORD signs deploy of Scientific (salt deltaverse.scientific.v1) then iNFT_7857 (salt deltaverse.inft.v1) via ~/DeltaVerse/pages/deployer.html with owner bankon.eth; CREATE2 → these exact addresses. Then set agenticplace.chainId + contracts.*.deployed=true (and mintMode 'direct' only if a simple-form mintable variant is used)."
+}

@@ -1,0 +1,61 @@
+{
+  "timestamp": "2026-06-23T14:30:55.515972",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mastermind_prime",
+  "content": {
+    "process_name": "godel_core_choice",
+    "data": {
+      "source_agent": "mastermind_prime",
+      "choice_type": "backlog_directive_selection",
+      "task_class": "improvement",
+      "importance": "standard",
+      "perception": {
+        "backlog_size": 11,
+        "eligible_count": 7,
+        "recent_directive_count": 4
+      },
+      "options_considered": [
+        {
+          "slug": "backlog_0",
+          "priority": 8,
+          "target": "llm.ollama_handler"
+        },
+        {
+          "slug": "backlog_1",
+          "priority": 7,
+          "target": "llm.model_registry"
+        },
+        {
+          "slug": "backlog_4",
+          "priority": 7,
+          "target": "validation.model_input_validator"
+        },
+        {
+          "slug": "backlog_7",
+          "priority": 6,
+          "target": "evaluation.boardroom_confidence"
+        },
+        {
+          "slug": "backlog_8",
+          "priority": 6,
+          "target": "evaluation.reasoning_quality_axis"
+        }
+      ],
+      "chosen_option": "backlog_1",
+      "rationale": "backlog_idx=1 priority=7 target=llm.model_registry reason: System should gracefully degrade when primary LLM provider is unavailable",
+      "confidence": "standard",
+      "outcome": "pending",
+      "timestamp_utc": "2026-06-23T21:30:25.513106Z"
+    }
+  },
+  "context": {
+    "agent_id": "mastermind_prime"
+  },
+  "tags": [
+    "godel_core_choice",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "3649ccf098f662ac"
+}

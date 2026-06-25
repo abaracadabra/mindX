@@ -199,6 +199,16 @@ class ModelSelector:
         if not candidates:
             return await self._bootstrap_pick(task_profile, reason="no candidates configured")
 
+        # Prune slugs the interaction ledger has marked dead (404/decommissioned).
+        # This is the operator directive: selection learns from real interaction
+        # and stops routing to models that no longer exist. filter_alive is
+        # fail-open (never returns empty for a non-empty input).
+        try:
+            from llm.model_health import filter_alive
+            candidates = filter_alive(candidates) or candidates
+        except Exception:
+            pass
+
         # Score every candidate.
         scored: List[ScoredCandidate] = []
         for slug in candidates:
@@ -365,7 +375,12 @@ class ModelSelector:
     async def _bootstrap_pick(self, profile: TaskProfile, reason: str) -> ModelChoice:
         """No usable candidates — bootstrap from operator skill→model map."""
         candidates = await self.aware.task_class_candidates(profile.task_class)
-        chosen = candidates[0] if candidates else "openai/gpt-oss-120b:free"
+        try:
+            from llm.model_health import filter_alive
+            candidates = filter_alive(candidates) or candidates
+        except Exception:
+            pass
+        chosen = candidates[0] if candidates else "nvidia/nemotron-3-ultra-550b-a55b:free"
         rationale = f"bootstrap: {reason} — using operator-curated fallback {chosen}"
         choice = ModelChoice(
             chosen=chosen,
@@ -387,7 +402,7 @@ class ModelSelector:
             data = json.loads(META_MODELS_FILE.read_text())
             return list(data.get("models") or [])
         except (OSError, json.JSONDecodeError):
-            return ["openai/gpt-oss-120b:free"]
+            return ["nvidia/nemotron-3-ultra-550b-a55b:free"]
 
     # ── Internal: logging ─────────────────────────────────────────────────
 

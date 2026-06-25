@@ -59,36 +59,34 @@
     }
   },
   "task_class_candidates": {
-    "_doc": "Bootstrap candidate list per task class — used when no historical signal exists for a (model, task_class) pair. Empirical map from data/config/board_openrouter_map.json + skill→model map in docs/OPENROUTER_mindX.md.",
+    "_doc": "Bootstrap candidate SEEDS per task class — used when no historical signal exists for a (model, task_class) pair. NOT authoritative: reconciled against the live OpenRouter :free roster by llm/model_health.refresh_openrouter_roster() and reweighted by per-model interaction outcomes (data=logs=memory). Dead slugs are skipped at runtime. Manual reconcile 2026-06-24.",
     "reasoning": [
-      "nvidia/nemotron-3-super-120b-a12b:free",
-      "openai/gpt-oss-120b:free",
-      "inclusionai/ling-2.6-1t:free"
+      "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "poolside/laguna-m.1:free"
     ],
     "codegen": [
       "poolside/laguna-m.1:free",
-      "qwen/qwen3-coder:free",
-      "openai/gpt-oss-120b:free"
+      "cohere/north-mini-code:free",
+      "poolside/laguna-xs.2:free"
     ],
     "planning": [
-      "nvidia/nemotron-3-super-120b-a12b:free",
-      "inclusionai/ling-2.6-1t:free",
-      "openai/gpt-oss-120b:free"
+      "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "poolside/laguna-m.1:free"
     ],
     "vision": [
-      "nvidia/nemotron-nano-12b-v2-vl:free",
-      "google/gemma-4-26b-a4b-it:free",
       "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
     ],
     "ops": [
-      "nvidia/nemotron-3-nano-30b-a3b:free",
-      "openai/gpt-oss-20b:free",
-      "openai/gpt-oss-120b:free"
+      "poolside/laguna-xs.2:free",
+      "cohere/north-mini-code:free",
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
     ],
     "default": [
-      "openai/gpt-oss-120b:free",
-      "nvidia/nemotron-3-super-120b-a12b:free",
-      "openrouter/free"
+      "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "poolside/laguna-m.1:free",
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
     ]
   },
   "tie_break": {

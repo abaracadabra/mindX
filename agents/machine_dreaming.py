@@ -1214,6 +1214,38 @@ class MachineDreamCycle:
             except Exception as e:
                 logger.debug(f"{self.log_prefix} Dream failed for {agent_id}: {e}")
 
+        # OpenRouter roster refresh — the free roster churns; reconcile the
+        # interaction ledger against the live :free set so selection stops
+        # routing to decommissioned models (data=logs=memory self-healing).
+        try:
+            import json as _json
+            from pathlib import Path as _Path
+            _seeds = set()
+            for _f in ("data/config/board_openrouter_map.json",
+                       "data/config/self_aware_meta_models.json",
+                       "data/config/self_aware_weights.json"):
+                try:
+                    _d = _json.loads(_Path(_f).read_text())
+                except Exception:
+                    continue
+                if isinstance(_d, dict):
+                    for _v in _d.values():
+                        if isinstance(_v, str) and ":free" in _v:
+                            _seeds.add(_v)
+                        elif isinstance(_v, list):
+                            _seeds.update(x for x in _v if isinstance(x, str) and ":free" in x)
+                        elif isinstance(_v, dict):
+                            for _vv in _v.values():
+                                if isinstance(_vv, list):
+                                    _seeds.update(x for x in _vv if isinstance(x, str) and ":free" in x)
+            from llm.openrouter_handler import refresh_openrouter_roster
+            _rec = await refresh_openrouter_roster(seed_slugs=sorted(_seeds))
+            logger.info(f"{self.log_prefix} OpenRouter roster reconciled: "
+                        f"retired={_rec.get('retired')} revived={_rec.get('revived')} "
+                        f"live={_rec.get('live_count')}")
+        except Exception as e:
+            logger.debug(f"{self.log_prefix} roster refresh phase skipped: {e}")
+
         # mindx.self.improve.model_selector retrain — read recent selector
         # decisions, nudge weights toward axes that predicted outcomes well.
         # Boundary check (user-locked): this phase reads only its own selector's

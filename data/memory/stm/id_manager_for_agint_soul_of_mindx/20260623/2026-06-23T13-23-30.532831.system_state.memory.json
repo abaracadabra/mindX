@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-06-23T13:23:30.532831",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "id_manager_for_agint_soul_of_mindx",
+  "content": {
+    "process_name": "id_manager_address_not_found",
+    "data": {
+      "entity_id": "agint_soul_of_mindx"
+    }
+  },
+  "context": {
+    "agent_id": "id_manager_for_agint_soul_of_mindx"
+  },
+  "tags": [
+    "id_manager_address_not_found",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "dfba757a01942ee9"
+}

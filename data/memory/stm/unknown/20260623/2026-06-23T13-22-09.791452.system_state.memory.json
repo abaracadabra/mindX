@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-06-23T13:22:09.791452",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "unknown",
+  "content": {
+    "process_name": "system_state_startup",
+    "data": {
+      "event_type": "startup",
+      "timestamp": 1782246129.4712114,
+      "event_id": "startup_1782246129",
+      "resource_snapshot": {
+        "timestamp": 1782246129.789257,
+        "cpu_percent": 61.5,
+        "memory_percent": 54.0,
+        "memory_used": 3307124817,
+        "memory_total": 6120328396,
+        "disk_usage": {
+          "/": 78.13920373793889
+        },
+        "network_bytes_sent": 166282509,
+        "network_bytes_recv": 347626453,
+        "process_count": 288,
+        "load_average": [
+          3.69091796875,
+          2.7255859375,
+          1.82373046875
+        ]
+      },
+      "performance_snapshot": null,
+      "agents_registered": [
+        "coordinator_agent"
+      ],
+      "agents_active": [
+        "coordinator_agent"
+      ],
+      "tools_registered": [],
+      "system_version": null,
+      "improvement_count": 0,
+      "rollback_count": 0,
+      "last_improvement": null,
+      "last_rollback": null,
+      "errors": [],
+      "warnings": [],
+      "metadata": {
+        "phase": "after_startup",
+        "duration_seconds": 58.675668716430664,
+        "steps_completed": [
+          "load_registry",
+          "initialize_always_on",
+          "coordinate_sequence"
+        ]
+      }
+    }
+  },
+  "context": {
+    "tracker": "system_state_tracker"
+  },
+  "tags": [
+    "system_state_startup",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "636a9dd81e7690fc"
+}

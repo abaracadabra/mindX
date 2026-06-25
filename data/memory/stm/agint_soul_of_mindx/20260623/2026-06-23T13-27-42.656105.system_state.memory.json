@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-06-23T13:27:42.656105",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "agint_soul_of_mindx",
+  "content": {
+    "process_name": "agint_action",
+    "data": {
+      "success": true,
+      "result": {
+        "message": "Successfully waited for 30s."
+      },
+      "type": "COOLDOWN"
+    }
+  },
+  "context": {
+    "agent_id": "agint_soul_of_mindx"
+  },
+  "tags": [
+    "agint_action",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "8a8288d0a1bf7a4a"
+}

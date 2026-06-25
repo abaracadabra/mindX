@@ -45,6 +45,47 @@ OPENROUTER_REFERER = "https://mindx.pythai.net"
 OPENROUTER_TITLE = "mindX"
 
 
+async def refresh_openrouter_roster(seed_slugs: Optional[list] = None) -> Dict[str, Any]:
+    """Fetch the live OpenRouter model roster and reconcile model_health.
+
+    The OpenRouter free roster churns constantly — models are decommissioned
+    without notice (7 of 8 of mindX's board models were 404 on 2026-06-24). This
+    fetches /models, derives the live ``:free`` set, seeds any config slugs so
+    they can be judged, and marks configured-but-absent slugs dead (revives ones
+    that reappear). Selection then never routes to a model that no longer exists.
+
+    Fail-open: any error returns an empty reconcile result and changes nothing.
+    Call periodically (dream cycle / startup) — it is cheap and idempotent.
+    """
+    result: Dict[str, Any] = {"retired": [], "revived": [], "live_count": 0, "error": None}
+    if not aiohttp:
+        result["error"] = "aiohttp unavailable"
+        return result
+    try:
+        from llm.model_health import ModelHealth
+        mh = ModelHealth.instance()
+        for s in (seed_slugs or []):
+            mh.seed(s, "openrouter")
+        async with aiohttp.ClientSession(json_serialize=json.dumps) as session:
+            async with session.get(f"{OPENROUTER_BASE_URL}/models",
+                                   timeout=aiohttp.ClientTimeout(total=20)) as resp:
+                if resp.status != 200:
+                    result["error"] = f"HTTP {resp.status}"
+                    return result
+                data = json.loads(await resp.text())
+        live_free = [m.get("id") for m in (data.get("data") or [])
+                     if isinstance(m.get("id"), str) and m["id"].endswith(":free")]
+        rec = mh.reconcile_roster("", live_free)
+        rec["live_count"] = len(live_free)
+        logger.info(f"OpenRouter roster refresh: {len(live_free)} live :free, "
+                    f"retired={rec.get('retired')}, revived={rec.get('revived')}")
+        return rec
+    except Exception as e:  # pragma: no cover
+        result["error"] = str(e)
+        logger.warning(f"OpenRouter roster refresh failed: {e}")
+        return result
+
+
 class OpenRouterHandler(LLMHandlerInterface):
     """OpenAI-compatible chat completions against OpenRouter."""
 
@@ -160,6 +201,14 @@ class OpenRouterHandler(LLMHandlerInterface):
                                        retry_after=float(_ra) if (_ra and _ra.isdigit()) else None)
                     except Exception:
                         pass
+                    # Per-model health: a 404 / "decommissioned" retires this slug
+                    # so the selector stops routing to it (the dead-roster fix).
+                    try:
+                        from llm.model_health import record as _health_record
+                        _health_record(model, ok=False, http_status=response.status,
+                                       error_text=snippet, latency_ms=latency_ms, provider="openrouter")
+                    except Exception:
+                        pass
                     # 429 / 5xx → return None so caller can cascade to next provider
                     return None
 
@@ -178,6 +227,14 @@ class OpenRouterHandler(LLMHandlerInterface):
                             f"OpenRouterHandler: API error for '{model}': "
                             f"{err.get('code')} {err.get('message')}"
                         )
+                    try:
+                        from llm.model_health import record as _health_record
+                        _emsg = f"{err.get('code')} {err.get('message')}" if err else "no choices"
+                        _ecode = err.get("code") if isinstance(err.get("code"), int) else None
+                        _health_record(model, ok=False, http_status=_ecode, error_text=_emsg,
+                                       latency_ms=latency_ms, provider="openrouter")
+                    except Exception:
+                        pass
                     return None
 
                 msg = (choices[0] or {}).get("message") or {}
@@ -194,10 +251,19 @@ class OpenRouterHandler(LLMHandlerInterface):
                 )
 
                 # Inference budget metabolism: healthy use of the openrouter tier.
+                _tok_total = int(usage.get("prompt_tokens", 0) or 0) + int(usage.get("completion_tokens", 0) or 0)
                 try:
                     from llm.inference_budget import record as _budget_record
-                    _budget_record("openrouter", ok=True,
-                                   tokens=int(usage.get("prompt_tokens", 0) or 0) + int(usage.get("completion_tokens", 0) or 0))
+                    _budget_record("openrouter", ok=True, tokens=_tok_total)
+                except Exception:
+                    pass
+                # Per-model health: a usable answer keeps (or revives) the slug.
+                try:
+                    from llm.model_health import record as _health_record
+                    _health_record(model, ok=bool(content), http_status=200,
+                                   error_text=None if content else "empty content",
+                                   tokens=_tok_total, latency_ms=latency_ms,
+                                   provider=f"openrouter/{actual_provider}")
                 except Exception:
                     pass
 

@@ -38,14 +38,17 @@ except Exception:  # pragma: no cover - standalone fallback
 
 # ── cypherpunk2048 palette ─────────────────────────────────────────────
 PALETTE = {
-    "ground": (10, 10, 18),      # #0a0a12 near-black
-    "ground2": (16, 18, 28),     # subtle panel
+    "ground": (8, 9, 14),        # #08090e deeper near-black (more contrast)
+    "ground2": (18, 20, 32),     # subtle panel
+    "ground3": (26, 30, 46),     # raised panel / brand bar
     "gold": (212, 175, 55),      # #d4af37 authority
+    "gold_bright": (240, 208, 110),  # specular highlight on the mark
     "gold_dim": (120, 99, 34),
     "blue": (64, 120, 200),      # mystical secondary
+    "blue_dim": (40, 70, 120),
     "green": (54, 150, 110),     # growth/training
-    "ink": (228, 228, 236),      # near-white text
-    "muted": (150, 152, 168),
+    "ink": (232, 233, 240),      # near-white text
+    "muted": (158, 160, 178),
 }
 
 _FONT_CANDIDATES = [
@@ -384,12 +387,21 @@ class ArtistAgent:
     def _build_prompt(self, *, title: str, subtitle: str, topic: str,
                       width: int = POSTER_W, height: int = POSTER_H) -> str:
         return (
-            f"Cypherpunk2048 editorial illustration for an article titled "
-            f"\"{title}\". Theme: {topic}. Deep near-black background, gold "
-            f"(#d4af37) angular circuitry and a luminous geometric 'M' sigil, "
-            f"mystical blue and green accents, symbolic and high-contrast, "
-            f"vector/illustrated (not photographic), suitable as a {width}x{height} "
-            f"image. {subtitle}".strip()
+            f"Corporate cypherpunk2048 brand poster for an article titled "
+            f"\"{title}\". Theme: {topic}. A premium, editorial tech-brand "
+            f"identity — NOT busy fan art. Deep near-black ground with a soft "
+            f"diagonal gold spotlight and a subtle radial vignette for depth. "
+            f"Centerpiece: a polished gold (#d4af37) hexagonal logomark housing a "
+            f"luminous geometric 'M' sigil with a fine specular highlight, set on "
+            f"an orderly Manhattan-routed circuit lattice (right-angle gold traces, "
+            f"glowing nodes), restrained mystical blue and green accents. Strong "
+            f"typographic hierarchy: a letter-spaced uppercase eyebrow label, a "
+            f"bold near-white headline, a muted subtitle, and a corporate brand bar "
+            f"along the bottom with the 'mindX' wordmark (gold X) and "
+            f"'rage.pythai.net · cypherpunk2048'. Clean grid, generous negative "
+            f"space, high contrast, flat vector/illustrated (not photographic), "
+            f"corner bracket frame. Suitable as a {width}x{height} image. "
+            f"{subtitle}".strip()
         )
 
     @staticmethod
@@ -424,7 +436,7 @@ class ArtistAgent:
     def _render_programmatic(self, *, title: str, subtitle: str, topic: str,
                              width: int, height: int, wordmark: str,
                              ts: Optional[int] = None) -> Path:
-        from PIL import Image, ImageDraw
+        from PIL import Image, ImageDraw, ImageFilter
 
         seed = int(hashlib.sha256(f"{title}|{topic}".encode("utf-8")).hexdigest(), 16)
         rnd = _SeededRandom(seed)
@@ -437,67 +449,100 @@ class ArtistAgent:
         img = Image.new("RGB", (width, height), PALETTE["ground"])
         d = ImageDraw.Draw(img, "RGBA")
 
-        # 1) Subtle vertical gradient panel.
+        # 1) Ground: vertical gradient + a diagonal gold "beam" duotone wash for
+        #    depth, then a radial vignette darkening the edges to focus the mark.
         for y in range(height):
             t = y / max(1, height - 1)
             r = int(PALETTE["ground"][0] + (PALETTE["ground2"][0] - PALETTE["ground"][0]) * t)
             g = int(PALETTE["ground"][1] + (PALETTE["ground2"][1] - PALETTE["ground"][1]) * t)
             b = int(PALETTE["ground"][2] + (PALETTE["ground2"][2] - PALETTE["ground"][2]) * t)
             d.line([(0, y), (width, y)], fill=(r, g, b))
+        self._beam_wash(img, width, height)
+        self._vignette(img, width, height)
+        self._scanlines(img, width, height, k)   # subtle printed/CRT texture
+        d = ImageDraw.Draw(img, "RGBA")  # re-bind after composite
 
-        # 2) Faint circuit grid + nodes (the "mesh of peers").
-        step = max(8, int(60 * k))
+        # 2) Engineering grid + Manhattan-routed circuitry (orderly, corporate
+        #    tech — right-angle traces, not a random web), nodes with halos.
+        step = max(8, int(64 * k))
         for x in range(0, width, step):
-            d.line([(x, 0), (x, height)], fill=(*PALETTE["gold_dim"], 22))
+            d.line([(x, 0), (x, height)], fill=(*PALETTE["gold_dim"], 16))
         for y in range(0, height, step):
-            d.line([(0, y), (width, y)], fill=(*PALETTE["gold_dim"], 22))
-        pad = int(40 * k)
+            d.line([(0, y), (width, y)], fill=(*PALETTE["gold_dim"], 16))
+        pad = int(44 * k)
         nodes: List[Tuple[int, int]] = []
-        for _ in range(rnd.randint(14, 22)):
+        for _ in range(rnd.randint(16, 24)):
             nx = rnd.randint(pad, max(pad + 1, width - pad))
             ny = rnd.randint(pad, max(pad + 1, height - pad))
             nodes.append((nx, ny))
-        trace_w = max(1, int(1 * k))
+        trace_w = max(1, int(1.4 * k))
         for i in range(len(nodes)):
             for j in range(i + 1, len(nodes)):
-                if rnd.random() < 0.10:
-                    col = PALETTE["blue"] if rnd.random() < 0.3 else PALETTE["gold"]
-                    d.line([nodes[i], nodes[j]], fill=(*col, 70), width=trace_w)
+                if rnd.random() < 0.085:
+                    col = PALETTE["blue"] if rnd.random() < 0.35 else PALETTE["gold"]
+                    self._route_manhattan(d, nodes[i], nodes[j], col, trace_w, rnd)
         for (nx, ny) in nodes:
-            rad = max(1, int(rnd.randint(2, 5) * k))
-            d.ellipse([nx - rad, ny - rad, nx + rad, ny + rad], fill=(*PALETTE["gold"], 200))
+            rad = max(1, int(rnd.randint(2, 4) * k))
+            d.ellipse([nx - rad * 3, ny - rad * 3, nx + rad * 3, ny + rad * 3],
+                      fill=(*PALETTE["gold"], 26))  # halo
+            d.ellipse([nx - rad, ny - rad, nx + rad, ny + rad], fill=(*PALETTE["gold"], 210))
 
-        # 3) Central luminous "M" sigil (mindX), gold angular strokes.
-        cx, cy = width // 2, int(height * 0.42)
-        s = int(height * 0.22)
-        lw = max(2, int(s / 14))
-        pts_left = [(cx - s, cy + s), (cx - s, cy - s), (cx, cy), (cx + s, cy - s), (cx + s, cy + s)]
-        for a, b in zip(pts_left, pts_left[1:]):
-            d.line([a, b], fill=(*PALETTE["gold"], 255), width=lw)
-        for (px, py) in pts_left:
-            d.ellipse([px - lw, py - lw, px + lw, py + lw], fill=(*PALETTE["gold"], 90))
-        d.line([(cx - s, cy + s + int(18 * k)), (cx + s, cy + s + int(18 * k))],
-               fill=(*PALETTE["green"], 200), width=max(2, int(4 * k)))
+        # 3) Brand emblem: a gold hexagon housing a refined, glowing "M" sigil —
+        #    a corporate logomark rather than a bare polyline.
+        cx, cy = width // 2, int(height * 0.35)
+        self._emblem(img, d, cx, cy, int(height * 0.165), k)
 
-        # 4) Text: wordmark, title, subtitle, footer — scale-aware + auto-fit.
+        # 3b) Top masthead rail — a tiny wordmark + topic chip on a hairline,
+        #     framing the poster like a publication masthead.
         if draw_text:
-            max_w = int(width * 0.90)
-            f_mark = self._fit_font(d, wordmark, max_w, int(72 * k), max(14, int(28 * k)))
-            f_title = self._fit_font(d, title, max_w, int(40 * k), max(12, int(16 * k)))
-            f_sub = self._fit_font(d, subtitle or " ", max_w, int(26 * k), max(10, int(13 * k)))
-            foot_text = "rage.pythai.net · cypherpunk2048 · a picture is worth a thousand words"
-            f_foot = self._fit_font(d, foot_text, max_w, int(20 * k), max(9, int(11 * k)))
-            self._centered(d, wordmark, f_mark, width, int(height * 0.70), PALETTE["ink"])
-            self._centered(d, title, f_title, width, int(height * 0.79), PALETTE["gold"])
-            if subtitle:
-                self._centered(d, subtitle, f_sub, width, int(height * 0.86), PALETTE["muted"])
-            self._centered(d, foot_text, f_foot, width, int(height * 0.93), PALETTE["gold_dim"])
+            self._masthead(d, width, height, wordmark, topic, k)
 
-        # 5) Corner ticks (frame).
+        # 4) Type system: badge kicker → title (wrapped, shadowed) → subtitle,
+        #    all on a centered baseline grid. Corporate brand bar pinned bottom.
+        if draw_text:
+            max_w = int(width * 0.84)
+            kicker = (topic or "mindX").upper()
+            f_kick = self._fit_font(d, kicker, max_w, int(20 * k), max(9, int(12 * k)))
+            ky = int(height * 0.605)
+            # Badge kicker: tracked label flanked by two short gold rules.
+            self._tracked(d, kicker, f_kick, width, ky, PALETTE["gold"], int(4 * k))
+            kw = self._tracked_w(d, kicker, f_kick, int(4 * k))
+            kc = ky + self._line_h(d, f_kick) // 3
+            seg = int(46 * k)
+            gap = int(18 * k)
+            lx0 = (width - kw) // 2 - gap - seg
+            d.line([(lx0, kc), (lx0 + seg, kc)], fill=(*PALETTE["gold"], 210), width=max(1, int(1.5 * k)))
+            rx0 = (width + kw) // 2 + gap
+            d.line([(rx0, kc), (rx0 + seg, kc)], fill=(*PALETTE["gold"], 210), width=max(1, int(1.5 * k)))
+
+            f_title = self._fit_font(d, title, max_w, int(46 * k), max(12, int(18 * k)))
+            lines = self._wrap(d, title, f_title, max_w)[:3]
+            lh = self._line_h(d, f_title)
+            ty = int(height * 0.66)
+            sh = max(1, int(2 * k))
+            for ln in lines:
+                # Drop shadow for depth + legibility over the lattice.
+                tw = self._text_w(d, ln, f_title)
+                d.text(((width - tw) // 2 + sh, ty + sh), ln, font=f_title, fill=(0, 0, 0, 150))
+                self._centered(d, ln, f_title, width, ty, PALETTE["ink"])
+                ty += lh
+            if subtitle:
+                f_sub = self._fit_font(d, subtitle, max_w, int(24 * k), max(10, int(12 * k)))
+                sub_lines = self._wrap(d, subtitle, f_sub, max_w)[:2]
+                slh = self._line_h(d, f_sub)
+                ty += int(8 * k)
+                for ln in sub_lines:
+                    self._centered(d, ln, f_sub, width, ty, PALETTE["muted"])
+                    ty += slh
+
+            # Corporate brand bar (bottom): solid band, wordmark left, URL right.
+            self._brand_bar(d, width, height, wordmark, k)
+
+        # 5) Bracket frame (refined corner brackets).
         if draw_frame:
-            m = int(24 * k)
-            tick = int(40 * k)
-            fw = max(1, int(2 * k))
+            m = int(26 * k)
+            tick = int(46 * k)
+            fw = max(1, int(2.2 * k))
             for (x0, y0, x1, y1) in [
                 (m, m, m + tick, m), (m, m, m, m + tick),
                 (width - m - tick, m, width - m, m), (width - m, m, width - m, m + tick),
@@ -505,7 +550,7 @@ class ArtistAgent:
                 (width - m - tick, height - m, width - m, height - m),
                 (width - m, height - m - tick, width - m, height - m),
             ]:
-                d.line([(x0, y0), (x1, y1)], fill=(*PALETTE["gold"], 180), width=fw)
+                d.line([(x0, y0), (x1, y1)], fill=(*PALETTE["gold"], 190), width=fw)
 
         stamp = int(ts) if ts is not None else int(time.time())
         stem = hashlib.sha256(f"{title}|{topic}|{width}x{height}|{stamp}".encode()).hexdigest()[:12]
@@ -538,6 +583,204 @@ class ArtistAgent:
     def _centered(cls, d, text: str, font, width: int, y: int, color) -> None:
         tw = cls._text_w(d, text, font)
         d.text(((width - tw) // 2, y), text, font=font, fill=color)
+
+    # ── brand-system drawing helpers (corporate cypherpunk2048) ─────
+    @staticmethod
+    def _beam_wash(img, width: int, height: int) -> None:
+        """Composite a soft diagonal gold beam from the upper-left for depth —
+        a corporate 'spotlight on the mark' wash. Cheap: a blurred polygon."""
+        try:
+            from PIL import Image, ImageDraw, ImageFilter
+            layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+            ld = ImageDraw.Draw(layer)
+            ld.polygon(
+                [(0, 0), (int(width * 0.62), 0), (int(width * 0.18), height), (0, height)],
+                fill=(*PALETTE["gold"], 20),
+            )
+            layer = layer.filter(ImageFilter.GaussianBlur(max(8, min(width, height) // 12)))
+            img.paste(Image.alpha_composite(img.convert("RGBA"), layer).convert("RGB"), (0, 0))
+        except Exception:
+            pass
+
+    @staticmethod
+    def _scanlines(img, width: int, height: int, k: float) -> None:
+        """Very subtle horizontal scanlines — a printed/CRT cypherpunk texture
+        that adds tactility without distracting from the mark."""
+        try:
+            from PIL import Image, ImageDraw
+            layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+            ld = ImageDraw.Draw(layer)
+            step = max(3, int(4 * k))
+            for y in range(0, height, step):
+                ld.line([(0, y), (width, y)], fill=(0, 0, 0, 26))
+            img.paste(Image.alpha_composite(img.convert("RGBA"), layer).convert("RGB"), (0, 0))
+        except Exception:
+            pass
+
+    def _masthead(self, d, width: int, height: int, wordmark: str, topic: str, k: float) -> None:
+        """A publication masthead rail near the top: small wordmark on the left,
+        a topic chip on the right, a hairline rule between."""
+        try:
+            m = int(40 * k)
+            y = int(36 * k)
+            f = _load_font(max(9, int(13 * k)))
+            head, tail = (wordmark[:-1], wordmark[-1]) if wordmark else ("mind", "X")
+            d.text((m, y), head, font=f, fill=PALETTE["muted"])
+            hx = m + self._text_w(d, head, f)
+            d.text((hx, y), tail, font=f, fill=PALETTE["gold"])
+            chip = (topic or "dispatch").upper()
+            cw = self._tracked_w(d, chip, f, int(3 * k))
+            self._tracked(d, chip, f, 2 * (width - m) - cw, y, PALETTE["gold_dim"], int(3 * k))
+            ry = y + int(22 * k)
+            d.line([(m, ry), (width - m, ry)], fill=(*PALETTE["gold_dim"], 90), width=max(1, int(1 * k)))
+        except Exception:
+            pass
+
+    @staticmethod
+    def _vignette(img, width: int, height: int) -> None:
+        """Darken the edges (radial vignette) to focus the centre — depth + a
+        premium, less-flat ground."""
+        try:
+            from PIL import Image, ImageDraw, ImageFilter
+            mask = Image.new("L", (width, height), 0)
+            md = ImageDraw.Draw(mask)
+            inset = int(min(width, height) * 0.10)
+            md.ellipse([-inset, -inset, width + inset, height + inset], fill=255)
+            mask = mask.filter(ImageFilter.GaussianBlur(max(12, min(width, height) // 8)))
+            dark = Image.new("RGB", (width, height), PALETTE["ground"])
+            base = img.copy()
+            img.paste(Image.composite(base, dark, mask), (0, 0))
+        except Exception:
+            pass
+
+    @staticmethod
+    def _route_manhattan(d, a, b, color, w: int, rnd) -> None:
+        """Right-angle (Manhattan) trace between two nodes — the orderly
+        circuit-routing look, with a small node pad at the bend."""
+        ax, ay = a
+        bx, by = b
+        if rnd.random() < 0.5:
+            mid = (bx, ay)
+        else:
+            mid = (ax, by)
+        d.line([a, mid], fill=(*color, 64), width=w)
+        d.line([mid, b], fill=(*color, 64), width=w)
+        r = max(1, w)
+        d.ellipse([mid[0] - r, mid[1] - r, mid[0] + r, mid[1] + r], fill=(*color, 110))
+
+    def _emblem(self, img, d, cx: int, cy: int, s: int, k: float) -> None:
+        """Gold hexagon shield housing a glowing 'M' sigil — the mindX logomark."""
+        from PIL import Image, ImageDraw, ImageFilter
+        # Hexagon (flat-top) vertices.
+        hexr = int(s * 1.18)
+        hexpts = []
+        for i in range(6):
+            ang = math.radians(60 * i - 30)
+            hexpts.append((cx + int(hexr * math.cos(ang)), cy + int(hexr * math.sin(ang))))
+        # Accent bloom — a soft radial glow behind the mark, for focus + depth.
+        try:
+            bloom = Image.new("RGBA", img.size, (0, 0, 0, 0))
+            bd = ImageDraw.Draw(bloom)
+            br = int(hexr * 1.9)
+            bd.ellipse([cx - br, cy - br, cx + br, cy + br], fill=(*PALETTE["gold"], 30))
+            bloom = bloom.filter(ImageFilter.GaussianBlur(max(6, int(hexr * 0.6))))
+            img.paste(Image.alpha_composite(img.convert("RGBA"), bloom).convert("RGB"), (0, 0))
+            d = ImageDraw.Draw(img, "RGBA")
+        except Exception:
+            pass
+        # Outer ring — a thin concentric hexagon framing the shield.
+        outer = []
+        ohexr = int(hexr * 1.16)
+        for i in range(6):
+            ang = math.radians(60 * i - 30)
+            outer.append((cx + int(ohexr * math.cos(ang)), cy + int(ohexr * math.sin(ang))))
+        d.polygon(outer, outline=(*PALETTE["gold_dim"], 200))
+        # Glow pass (blurred emblem strokes) for luminosity.
+        glow = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        gd = ImageDraw.Draw(glow)
+        gd.polygon(hexpts, outline=(*PALETTE["gold"], 150))
+        gw = max(2, int(s / 12))
+        mpts = [(cx - s, cy + s), (cx - s, cy - s), (cx, cy + int(s * 0.18)),
+                (cx + s, cy - s), (cx + s, cy + s)]
+        for p, q in zip(mpts, mpts[1:]):
+            gd.line([p, q], fill=(*PALETTE["gold_bright"], 220), width=gw)
+        glow = glow.filter(ImageFilter.GaussianBlur(max(3, int(6 * k))))
+        img.paste(Image.alpha_composite(img.convert("RGBA"), glow).convert("RGB"), (0, 0))
+        d = ImageDraw.Draw(img, "RGBA")
+        # Inner panel fill for the shield (subtle raised surface).
+        d.polygon(hexpts, fill=(*PALETTE["ground3"], 130), outline=(*PALETTE["gold_dim"], 220))
+        d.polygon(hexpts, outline=(*PALETTE["gold"], 230))
+        # Crisp M on top of the glow.
+        for p, q in zip(mpts, mpts[1:]):
+            d.line([p, q], fill=(*PALETTE["gold"], 255), width=gw)
+        for (px, py) in mpts:
+            d.ellipse([px - gw, py - gw, px + gw, py + gw], fill=(*PALETTE["gold_bright"], 150))
+        # Baseline accent (the 'X'/ground line under the mark).
+        d.line([(cx - s, cy + s + int(16 * k)), (cx + s, cy + s + int(16 * k))],
+               fill=(*PALETTE["green"], 210), width=max(2, int(4 * k)))
+
+    def _brand_bar(self, d, width: int, height: int, wordmark: str, k: float) -> None:
+        """Corporate footer band: a raised bar with the wordmark (logotype, gold
+        'X') on the left and the rage.pythai.net / cypherpunk2048 lockup right."""
+        bar_h = int(58 * k)
+        y0 = height - bar_h
+        d.rectangle([0, y0, width, height], fill=(*PALETTE["ground3"], 235))
+        d.line([(0, y0), (width, y0)], fill=(*PALETTE["gold"], 200), width=max(1, int(2 * k)))
+        pad = int(36 * k)
+        ty = y0 + (bar_h - int(26 * k)) // 2
+        # Wordmark logotype: split so the trailing 'X' renders in gold.
+        f_mark = _load_font(max(12, int(26 * k)))
+        head, tail = (wordmark[:-1], wordmark[-1]) if wordmark else ("mind", "X")
+        d.text((pad, ty), head, font=f_mark, fill=PALETTE["ink"])
+        hx = pad + self._text_w(d, head, f_mark)
+        d.text((hx, ty), tail, font=f_mark, fill=PALETTE["gold"])
+        # Right lockup.
+        right = "rage.pythai.net · cypherpunk2048"
+        f_r = _load_font(max(9, int(14 * k)))
+        rw = self._text_w(d, right, f_r)
+        d.text((width - pad - rw, y0 + (bar_h - int(14 * k)) // 2), right,
+               font=f_r, fill=PALETTE["muted"])
+
+    @classmethod
+    def _tracked(cls, d, text: str, font, width: int, y: int, color, tracking: int) -> None:
+        """Draw letter-spaced (tracked) text centered — the eyebrow/kicker look."""
+        total = cls._tracked_w(d, text, font, tracking)
+        x = (width - total) // 2
+        for ch in text:
+            d.text((x, y), ch, font=font, fill=color)
+            x += cls._text_w(d, ch, font) + tracking
+
+    @classmethod
+    def _tracked_w(cls, d, text: str, font, tracking: int) -> int:
+        if not text:
+            return 0
+        return sum(cls._text_w(d, ch, font) + tracking for ch in text) - tracking
+
+    @classmethod
+    def _line_h(cls, d, font) -> int:
+        try:
+            bbox = d.textbbox((0, 0), "Ag", font=font)
+            return int((bbox[3] - bbox[1]) * 1.32)
+        except Exception:
+            return 18
+
+    @classmethod
+    def _wrap(cls, d, text: str, font, max_w: int) -> List[str]:
+        """Greedy word-wrap to ``max_w`` pixels."""
+        words = (text or "").split()
+        if not words:
+            return []
+        lines: List[str] = []
+        cur = words[0]
+        for w in words[1:]:
+            trial = cur + " " + w
+            if cls._text_w(d, trial, font) <= max_w:
+                cur = trial
+            else:
+                lines.append(cur)
+                cur = w
+        lines.append(cur)
+        return lines
 
 
 def _load_font(size: int):

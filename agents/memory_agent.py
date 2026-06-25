@@ -64,22 +64,37 @@ class _EvalHealth:
 
     def __init__(self, window: int = 200) -> None:
         self.window = window
-        self.scores: list[float] = []
+        self.scores: list[float] = []          # ACTUAL (LLM-judged) scores ONLY — the eval-from-actual mean
+        self.heuristic_scores: list[float] = []  # deferred-proxy scores — NEVER counted as actual eval
         self.misses = 0
-        self.hits = 0
+        self.hits = 0                          # actual LLM-judged evals only
+        self.heuristic_hits = 0                # proxy fallbacks (CPU-throttled / judge unreachable)
         self.last_score_ts: Optional[float] = None
         self.last_miss_ts: Optional[float] = None
+        self.last_heuristic_ts: Optional[float] = None
 
-    def record_score(self, score: float) -> None:
+    def record_score(self, score: float, model: Optional[str] = None) -> None:
+        """Record an eval result. A 'heuristic' (proxy) score is tracked on a
+        SEPARATE track and never enters the actual-eval mean or hit count — the
+        eval-from-actual number must reflect real judgments, not jump because a
+        cheap fallback padded it (operator doctrine: eval from actual)."""
         import time as _t
         try:
-            self.scores.append(float(score))
-            if len(self.scores) > self.window:
-                self.scores = self.scores[-self.window:]
-            self.hits += 1
-            self.last_score_ts = _t.time()
+            s = float(score)
         except (TypeError, ValueError):
-            pass
+            return
+        if model == "heuristic":
+            self.heuristic_scores.append(s)
+            if len(self.heuristic_scores) > self.window:
+                self.heuristic_scores = self.heuristic_scores[-self.window:]
+            self.heuristic_hits += 1
+            self.last_heuristic_ts = _t.time()
+            return
+        self.scores.append(s)
+        if len(self.scores) > self.window:
+            self.scores = self.scores[-self.window:]
+        self.hits += 1
+        self.last_score_ts = _t.time()
 
     def record_miss(self) -> None:
         import time as _t
@@ -88,19 +103,27 @@ class _EvalHealth:
 
     def snapshot(self) -> Dict[str, Any]:
         n = len(self.scores)
-        mean = sum(self.scores) / n if n else None
+        mean = sum(self.scores) / n if n else None  # FROM ACTUAL (LLM) judgments only
+        hn = len(self.heuristic_scores)
+        heuristic_mean = sum(self.heuristic_scores) / hn if hn else None
+        # attempts/rate are over ACTUAL eval opportunities (LLM hits + misses).
+        # Heuristic proxies are reported alongside, never folded in.
         attempts = self.hits + self.misses
         success_rate = (self.hits / attempts) if attempts else None
         return {
             "gate_open": _eval_godel_gate_open(),
             "window": self.window,
             "hits": self.hits,
+            "llm_hits": self.hits,
+            "heuristic_hits": self.heuristic_hits,
+            "heuristic_mean": heuristic_mean,
             "misses": self.misses,
             "attempts": attempts,
             "success_rate": success_rate,
             "scores_in_window": n,
             "mean_score": mean,
             "last_score_ts": self.last_score_ts,
+            "last_heuristic_ts": self.last_heuristic_ts,
             "last_miss_ts": self.last_miss_ts,
         }
 
@@ -808,7 +831,7 @@ class MemoryAgent:
                     record["eval_score"] = eval_result["score"]
                     record["eval_reason"] = eval_result["reason"]
                     record["eval_model"] = eval_result["model"]
-                    _eval_health.record_score(eval_result["score"])
+                    _eval_health.record_score(eval_result["score"], eval_result.get("model"))
                 else:
                     _eval_health.record_miss()
 
@@ -866,20 +889,24 @@ class MemoryAgent:
             from agents.eval import GEval, LLMTestCase, SingleTurnParams
         except Exception as exc:
             logger.warning("eval module import failed: %s", exc)
-            return None
+            return self._heuristic_godel_score(record)
 
         # Share the processor: the GEval judge falls back to local CPU inference
         # under cloud exhaustion, which thrashes a busy box (40s+ model loads). Skip
-        # this best-effort eval when CPU is over the autonomous ceiling — the choice
-        # is still logged without a score, and the eval runs at a lower-load moment.
+        # the EXPENSIVE LLM judge when CPU is over the autonomous ceiling — but
+        # still record a cheap DETERMINISTIC score so the eval surface is never
+        # empty. Previously this returned None on a hot box, and prod stayed
+        # pegged at 100% CPU, so scanned=468/scored=0 forever (alignment never
+        # measured). A heuristic score keeps the gate honest under load; the LLM
+        # judge upgrades it at a lower-load moment.
         try:
             from agents.resource_governor import ResourceGovernor
             _gov = await ResourceGovernor.get_instance()
             if _gov.should_throttle():
-                logger.debug("Gödel choice eval deferred — CPU over ceiling")
-                return None
+                logger.debug("Gödel choice eval: LLM judge deferred (CPU over ceiling) — heuristic score")
+                return self._heuristic_godel_score(record)
         except Exception:
-            pass  # fail-open: governor unavailable → run the eval
+            pass  # fail-open: governor unavailable → run the LLM judge
 
         try:
             problem = (
@@ -939,11 +966,53 @@ class MemoryAgent:
                 "model": metric.evaluation_model,
             }
         except asyncio.TimeoutError:
-            logger.warning("Gödel choice eval timed out after %.0fs", timeout)
-            return None
+            logger.warning("Gödel choice eval timed out after %.0fs — heuristic score", timeout)
+            return self._heuristic_godel_score(record)
         except Exception as exc:
-            logger.warning("Gödel choice eval failed: %s", exc)
-            return None
+            logger.warning("Gödel choice eval failed: %s — heuristic score", exc)
+            return self._heuristic_godel_score(record)
+
+    @staticmethod
+    def _heuristic_godel_score(record: Dict[str, Any]) -> Dict[str, Any]:
+        """Cheap, deterministic, LLM-free coherence proxy for a Gödel choice.
+
+        Used when the LLM judge can't run (CPU throttled / unreachable / timeout)
+        so the alignment surface is never empty (the scanned>0 / scored=0 bug).
+        Marked model='heuristic' so it is never mistaken for the LLM judge — the
+        eval-health surface can distinguish proxy scores from judged ones.
+
+        Signal (all in [0,1], averaged): the chosen option is grounded in the
+        options considered; a non-trivial rationale exists; the rationale
+        references the choice/problem; no contradiction markers. This is a
+        floor, not a verdict — coherence ≠ correctness (see EVALUATION_AUDIT.md).
+        """
+        try:
+            options = record.get("options_considered") or record.get("options") or []
+            chosen = str(record.get("chosen_option") or record.get("decision") or "").strip()
+            rationale = str(record.get("rationale") or record.get("reasoning") or "").strip()
+
+            def _slug(o: Any) -> str:
+                if isinstance(o, dict):
+                    return str(o.get("slug") or o.get("option") or o.get("name") or o)
+                return str(o)
+            option_slugs = [_slug(o) for o in options] if isinstance(options, list) else []
+
+            grounded = 1.0 if (chosen and any(chosen in s or s in chosen for s in option_slugs)) else (
+                0.5 if not option_slugs else 0.0)
+            has_rationale = min(1.0, len(rationale) / 80.0) if rationale else 0.0
+            references = 1.0 if (rationale and chosen and chosen.split("/")[-1][:20].lower() in rationale.lower()) else 0.5
+            low = rationale.lower()
+            contradiction = 0.0 if any(m in low for m in ("however not", "but cannot", "contradict", "no valid", "error", "failed")) else 1.0
+
+            score = round((grounded + has_rationale + references + contradiction) / 4.0, 4)
+            return {
+                "score": score,
+                "reason": (f"heuristic: grounded={grounded:.1f} rationale={has_rationale:.1f} "
+                           f"refs={references:.1f} consistency={contradiction:.1f}"),
+                "model": "heuristic",
+            }
+        except Exception:
+            return {"score": 0.5, "reason": "heuristic: neutral prior (compute failed)", "model": "heuristic"}
 
     async def log_agint_cycle(self, cycle_id: int, message_type: str, message: str) -> Optional[Path]:
         """

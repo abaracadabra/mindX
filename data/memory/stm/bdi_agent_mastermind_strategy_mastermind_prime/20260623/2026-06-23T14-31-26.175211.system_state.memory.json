@@ -1,0 +1,55 @@
+{
+  "timestamp": "2026-06-23T14:31:26.175211",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_deliberation",
+    "data": {
+      "selected_goal": {
+        "id": "3a98858e",
+        "goal": "Implement the following evolution: Add output validation checks to ensure expected formats and data types [target: validation.output_validator, priority: 8, backlog_idx: 3]",
+        "priority": 1,
+        "status": "pending",
+        "added_at": 1782246371.1769412,
+        "is_primary": true
+      },
+      "full_desire_queue": [
+        {
+          "id": "3a98858e",
+          "goal": "Implement the following evolution: Add output validation checks to ensure expected formats and data types [target: validation.output_validator, priority: 8, backlog_idx: 3]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1782246371.1769412,
+          "is_primary": true
+        },
+        {
+          "id": "fbb01c6e",
+          "goal": "Implement the following evolution: Improve the sentinel target module: clarify docstrings and add type hints, harden add() for edge cases, and bump SENTINEL_VERSION. [target: agents/sentinel/sentinel_target.py, priority: 8, backlog_idx: 10]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1782248326.2092614,
+          "is_primary": true
+        },
+        {
+          "id": "8a7b068e",
+          "goal": "Implement the following evolution: Implement fallback provider selection when primary LLM fails [target: llm.model_registry, priority: 7, backlog_idx: 1]",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1782250286.1729422,
+          "is_primary": true
+        }
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+    "run_id": "7523132a"
+  },
+  "tags": [
+    "bdi_deliberation",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "59e08925c9f2f56b"
+}

@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-06-23T16:09:14.176664",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_goal_set",
+    "data": {
+      "goal": {
+        "id": "eb708aa4",
+        "goal": "Implement the following evolution: Phase 3: Add an 8th 'reasoning_quality' axis to the fitness leaderboard in mindx_backend_service/insight_aggregator.py \u2014 calibrated campaign-verdict scoring via GEval (agents/eval/) [target: evaluation.reasoning_quality_axis, priority: 6, backlog_idx: 8]",
+        "priority": 1,
+        "status": "pending",
+        "added_at": 1782256154.1736236,
+        "is_primary": true
+      }
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime"
+  },
+  "tags": [
+    "bdi_goal_set",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "e1f59b6a053d7927"
+}

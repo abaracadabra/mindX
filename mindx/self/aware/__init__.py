@@ -229,6 +229,30 @@ class Aware:
             if s.latency_p50 == 0.0 and "avg_latency_ms" in m:
                 s.latency_p50 = float(m["avg_latency_ms"])
 
+        # 3b. Per-model interaction health (data=logs=memory) — the ground-truth
+        # signal from every real call to this slug. The godel-choice `outcome`
+        # field stays "pending" (no writeback), so without this the success_rate
+        # above is always 0 and selection never learns. model_health records the
+        # actual handler outcome (ok/404/empty/latency/tokens) directly, so we
+        # prefer it whenever it has observed calls. A dead slug is pinned to 0.
+        try:
+            from llm.model_health import ModelHealth
+            mh = ModelHealth.instance().snapshot().get("models", {}).get(slug)
+            if mh and mh.get("total", 0) > 0:
+                s.sample_size = max(s.sample_size, int(mh["total"]))
+                s.success_rate = float(mh["success_rate"])
+                if mh.get("latency_ms"):
+                    s.latency_p50 = float(mh["latency_ms"])
+                if mh.get("status") == "dead":
+                    s.success_rate = 0.0
+                if mh.get("total"):
+                    rl = int(mh.get("rate_limited", 0))
+                    s.recent_429_rate = rl / mh["total"] if mh["total"] else 0.0
+                if mh.get("last_ok_ts"):
+                    s.last_used_ts = max(s.last_used_ts, float(mh["last_ok_ts"]))
+        except Exception:
+            pass
+
         # 4. Costs — pull from catalogue capabilities (passed in by selector from live OR catalog)
         pricing = catalogue_caps.get("pricing") or {}
         try:

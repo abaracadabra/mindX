@@ -15,7 +15,10 @@
     "priority": 7,
     "occurrences": 2480,
     "first_seen": null,
-    "last_seen": null
+    "last_seen": null,
+    "status": "attempted",
+    "attempted_at": 1782250225.511224,
+    "cooldown_until": 1782336625.511224
   },
   {
     "target_component_path": "validation.input_validator",
@@ -35,7 +38,10 @@
     "priority": 8,
     "occurrences": 1,
     "first_seen": null,
-    "last_seen": null
+    "last_seen": null,
+    "status": "attempted",
+    "attempted_at": 1782246310.8130925,
+    "cooldown_until": 1782332710.8130925
   },
   {
     "target_component_path": "validation.model_input_validator",
@@ -44,7 +50,10 @@
     "priority": 7,
     "occurrences": 1,
     "first_seen": null,
-    "last_seen": null
+    "last_seen": null,
+    "status": "attempted",
+    "attempted_at": 1782252179.513356,
+    "cooldown_until": 1782338579.513356
   },
   {
     "target_component_path": "evaluation.framework",
@@ -55,7 +64,10 @@
     "closed_by": "agents/eval/ Phase 1 \u2014 GEval ported (Apache-2.0 fork) + log_godel_choice scoring",
     "occurrences": 1,
     "first_seen": null,
-    "last_seen": null
+    "last_seen": null,
+    "status": "attempted",
+    "attempted_at": 1782260007.5227184,
+    "cooldown_until": 1782346407.5227184
   },
   {
     "target_component_path": "fine_tuning.lora",
@@ -64,7 +76,10 @@
     "priority": 5,
     "occurrences": 1,
     "first_seen": null,
-    "last_seen": null
+    "last_seen": null,
+    "status": "attempted",
+    "attempted_at": 1782258053.5182495,
+    "cooldown_until": 1782344453.5182495
   },
   {
     "target_component_path": "evaluation.boardroom_confidence",
@@ -73,7 +88,10 @@
     "priority": 6,
     "occurrences": 1,
     "first_seen": null,
-    "last_seen": null
+    "last_seen": null,
+    "status": "attempted",
+    "attempted_at": 1782254139.619949,
+    "cooldown_until": 1782340539.619949
   },
   {
     "target_component_path": "evaluation.reasoning_quality_axis",
@@ -82,7 +100,10 @@
     "priority": 6,
     "occurrences": 1,
     "first_seen": null,
-    "last_seen": null
+    "last_seen": null,
+    "status": "attempted",
+    "attempted_at": 1782256093.492544,
+    "cooldown_until": 1782342493.492544
   },
   {
     "target_component_path": "external_package.llmfit",
@@ -118,5 +139,18 @@
     "occurrences": 1,
     "first_seen": 1781152838.333997,
     "last_seen": 1781152838.333997
+  },
+  {
+    "target_component_path": "agents/sentinel/sentinel_target.py",
+    "suggestion": "Improve the sentinel target module: clarify docstrings and add type hints, harden add() for edge cases, and bump SENTINEL_VERSION.",
+    "justification": "Sentinel: safe end-to-end verification of the autonomous self-improvement loop without touching production code.",
+    "priority": 8,
+    "source": "sentinel",
+    "status": "attempted",
+    "occurrences": 1,
+    "first_seen": 1781982617.6542578,
+    "last_seen": 1781982617.654258,
+    "attempted_at": 1782248265.7170737,
+    "cooldown_until": 1782334665.7170737
   }
 ]

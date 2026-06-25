@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-06-24T16:09:45.377821",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "agint_soul_of_mindx",
+  "content": {
+    "process_name": "agint_perception",
+    "data": {
+      "timestamp": 1782342585.3775232,
+      "llm_status": "Initializing...",
+      "llm_operational": false,
+      "llm_suggestion": "Checking LLM availability"
+    }
+  },
+  "context": {
+    "agent_id": "agint_soul_of_mindx"
+  },
+  "tags": [
+    "agint_perception",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "d4477d8c961d5549"
+}

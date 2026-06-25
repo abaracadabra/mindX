@@ -1,0 +1,61 @@
+{
+  "timestamp": "2026-06-23T13:58:15.721193",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mastermind_prime",
+  "content": {
+    "process_name": "godel_core_choice",
+    "data": {
+      "source_agent": "mastermind_prime",
+      "choice_type": "backlog_directive_selection",
+      "task_class": "improvement",
+      "importance": "standard",
+      "perception": {
+        "backlog_size": 11,
+        "eligible_count": 8,
+        "recent_directive_count": 3
+      },
+      "options_considered": [
+        {
+          "slug": "backlog_0",
+          "priority": 8,
+          "target": "llm.ollama_handler"
+        },
+        {
+          "slug": "backlog_10",
+          "priority": 8,
+          "target": "agents/sentinel/sentinel_target.py"
+        },
+        {
+          "slug": "backlog_1",
+          "priority": 7,
+          "target": "llm.model_registry"
+        },
+        {
+          "slug": "backlog_4",
+          "priority": 7,
+          "target": "validation.model_input_validator"
+        },
+        {
+          "slug": "backlog_7",
+          "priority": 6,
+          "target": "evaluation.boardroom_confidence"
+        }
+      ],
+      "chosen_option": "backlog_10",
+      "rationale": "backlog_idx=10 priority=8 target=agents/sentinel/sentinel_target.py reason: Sentinel: safe end-to-end verification of the autonomous self-improvement loop without touching production code.",
+      "confidence": "standard",
+      "outcome": "pending",
+      "timestamp_utc": "2026-06-23T20:57:45.718221Z"
+    }
+  },
+  "context": {
+    "agent_id": "mastermind_prime"
+  },
+  "tags": [
+    "godel_core_choice",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "b97d030e2dea0d8e"
+}

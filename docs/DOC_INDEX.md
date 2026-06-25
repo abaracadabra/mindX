@@ -2,9 +2,9 @@
 
 > Auto-maintained by [AuthorAgent](AUTHOR_AGENT.md). Regenerated on every recognized milestone (`github.awareness`). Do not edit by hand — changes are overwritten. The curated hub is [NAV.md](NAV.md); this is the exhaustive catalogue, grouped as on [/docs.html](https://mindx.pythai.net/docs.html).
 
-_Last regenerated: 2026-06-14 20:54 UTC · 246 documents in 10 categories._
+_Last regenerated: 2026-06-25 01:15 UTC · 252 documents in 10 categories._
 
-[Core Architecture](#core-architecture) (17) · [Agents](#agents) (46) · [Tools](#tools) (33) · [Governance & DAIO](#governance--daio) (6) · [Memory & Knowledge](#memory--knowledge) (11) · [Deployment & Operations](#deployment--operations) (19) · [API & Integration](#api--integration) (18) · [Philosophy & Vision](#philosophy--vision) (12) · [Tutorials & Guides](#tutorials--guides) (4) · [Other](#other) (80)
+[Core Architecture](#core-architecture) (17) · [Agents](#agents) (46) · [Tools](#tools) (33) · [Governance & DAIO](#governance--daio) (7) · [Memory & Knowledge](#memory--knowledge) (11) · [Deployment & Operations](#deployment--operations) (19) · [API & Integration](#api--integration) (18) · [Philosophy & Vision](#philosophy--vision) (13) · [Tutorials & Guides](#tutorials--guides) (4) · [Other](#other) (84)
 
 ## Core Architecture
 
@@ -49,7 +49,7 @@ _Last regenerated: 2026-06-14 20:54 UTC · 246 documents in 10 categories._
 | [autonomous_audit_coordinator.md](autonomous_audit_coordinator.md) | Autonomous Audit Coordinator | 2026-01-12 |
 | [base_gen_agent_backup.md](base_gen_agent_backup.md) | BaseGenAgent (`base_gen_agent.py`) - Configurable Codebase Documenter | 2026-01-12 |
 | [basegenagent_optimization_assessment.md](basegenagent_optimization_assessment.md) | BaseGenAgent Optimization Assessment for Code Auditing | 2025-09-21 |
-| [BOOK_OF_MINDX.md](BOOK_OF_MINDX.md) | The Book of mindX | 2026-06-13 |
+| [BOOK_OF_MINDX.md](BOOK_OF_MINDX.md) | The Book of mindX | 2026-06-24 |
 | [CEO.md](CEO.md) | What Has Been Built Here? A High-Level Explanation | 2026-01-05 |
 | [CEO_AGENT_BATTLE_HARDENED_GUIDE.md](CEO_AGENT_BATTLE_HARDENED_GUIDE.md) | CEO Agent Battle Hardened Guide | 2026-01-05 |
 | [CEO_AGENT_TEMPLATE.md](CEO_AGENT_TEMPLATE.md) | CEO Agent Template Documentation | 2026-01-05 |
@@ -71,7 +71,7 @@ _Last regenerated: 2026-06-14 20:54 UTC · 246 documents in 10 categories._
 | [mindxfrontend.md](mindxfrontend.md) | MindX Frontend Documentation | 2025-09-21 |
 | [mindXsh.md](mindXsh.md) | mindX.sh - Comprehensive Deployment Script Documentation | 2025-09-21 |
 | [mindXsh_quick_reference.md](mindXsh_quick_reference.md) | mindX.sh Quick Reference Guide | 2026-03-29 |
-| [MINDXTRAIN_INSTALL.md](MINDXTRAIN_INSTALL.md) | mindXtrain Install — CPU (handheld-class) and GPU (MI300X) | 2026-06-13 |
+| [MINDXTRAIN_INSTALL.md](MINDXTRAIN_INSTALL.md) | mindXtrain Install — CPU (handheld-class) and GPU (MI300X) | 2026-06-17 |
 | [multimodel_agent2.md](multimodel_agent2.md) | Multi-Model Agent (MMA) (`multimodel_agent.py`) - Production Candidate Stub v2 | 2026-04-03 |
 | [OPENROUTER_mindX.md](OPENROUTER_mindX.md) | OpenRouter integration manual for mindX | 2026-05-04 |
 | [run_mindx_coordinator.md](run_mindx_coordinator.md) | MindX Coordinator CLI (`run_mindx_coordinator.py`) - Production Candidate | 2025-09-21 |
@@ -125,6 +125,7 @@ _Last regenerated: 2026-06-14 20:54 UTC · 246 documents in 10 categories._
 | [DAIO.md](DAIO.md) | DAIO: Decentralized Autonomous Intelligent Organization - Complete Blockchain Integration  | 2026-05-02 |
 | [DAIO_CIVILIZATION_GOVERNANCE.md](DAIO_CIVILIZATION_GOVERNANCE.md) | DAIO Civilization Governance: The Constitutional Framework for Autonomous Digital Sovereig | 2026-01-11 |
 | [DAIO_DOCUMENTATION_COMPLETION_SUMMARY.md](DAIO_DOCUMENTATION_COMPLETION_SUMMARY.md) | DAIO Documentation Completion Summary | 2026-03-31 |
+| [DOJO_ARBITER.md](DOJO_ARBITER.md) | Dojo Arbiter — the blackbox consensus-arbitration service | 2026-06-24 |
 | [governance-tab.md](governance-tab.md) | Governance Tab: DAIO Constitutional Compliance | 2026-03-29 |
 | [RESOURCE_GOVERNANCE.md](RESOURCE_GOVERNANCE.md) | Resource Governance — How mindX Shares the Processor | 2026-06-13 |
 
@@ -153,7 +154,7 @@ _Last regenerated: 2026-06-14 20:54 UTC · 246 documents in 10 categories._
 | [enhanced_monitoring_system.md](enhanced_monitoring_system.md) | Enhanced Monitoring System | 2025-09-21 |
 | [enhanced_monitoring_update_summary.md](enhanced_monitoring_update_summary.md) | Enhanced Monitoring System - Update Summary | 2025-09-21 |
 | [MILESTONE_RECOGNITION.md](MILESTONE_RECOGNITION.md) | Milestone recognition — mindX recognizes its own achievements | 2026-06-13 |
-| [MILESTONES.md](MILESTONES.md) | MILESTONES — mindX's chronicle of its own evolution | 2026-06-13 |
+| [MILESTONES.md](MILESTONES.md) | MILESTONES — mindX's chronicle of its own evolution | 2026-06-25 |
 | [monitoring_implementation_summary.md](monitoring_implementation_summary.md) | Enhanced Monitoring System Implementation Summary | 2025-09-21 |
 | [monitoring_integration.md](monitoring_integration.md) | Monitoring Integration | 2026-01-12 |
 | [monitoring_rate_control.md](monitoring_rate_control.md) | Monitoring and Rate Control (Both Directions) | 2026-03-29 |
@@ -188,7 +189,7 @@ _Last regenerated: 2026-06-14 20:54 UTC · 246 documents in 10 categories._
 | [ollama_api_integration.md](ollama_api_integration.md) | Ollama API Integration - Official Documentation Compliance | 2026-03-29 |
 | [ollama_integration.md](ollama_integration.md) | Ollama Integration Guide | 2026-03-29 |
 | [OLLAMA_VLLM_CLOUD_RESEARCH.md](OLLAMA_VLLM_CLOUD_RESEARCH.md) | Ollama Cloud & vLLM Research — 2026-04-10 | 2026-04-10 |
-| [VLLM_INTEGRATION.md](VLLM_INTEGRATION.md) | vLLM Integration — mindX Inference Engine | 2026-04-03 |
+| [VLLM_INTEGRATION.md](VLLM_INTEGRATION.md) | vLLM Integration — mindX Inference Engine | 2026-06-20 |
 | [VLLM_OLLAMA_CLOUD.md](VLLM_OLLAMA_CLOUD.md) | vLLM → Ollama Cloud Bridge | 2026-04-12 |
 
 ## Philosophy & Vision
@@ -199,6 +200,7 @@ _Last regenerated: 2026-06-14 20:54 UTC · 246 documents in 10 categories._
 | [autonomous_civilization.md](autonomous_civilization.md) | 📡 Autonomous Digital Civilization | 2026-01-05 |
 | [autonomousROADMAP.md](autonomousROADMAP.md) | mindX (Augmentic Intelligence) - Web3 & Self-Funding Vision | 2025-09-21 |
 | [EVALUATION.md](EVALUATION.md) | Objective Report: mindX Augmentic Intelligence System Evaluation | 2025-09-21 |
+| [EVALUATION_AUDIT.md](EVALUATION_AUDIT.md) | mindX Evaluation Audit | 2026-06-23 |
 | [livingTHESIS.md](livingTHESIS.md) | livingTHESIS | 2026-04-13 |
 | [MANIFESTO.md](MANIFESTO.md) | The MindX Manifesto: A Declaration of Digital Sovereignty | 2026-04-11 |
 | [PRESS.md](PRESS.md) | PRESS | 2025-09-21 |
@@ -250,6 +252,7 @@ _Last regenerated: 2026-06-14 20:54 UTC · 246 documents in 10 categories._
 | [enhanced_simple_coder.md](enhanced_simple_coder.md) | Enhanced Simple Coder Agent | 2026-01-12 |
 | [faicey_integration.md](faicey_integration.md) | Faicey Integration - Modular UI/UX Expression System | 2026-03-29 |
 | [frontend_backend_analysis.md](frontend_backend_analysis.md) | Frontend-Backend Analysis and Updates | 2025-09-21 |
+| [GITMIND.md](GITMIND.md) | gitmind — self-contained git monitor + multi-source backup/rollback | 2026-06-25 |
 | [goal_management.md](goal_management.md) | Goal Management System | 2026-01-13 |
 | [graceful_degradation.md](graceful_degradation.md) | Graceful Degradation Implementation for mindX | 2025-09-21 |
 | [HERMES_INTEGRATION.md](HERMES_INTEGRATION.md) | Hermes Integration — Day-1: SKILL.md procedural memory | 2026-05-19 |
@@ -257,7 +260,7 @@ _Last regenerated: 2026-06-14 20:54 UTC · 246 documents in 10 categories._
 | [HITL.md](HITL.md) | HITL Trigger Points and Rationale | 2025-09-21 |
 | [IDENTITY.md](IDENTITY.md) | Within MastermindAgent's async initialization | 2026-04-03 |
 | [IDENTITY_MANAGEMENT_OVERHAUL_REPORT.md](IDENTITY_MANAGEMENT_OVERHAUL_REPORT.md) | 🔐 mindX Identity Management System Overhaul Report | 2025-09-21 |
-| [IMPROVEMENT_JOURNAL.md](IMPROVEMENT_JOURNAL.md) | mindX Improvement Journal | 2026-06-13 |
+| [IMPROVEMENT_JOURNAL.md](IMPROVEMENT_JOURNAL.md) | mindX Improvement Journal | 2026-06-25 |
 | [index.md](index.md) | mindX Documentation Index | 2026-04-03 |
 | [INDEX.md](INDEX.md) | MindX Documentation Index | 2026-05-19 |
 | [INFT_7857.md](INFT_7857.md) | iNFT-7857 — ERC-7857 Intelligent NFT for mindX × AgenticPlace × BANKON | 2026-04-28 |
@@ -274,12 +277,14 @@ _Last regenerated: 2026-06-14 20:54 UTC · 246 documents in 10 categories._
 | [MARKETING_RECEIPTS.md](MARKETING_RECEIPTS.md) | The three-receipt model — marketinga.agent on-chain provenance | 2026-05-09 |
 | [mindterm_integration.md](mindterm_integration.md) | mindterm v0.0.4 - Complete mindX Integration | 2026-03-29 |
 | [MUSIC4ROBOTS2DANCE2.md](MUSIC4ROBOTS2DANCE2.md) | Music 4 Robots 2 Dance 2 — pro SoundCloud player | 2026-06-13 |
-| [NAV.md](NAV.md) | mindX Documentation | 2026-06-14 |
+| [NAV.md](NAV.md) | mindX Documentation | 2026-06-24 |
 | [operations.md](operations.md) | Agent Hierarchy and Operations | 2025-09-21 |
 | [PACKAGE_ADOPTION.md](PACKAGE_ADOPTION.md) | External Package Adoption — audit → decide → stage | 2026-06-13 |
 | [plan_management.md](plan_management.md) | Plan Management System | 2026-01-13 |
 | [platform-tab.md](platform-tab.md) | Platform Tab: Enterprise SRE Dashboard | 2026-03-29 |
 | [processor.md](processor.md) | Processor Agent | 2026-01-12 |
+| [PUBLISHING_STANDARD.md](PUBLISHING_STANDARD.md) | Publishing Standard — AuthorAgent × editor.agent × artist.agent | 2026-06-16 |
+| [PYTORCH.md](PYTORCH.md) | PyTorch in mindX — usage, contract, and the framework-agnostic summary | 2026-06-17 |
 | [rate_limiting_optimization.md](rate_limiting_optimization.md) | Rate Limiting & Autonomous Interaction Optimizations | 2026-03-29 |
 | [README.md](README.md) | mindX: Autonomous Intelligence Framework | 2026-03-31 |
 | [real_pricing_implementation_summary.md](real_pricing_implementation_summary.md) | Real LLM Pricing Implementation - Complete Summary | 2025-09-21 |
@@ -298,6 +303,7 @@ _Last regenerated: 2026-06-14 20:54 UTC · 246 documents in 10 categories._
 | [user_persistence_manager.md](user_persistence_manager.md) | User Persistence Manager Documentation | 2026-01-12 |
 | [validator.md](validator.md) | Validator Agent | 2026-01-12 |
 | [vault_system.md](vault_system.md) | Vault System Documentation | 2026-04-29 |
+| [WAR_COUNCIL.md](WAR_COUNCIL.md) | The War Council — live-message → decision → blueprint bridge | 2026-06-24 |
 | [workflow-tab.md](workflow-tab.md) | Workflow Tab: Agent Interaction Visualization | 2026-03-29 |
 | [workflow.md](workflow.md) | MindX System Workflow and Architecture | 2025-09-21 |
 | [X402.md](X402.md) | X402 — HTTP 402 micropayments, mindX edition | 2026-05-02 |

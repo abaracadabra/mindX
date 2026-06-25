@@ -360,12 +360,34 @@ class MastermindAgent:
                   f"Assessment: {assessment_text}\n\n"
                   f"Respond ONLY with a JSON object containing a 'recommendations' list.")
         try:
-            response_str = await self.llm_handler.generate_text(
-                prompt, model=getattr(self.llm_handler, "model_name_for_api", None), json_mode=True
-            )
-            if not response_str:
-                return False, "LLM returned empty response during strategy proposal"
-            strategy = json.loads(response_str)
+            from utils.json_extract import extract_json
+            # Free-tier/CPU-throttled models often wrap JSON in prose, fences, or
+            # <think> blocks, or return whitespace — json.loads then raised
+            # "Expecting value: line 1 column 1 (char 0)" and failed every
+            # campaign here. Tolerant-parse with one retry, then degrade to an
+            # empty-but-valid strategy so the campaign continues instead of
+            # dying at the strategy step.
+            strategy = None
+            last_raw = ""
+            for attempt in range(2):
+                last_raw = await self.llm_handler.generate_text(
+                    prompt, model=getattr(self.llm_handler, "model_name_for_api", None), json_mode=True
+                )
+                strategy = extract_json(last_raw)
+                if isinstance(strategy, dict):
+                    break
+            if not isinstance(strategy, dict):
+                self.logger.warning(
+                    "PROPOSE_TOOL_STRATEGY: model returned no parseable JSON after retry "
+                    f"(model={getattr(self.llm_handler, 'model_name_for_api', '?')}, "
+                    f"raw_head={str(last_raw)[:120]!r}); degrading to empty recommendations."
+                )
+                await self.memory_agent.log_process(
+                    process_name="mastermind_strategy_proposal_degraded",
+                    data={"reason": "unparseable_json", "raw_head": str(last_raw)[:200]},
+                    metadata={"agent_id": self.agent_id},
+                )
+                strategy = {"recommendations": [], "_degraded": True}
             await self.belief_system.add_belief("strategy.tool_proposal.latest", strategy)
             
             # Log successful strategy proposal

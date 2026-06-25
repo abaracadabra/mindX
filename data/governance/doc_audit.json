@@ -1,19 +1,19 @@
 {
-  "timestamp": 1781309464.7310107,
-  "total_docs": 246,
+  "timestamp": 1782342564.5896854,
+  "total_docs": 253,
   "archived": 6,
   "deprecated": 1,
   "recently_modified": [
-    "AUTHORAGENT_COMPOSITION",
     "BOOK_OF_MINDX",
     "DOC_INDEX",
+    "DOJO_ARBITER",
+    "EVALUATION_AUDIT",
+    "GITMIND",
     "IMPROVEMENT_JOURNAL",
     "MILESTONES",
-    "MUSIC4ROBOTS2DANCE2",
     "NAV",
-    "PACKAGE_ADOPTION",
-    "SIMPLECODER_SANDBOX_AUDIT",
-    "SPEECH_FROM_THE_THRONE"
+    "VLLM_INTEGRATION",
+    "WAR_COUNCIL"
   ],
   "conflicts": [
     "TECHNICAL: MindXAgent is meta-agent",

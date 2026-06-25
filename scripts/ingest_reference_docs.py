@@ -201,8 +201,13 @@ async def main() -> None:
                 # purge first so a shrunken doc doesn't keep stale tail chunks
                 # (embed_and_store_doc upserts per (doc_name, chunk_idx))
                 await pool.execute("DELETE FROM doc_embeddings WHERE doc_name = $1", doc_name)
+                # bail on the first overflow so the ladder descends after one
+                # failed embed, not after failing every chunk at an oversized
+                # window. Last rung embeds in full (best effort, no bail).
+                is_last = csize == ladder[-1]
                 stored = await embed_and_store_doc(doc_name, text, chunk_size=csize,
-                                                   interactive=args.aggressive)
+                                                   interactive=args.aggressive,
+                                                   bail_on_first_failure=not is_last)
                 if stored > 0 or len(text) < MIN_CHUNKABLE_CHARS:
                     break
                 if attempt < args.retries:

@@ -1,0 +1,31 @@
+{
+  "agent_id": "mastermind_prime",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 16,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Top processes: mastermind_strategy_proposal_start(8), godel_core_choice(8)",
+      "Peak activity hour: 16:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 16
+        },
+        "process_distribution": {
+          "mastermind_strategy_proposal_start": 8,
+          "godel_core_choice": 8
+        },
+        "total_memories": 16,
+        "timestamp": "2026-06-24T05:26:22.593459"
+      }
+    ]
+  },
+  "promoted_at": "2026-06-24T05:26:22.593471",
+  "promotion_criteria": {
+    "pattern_threshold": 3,
+    "days_analyzed": 7
+  }
+}

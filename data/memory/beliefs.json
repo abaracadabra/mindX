@@ -87,7 +87,7 @@
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1776022239.3365555
+    "last_updated": 1782379358.342178
   },
   "identity.map.entity_to_address.smoke_test_entity_1": {
     "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
@@ -274,6 +274,39 @@
     "confidence": 0.8,
     "source": "inference",
     "timestamp": 1781152485.4882739,
-    "last_updated": 1781152838.2529452
+    "last_updated": 1781152485.4882739
+  },
+  "identity.map.entity_to_address.agint_soul_of_mindx": {
+    "value": "0xf8dFc1A088d317a35C191c5822Cd38Bb5B788e23",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1782246210.7787127,
+    "last_updated": 1782246210.7787127
+  },
+  "identity.map.address_to_entity.0xf8dFc1A088d317a35C191c5822Cd38Bb5B788e23": {
+    "value": "agint_soul_of_mindx",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1782246210.978212,
+    "last_updated": 1782246210.978212
+  },
+  "milestone:bug_crushed:batch_0_0c_0h": {
+    "value": {
+      "category": "bug_crushed",
+      "summary": "Closed 0 security alert(s)",
+      "confidence": 0.6,
+      "recognizer": "bug.crushed",
+      "evidence": {
+        "pr_number": null,
+        "alert_count": 0,
+        "severities": {},
+        "is_major": false
+      },
+      "autopublish_status": "none"
+    },
+    "confidence": 0.6,
+    "source": "derived",
+    "timestamp": 1782303847.6415415,
+    "last_updated": 1782303847.6415415
   }
 }

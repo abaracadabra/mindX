@@ -189,6 +189,147 @@ def _read_latest_dream(root: Path) -> Dict[str, Any]:
     }
 
 
+def _read_self_improvement(root: Path) -> Dict[str, Any]:
+    """The GROUND TRUTH of autonomous code self-improvement: the sentinel
+    effector's real applies, measured by version progress in
+    data/system_state/sentinel.json. The campaign-wrapper status undercounts
+    this badly (it rarely reaches terminal SUCCESS even when the effector edits
+    + verifies code), which is why the front page read "0/138, nothing happened"
+    while v187 sat on disk. v1 is the seed; each apply bumps the version."""
+    out = {"version": None, "applies": 0, "healthy": None, "changed_by_loop": None}
+    # The version lives in the sentinel TARGET file's verify() return, not in
+    # sentinel.json — sentinel.status() execs the target in isolation to read it.
+    # The module is stdlib + utils.config only (no agent stack), safe here.
+    try:
+        from agents.sentinel.sentinel import status as _sentinel_status
+        s = _sentinel_status()
+        v = s.get("version")
+        out["version"] = v
+        out["healthy"] = s.get("healthy")
+        out["changed_by_loop"] = s.get("changed_by_loop")
+        if isinstance(v, int):
+            out["applies"] = max(0, v - 1)
+    except Exception:
+        # Fallback: changed_by_loop/healthy from the state file if the import fails.
+        try:
+            st = json.loads((root / "data" / "system_state" / "sentinel.json").read_text(encoding="utf-8")) or {}
+            out["healthy"] = st.get("healthy")
+            out["changed_by_loop"] = st.get("changed_by_loop")
+        except Exception:
+            pass
+    return out
+
+
+def _read_training(root: Path) -> Dict[str, Any]:
+    """The mindXtrain right-apex objective eval: dream→(dojo)→model imprints.
+
+    machine.dream turns mindX's own memory (its logged actions) into training
+    data; mindXtrain/the-dojo train *the mindX model* on it; a positive imprint
+    (proof-of-recall) means the model absorbed the dream corpus — an improvement
+    of mindX's actions learned from memory. This is REAL self-improvement that
+    the code-diff counter cannot see. Source: data/logs/ascend_log.jsonl."""
+    out = {"total": 0, "accepted": 0, "rate": None, "last_delta": None, "last_stage": None}
+    rows = _tail_jsonl(root / "data" / "logs" / "ascend_log.jsonl", 256 * 1024)
+    if not rows:
+        return out
+    recent = rows[-10:]
+    out["total"] = len(recent)
+    out["accepted"] = sum(1 for r in recent if r.get("accepted") or r.get("promoted"))
+    out["rate"] = round(out["accepted"] / len(recent), 3) if recent else None
+    last = recent[-1]
+    out["last_delta"] = last.get("imprint_delta") or last.get("delta")
+    out["last_stage"] = _san(last.get("stage") or last.get("status"), 40)
+    return out
+
+
+def _read_inference_appetite(root: Path) -> Dict[str, Any]:
+    """Daily inference budget + per-model interaction health — the public display
+    of mindX's inference 'appetite' (the operator directive). Shows how little of
+    the free-tier ceiling is consumed and which models are live/dead."""
+    out: Dict[str, Any] = {}
+    try:
+        from llm.inference_budget import daily_budget
+        out["budget"] = daily_budget()
+    except Exception:
+        out["budget"] = {}
+    try:
+        from llm.model_health import snapshot as _mh_snapshot
+        snap = _mh_snapshot()
+        out["models"] = snap.get("summary", {})
+        out["dead_slugs"] = snap.get("dead_slugs", [])[:12]
+    except Exception:
+        out["models"] = {}
+        out["dead_slugs"] = []
+    try:
+        from llm.token_appetite import snapshot as _ta_snapshot
+        out["lifetime"] = _ta_snapshot()  # seeded 347M, monotonic, incl. CPU tokens
+    except Exception:
+        out["lifetime"] = {}
+    return out
+
+
+# The Book of mindX publishes one full-moon edition per ~29.53-day lunar cycle,
+# compiled from 27 daily chapters written across the cycle (AuthorAgent). The
+# schedule eval below is honest cadence-keeping (warts-and-all): is the edition
+# overdue, and how complete is the current cycle's daily coverage.
+_LUNAR_CYCLE_DAYS = 29.53
+_BOOK_GRACE_DAYS = 2.0  # full moon timing drift + compile latency
+
+
+def _read_book_schedule(root: Path) -> Dict[str, Any]:
+    """Eval of the Book-of-mindX publishing schedule. Reads the daily-chapter
+    archive + full-moon editions (docs/publications/) and reports cadence: days
+    since last edition, overdue flag, and current-cycle daily coverage."""
+    out: Dict[str, Any] = {
+        "last_edition_date": None, "days_since_edition": None, "overdue": None,
+        "cycle_days_elapsed": None, "cycle_chapters_written": 0,
+        "cycle_expected": None, "coverage_ratio": None, "verdict": "unknown",
+    }
+    daily_dir = root / "docs" / "publications" / "daily"
+    if not daily_dir.is_dir():
+        return out
+    import re as _re
+    from datetime import datetime as _dt, timezone as _tz
+    _date_re = _re.compile(r"day_(\d{1,2})_.*?(\d{8})\.md$")
+
+    def _parse(p: Path):
+        m = _date_re.search(p.name)
+        if not m:
+            return None
+        try:
+            return int(m.group(1)), _dt.strptime(m.group(2), "%Y%m%d").replace(tzinfo=_tz.utc)
+        except Exception:
+            return None
+
+    parsed = [r for r in (_parse(p) for p in daily_dir.glob("day_*.md")) if r]
+    if not parsed:
+        return out
+    # Full-moon editions are the day-28 compile events.
+    editions = sorted(d for (n, d) in parsed if n >= 28)
+    now = _dt.now(_tz.utc)
+    if editions:
+        last_ed = editions[-1]
+        out["last_edition_date"] = last_ed.strftime("%Y-%m-%d")
+        days_since = (now - last_ed).total_seconds() / 86400.0
+        out["days_since_edition"] = round(days_since, 1)
+        out["overdue"] = days_since > (_LUNAR_CYCLE_DAYS + _BOOK_GRACE_DAYS)
+        # Current cycle = chapters dated after the last edition.
+        cycle_days = list(d for (n, d) in parsed if d > last_ed and n < 28)
+        distinct = {d.strftime("%Y%m%d") for d in cycle_days}
+        out["cycle_chapters_written"] = len(distinct)
+        out["cycle_days_elapsed"] = round(days_since, 1)
+        out["cycle_expected"] = min(27, int(days_since))
+        exp = out["cycle_expected"] or 0
+        out["coverage_ratio"] = round(out["cycle_chapters_written"] / exp, 2) if exp > 0 else None
+    if out["overdue"]:
+        out["verdict"] = "overdue"
+    elif out["coverage_ratio"] is not None and out["coverage_ratio"] < 0.5:
+        out["verdict"] = "behind"
+    elif out["last_edition_date"]:
+        out["verdict"] = "on_track"
+    return out
+
+
 def _read_campaigns(root: Path) -> Dict[str, Any]:
     path = (root / "data" / "memory" / "agent_workspaces" / "mastermind_prime"
             / "mastermind_campaigns_history.json")
@@ -237,8 +378,8 @@ def _read_campaigns(root: Path) -> Dict[str, Any]:
             looped.append({
                 "directive": _san(fp, 100),
                 "count": n,
-                "diagnosis": ("selector fingerprint mismatch + non-terminal BDI status "
-                              "(repaired 2026-06-11; see docs/SYSTEM_REVIEW_2026_06.md)"),
+                "diagnosis": ("repeating (agent, step) — typically a selector/fingerprint "
+                              "mismatch or non-terminal BDI status"),
             })
     return {
         "campaigns_7d": {"total": len(week), **{k: buckets.get(k, 0) for k in
@@ -344,19 +485,91 @@ def _build_verdict(real: Dict[str, Any], cons: Dict[str, Any], ph: Dict[str, Any
         evidence.append(f"{len(real['adoptions'])} external-package adoption decisions")
     sia = (real.get("sia_diffs") or {})
     evidence.append(f"{sia.get('count', 0)} autonomous code diffs recorded")
-    if ph.get("looped_directives"):
-        worst = ph["looped_directives"][0]
-        evidence.append(f"improvement loop pathology: 1 directive repeated {worst['count']}x (repaired 2026-06-11)")
+    looped = ph.get("looped_directives") or []
+    if looped:
+        worst = looped[0]
+        evidence.append(f"improvement loop pathology: {len(looped)} looping directive(s), worst repeated {worst['count']}x")
     if bl:
         evidence.append(f"backlog {bl.get('size')} items / {bl.get('unique')} unique"
                         + (" (dedup live)" if bl.get("dedup_live") else f" (dup_factor {bl.get('dup_factor')}x)"))
     ok = c7.get("succeeded", 0)
-    line = (
-        "mindX genuinely improves its memory (dream consolidation) and publishes; "
-        f"autonomous code self-improvement is not yet real ({sia.get('count', 0)} recorded diffs, "
-        f"{ok} successful campaigns in 7d). The treadmill was three small bugs, now repaired — "
-        "this page is the regression watch."
-    )
+    total = c7.get("total", 0)
+    diffs = sia.get("count", 0)
+    ltm = cons.get("ltm_promotions", 0)
+    pubs = len(real.get("publications") or [])
+    stuck = (ph.get("stuck_loops") or {}).get("count", 0)
+
+    # The GROUND-TRUTH self-improvement signals that the campaign-wrapper and the
+    # code-diff counter both miss (the cause of the "0/138, nothing happened"
+    # stale headline). Real change has THREE channels, not one:
+    #   1. sentinel code self-improvement loop (version applies)
+    #   2. dream → (dojo) → mindXtrain MODEL imprints (the mindX model learning
+    #      from its own memory) — see EVALUATION_AUDIT.md §4
+    #   3. memory consolidation (LTM promotions)
+    si = real.get("self_improvement") or {}
+    train = real.get("training") or {}
+    applies = si.get("applies", 0)
+    si_version = si.get("version")
+    si_healthy = si.get("healthy")
+    imprints_ok = train.get("accepted", 0)
+    imprints_total = train.get("total", 0)
+    if applies:
+        evidence.append(f"sentinel self-improvement: {applies} applies (v{si_version}, "
+                        f"{'healthy' if si_healthy else 'unverified'})")
+    if imprints_total:
+        evidence.append(f"mindXtrain model imprints from dream-training: {imprints_ok}/{imprints_total} took")
+
+    # Compose the verdict live from what is actually true right now — no frozen
+    # narrative or dates, so the line can never read stale. Warts-and-all.
+    # LEAD with the real gains (the honest mirror), not the campaign 0/X.
+    gains = []
+    if applies:
+        gains.append(f"applied {applies} self-improvements (sentinel v{si_version})")
+    if imprints_ok:
+        gains.append(f"imprinted {imprints_ok}/{imprints_total} model trainings from its own dreams")
+    if ltm:
+        gains.append(f"consolidated {ltm} memories to long-term last dream")
+    if pubs:
+        gains.append(f"published {pubs}")
+    lead = "mindX " + (", ".join(gains) if gains else "shows no real gains this window")
+
+    # Campaign rate is process health, NOT the headline — and is qualified so a
+    # known-failing wrapper can't read as "mindX did nothing."
+    health = []
+    if applies and not diffs:
+        health.append(f"code self-improvement via the sentinel effector (v{si_version}); "
+                      f"0 free-form code diffs recorded")
+    elif diffs:
+        health.append(f"autonomous code self-improvement producing ({diffs} recorded diffs)")
+    else:
+        health.append("autonomous code self-improvement not yet real (0 diffs)")
+    if total:
+        health.append(f"campaign wrapper {ok}/{total} in 7d"
+                      + (" — wrapper under-reports; effector applies are the truth" if (applies and not ok) else ""))
+    if looped:
+        health.append(f"{len(looped)} looping directive(s)")
+    if stuck:
+        health.append(f"{stuck} stuck loop(s)")
+    # Book-of-mindX publishing-schedule eval (cadence-keeping, warts-and-all).
+    bk = ph.get("book_schedule") or {}
+    if bk.get("verdict") and bk.get("verdict") != "unknown":
+        if bk.get("verdict") == "overdue":
+            health.append(f"Book edition overdue ({bk.get('days_since_edition')}d since last, cycle ~{_LUNAR_CYCLE_DAYS:.0f}d)")
+        elif bk.get("verdict") == "behind":
+            health.append(f"Book daily chapters behind ({bk.get('cycle_chapters_written')}/{bk.get('cycle_expected')} this cycle)")
+        else:
+            health.append(f"Book on schedule ({bk.get('cycle_chapters_written')}/{bk.get('cycle_expected')} chapters, last edition {bk.get('days_since_edition')}d ago)")
+
+    # Verdict tag from the FULL picture of real change, not campaigns alone.
+    real_change = bool(applies or imprints_ok or diffs)
+    if real_change and ok:
+        tag = "process and real change are aligned"
+    elif real_change:
+        tag = "real change is happening through the effector/training loop even as the campaign wrapper lags"
+    else:
+        tag = "the gap between process and real change is the watch"
+
+    line = f"{lead}; {'; '.join(health)}. {tag}."
     return {"line": line, "evidence": evidence}
 
 
@@ -364,7 +577,8 @@ async def compute_self_diagnostic(root: Optional[Path] = None) -> Dict[str, Any]
     """Assemble the full diagnostic. `root` overrides PROJECT_ROOT for tests."""
     base = Path(root) if root else PROJECT_ROOT
 
-    milestones, catalogue, sia, dream, campaigns, backlog, heartbeat = await asyncio.gather(
+    (milestones, catalogue, sia, dream, campaigns, backlog, heartbeat,
+     self_improvement, training, appetite, book_schedule) = await asyncio.gather(
         asyncio.to_thread(_read_milestones, base),
         asyncio.to_thread(_read_catalogue_kinds, base),
         asyncio.to_thread(_read_sia_diffs, base),
@@ -372,6 +586,10 @@ async def compute_self_diagnostic(root: Optional[Path] = None) -> Dict[str, Any]
         asyncio.to_thread(_read_campaigns, base),
         asyncio.to_thread(_read_backlog, base),
         asyncio.to_thread(_read_heartbeat_sample, base),
+        asyncio.to_thread(_read_self_improvement, base),
+        asyncio.to_thread(_read_training, base),
+        asyncio.to_thread(_read_inference_appetite, base),
+        asyncio.to_thread(_read_book_schedule, base),
     )
     stuck, eval_gate, interactions = await asyncio.gather(
         _stuck_loops_summary(), _eval_gate_summary(), _interactions()
@@ -383,12 +601,16 @@ async def compute_self_diagnostic(root: Optional[Path] = None) -> Dict[str, Any]
         "adoptions": catalogue["adoptions"],
         "code_change_events": catalogue["code_change_events"],
         "sia_diffs": sia,
+        "self_improvement": self_improvement,
+        "training": training,
     }
     process_health = {
         **campaigns,
         "backlog": backlog,
         "stuck_loops": stuck,
         "eval_gate": eval_gate,
+        "inference_appetite": appetite,
+        "book_schedule": book_schedule,
     }
     return {
         "generated_at": time.time(),

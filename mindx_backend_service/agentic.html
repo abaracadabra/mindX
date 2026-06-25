@@ -91,14 +91,14 @@ tr:hover td{background:rgba(121,192,255,.04);color:var(--text)}
   <div class="sub">Publish pipeline audit · live agent activity · alignment-eval health · stuck-loop watch. Refreshes every 30s. Plain text at <a href="/feedback.txt">/feedback.txt</a>.</div>
 
   <div class="grid">
-    <div class="card">
+    <div class="card" data-sn="ess">
       <h2>Publication audit <span class="meta" id="pub-meta">—</span></h2>
       <div id="pub-summary" class="kv"></div>
       <div style="margin-top:12px"><b style="font-family:var(--mono);font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Recent publication events</b></div>
       <table id="pub-events"><thead><tr><th>ts</th><th>kind</th><th>trigger</th><th>note</th></tr></thead><tbody></tbody></table>
     </div>
 
-    <div class="card">
+    <div class="card" data-sn="adv">
       <h2>Draft inventory <span class="meta" id="draft-meta">—</span></h2>
       <div id="draft-summary" class="kv"></div>
       <div style="margin-top:12px"><b style="font-family:var(--mono);font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Unpublished drafts (top 10)</b></div>
@@ -107,7 +107,7 @@ tr:hover td{background:rgba(121,192,255,.04);color:var(--text)}
   </div>
 
   <div class="grid">
-    <div class="card">
+    <div class="card" data-sn="detail">
       <h2>Alignment-eval gate <span class="meta" id="eval-meta">—</span></h2>
       <div id="eval-summary" class="kv"></div>
       <div style="margin-top:10px">
@@ -122,13 +122,13 @@ tr:hover td{background:rgba(121,192,255,.04);color:var(--text)}
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" data-sn="detail">
       <h2>Stuck loops <span class="meta">15-min window</span></h2>
       <table id="stuck"><thead><tr><th>agent</th><th>step</th><th style="text-align:right">×</th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 
-  <div class="card">
+  <div class="card" data-sn="ess">
     <h2>Agent activity <span class="meta" id="activity-meta">—</span></h2>
     <div id="activity" class="activity"></div>
   </div>
@@ -278,5 +278,9 @@ async function refreshAll(){
 refreshAll();
 setInterval(refreshAll,30000);
 </script>
+
+<!-- signal/noise tiering (shared) -->
+<script>window.SN_CONFIG={selector:".card"};</script>
+<script src="/static/signal_noise.js"></script>
 </body>
 </html>

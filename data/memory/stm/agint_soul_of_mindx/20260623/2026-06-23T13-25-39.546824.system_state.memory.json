@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-06-23T13:25:39.546824",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "agint_soul_of_mindx",
+  "content": {
+    "process_name": "agint_perception",
+    "data": {
+      "timestamp": 1782246339.5466168,
+      "llm_status": "Offline - All models failed",
+      "llm_operational": false,
+      "llm_suggestion": "Check API keys and network connectivity"
+    }
+  },
+  "context": {
+    "agent_id": "agint_soul_of_mindx"
+  },
+  "tags": [
+    "agint_perception",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "8dc4053b202f31b8"
+}

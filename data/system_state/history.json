@@ -586,5 +586,35 @@
     "event_type": "startup",
     "timestamp": 1781309651.17253,
     "state_file": "states/startup_1781309651.json"
+  },
+  {
+    "event_id": "startup_1782246071",
+    "event_type": "startup",
+    "timestamp": 1782246071.8604567,
+    "state_file": "states/startup_1782246071.json"
+  },
+  {
+    "event_id": "startup_1782246129",
+    "event_type": "startup",
+    "timestamp": 1782246129.4712114,
+    "state_file": "states/startup_1782246129.json"
+  },
+  {
+    "event_id": "startup_1782342355",
+    "event_type": "startup",
+    "timestamp": 1782342355.4714453,
+    "state_file": "states/startup_1782342355.json"
+  },
+  {
+    "event_id": "startup_1782342444",
+    "event_type": "startup",
+    "timestamp": 1782342444.508379,
+    "state_file": "states/startup_1782342444.json"
+  },
+  {
+    "event_id": "startup_1782342507",
+    "event_type": "startup",
+    "timestamp": 1782342507.8436863,
+    "state_file": "states/startup_1782342507.json"
   }
 ]

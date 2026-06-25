@@ -152,7 +152,7 @@ tr.dream-row.active{background:rgba(210,168,255,.10)}
     information dies. It is where information learns to count.</em>
   </div>
 
-  <div class="section">
+  <div class="section" data-sn="ess">
     <div class="sec-head">
       <h2>recent cycles</h2>
       <span class="sub">/insight/dreams/recent · click any row for the diff</span>
@@ -174,7 +174,7 @@ tr.dream-row.active{background:rgba(210,168,255,.10)}
     <div id="drill-body"></div>
   </div>
 
-  <div class="section">
+  <div class="section" data-sn="adv">
     <div class="sec-head">
       <h2>training data — the wisdom substrate</h2>
       <span class="sub">why <code>*_training.jsonl</code> matters</span>
@@ -401,5 +401,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(refreshAll, 60000);
 });
 </script>
+
+<!-- signal/noise tiering (shared) -->
+<script>window.SN_CONFIG={selector:".section"};</script>
+<script src="/static/signal_noise.js"></script>
 </body>
 </html>
