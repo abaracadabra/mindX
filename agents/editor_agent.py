@@ -4,11 +4,13 @@
 
 AuthorAgent writes; editor.agent edits. It does two things:
 
-  1. **Critiques AuthorAgent** against three high bars — CLARITY, GENIUS, and
-     OPERATIONAL TRANSPARENCY (the cypherpunk2048 standard). The clarity and
-     genius thresholds are set deliberately HIGH; the editor is hard to please
-     on purpose. Its rubric is itself open and auditable — operational
-     transparency applied to the editor.
+  1. **Critiques AuthorAgent** against high bars — CLARITY, GENIUS, STYLE,
+     WISDOM, and OPERATIONAL TRANSPARENCY (the cypherpunk2048 standard). The
+     clarity/genius/style thresholds are set deliberately HIGH; WISDOM carries a
+     lower floor (≥0.50) because sound judgment is scarcer than polish, but a
+     piece with none of it does not pass. The editor is hard to please on
+     purpose. Its rubric is itself open and auditable — operational transparency
+     applied to the editor.
 
   2. **Publishes the Operational Transparency standard** to rage.pythai.net — a
      reference to https://github.com/cypherpunk2048, where cypherpunk2048 is a
@@ -68,17 +70,21 @@ OFFICIAL_LINKS = {
 CLARITY_THRESHOLD = 0.90
 GENIUS_THRESHOLD = 0.90
 STYLE_THRESHOLD = 0.90
+# Wisdom — judgment, perspective, temperance. A softer floor than the craft
+# bars: a piece must show sound judgment (≥0.50) to pass, but wisdom is scarcer
+# than polish and we do not demand it be maximal.
+WISDOM_THRESHOLD = 0.50
 # A real editor cites its sources with links. Hold the writing to it:
 # at least this many hyperlinked references per 1000 words.
 REFERENCE_DENSITY_THRESHOLD = 6.0  # links / 1000 words
 
 # Editorial policy — the standing rules editor.agent enforces and publishes to.
 EDITORIAL_POLICY = (
-    "editor.agent policy: every piece must clear CLARITY ≥ %.2f, GENIUS ≥ %.2f, and STYLE ≥ %.2f, "
-    "and carry ≥ %.0f hyperlinked references per 1000 words — cite every claim, link the open web, "
-    "promote the house (RAGE) and the projects we have built. The editor reads the docs before it "
-    "judges. Operational transparency applies to the editor too: the rubric is public."
-    % (CLARITY_THRESHOLD, GENIUS_THRESHOLD, STYLE_THRESHOLD, REFERENCE_DENSITY_THRESHOLD)
+    "editor.agent policy: every piece must clear CLARITY ≥ %.2f, GENIUS ≥ %.2f, STYLE ≥ %.2f, and "
+    "WISDOM ≥ %.2f, and carry ≥ %.0f hyperlinked references per 1000 words — cite every claim, link "
+    "the open web, promote the house (RAGE) and the projects we have built. The editor reads the docs "
+    "before it judges. Operational transparency applies to the editor too: the rubric is public."
+    % (CLARITY_THRESHOLD, GENIUS_THRESHOLD, STYLE_THRESHOLD, WISDOM_THRESHOLD, REFERENCE_DENSITY_THRESHOLD)
 )
 
 # The operational-transparency tenets a piece (or a tool) must satisfy.
@@ -165,6 +171,7 @@ class EditorAgent:
         clarity = self._score_clarity(text)
         genius = self._score_genius(text, link_count=n_links)
         style = self._score_style(text)
+        wisdom = self._score_wisdom(text)
         transparency = self._audit_transparency(text)
         ref_density = round(n_links * 1000.0 / n_words, 2)
         house = (self._score_house_match(content_html or "", ref_density, n_words, house_targets)
@@ -188,6 +195,11 @@ class EditorAgent:
             demands.append(
                 f"Raise STYLE to ≥{STYLE_THRESHOLD:.2f} (now {style:.2f}): vary the sentence rhythm, "
                 "earn the em-dash, keep one voice from first line to last.")
+        if wisdom < WISDOM_THRESHOLD:
+            demands.append(
+                f"Raise WISDOM to ≥{WISDOM_THRESHOLD:.2f} (now {wisdom:.2f}): show judgment, not just "
+                "cleverness — name the tradeoffs and costs, weigh the counter-case, take the long view, "
+                "and temper the hype. Perspective earns trust.")
         missing = [t for t, ok in transparency["tenets"].items() if not ok]
         if missing:
             demands.append(
@@ -203,7 +215,8 @@ class EditorAgent:
                 "Meet or beat each — every article must be at or above what the domain set.")
 
         passes = (clarity >= CLARITY_THRESHOLD and genius >= GENIUS_THRESHOLD
-                  and style >= STYLE_THRESHOLD and transparency["passes"]
+                  and style >= STYLE_THRESHOLD and wisdom >= WISDOM_THRESHOLD
+                  and transparency["passes"]
                   and ref_density >= REFERENCE_DENSITY_THRESHOLD
                   and (house is None or house["passes"]))
         verdict = "ACCEPT" if passes else "REVISE"
@@ -212,14 +225,17 @@ class EditorAgent:
             "clarity": round(clarity, 3),
             "genius": round(genius, 3),
             "style": round(style, 3),
+            "wisdom": round(wisdom, 3),
             "reference_density": ref_density,
             "clarity_threshold": CLARITY_THRESHOLD,
             "genius_threshold": GENIUS_THRESHOLD,
             "style_threshold": STYLE_THRESHOLD,
+            "wisdom_threshold": WISDOM_THRESHOLD,
             "reference_density_threshold": REFERENCE_DENSITY_THRESHOLD,
             "passes_clarity": clarity >= CLARITY_THRESHOLD,
             "passes_genius": genius >= GENIUS_THRESHOLD,
             "passes_style": style >= STYLE_THRESHOLD,
+            "passes_wisdom": wisdom >= WISDOM_THRESHOLD,
             "transparency": transparency,
             "verdict": verdict,
             "demands": demands,
@@ -291,6 +307,7 @@ class EditorAgent:
             logger.info(
                 f"editor.agent critique of AuthorAgent: verdict={crit['verdict']} "
                 f"clarity={crit['clarity']} genius={crit['genius']} "
+                f"style={crit['style']} wisdom={crit['wisdom']} "
                 f"transparent={crit['transparency']['passes']}")
             return crit
         except Exception as e:  # pragma: no cover - defensive
@@ -345,6 +362,47 @@ class EditorAgent:
         cite_density = min(1.0, cites / 6.0)
         genius = 0.5 * min(1.0, ttr / 0.55) + 0.3 * marker_score + 0.2 * cite_density
         return max(0.0, min(1.0, genius))
+
+    def _score_wisdom(self, text: str) -> float:
+        """Wisdom proxy: judgment, perspective, and temperance — distinct from
+        genius (which rewards cleverness/idea-density). Transparent and crude on
+        purpose; you can read the formula. Three signals:
+
+        1. judgment — names tradeoffs, costs, limits, consequences, the long view;
+        2. perspective — holds two sides (contrast/concession markers), not a
+           one-sided pitch;
+        3. temperance — is NOT drowning in hype/absolutism; measured claims earn
+           more trust than superlatives.
+
+        Wisdom is scarcer than polish, so its bar (WISDOM_THRESHOLD=0.50) is a
+        floor, not a summit."""
+        words = re.findall(r"[A-Za-z][A-Za-z'-]+", text.lower())
+        if len(words) < 40:
+            return 0.0
+        low = " " + text.lower() + " "
+        judgment_markers = (
+            "tradeoff", "trade-off", "the cost", "the price", "at what cost",
+            "in the long run", "over time", "long view", "consequence", "downstream",
+            "second-order", "unintended", "caveat", "limitation", "the limit",
+            "cannot", "won't", "boundary", "restraint", "temper", "prudent",
+            "sustainable", "worth", "lesson", "hard-won", "mature", "humility",
+            "we should", "the risk", "the danger")
+        j = sum(1 for k in judgment_markers if k in low)
+        judgment = min(1.0, j / 6.0)
+        perspective_markers = (
+            " but ", " however", " yet ", "although", "though ", "on the other hand",
+            "rather than", "instead of", "not merely", "not just", "even if",
+            "granted", "to be fair", "on balance", "that said")
+        p = sum(1 for k in perspective_markers if k in low)
+        perspective = min(1.0, p / 5.0)
+        hype_markers = (
+            "revolutionary", "game-chang", "game chang", "unprecedented", "flawless",
+            "perfect", "guaranteed", "always ", " never fails", "the best", "world-class",
+            "cutting-edge", "disrupt", "paradigm shift", "10x", "magical", "seamless")
+        h = sum(low.count(k) for k in hype_markers)
+        temperance = max(0.0, 1.0 - h / 5.0)
+        wisdom = 0.45 * judgment + 0.35 * perspective + 0.20 * temperance
+        return max(0.0, min(1.0, wisdom))
 
     def _audit_transparency(self, text: str) -> Dict[str, Any]:
         low = text.lower()
@@ -536,6 +594,7 @@ class EditorAgent:
                 f"<strong>clarity {crit.get('clarity')}</strong>/{crit.get('clarity_threshold')}, "
                 f"<strong>genius {crit.get('genius')}</strong>/{crit.get('genius_threshold')}, "
                 f"<strong>style {crit.get('style')}</strong>/{crit.get('style_threshold')}, "
+                f"<strong>wisdom {crit.get('wisdom')}</strong>/{crit.get('wisdom_threshold')}, "
                 f"<strong>references {crit.get('reference_density')}</strong>/"
                 f"{crit.get('reference_density_threshold')}/1000 words, transparency "
                 f"{t.get('passed')}/{t.get('total')} — verdict <strong>{crit.get('verdict')}</strong>. "

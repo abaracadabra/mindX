@@ -828,7 +828,7 @@ class AuthorAgent:
                 kind="publication.reviewed", actor="editor.agent",
                 payload={"title": title, "verdict": crit.get("verdict"),
                          "clarity": crit.get("clarity"), "genius": crit.get("genius"),
-                         "style": crit.get("style"),
+                         "style": crit.get("style"), "wisdom": crit.get("wisdom"),
                          "reference_density": crit.get("reference_density"),
                          "transparency_passed": (crit.get("transparency") or {}).get("passes")},
                 source_log="data/logs/catalogue_events.jsonl",
@@ -944,7 +944,8 @@ class AuthorAgent:
                 logger.info(
                     f"publish_to_rage: editor.agent verdict={v} "
                     f"clarity={editor_verdict.get('clarity')} genius={editor_verdict.get('genius')} "
-                    f"style={editor_verdict.get('style')} ref_density={editor_verdict.get('reference_density')} "
+                    f"style={editor_verdict.get('style')} wisdom={editor_verdict.get('wisdom')} "
+                    f"ref_density={editor_verdict.get('reference_density')} "
                     f"gate={gate}"
                 )
                 if gate == "hard" and v == "REVISE":
@@ -962,7 +963,8 @@ class AuthorAgent:
             post_meta["_mindx_editor_verdict"] = editor_verdict.get("verdict")
             post_meta["_mindx_editor_scores"] = (
                 f"clarity={editor_verdict.get('clarity')},genius={editor_verdict.get('genius')},"
-                f"style={editor_verdict.get('style')},ref_density={editor_verdict.get('reference_density')}"
+                f"style={editor_verdict.get('style')},wisdom={editor_verdict.get('wisdom')},"
+                f"ref_density={editor_verdict.get('reference_density')}"
             )
 
         # ── AuthorAgent cryptographic identity footer (EVERY article) ──

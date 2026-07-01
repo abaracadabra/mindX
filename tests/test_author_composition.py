@@ -162,6 +162,31 @@ def test_editor_house_match_demands_when_below_bar():
     assert crit["verdict"] == "REVISE"
 
 
+def test_editor_wisdom_bar():
+    from agents.editor_agent import EditorAgent, WISDOM_THRESHOLD
+    assert WISDOM_THRESHOLD == 0.50
+    ed = EditorAgent()
+    # A measured piece that names tradeoffs, holds two sides, avoids hype.
+    wise = (
+        "<p>The design is worth its cost, but the tradeoff is real. However efficient it looks, "
+        "the limitation shows over time: we cannot ignore the second-order consequence, and prudent "
+        "restraint matters more than speed. On balance, rather than chase the win, the long view "
+        "rewards judgment. That said, the risk is not zero.</p>"
+    ) * 2
+    crit = ed.critique(wise, title="wise")
+    assert "wisdom" in crit and "wisdom_threshold" in crit and "passes_wisdom" in crit
+    assert crit["wisdom"] >= WISDOM_THRESHOLD
+    assert crit["passes_wisdom"] is True
+    # Hype-drenched, one-sided filler should fail the wisdom floor and draw a demand.
+    hype = "<p>" + ("This revolutionary game-changing flawless product is always perfect and "
+                    "guaranteed the best world-class cutting-edge seamless magical solution. " * 8) + "</p>"
+    bad = ed.critique(hype, title="hype")
+    assert bad["wisdom"] < WISDOM_THRESHOLD
+    assert bad["passes_wisdom"] is False
+    assert any("WISDOM" in d for d in bad["demands"])
+    assert bad["verdict"] == "REVISE"
+
+
 def test_self_referential_dial_scales_self_linking():
     from agents.author_composition import SELF_REFERENTIAL_LEVELS
     assert set(SELF_REFERENTIAL_LEVELS) == {"tasteful", "balanced", "promotional", "blatant"}
