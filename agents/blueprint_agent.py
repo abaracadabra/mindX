@@ -34,7 +34,7 @@ from typing import Any, Dict, List, Optional
 # Version + the growing catalogue of blueprint.agent skills. Each new capability is
 # appended here as we discover it; save_version() snapshots (version, skills) to the
 # manifest so every version is preserved with the skills it shipped with.
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 SKILLS: List[Dict[str, str]] = [
     {"name": "gmi",                "kind": "blueprint", "desc": "read the live Gödel Machine Index"},
     {"name": "predicate_report",   "kind": "blueprint", "desc": "structured G1–G8 analysis (verdict + evidence)"},
@@ -50,6 +50,7 @@ SKILLS: List[Dict[str, str]] = [
     {"name": "frontend-design",    "kind": "skill",     "desc": "distinctive corporate/elegant UI direction"},
     {"name": "image-toolchain",    "kind": "skill",     "desc": "mozjpeg/cwebp/avifenc/pngquant/oxipng via artist.agent"},
     {"name": "client-cache",       "kind": "frontend",  "desc": "light sessionStorage GMI cache + deferred substrate"},
+    {"name": "analyze_path",       "kind": "analysis",  "desc": "scientific structural analysis of a code directory (LOC, symbols, docstrings)"},
 ]
 
 # Interaction mapping — every interaction and the substrate/UI effect it produces,
@@ -290,6 +291,53 @@ class BlueprintAgent:
             return {"success": False, "error": "mindX.png not found"}
         dst = str(src.with_suffix(".webp"))
         return await asyncio.to_thread(image_optimize.to_webp, str(src), dst, width=width, q=82)
+
+    # ── code analysis (scientific structural read of a directory) ──────
+    def analyze_path(self, rel_path: str) -> Dict[str, Any]:
+        """Scientific structural analysis of a code directory: per-file LOC, classes,
+        functions, async ratio, docstring coverage; aggregates + largest files.
+        Read-only, ast-based, graceful per file."""
+        import ast as _ast
+        base = (_ROOT / rel_path).resolve()
+        if not str(base).startswith(str(_ROOT.resolve())) or not base.exists():
+            return {"path": rel_path, "error": "path not found or outside repo"}
+        files: List[Dict[str, Any]] = []
+        tot = {"files": 0, "loc": 0, "classes": 0, "functions": 0, "async": 0, "documented": 0}
+        for f in sorted(base.rglob("*.py")):
+            try:
+                src = f.read_text(encoding="utf-8", errors="replace")
+            except Exception:
+                continue
+            loc = sum(1 for ln in src.splitlines() if ln.strip() and not ln.strip().startswith("#"))
+            cls = fns = afns = 0
+            documented = False
+            try:
+                tree = _ast.parse(src)
+                documented = _ast.get_docstring(tree) is not None
+                for node in _ast.walk(tree):
+                    if isinstance(node, _ast.ClassDef):
+                        cls += 1
+                    elif isinstance(node, _ast.AsyncFunctionDef):
+                        fns += 1; afns += 1
+                    elif isinstance(node, _ast.FunctionDef):
+                        fns += 1
+            except SyntaxError:
+                pass
+            files.append({"file": str(f.relative_to(_ROOT)), "loc": loc, "classes": cls,
+                          "functions": fns, "async": afns, "documented": documented})
+            tot["files"] += 1; tot["loc"] += loc; tot["classes"] += cls
+            tot["functions"] += fns; tot["async"] += afns; tot["documented"] += int(documented)
+        largest = sorted(files, key=lambda x: x["loc"], reverse=True)[:8]
+        return {
+            "path": rel_path, "totals": tot,
+            "async_ratio": round(tot["async"] / tot["functions"], 3) if tot["functions"] else 0,
+            "docstring_coverage": round(tot["documented"] / tot["files"], 3) if tot["files"] else 0,
+            "largest": largest, "files": files,
+        }
+
+    def analyze_core(self) -> Dict[str, Any]:
+        """Analyze the cognitive core (agents/core — BDI, AGInt, mindXagent, self-eval)."""
+        return self.analyze_path("agents/core")
 
     # ── versioned skills + interaction catalogue ───────────────────────
     def skills(self) -> List[Dict[str, str]]:

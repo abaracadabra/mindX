@@ -66,6 +66,17 @@ class AGInt:
         self.memory_agent = memory_agent or MemoryAgent(config=self.config)
         self.tools: Dict[str, Any] = kwargs.get('tools', {})
 
+        # blueprint.agent — AGInt can DIRECT blueprint / UI / self-audit-analysis
+        # work to it (the agent that works the Gödel-Machine-Index UI + code analysis).
+        try:
+            from agents.blueprint_agent import BlueprintAgent
+            self.blueprint_agent = BlueprintAgent()
+            self.tools.setdefault("blueprint", self.blueprint_agent)
+            logger.info(f"{self.log_prefix} blueprint.agent registered — AGInt can direct to it.")
+        except Exception as e:
+            self.blueprint_agent = None
+            logger.debug(f"{self.log_prefix} blueprint.agent unavailable: {e}")
+
         # Keep a reference to the BeliefSystem so milestone recognition can
         # persist `milestone:*` beliefs (see _on_milestone_candidate_event).
         # The BeliefSystem is a singleton — same instance everywhere.
@@ -234,6 +245,33 @@ class AGInt:
             "classified_total": self._milestones_classified_total,
             "per_category_counts": dict(self._milestones_per_category),
         }
+
+    async def direct_to_blueprint(self, directive: str, *, target: str = "agents/core") -> Dict[str, Any]:
+        """Direct a blueprint/UI/self-audit-analysis directive to blueprint.agent.
+        AGInt routes by intent; blueprint.agent does the work and returns the result."""
+        bp = getattr(self, "blueprint_agent", None)
+        if bp is None:
+            return {"ok": False, "error": "blueprint.agent unavailable"}
+        d = (directive or "").lower()
+        try:
+            if any(k in d for k in ("analyze", "analyse", "audit code", "structure")):
+                res = bp.analyze_path(target)
+            elif any(k in d for k in ("validate", "ui", "frontend", "lint")):
+                res = bp.validate_ui()
+            elif any(k in d for k in ("coverage", "threshold", "math")):
+                res = bp.coverage_math()
+            elif any(k in d for k in ("interaction", "substrate", "mapping")):
+                res = bp.interaction_map()
+            elif any(k in d for k in ("predicate", "g1", "g8")):
+                res = bp.predicate_report()
+            elif any(k in d for k in ("verdict", "gmi", "machine", "godel", "gödel", "self-audit")):
+                res = {"summary": bp.summary_text(), "gmi": bp.gmi()}
+            else:
+                res = {"summary": bp.summary_text(), "skills": bp.skills()}
+            logger.info(f"{self.log_prefix} directed to blueprint.agent → {directive[:60]}")
+            return {"ok": True, "agent": bp.AGENT_ID, "directive": directive, "result": res}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
 
     def start(self, directive: str):
         if self.status == AgentStatus.RUNNING: return
