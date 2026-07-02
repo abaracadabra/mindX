@@ -2649,55 +2649,97 @@ async def _tier_gate(request: "Request", min_tier: str, html_from: str):
 
 
 def _access_denied_page(from_path: str, min_tier: str) -> str:
-    """A solid ACCESS DENIED page for the OVERLORD hierarchy — not a 'not found'.
-    ENTER THE REALM connects the wallet, signs the challenge, and returns to the
-    requested page with the tier token. No wallet → opens MetaMask in a new tab."""
+    """THE standard mindX ACCESS DENIED page (harmonized across every gate). Not a
+    'not found' — a solid ACCESS DENIED with the OVERLORD-hierarchy access map so
+    a recognized participant sees exactly what they CAN and CANNOT reach, plus
+    ENTER THE REALM (connect + sign → return with the tier token; no wallet →
+    MetaMask). After signing, if the tier still isn't enough it says so and shows
+    the climb, rather than looping."""
     import json as _json
     frm = _json.dumps(from_path)
     tier = _json.dumps(min_tier)
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>mindX — Access Denied</title><meta name="robots" content="noindex,nofollow">
+<title>mindX — the Realm</title><meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="/gfx/favicon.ico" sizes="any">
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{background:#04060b;color:#aeb7c2;font-family:'JetBrains Mono','SF Mono',monospace;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px}}
-.box{{max-width:520px}}
-.lock{{font-size:40px;margin-bottom:16px;filter:drop-shadow(0 0 14px rgba(248,81,73,.4))}}
-h1{{font-size:26px;letter-spacing:.28em;color:#f85149;margin-bottom:14px;text-transform:uppercase}}
-p{{font-size:12.5px;line-height:1.7;color:#7d8590;margin-bottom:8px}}
+body{{background:#04060b;color:#aeb7c2;font-family:'JetBrains Mono','SF Mono',monospace;min-height:100vh;overflow:hidden}}
+canvas#bg{{position:fixed;inset:0;width:100%;height:100%;z-index:0;opacity:.55}}
+.wrap{{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}}
+.box{{max-width:580px;width:100%;text-align:center;background:rgba(8,11,17,.72);border:1px solid rgba(120,132,148,.16);border-radius:16px;padding:38px 34px;backdrop-filter:blur(8px);box-shadow:0 20px 60px rgba(0,0,0,.5)}}
+.crest{{width:66px;height:66px;margin:0 auto 16px;border-radius:16px;transition:.5s}}
+.badge{{font-size:36px;margin-bottom:14px;transition:.4s}}
+h1{{font-size:23px;letter-spacing:.26em;margin-bottom:12px;text-transform:uppercase;transition:.4s}}
+h1.denied{{color:#f85149}} h1.ok{{color:#e3b341}}
+p{{font-size:12px;line-height:1.7;color:#8b949e;margin-bottom:8px}}
 b{{color:#e3b341}}
-.enter{{margin-top:26px;display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:#0a0d07;background:linear-gradient(135deg,#e3b341,#caa233);border:none;border-radius:10px;padding:15px 32px;cursor:pointer}}
-.enter:hover{{box-shadow:0 0 30px rgba(227,179,65,.35)}}
-#msg{{margin-top:16px;font-size:11px;color:#f0883e;min-height:16px}}
-a.home{{display:block;margin-top:22px;font-size:10px;color:#6b7480;text-decoration:none;letter-spacing:.1em}}a.home:hover{{color:#aeb7c2}}
+.map{{text-align:left;margin:22px auto 0;border:1px solid rgba(120,132,148,.14);border-radius:10px;overflow:hidden;max-width:480px}}
+.row{{display:flex;gap:10px;padding:10px 15px;border-bottom:1px solid rgba(120,132,148,.09);font-size:11px;align-items:baseline;transition:.3s}}
+.row:last-child{{border-bottom:none}}
+.row.cur{{background:linear-gradient(90deg,rgba(227,179,65,.14),rgba(227,179,65,.03));box-shadow:inset 2px 0 0 #e3b341}}
+.t{{flex:0 0 96px;color:#58a6ff;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:10px}}
+.row.cur .t{{color:#e3b341}}
+.can{{flex:1;color:#8b949e}}.can em{{color:#56d364;font-style:normal}}.can s{{color:#4a5060}}
+.enter{{margin-top:26px;display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:#0a0d07;background:linear-gradient(135deg,#e3b341,#caa233);border:none;border-radius:11px;padding:16px 34px;cursor:pointer;transition:.25s}}
+.enter:hover{{box-shadow:0 0 34px rgba(227,179,65,.4);transform:translateY(-1px)}}
+#msg{{margin-top:15px;font-size:11px;min-height:16px;color:#8b949e}}
+a.home{{display:block;margin-top:20px;font-size:10px;color:#6b7480;text-decoration:none;letter-spacing:.1em}}a.home:hover{{color:#aeb7c2}}
 </style></head><body>
-<div class="box">
-  <div class="lock">&#128274;</div>
-  <h1>Access Denied</h1>
-  <p>This is the OVERLORD hierarchy. The page you sought requires <b>{min_tier}</b> tier.</p>
-  <p>Enter the realm — connect your wallet and sign to prove control. Signing grants no funds access.</p>
+<canvas id="bg"></canvas>
+<div class="wrap"><div class="box">
+  <img class="crest" src="/gfx/mindX.png" alt="mindX">
+  <div class="badge" id="badge">&#128274;</div>
+  <h1 class="denied" id="h1">Access Denied</h1>
+  <p id="lead">The mindX OVERLORD hierarchy — a small door, <b>far bigger on the inside</b>. This gate requires <b>{min_tier}</b> tier. Connect and sign — you deserve to see exactly what you can reach:</p>
+  <div class="map" id="map">
+    <div class="row" data-tier="participant"><span class="t">participant</span><span class="can"><em>docs, automindx, activity</em> &middot; <s>book, API, realm</s></span></div>
+    <div class="row" data-tier="member"><span class="t">member</span><span class="can"><em>+ the book, API, member surfaces</em> &middot; <s>realm controls</s></span></div>
+    <div class="row" data-tier="overseer"><span class="t">overseer</span><span class="can"><em>+ community governance, moderation, editing</em></span></div>
+    <div class="row" data-tier="overlord"><span class="t">overlord</span><span class="can"><em>+ mint, deploy, the realm — everything</em></span></div>
+  </div>
   <button class="enter" id="enter">ENTER THE REALM</button>
   <div id="msg"></div>
   <a class="home" href="/">&larr; back to the door</a>
-</div>
+</div></div>
 <script>
 var FROM={frm}, TIER={tier};
+var RANK={{public:0,participant:1,member:2,overseer:3,overlord:4}};
+function markTier(role){{var rows=document.querySelectorAll('#map .row');for(var i=0;i<rows.length;i++){{rows[i].classList.toggle('cur',rows[i].getAttribute('data-tier')===role);}}}}
+function recognize(role){{
+  document.getElementById('badge').innerHTML='&#9819;';
+  var h=document.getElementById('h1');h.textContent='Recognized';h.classList.remove('denied');h.classList.add('ok');
+  document.getElementById('lead').innerHTML='Welcome. You are recognized as <b>'+role+'</b> — this is your standing in the hierarchy, and what it opens:';
+  markTier(role);
+}}
 document.getElementById('enter').addEventListener('click',async function(){{
   var msg=document.getElementById('msg');
   if(!window.ethereum){{ msg.textContent='no wallet found — opening MetaMask…'; window.open('https://metamask.io/download/','_blank','noopener'); return; }}
   try{{
     var accts=await window.ethereum.request({{method:'eth_requestAccounts'}});
     var addr=accts&&accts[0]; if(!addr){{msg.textContent='no account';return;}}
+    msg.textContent='sign to prove control…';
     var ch=await fetch('/realm/challenge?address='+encodeURIComponent(addr)).then(function(r){{return r.json();}});
     var sig=await window.ethereum.request({{method:'personal_sign',params:[ch.message,addr]}});
     var v=await fetch('/realm/verify',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{address:addr,nonce:ch.nonce,signature:sig}})}}).then(function(r){{return r.json();}});
     if(v&&v.realm_token){{
       try{{localStorage.setItem('mindx_realm_token',v.realm_token);localStorage.setItem('mindx_participant',v.role);if(v.role==='overlord')localStorage.setItem('mindx_overlord_verified','1');}}catch(e){{}}
-      location.href=FROM+(FROM.indexOf('?')>=0?'&':'?')+'t='+encodeURIComponent(v.realm_token);
-    }} else {{ msg.textContent='signature verified, but tier '+TIER+' not met'; }}
+      recognize(v.role);
+      if((RANK[v.role]||0) >= (RANK[TIER]||99)){{
+        msg.style.color='#56d364';msg.textContent='access granted — entering…';
+        setTimeout(function(){{location.href=FROM+(FROM.indexOf('?')>=0?'&':'?')+'t='+encodeURIComponent(v.realm_token);}},700);
+      }} else {{
+        var e=document.getElementById('enter');e.textContent='Climb the hierarchy';
+        msg.style.color='#e3b341';msg.textContent='this gate needs '+TIER+'. Hold a token to become a member, and more opens.';
+      }}
+    }} else {{ msg.textContent='signature did not meet a recognized tier'; }}
   }}catch(e){{ msg.textContent='sign-in cancelled'; }}
 }});
+// substrate — the realm's living field
+(function(){{var cv=document.getElementById('bg'),c=cv.getContext('2d'),W,H,st=[];var CL=['rgba(227,179,65,','rgba(88,166,255,','rgba(86,211,100,'];
+function rs(){{W=cv.width=innerWidth;H=cv.height=innerHeight;st=[];var n=Math.min(90,Math.floor(W*H/15000));for(var i=0;i<n;i++)st.push({{x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,z:Math.random()*1.6+.5,cl:CL[i%3]}});}}
+addEventListener('resize',rs);rs();
+function d(t){{c.fillStyle='rgba(4,6,11,.14)';c.fillRect(0,0,W,H);for(var i=0;i<st.length;i++){{var a=st[i];for(var j=i+1;j<Math.min(st.length,i+9);j++){{var b=st[j],dx=a.x-b.x,dy=a.y-b.y,q=dx*dx+dy*dy;if(q<18000){{c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.strokeStyle=a.cl+(1-q/18000)*.06+')';c.lineWidth=.4;c.stroke();}}}}a.x+=a.vx;a.y+=a.vy;if(a.x<0)a.x=W;if(a.x>W)a.x=0;if(a.y<0)a.y=H;if(a.y>H)a.y=0;c.beginPath();c.arc(a.x,a.y,a.z,0,6.28);c.fillStyle=a.cl+'0.5)';c.fill();}}requestAnimationFrame(d);}}requestAnimationFrame(d);}})();
 </script></body></html>"""
 
 
