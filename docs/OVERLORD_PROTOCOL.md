@@ -73,4 +73,15 @@ with a verified bankon.eth signature.
 SCIENTIFIC first-light → **Algorand BONA FIDE proof-of-work** (A1–A4; unlocks EVM) →
 EVM E1–E7 (settlement → registries → iNFT → payment infra → x402 + ENS → THOT → DAIO)
 → devolution. Source: `~/DeltaVerse/docs/PRODUCTION_DEPLOY_ORDER.md`. Mainnet is
-OVERLORD-signed only.
+OVERLORD-signed only (agents never sign real-chain).
+
+### Deploy feedback loop
+The handoff is a LIVE sequence, not a static plan. After the OVERLORD/OVERSEER signs
+each step, the result is recorded: `POST /realm/deploy/feedback` (sovereign-gated —
+overlord-session or OVERSEER JWT) stores `{step, contract, chain, tx_hash, address,
+asa_id, status}` to an append-only ledger + a `deploy.feedback` catalogue event
+(mindX improvement awareness). `GET /insight/deploy/feedback` surfaces it, and the
+`/activity` OVERLORD deploy card renders plan + confirmed-on-chain results with
+explorer tx links. BONA FIDE activation: the OVERSEER deploys `BonaFideDeployer` →
+`mintBonafideAsa`, then `scripts/activate_bonafide.sh <ASA_ID> <net>` wires the real
+ASA id into the running gate (fail-closed until then).
