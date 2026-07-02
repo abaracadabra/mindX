@@ -82,39 +82,71 @@
       '.mxb-go{flex:0 0 auto;font-size:11px;color:var(--text3,#7d8590);transition:.13s}',
       '.mxb-foot{padding:8px 14px;font-size:8.5px;color:var(--text3,#7d8590);letter-spacing:.03em;border-top:1px solid var(--border,#30363d);text-align:center}',
       '.mxb-foot a{color:var(--violet,#bc8cff);text-decoration:none}',
+      '.mxb-lock .mxb-name,.mxb-lock .mxb-blurb{opacity:.55}',
+      '.mxb-lock .mxb-av{opacity:.4;filter:grayscale(.5)}',
+      '.mxb-lock:hover .mxb-name,.mxb-lock:hover .mxb-blurb,.mxb-lock:hover .mxb-av{opacity:1;filter:none}',
       '@media (prefers-reduced-motion: reduce){.mxb-btn{animation:none}.mxb-item{opacity:1;animation:none!important}}'
     ].join('');
     var st = document.createElement('style'); st.id = 'mxb-css'; st.textContent = css;
     document.head.appendChild(st);
   }
 
+  // Sign-in gate. Public participant access is CORPORATE-tier by default and
+  // links stay locked until the visitor signs in. A signed-in participant is
+  // recorded in localStorage('mindx_participant') by the sign-in flow, or a
+  // connected wallet counts as signed in. Until then, every archetype link is
+  // a locked prompt that routes to sign-in — no direct mint/build access.
+  function isSignedIn() {
+    try {
+      if (localStorage.getItem('mindx_participant')) return true;
+      var eth = window.ethereum;
+      if (eth && (eth.selectedAddress || (eth._state && eth._state.accounts && eth._state.accounts.length))) return true;
+    } catch (e) {}
+    return false;
+  }
+  // Corporate public-participant settings — the default tier a new sign-in enters.
+  var PARTICIPANT = { tier: 'public', profile: 'corporate', signin: '/login?as=participant&profile=corporate&from=/inft' };
+
   function build() {
     if (document.querySelector('.mxb-wrap')) return;  // idempotent
     injectCSS();
+    var signedIn = isSignedIn();
     var wrap = document.createElement('div'); wrap.className = 'mxb-wrap';
+    if (!signedIn) wrap.classList.add('mxb-locked');
 
     var items = ARCHETYPES.map(function (a, i) {
-      // /inft seeded with the archetype → born compatible with AgenticPlace iNFT.
-      var href = '/inft?archetype=' + a.key + '&level=' + a.lvl + '&autonomous=' + a.auto;
-      return '<a class="mxb-item" href="' + href + '" title="Build a ' + a.label +
-        ' iNFT — ' + a.blurb + '" style="animation-delay:' + (i * 0.035) + 's">' +
+      // Signed in → /inft seeded with the archetype (born AgenticPlace-iNFT compatible).
+      // Not signed in → locked; route to corporate public-participant sign-in.
+      var href = signedIn
+        ? '/inft?archetype=' + a.key + '&level=' + a.lvl + '&autonomous=' + a.auto + '&profile=' + PARTICIPANT.profile
+        : PARTICIPANT.signin;
+      var lockCls = signedIn ? '' : ' mxb-lock';
+      var title = signedIn ? ('Build a ' + a.label + ' iNFT — ' + a.blurb)
+                           : ('Sign in as a public participant (corporate) to build a ' + a.label);
+      return '<a class="mxb-item' + lockCls + '" href="' + href + '" title="' + title +
+        '" style="animation-delay:' + (i * 0.035) + 's">' +
         '<span class="mxb-av">' + avatarSVG(a) + '</span>' +
         '<span class="mxb-meta"><span class="mxb-name">' + a.label + '</span>' +
         '<span class="mxb-blurb">' + a.blurb + '</span></span>' +
-        '<span class="mxb-lvl">iq ' + a.lvl + '</span>' +
-        '<span class="mxb-go">&rarr;</span></a>';
+        (signedIn ? '<span class="mxb-lvl">iq ' + a.lvl + '</span><span class="mxb-go">&rarr;</span>'
+                  : '<span class="mxb-go" aria-label="locked">&#128274;</span>') +
+        '</a>';
     }).join('');
+
+    var foot = signedIn
+      ? 'avatars are <a href="/inft">AgenticPlace iNFT</a>-compatible &middot; corporate participant'
+      : '<a href="' + PARTICIPANT.signin + '">sign in</a> as a public participant (corporate) to unlock building';
 
     wrap.innerHTML =
       '<div class="mxb-menu" role="menu" aria-label="Build an agent — choose an archetype">' +
         '<div class="mxb-head"><span class="mxb-h">Archetype</span>' +
-        '<span class="mxb-sub">choose a soul to forge</span></div>' +
+        '<span class="mxb-sub">' + (signedIn ? 'choose a soul to forge' : 'sign in to forge') + '</span></div>' +
         items +
-        '<div class="mxb-foot">avatars are <a href="/inft">AgenticPlace iNFT</a>-compatible &middot; ' +
-        'mintable on <a href="https://agenticplace.pythai.net" rel="noopener">agenticplace</a></div>' +
+        '<div class="mxb-foot">' + foot + '</div>' +
       '</div>' +
       '<button class="mxb-btn" type="button" aria-haspopup="true" aria-label="Builder — forge an agent archetype">' +
-        '<span class="mxb-spark"></span> Builder <span class="mxb-tag">forge an agent</span>' +
+        '<span class="mxb-spark"></span> Builder <span class="mxb-tag">' +
+        (signedIn ? 'forge an agent' : 'sign in to forge') + '</span>' +
       '</button>';
 
     document.body.appendChild(wrap);
