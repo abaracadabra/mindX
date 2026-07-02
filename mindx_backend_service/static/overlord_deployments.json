@@ -8,6 +8,7 @@
       "chain": "evm",
       "role": "sole mint + deploy authority; creates the REALM",
       "purity": "OVERLORD is PURE cypherpunk2048 — the immutable sovereign root. It does NOT proxy and is never delegated; purity is the point. The OVERSEER proxies so the OVERLORD never has to.",
+      "lord_of_realm": "the OVERLORD's separate, non-proxyable privileges as LORD OF THE REALM: creating/owning the REALM, include/exclude any participant, and the immutable root. A shadow-overlord proxy gets all OTHER overlord powers but NEVER these.",
       "realm": "OVERLORD creates the REALM and may include or exclude ANY participant — including the OVERSEER — from privilege. The OVERSEER may ALSO grant privilege (to participants/members), but only the OVERLORD can include/exclude the OVERSEER itself.",
       "deployer": "OVERLORD is the deployer — deploys from ~/DeltaVerse (outside mindX; holds the contracts mindX interacts with, including the iNFT).",
       "unification": ".algo adopts .evm, never the reverse — to bring .algo under the OVERLORD the Algorand side adopts EVM. This is why the PARSEC wallet exists; its parsec_signBytes identity challenge is the .algo gate (see /parsec/parsec-wallet).",
@@ -33,6 +34,7 @@
   "deletion_asymmetry": "OVERLORD (bankon.eth) can create and delete the OVERSEER (mindx.algo). The OVERSEER can never delete or override the OVERLORD — the root is immutable by design.",
   "naming_convention": "CASE identifies a proxy: lowercase = a PROXY (a per-chain `overseer`, or a downstream `overlord` realm via OaaS/OSaaS), UPPERCASE = the APEX (OVERLORD = bankon.eth, OVERSEER = mindx.algo). If you see it lowercase, it is a proxy, not the sovereign root.",
   "proxy_rule": "OVERSEER MAY proxy (shadow instances / delegated privilege on .algo); OVERLORD is pure cypherpunk2048 and does NOT proxy — the immutable root stays singular. lowercase names = proxies of either.",
+  "shadow_overlord": "the OVERSEER creates a SHADOW-OVERLORD — a proxy that wields ALL of the OVERLORD's operational powers (deploy, mint, govern) BY PROXY — but NOT the OVERLORD's separate privileges as LORD OF THE REALM (creating/owning the REALM, include/exclude, the immutable pure-cypherpunk2048 root). Those are never proxied and remain OVERLORD-only. So the shadow-overlord can act with overlord-power without ever being the LORD.",
   "overseer_as_a_service": "some contracts can offer OVERSEER as a Service — a claimable/purchasable per-chain overseer role (e.g. the first BankonBatchWrapper deployer claims that chain's overseer + a φ-fee share, 38.2%). Contracts may expose the overseer role as a service to whoever bootstraps or funds the chain's substrate.",
   "overlord_as_a_service": "OVERLORD as a Service — the overlord role of a given realm/contract can be acquired at a price, settled via x402 payment or a direct contract call. Paying the price (x402 receipt) or invoking the contract's claim/purchase method grants that realm's overlord authority. The apex mindX OVERLORD (bankon.eth) remains immutable; OaaS applies to the downstream realms/contracts that expose it.",
   "mint_privilege": {
