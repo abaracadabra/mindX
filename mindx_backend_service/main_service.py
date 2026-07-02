@@ -2740,13 +2740,14 @@ body{{font-family:'JetBrains Mono','SF Mono',monospace;color:#e6edf3;background:
 /* TARDIS: the small door opens into the vast interior on ACCESS GRANTED */
 .interior{{position:fixed;inset:0;z-index:1;opacity:0;transition:opacity 1.2s ease .35s;pointer-events:none}}
 .interior canvas{{position:absolute;inset:0;width:100%;height:100%}}
-.inside-txt{{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;text-transform:uppercase}}
-.inside-txt .big{{font-size:clamp(18px,4vw,30px);color:#e3b341;letter-spacing:.24em;font-weight:700;text-shadow:0 0 30px rgba(227,179,65,.4)}}
-.inside-txt .sm{{font-size:11px;letter-spacing:.36em;color:#8b949e}}
+.interior #dvfabric{{opacity:.5}}
 body.tardis-go .portal{{transform:scale(7);filter:saturate(1.7) brightness(1.35);opacity:0}}
 body.tardis-go .veil{{opacity:0}}
 body.tardis-go .stage{{opacity:0;transition:opacity .7s;pointer-events:none}}
 body.tardis-go .interior{{opacity:1}}
+/* falling down the rabbit hole — the interior tumbles as you fall into the spiral */
+@keyframes rabbithole{{0%{{transform:rotate(0) scale(1.08)}}100%{{transform:rotate(11deg) scale(1)}}}}
+body.tardis-go #inside{{animation:rabbithole 3.2s cubic-bezier(.4,0,.2,1) both;transform-origin:50% 46%}}
 .stage{{position:relative;z-index:2;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:24px}}
 .crest{{width:72px;height:72px;filter:drop-shadow(0 0 22px rgba(227,179,65,.4))}}
 .hd{{font-size:22px;letter-spacing:.34em;text-transform:uppercase;font-weight:700;transition:.5s}}
@@ -2757,10 +2758,13 @@ body.tardis-go .interior{{opacity:1}}
 .connect:hover{{box-shadow:0 0 40px rgba(227,179,65,.5);transform:translateY(-1px)}}
 #msg{{font-size:11px;letter-spacing:.06em;color:#c9d1d9;min-height:15px;opacity:.85}}
 .algo{{font-size:10px;letter-spacing:.16em;color:#c9a0ff;text-decoration:none;opacity:.8}}.algo:hover{{opacity:1;color:#e6edf3}}
+.crown{{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);font-size:30px;color:#e3b341;cursor:grab;user-select:none;-webkit-user-select:none;text-shadow:0 0 16px rgba(227,179,65,.6);z-index:4;touch-action:none}}
+.crown.drag{{cursor:grabbing;text-shadow:0 0 28px rgba(227,179,65,.95)}}
+.toro{{position:fixed;border:2px solid rgba(227,179,65,.6);border-radius:50%;pointer-events:none;z-index:3;transform:translate(-50%,-50%)}}
 a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color:#6b7480;text-decoration:none;letter-spacing:.14em}}a.back:hover{{color:#aeb7c2}}
 </style></head><body>
 <div class="portal"></div><div class="veil"></div>
-<div class="interior"><canvas id="inside"></canvas><div class="inside-txt"><div class="big">You are inside</div><div class="sm">the realm is bigger on the inside</div></div></div>
+<div class="interior"><canvas id="dvfabric"></canvas><canvas id="inside"></canvas></div>
 <div class="stage">
   <img class="crest" src="/gfx/mindX.png" alt="mindX">
   <div class="hd denied" id="hd">Access Denied</div>
@@ -2769,16 +2773,60 @@ a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color
   <div id="msg"></div>
   <a class="algo" href="/overseer">the OVERSEER enters via mindx.algo &rarr;</a>
 </div>
+<div class="crown" id="crown" title="drag the crown">&#9819;</div>
 <a class="back" href="/">&larr;</a>
+<script src="/deltaverse.js"></script>
 <script>
 var FROM={frm}, TIER={tier}, RANK={{public:0,participant:1,member:2,overseer:3,overlord:4}};
 // The vast interior — the substrate that fills the frame once the door opens.
 function startInside(){{
-  var cv=document.getElementById('inside');if(!cv)return;var c=cv.getContext('2d'),W,H,st=[];
+  // DeltaVerse substrate fabric behind (the imported engine).
+  try{{ if(window.DeltaVerse){{ window.__dv=new DeltaVerse({{canvas:'#dvfabric'}}); if(window.__dv.start)window.__dv.start(); }} }}catch(e){{}}
+  // Fall down the rabbit hole: a spiral-tornado corkscrew of mesh from the
+  // initiation point, drawing up a long tunnel toward a distant object — the
+  // THRONE — that grows as you approach. Golden-ratio acceleration (peak at φ⁻¹
+  // of the journey) then deceleration to arrival. The cursor bends the vortex
+  // axis: the participant alters the substrate on the way in.
+  var cv=document.getElementById('inside');if(!cv)return;var c=cv.getContext('2d');
+  var W,H,cx,cy,pts=[],spin=0,mx=-1,my=-1;
+  var PHI=1.6180339887,INVPHI=0.6180339887,DUR=3300,t0=(window.performance&&performance.now?performance.now():Date.now());
   var CL=['rgba(227,179,65,','rgba(88,166,255,','rgba(86,211,100,','rgba(201,160,255,'];
-  function rs(){{W=cv.width=innerWidth;H=cv.height=innerHeight;st=[];var n=Math.min(160,Math.floor(W*H/7000));for(var i=0;i<n;i++)st.push({{x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4,z:Math.random()*1.8+.5,cl:CL[i%4]}});}}
+  function rs(){{W=cv.width=innerWidth;H=cv.height=innerHeight;cx=W/2;cy=H*0.46;pts=[];var N=Math.min(560,Math.floor(W*H/2500));for(var i=0;i<N;i++)pts.push({{a:Math.random()*6.283,t:Math.random(),s:Math.random()*0.6+0.7,cl:CL[i%4]}});}}
   addEventListener('resize',rs);rs();
-  (function d(){{c.fillStyle='rgba(4,6,11,.12)';c.fillRect(0,0,W,H);for(var i=0;i<st.length;i++){{var a=st[i];for(var j=i+1;j<Math.min(st.length,i+10);j++){{var b=st[j],dx=a.x-b.x,dy=a.y-b.y,q=dx*dx+dy*dy;if(q<16000){{c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.strokeStyle=a.cl+(1-q/16000)*.09+')';c.lineWidth=.4;c.stroke();}}}}a.x+=a.vx;a.y+=a.vy;if(a.x<0)a.x=W;if(a.x>W)a.x=0;if(a.y<0)a.y=H;if(a.y>H)a.y=0;c.beginPath();c.arc(a.x,a.y,a.z,0,6.28);c.fillStyle=a.cl+'0.6)';c.fill();}}requestAnimationFrame(d);}})();
+  function pointer(e){{var p=e.touches&&e.touches[0]?e.touches[0]:e;mx=p.clientX;my=p.clientY;}}
+  addEventListener('mousemove',pointer);addEventListener('touchmove',pointer,{{passive:true}});
+  var maxR=Math.max(W,H)*0.62;
+  function speedAt(j){{ return j<INVPHI ? PHI*(j/INVPHI) : PHI*Math.max(0,(1-j)/(1-INVPHI)); }}
+  function draw(now){{
+    var j=Math.min(1,(now-t0)/DUR), spd=speedAt(j);
+    spin+=0.006+0.030*spd;
+    var tx=(mx>0?mx:cx),ty=(my>0?my:H*0.46);
+    cx+=(tx-cx)*0.05*Math.min(1,spd); cy+=(ty-cy)*0.05*Math.min(1,spd);
+    c.fillStyle='rgba(4,6,11,'+(0.16+0.08*j).toFixed(3)+')';c.fillRect(0,0,W,H);
+    pts.sort(function(p,q){{return q.t-p.t;}});
+    var prev=null;
+    for(var i=0;i<pts.length;i++){{var p=pts[i];
+      p.t-=(0.0016+0.0060*spd)*p.s; if(p.t<=0.02){{p.t+=1;p.a=Math.random()*6.283;}}
+      var ang=p.a+p.t*7.5+spin, r=maxR*Math.pow(p.t,1.5), persp=0.22+p.t*0.78;
+      var x=cx+Math.cos(ang)*r*persp, y=cy+Math.sin(ang)*r*persp*0.62;
+      var size=(0.4+p.t*2.4)*p.s, al=Math.min(1,((1-p.t)*0.2+p.t*0.9));
+      if(prev&&Math.abs(prev.t-p.t)<0.06){{c.beginPath();c.moveTo(prev.x,prev.y);c.lineTo(x,y);c.strokeStyle=p.cl+(al*0.14).toFixed(3)+')';c.lineWidth=0.5;c.stroke();}}
+      c.beginPath();c.arc(x,y,size,0,6.28);c.fillStyle=p.cl+al.toFixed(3)+')';c.fill();
+      prev={{x:x,y:y,t:p.t}};
+    }}
+    var g=Math.pow(j,1.8), R=(8+g*Math.min(W,H)*0.9);
+    var og=c.createRadialGradient(cx,cy,0,cx,cy,R);
+    og.addColorStop(0,'rgba(255,228,150,'+(0.35+0.60*g).toFixed(3)+')');
+    og.addColorStop(0.5,'rgba(227,179,65,'+(0.22*g).toFixed(3)+')');
+    og.addColorStop(1,'transparent');
+    c.fillStyle=og;c.beginPath();c.arc(cx,cy,R,0,6.28);c.fill();
+    if(j>0.55){{var em=Math.min(1,(j-0.55)/0.45), fs=(20+em*Math.min(W,H)*0.16);
+      c.save();c.globalAlpha=em;c.fillStyle='rgba(255,236,180,1)';
+      c.font='700 '+fs.toFixed(0)+'px JetBrains Mono,monospace';c.textAlign='center';c.textBaseline='middle';
+      c.shadowColor='rgba(227,179,65,.85)';c.shadowBlur=fs*0.6;c.fillText('♛',cx,cy);c.restore();}}
+    if(j<1)requestAnimationFrame(draw);
+  }}
+  requestAnimationFrame(draw);
 }}
 document.getElementById('c').addEventListener('click',async function(){{
   var m=document.getElementById('msg');
@@ -2792,11 +2840,26 @@ document.getElementById('c').addEventListener('click',async function(){{
     if(v&&v.realm_token){{
       try{{localStorage.setItem('mindx_realm_token',v.realm_token);localStorage.setItem('mindx_participant',v.role);if(v.role==='overlord')localStorage.setItem('mindx_overlord_verified','1');}}catch(e){{}}
       var hd=document.getElementById('hd');
-      if((RANK[v.role]||0)>=(RANK[TIER]||99)){{ hd.textContent='Access Granted';hd.classList.remove('denied');hd.classList.add('ok'); m.style.color='#56d364';m.textContent='the door opens…'; startInside(); document.body.classList.add('tardis-go'); setTimeout(function(){{location.href=FROM+(FROM.indexOf('?')>=0?'&':'?')+'t='+encodeURIComponent(v.realm_token);}},1800); }}
+      if((RANK[v.role]||0)>=(RANK[TIER]||99)){{ hd.textContent='Access Granted';hd.classList.remove('denied');hd.classList.add('ok'); m.style.color='#56d364';m.textContent='the door opens…'; startInside(); document.body.classList.add('tardis-go'); setTimeout(function(){{location.href=FROM+(FROM.indexOf('?')>=0?'&':'?')+'t='+encodeURIComponent(v.realm_token);}},3400); }}
       else {{ m.style.color='#e3b341';m.textContent='recognized as '+v.role+' — '+TIER+' required'; }}
     }} else {{ m.textContent='not recognized'; }}
   }}catch(e){{ m.textContent='cancelled'; }}
 }});
+// Optional: a substrate-rendered drag-and-drop crown with toroid magic on pickup.
+(function(){{
+  var cr=document.getElementById('crown');if(!cr)return;var drag=false,ox=0,oy=0;
+  function toroid(x,y){{for(var k=0;k<3;k++){{(function(delay){{setTimeout(function(){{
+    var t=document.createElement('div');t.className='toro';t.style.left=x+'px';t.style.top=y+'px';
+    t.style.width=t.style.height='10px';document.body.appendChild(t);var s=10;
+    var iv=setInterval(function(){{s+=9;t.style.width=t.style.height=s+'px';t.style.opacity=String(Math.max(0,0.9-s/220));if(s>210){{clearInterval(iv);t.remove();}}}},16);
+  }},delay);}})(k*90);}}}}
+  function down(e){{drag=true;cr.classList.add('drag');var p=e.touches?e.touches[0]:e;var r=cr.getBoundingClientRect();ox=p.clientX-(r.left+r.width/2);oy=p.clientY-(r.top+r.height/2);toroid(p.clientX,p.clientY);if(e.cancelable)e.preventDefault();}}
+  function move(e){{if(!drag)return;var p=e.touches?e.touches[0]:e;cr.style.left=(p.clientX-ox)+'px';cr.style.top=(p.clientY-oy)+'px';cr.style.bottom='auto';cr.style.transform='translate(-50%,-50%)';}}
+  function up(){{drag=false;cr.classList.remove('drag');}}
+  cr.addEventListener('mousedown',down);cr.addEventListener('touchstart',down,{{passive:false}});
+  addEventListener('mousemove',move);addEventListener('touchmove',move,{{passive:false}});
+  addEventListener('mouseup',up);addEventListener('touchend',up);
+}})();
 </script></body></html>"""
 
 async def _reference_gate(request: Request, html_from: str):
