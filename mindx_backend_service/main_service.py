@@ -2215,6 +2215,57 @@ async def realm_verify(request: Request):
     return {"status": "success", **res}
 
 
+def _resolve_sovereign(request: Request) -> Optional[str]:
+    """Return 'overlord' or 'overseer' if the caller presents a valid sovereign
+    token (EVM overlord-session or Algorand OVERSEER JWT), else None."""
+    try:
+        from mindx_backend_service.deltaverse.routes import _viewer_role
+        v = _viewer_role(request)
+        if (v.get("role") or "").lower() == "overlord" and v.get("verified"):
+            return "overlord"
+    except Exception:
+        pass
+    _tok = None
+    _auth = request.headers.get("authorization", "")
+    if _auth.lower().startswith("bearer "):
+        _tok = _auth[7:].strip()
+    _tok = _tok or request.headers.get("x-overseer-token") or request.query_params.get("t")
+    if _tok:
+        try:
+            from mindx_backend_service.overseer_auth import verify_overseer_jwt
+            verify_overseer_jwt(_tok)
+            return "overseer"
+        except Exception:
+            pass
+    return None
+
+
+@app.post("/realm/deploy/feedback", tags=["overlord"], include_in_schema=False)
+async def realm_deploy_feedback(request: Request):
+    """OVERLORD/OVERSEER-gated: record on-chain deploy feedback (tx, address/ASA,
+    status) for a step of the deploy sequence. Closes the handoff loop — the
+    signed deploy's result flows back into the live sequence + improvement awareness."""
+    who = _resolve_sovereign(request)
+    if not who:
+        raise HTTPException(status_code=403, detail="overlord or overseer session required to record deploy feedback")
+    from mindx_backend_service import deploy_feedback
+    b = await request.json()
+    entry = deploy_feedback.record(
+        step=b.get("step", ""), contract=b.get("contract", ""), chain=b.get("chain", ""),
+        tx_hash=b.get("tx_hash", ""), address=b.get("address", ""), asa_id=b.get("asa_id"),
+        status=b.get("status", "confirmed"), by=who, note=b.get("note", ""))
+    return {"status": "success", "recorded": entry}
+
+
+@app.get("/insight/deploy/feedback", tags=["insight"], include_in_schema=False)
+async def insight_deploy_feedback(limit: int = 50):
+    """Public: the live deploy-sequence feedback — what deployed, where, tx, status.
+    No secrets stored; this is the confirmed-on-chain record surfaced to the handoff."""
+    from mindx_backend_service import deploy_feedback
+    fb = deploy_feedback.recent(limit)
+    return {"status": "success", "count": len(fb), "feedback": fb}
+
+
 @app.get("/reference", response_class=_DashResponse, include_in_schema=False)
 @app.get("/reference.html", response_class=_DashResponse, include_in_schema=False)
 async def reference_page():
@@ -2464,6 +2515,7 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/activity", "/activity.html",     # Realm door — public shell; identity recognized client-side on connect, redirected per hierarchy
     "/diagnostics", "/diagnostics.html",  # full diagnostics dashboard (moved off the landing; still public)
     "/realm/challenge", "/realm/verify",  # OVERLORD-protocol signature gate (public: sign to earn a tier)
+    "/realm/deploy/feedback",          # deploy-feedback record (handler-gated to overlord/overseer)
     "/book",                           # listed public so the middleware defers; the handler _tier_gate enforces MEMBER
     # NOTE: /docs.html, /book, /doc/*, /automindx stay listed public so the MIDDLEWARE
     # defers to them; the per-handler _tier_gate does the tier enforcement (participant/member),

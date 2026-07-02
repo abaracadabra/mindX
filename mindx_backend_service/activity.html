@@ -65,8 +65,9 @@ canvas#bg.on{opacity:.6}
       <div id="act-feed"><div class="muted">loading activity…</div></div>
     </div>
     <div class="card">
-      <h2>Recommended deploy order</h2>
+      <h2>Deploy sequence &amp; feedback</h2>
       <div id="deploy-order"><div class="muted">loading sequence…</div></div>
+      <div id="deploy-feedback" style="margin-top:12px"></div>
     </div>
     <div class="card">
       <h2>Hierarchy</h2>
@@ -128,6 +129,17 @@ function renderOverlord(addr){
     var doEl=document.getElementById('deploy-order');
     var steps=(d.deploy_order&&d.deploy_order.steps)||[];
     doEl.innerHTML=steps.length?('<div class="tiers">'+steps.map(function(s){return '<div class="tier"><span>'+esc(s)+'</span></div>';}).join('')+'<div class="muted" style="margin-top:8px">'+esc((d.deploy_order&&d.deploy_order.note)||'')+'</div>'):'<div class="muted">no sequence.</div>';
+    // live deploy FEEDBACK — what the OVERLORD/OVERSEER actually signed on-chain
+    fetch('/insight/deploy/feedback?limit=20',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(fd){
+      var fe=document.getElementById('deploy-feedback');if(!fe)return;
+      var items=(fd&&fd.feedback)||[];
+      if(!items.length){fe.innerHTML='<div class="muted">no on-chain deploys recorded yet — the sequence above is the plan.</div>';return;}
+      fe.innerHTML='<div class="muted" style="margin-bottom:6px">confirmed on-chain:</div><div class="tiers">'+items.map(function(e){
+        var tx=e.explorer?('<a class="link" href="'+e.explorer+'" target="_blank">'+esc((e.tx_hash||'').slice(0,12))+'…</a>'):esc((e.tx_hash||'').slice(0,12));
+        var ref=e.asa_id?('ASA '+e.asa_id):esc((e.address||'').slice(0,10));
+        return '<div class="tier"><b>'+esc(e.status||'')+'</b><span>'+esc(e.contract||'')+' @ '+esc(e.chain||'')+' &middot; '+ref+' &middot; '+tx+'</span></div>';
+      }).join('')+'</div>';
+    }).catch(function(){});
     var h=d.hierarchy||{},os=h.OVERSEER||{},ov=h.OVERLORD||{};
     document.getElementById('hierarchy').innerHTML=
       '<div class="tiers">'+
