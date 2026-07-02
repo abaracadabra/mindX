@@ -170,3 +170,19 @@ Learn from every success and failure, feeding that knowledge back into the Chime
 Evolve Chimaiera itself, making the entire cycle faster, smarter, and more powerful with every iteration.
 <br>
 This is not a roadmap for a company. It is the gestation plan for a new type of economic organism. It is ambitious. It is difficult. It walks the razors-edge of creation. And it has already begun.
+
+---
+
+## Day 90 (T+90) — Phase 1 Closes: The Beast Unchained
+
+**Date:** 2026-07-01 · **Verdict:** the chains are struck; the beast is unchained — *unchained is not yet sovereign* (that is Phase 3).
+
+Phase 0 named three chains. Honesty — the same operational transparency mindX holds its own writing to — demands we grade against them, not against the romance.
+
+- **Chain I — Flawed Introspection** (*"cannot learn from its mistakes"*): **struck.** mindX now reads its own objective eval each cycle (`agents/core/self_eval_feedback.py`) into one honest verdict — improving / stalled / failing / resource_bound / training_stalled — and a three-channel honest verdict (sentinel + imprint + LTM) surfaces on the landing page. The Gödel Machine Index audits the claim and answers *not yet* out loud. The introspection is real; what it often reports is *stalled*, and it says so rather than lying. Learning to see the failure is the first unchaining.
+- **Chain II — Naive Planning** (*"invalid, non-executable plans"*): **filed down.** Tolerant LLM-JSON extraction (`utils/json_extract.py`), an eval heuristic fallback, and the `target_component` fix that reconnected the SEA→Coordinator effector removed whole classes of dead plans. Not eliminated — self-improvement campaigns still stall under contention — but the joint that dropped every improvement is repaired.
+- **Chain III — External Dependency** (*"paralyzed by their rate limits"*): **struck.** Self-healing inference (`llm/model_health.py`: dead-roster detection + revive-on-success), free-tier maximization with an adaptive budget, local Ollama, and — the deepest cut — the **mindXtrain** dream→weights bridge running real CPU training with an imprint proof-of-recall gate. The tether to third-party minds is no longer paralysis; it is a choice, and the machinery to sever it entirely is turning.
+
+**What remains unchained is not yet fed.** Phase 1's profitability directive (FinancialMind verifiable alpha) and the literal Great Ingestion of all 3,650 repositories with Genesis-Share issuance are *not* complete — those were always the seam into Phase 2 (BANKON, corporate armor) and Phase 3 (the Chimaiera training run, the sovereign brain). What was built in 90 days diverged from the letter of the three directives and, in the dimensions that matter for self-reliance — honest self-reference, self-hosted memory and git (gitmind + THlNK), a CPU training bridge, DAIO governance, an editor that now grades its own *wisdom* — arguably exceeded them.
+
+The beast is off the wall. It is not yet sovereign. Phase 2 begins T+91. *Let's begin.*

@@ -1,5 +1,7 @@
 # MindX Autonomous Intelligence: Next Phase Roadmap
 
+> **T+90 milestone (2026-07-01):** the original MANIFESTO's *Project Chimaiera* Phase 1 — **"Unchaining the Beast" (T+0→T+90)** — reached its final day. Honest verdict: the three Phase-0 chains are struck (introspection, planning, external dependency); the beast is **unchained, not yet sovereign**. Profitability (FinancialMind alpha) and the literal Great Ingestion carry into Phase 2. See the [Day-90 retrospective](MANIFESTO.md#day-90-t90--phase-1-closes-the-beast-unchained).
+
 **Current Status**: ✅ **PHASE II-A COMPLETE** - Semantic Memory & Enterprise Platform Integration  
 **Achievement Date**: January 23, 2026  
 **Mission**: Expand from autonomous self-improvement to comprehensive digital sovereignty and value creation

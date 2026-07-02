@@ -10,6 +10,7 @@ Auto-maintained by AuthorAgent from the public git history (`github.awareness`).
 
 | date | commit | worthy | score | summary |
 |------|--------|--------|-------|---------|
+| 2026-07-01 | [`141d0fcf`](https://github.com/AgenticPlace/mindX/commit/141d0fcf2998ed6d7cfb78a15211106c05239985) | ✓ | 1.0 | **T+90 — Phase 1 "Unchaining the Beast" closes.** The three Phase-0 chains struck (flawed introspection → honest self-eval; naive planning → tolerant JSON + effector fix; external dependency → self-healing inference + mindXtrain CPU training). Unchained, not yet sovereign — Phase 2 begins T+91. See [MANIFESTO](MANIFESTO.md#day-90-t90--phase-1-closes-the-beast-unchained). |
 | 2026-06-04 | [`21929858`](https://github.com/AgenticPlace/mindX/commit/219298585b69f0e06114b6f5a54896f1226d7df6) | ✓ | 1.0 | Add Schmidhüber Engine + dormant mindXtrain bridge |
 | 2026-06-04 | [`12d4bb58`](https://github.com/AgenticPlace/mindX/commit/12d4bb580f4eeb0927d1eb16eaf333d9d1fd36ea) | ✓ | 1.0 | Add Gödel Eval Blueprint: falsifiable proof-or-disprove harness |
 | 2026-06-04 | [`e8cff54c`](https://github.com/AgenticPlace/mindX/commit/e8cff54c6f0f151604663aa9814c7c6a4490b8ca) | ✓ | 1.0 | Calibrate Gödel claim + ship Gödel Machine Index (GMI) Phase 0 |
