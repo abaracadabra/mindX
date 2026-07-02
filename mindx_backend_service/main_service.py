@@ -2401,6 +2401,7 @@ _PUBLIC_EXACT_STRICT = frozenset({
     # public the whole time; these are just the read-only renderings.
     "/feedback", "/feedback.html", "/feedback.txt",
     "/agentic", "/agentic.html",
+    "/activity", "/activity.html",     # Realm door — public shell; identity recognized client-side on connect, redirected per hierarchy
     "/insight/narrative/recent",       # DeltaVerse narrative recap stream (public read)
     "/deltaverse.js",                  # DeltaVerse fabric engine — public asset for 404/landing/realm
     "/realm",                          # REALM surface — overlord-gated at the handler level

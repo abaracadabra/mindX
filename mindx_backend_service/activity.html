@@ -3,27 +3,32 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>mindX — Activity (OVERLORD)</title>
-<meta name="robots" content="noindex,follow">
+<title>mindX — the Realm</title>
+<meta name="robots" content="noindex,nofollow">
 <link rel="canonical" href="https://mindx.pythai.net/">
 <link rel="icon" href="/gfx/favicon.ico" sizes="any">
 <style>
 :root{--bg:#050810;--panel:rgba(10,12,18,.96);--border:#30363d;--text:#e6edf3;--text2:#c9d1d9;--text3:#7d8590;--gold:#e3b341;--green:#56d364;--blue:#79c0ff;--violet:#bc8cff;--mono:'JetBrains Mono','SF Mono','Fira Code',monospace}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text2);font-family:var(--mono);min-height:100vh;line-height:1.5}
-canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.6}
+canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0;transition:opacity 1.6s ease}
+canvas#bg.on{opacity:.6}
 .wrap{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:40px 20px}
+.gate{display:none}
+/* Outer door — tells very little. */
+#door-view{min-height:88vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;text-align:center}
+#door-view .mark{width:60px;height:60px;opacity:.9}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:8px;border:1px solid rgba(227,179,65,.5);background:rgba(227,179,65,.07);color:var(--gold);font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;text-decoration:none}
+.btn:hover{background:rgba(227,179,65,.16);color:#fff}
+.btn.ghost{border-color:var(--border);color:var(--text3);background:transparent}
+.btn.realm{font-size:14px;letter-spacing:.28em;padding:16px 34px;border-radius:10px;box-shadow:0 0 0 1px rgba(227,179,65,.15),0 8px 30px rgba(0,0,0,.5)}
 .brand{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 .brand img{width:34px;height:34px}
 .brand h1{font-size:20px;color:var(--text);letter-spacing:.5px;font-weight:700}
 .brand h1 b{color:var(--gold)}
 .sub{font-size:11px;color:var(--text3);letter-spacing:.06em;margin-bottom:26px}
-.gate{display:none}
 .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin-bottom:16px}
 .card h2{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:8px;border:1px solid rgba(227,179,65,.5);background:rgba(227,179,65,.07);color:var(--gold);font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;text-decoration:none}
-.btn:hover{background:rgba(227,179,65,.16);color:#fff}
-.btn.ghost{border-color:var(--border);color:var(--text3);background:transparent}
 .act-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(48,54,61,.5);font-size:12px}
 .act-row:last-child{border-bottom:none}
 .act-tier{flex:0 0 auto;font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;border:1px solid var(--border);color:var(--text3)}
@@ -32,24 +37,28 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events
 .act-time{flex:0 0 auto;color:var(--text3);font-size:10px}
 .tiers{display:flex;flex-direction:column;gap:8px;margin-top:8px}
 .tier{display:flex;gap:10px;font-size:11px;padding:6px 10px;border:1px solid var(--border);border-radius:6px}
-.tier b{color:var(--gold);flex:0 0 90px}
-.tier span{color:var(--text3)}
+.tier b{color:var(--gold);flex:0 0 90px}.tier span{color:var(--text3)}
 .muted{font-size:10.5px;color:var(--text3);line-height:1.7}
-a.link{color:var(--blue);text-decoration:none}a.link:hover{text-decoration:underline}
 .pill{font-size:9px;color:var(--gold);border:1px solid rgba(227,179,65,.4);border-radius:999px;padding:2px 9px}
 </style>
 </head>
 <body>
 <canvas id="bg"></canvas>
 <div class="wrap">
-  <div class="brand"><img src="/gfx/mindX.png" alt="mindX"><h1>mind<b>X</b> · Activity</h1></div>
-  <div class="sub" id="sub">verifying OVERLORD credentials…</div>
+
+  <!-- OUTER DOOR: tell very little. One way through. -->
+  <div id="door-view">
+    <img class="mark" src="/gfx/mindX.png" alt="mindX">
+    <button class="btn realm" id="connect-btn">ENTER THE REALM</button>
+  </div>
 
   <!-- OVERLORD-recognized view -->
   <div id="overlord-view" class="gate">
+    <div class="brand"><img src="/gfx/mindX.png" alt="mindX"><h1>mind<b>X</b> · Activity</h1></div>
+    <div class="sub" id="ovl-sub">OVERLORD session · both menus unlocked</div>
     <div class="card">
       <h2>♛ OVERLORD recognized <span class="pill" id="ovl-addr"></span></h2>
-      <div class="muted">Full mindX activity + the BUILDER and OVERLORD panels are unlocked below (bottom corners). Mint authority is yours; the public participant does not have it yet.</div>
+      <div class="muted">Full mindX activity + the BUILDER and OVERLORD panels are unlocked (bottom corners). Mint + deploy authority is yours; the public participant does not have it yet.</div>
     </div>
     <div class="card">
       <h2>Live activity</h2>
@@ -57,84 +66,86 @@ a.link{color:var(--blue);text-decoration:none}a.link:hover{text-decoration:under
     </div>
   </div>
 
-  <!-- Recognized-participant view (non-OVERLORD) -->
+  <!-- Recognized-participant view (after a non-OVERLORD connects) -->
   <div id="participant-view" class="gate">
+    <div class="brand"><img src="/gfx/mindX.png" alt="mindX"><h1>mind<b>X</b></h1></div>
+    <div class="sub">recognized participant · corporate</div>
     <div class="card">
       <h2>Recognized participant</h2>
-      <div class="muted">Activity is gated to the OVERLORD. You are recognized as a <b style="color:var(--violet)">public participant (corporate)</b> — welcome. Privilege is earned from the hierarchy; here is how to climb it.</div>
+      <div class="muted">Welcome. You entered as a <b style="color:var(--text2)">participant</b>; on connecting you are now a <b style="color:var(--violet)">recognized participant</b>. The next step is yours.</div>
       <div class="tiers">
-        <div class="tier"><b>free</b><span>the outer door — read the public dashboard and the writing at rage.pythai.net</span></div>
-        <div class="tier"><b>sovereign</b><span>hold a subname.bankon.eth → SOVEREIGN member (BASIC)</span></div>
-        <div class="tier"><b>member → model</b><span>earned from holdings (ERC-20 / iNFT) — build an agent to begin</span></div>
-        <div class="tier"><b>overseer</b><span>mindx.algo (Algorand / PARSEC), or first BankonBatchWrapper deployer on a chain</span></div>
-        <div class="tier"><b>overlord</b><span>bankon.eth — sole mint + deploy authority</span></div>
+        <div class="tier"><b>participant</b><span>the outer door — anyone may enter the realm</span></div>
+        <div class="tier"><b>recognized</b><span>connected — the realm knows you</span></div>
+        <div class="tier"><b>member</b><span>privilege from token — hold the token, gain member access</span></div>
       </div>
-      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
-        <a class="btn" href="/login?as=participant&profile=corporate">connect / sign in</a>
-        <a class="btn ghost" href="/">back to the door</a>
-      </div>
-    </div>
-    <div class="card">
-      <h2>Connect as OVERLORD</h2>
-      <div class="muted">If you are the OVERLORD (bankon.eth), connect your wallet to unlock Activity.</div>
-      <div style="margin-top:12px"><button class="btn" id="connect-btn">◈ connect wallet</button></div>
+      <div style="margin-top:16px"><button class="btn realm" id="member-btn" style="font-size:12px;letter-spacing:.12em;padding:12px 24px">Become a Member</button></div>
     </div>
   </div>
 </div>
 
 <script>
 var OVERLORD='0x10f7ee226b16bea7f365dc1edef159fc1957d169'; // bankon.eth
+// Courtesy whitelist — wallet public keys granted MEMBER access as a courtesy,
+// without holding the token. Operator fills with lowercased addresses.
+var COURTESY_WHITELIST=[];
+function isCourtesy(a){return !!a && COURTESY_WHITELIST.indexOf(a.toLowerCase())>=0;}
 function short(a){return a?a.slice(0,6)+'…'+a.slice(-4):'';}
 function connectedAddr(){try{var e=window.ethereum;return (e&&(e.selectedAddress||(e._state&&e._state.accounts&&e._state.accounts[0])))||null;}catch(x){return null;}}
-
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function show(id){['door-view','overlord-view','participant-view'].forEach(function(v){var el=document.getElementById(v);if(el)el.style.display=(v===id)?(v==='door-view'?'flex':'block'):'none';});}
+
+var _substrateOn=false;
+function startSubstrate(){ // deferred: only after a wallet is logged in
+  if(_substrateOn)return; _substrateOn=true;
+  var cv=document.getElementById('bg');cv.classList.add('on');
+  var c=cv.getContext('2d'),W,H,st=[];
+  function rs(){W=cv.width=innerWidth;H=cv.height=innerHeight;st=[];var n=Math.min(140,Math.floor(W*H/8000));for(var i=0;i<n;i++)st.push({x:Math.random()*W,y:Math.random()*H,z:Math.random()*2+.4,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,cl:['rgba(227,179,65,','rgba(121,192,255,','rgba(86,211,100,'][i%3]});}
+  addEventListener('resize',rs);rs();
+  function d(){c.fillStyle='rgba(5,8,16,.1)';c.fillRect(0,0,W,H);for(var i=0;i<st.length;i++){var s=st[i];for(var j=i+1;j<Math.min(st.length,i+8);j++){var dx=s.x-st[j].x,dy=s.y-st[j].y,q=dx*dx+dy*dy;if(q<6000){c.beginPath();c.moveTo(s.x,s.y);c.lineTo(st[j].x,st[j].y);c.strokeStyle='rgba(121,192,255,'+(1-q/6000)*.05+')';c.lineWidth=.4;c.stroke();}}s.x+=s.vx;s.y+=s.vy;if(s.x<0)s.x=W;if(s.x>W)s.x=0;if(s.y<0)s.y=H;if(s.y>H)s.y=0;c.beginPath();c.arc(s.x,s.y,s.z,0,6.28);c.fillStyle=s.cl+'.5)';c.fill();}requestAnimationFrame(d);}requestAnimationFrame(d);
+}
 
 function renderOverlord(addr){
-  document.getElementById('sub').textContent='OVERLORD session · both menus unlocked';
+  show('overlord-view');startSubstrate();
   document.getElementById('ovl-addr').textContent=short(addr);
-  document.getElementById('overlord-view').style.display='block';
-  document.getElementById('participant-view').style.display='none';
-  // load both menus (BUILDER + OVERLORD floating panels)
-  ['/static/archetypes.js','/static/builder_button.js','/static/overlord_button.js'].forEach(function(src){
-    var s=document.createElement('script');s.src=src;s.async=true;document.body.appendChild(s);
-  });
-  // mark participant signed-in so BUILDER links unlock for the OVERLORD
+  ['/static/archetypes.js','/static/builder_button.js','/static/overlord_button.js'].forEach(function(src){var s=document.createElement('script');s.src=src;s.async=true;document.body.appendChild(s);});
   try{localStorage.setItem('mindx_participant','overlord');}catch(e){}
-  // live activity feed
   fetch('/insight/agentic/activity',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
     var feed=document.getElementById('act-feed');var items=(d&&(d.activity||d.events||d.items))||[];
     if(!items.length){feed.innerHTML='<div class="muted">no recent activity.</div>';return;}
-    feed.innerHTML=items.slice(0,30).map(function(e){
-      return '<div class="act-row"><span class="act-tier">'+esc(e.tier||e.agent_tier||'—')+'</span>'+
-        '<span class="act-agent">'+esc(e.agent||e.agent_id||'?')+'</span>'+
-        '<span class="act-head">'+esc(e.headline||e.type||e.kind||'')+'</span>'+
-        '<span class="act-time">'+esc(e.time||e.ts||'')+'</span></div>';
-    }).join('');
+    feed.innerHTML=items.slice(0,30).map(function(e){return '<div class="act-row"><span class="act-tier">'+esc(e.tier||e.agent_tier||'—')+'</span><span class="act-agent">'+esc(e.agent||e.agent_id||'?')+'</span><span class="act-head">'+esc(e.headline||e.type||e.kind||'')+'</span><span class="act-time">'+esc(e.time||e.ts||'')+'</span></div>';}).join('');
   }).catch(function(){document.getElementById('act-feed').innerHTML='<div class="muted">activity feed unavailable.</div>';});
 }
-function renderParticipant(){
-  document.getElementById('sub').textContent='recognized participant · Activity is OVERLORD-gated';
-  document.getElementById('participant-view').style.display='block';
-  document.getElementById('overlord-view').style.display='none';
+function renderParticipant(courtesy){
+  show('participant-view');startSubstrate();
+  try{localStorage.setItem('mindx_participant',courtesy?'member':'recognized');}catch(e){}
+  if(courtesy){
+    var h=document.querySelector('#participant-view .card h2');if(h)h.textContent='Member (courtesy)';
+    var b=document.getElementById('member-btn');if(b){b.textContent='Member access granted';b.disabled=true;b.style.opacity=.6;b.style.cursor='default';}
+  }
 }
-function gate(){
+function afterConnect(){
   var a=connectedAddr();
-  if(a&&a.toLowerCase()===OVERLORD)renderOverlord(a); else renderParticipant();
+  if(a&&a.toLowerCase()===OVERLORD)renderOverlord(a);
+  else if(a)renderParticipant(isCourtesy(a));   // courtesy whitelist → member without token
+  else show('door-view');
 }
+
 document.addEventListener('DOMContentLoaded',function(){
+  show('door-view'); // outer door only — no substrate, no detail, until connected
   var btn=document.getElementById('connect-btn');
   if(btn)btn.addEventListener('click',function(){
-    if(!window.ethereum){alert('No wallet detected.');return;}
-    window.ethereum.request({method:'eth_requestAccounts'}).then(gate).catch(function(){});
+    if(!window.ethereum){location.href='/login?as=participant&profile=corporate';return;}
+    window.ethereum.request({method:'eth_requestAccounts'}).then(afterConnect).catch(function(){});
   });
-  gate();
-  if(window.ethereum&&window.ethereum.on)window.ethereum.on('accountsChanged',gate);
+  var mb=document.getElementById('member-btn');
+  if(mb)mb.addEventListener('click',function(){
+    // Member privilege comes from the token (or the courtesy whitelist).
+    location.href='/login?as=member&from=/activity';
+  });
+  // if a wallet is already authorized, honor it (still gated by identity)
+  if(connectedAddr())afterConnect();
+  if(window.ethereum&&window.ethereum.on)window.ethereum.on('accountsChanged',afterConnect);
 });
-// ambient substrate
-(function(){var cv=document.getElementById('bg'),c=cv.getContext('2d'),W,H,st=[];
-function rs(){W=cv.width=innerWidth;H=cv.height=innerHeight;st=[];var n=Math.min(120,Math.floor(W*H/9000));for(var i=0;i<n;i++)st.push({x:Math.random()*W,y:Math.random()*H,z:Math.random()*2+.4,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,cl:['rgba(227,179,65,','rgba(121,192,255,','rgba(86,211,100,'][i%3]});}
-addEventListener('resize',rs);rs();
-function d(){c.fillStyle='rgba(5,8,16,.1)';c.fillRect(0,0,W,H);for(var i=0;i<st.length;i++){var s=st[i];s.x+=s.vx;s.y+=s.vy;if(s.x<0)s.x=W;if(s.x>W)s.x=0;if(s.y<0)s.y=H;if(s.y>H)s.y=0;c.beginPath();c.arc(s.x,s.y,s.z,0,6.28);c.fillStyle=s.cl+'.5)';c.fill();}requestAnimationFrame(d);}requestAnimationFrame(d);})();
 </script>
 </body>
 </html>
