@@ -1350,6 +1350,7 @@ async def improvement_journal_page():
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
 _LANDING_HTML_PATH = Path(__file__).parent / "landing.html"
 _MACHINE_HTML_PATH = Path(__file__).parent / "machine.html"
+_MACHINE_ADMIN_HTML_PATH = Path(__file__).parent / "machine_admin.html"
 _FEEDBACK_HTML_PATH = Path(__file__).parent / "feedback.html"
 _NETSTAT_HTML_PATH = Path(__file__).parent / "netstat.html"
 _OVERSEER_HTML_PATH = Path(__file__).parent / "overseer.html"
@@ -2137,6 +2138,16 @@ async def public_machine():
     return _DashResponse(content="<h1>mindX — Gödel Machine Index</h1><p><a href='/insight/godel/machine'>raw JSON</a></p>")
 
 
+@app.get("/machine/admin", response_class=_DashResponse, include_in_schema=False)
+async def public_machine_admin():
+    """Gödel Machine diagnostics — the complete audit in scientific, corporate-elegant
+    admin panelling (public data; the deep companion page linked once from /machine).
+    Maintained by blueprint.agent."""
+    if _MACHINE_ADMIN_HTML_PATH.exists():
+        return _DashResponse(content=_MACHINE_ADMIN_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX — Diagnostics</h1><p><a href='/machine'>◂ index</a> · <a href='/insight/godel/machine'>raw JSON</a></p>")
+
+
 @app.get("/diagnostics", response_class=_DashResponse, include_in_schema=False)
 @app.get("/diagnostics.html", response_class=_DashResponse, include_in_schema=False)
 async def public_dashboard():
@@ -2527,7 +2538,7 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/diagnostics", "/diagnostics.html",  # full diagnostics dashboard (moved off the landing; still public)
     "/realm/challenge", "/realm/verify",  # OVERLORD-protocol signature gate (public: sign to earn a tier)
     "/realm/deploy/feedback",          # deploy-feedback record (handler-gated to overlord/overseer)
-    "/machine",                        # Gödel Machine Index — public honest self-audit (admin layer walled client-side)
+    "/machine", "/machine/admin",      # Gödel Machine Index (public) + diagnostics admin page (public data)
     "/book",                           # listed public so the middleware defers; the handler _tier_gate enforces MEMBER
     # NOTE: /docs.html, /book, /doc/*, /automindx stay listed public so the MIDDLEWARE
     # defers to them; the per-handler _tier_gate does the tier enforcement (participant/member),

@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>mindX — Gödel Machine Index</title>
-<meta name="description" content="The Gödel Machine Index: mindX's honest, live self-audit of whether it is a Gödel machine. Eight predicates, machine-checked, honest when the answer is not yet.">
+<meta name="description" content="The Gödel Machine Index: mindX's objective, scientific self-audit of whether it is a Gödel machine. Eight predicates, machine-checked, each true or false — computed from the log.">
 <meta name="robots" content="index,follow"><link rel="canonical" href="https://mindx.pythai.net/machine">
 <link rel="icon" href="/gfx/favicon.ico" sizes="any">
 <meta property="og:title" content="mindX — Gödel Machine Index"><meta property="og:type" content="website">
@@ -62,6 +62,7 @@ header.top{display:flex;justify-content:space-between;align-items:center;padding
 .pred:before{content:'';position:absolute;left:0;top:16px;bottom:16px;width:2px;background:var(--mut);border-radius:2px}
 .pred.ok:before{background:var(--ok)}.pred.no:before{background:var(--no)}.pred.wait:before{background:var(--wait)}
 .pred .id{font-size:11px;color:var(--blu);font-weight:700;letter-spacing:.14em}
+.pred .bit{float:right;font-size:15px;font-weight:800;color:var(--no)}.pred.ok .bit{color:var(--ok)}
 .pred .nm{font-family:var(--serif);font-size:17px;margin:4px 0 9px;text-transform:capitalize;color:var(--ink)}
 .pred .vd{display:inline-block;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;padding:3px 10px;border-radius:2px;border:1px solid currentColor}
 .pred.ok .vd{color:var(--ok)}.pred.no .vd{color:var(--no)}.pred.wait .vd{color:var(--wait)}
@@ -92,9 +93,9 @@ footer a{color:var(--blu);text-decoration:none}footer code{color:var(--au)}
   <section class="hero">
     <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
     <div class="hero-in">
-      <div class="eyebrow">Sheet G · live self-audit · <b>computed from the log</b></div>
+      <div class="eyebrow">Sheet G · objective · scientific · <b>computed from the log</b></div>
       <div class="verdict" id="verdict">measuring…</div>
-      <p class="summary" id="summary">Reading the machine's honest verdict…</p>
+      <p class="summary" id="summary">Reading the machine's objective verdict…</p>
     </div>
     <div class="stamp" id="gauges"></div>
   </section>
@@ -106,10 +107,9 @@ footer a{color:var(--blu);text-decoration:none}footer code{color:var(--au)}
 
   <section class="wall">
     <div class="wall-top">
-      <div><div class="t">The Complete Audit</div><div class="s">Every measured surface, the coverage math, live telemetry &amp; the verbatim payload — in full, in the open.</div></div>
-      <a class="lockbtn" href="/insight/godel/machine" style="text-decoration:none;display:inline-block">Raw JSON ▸</a>
+      <div><div class="t">Diagnostics — the complete audit</div><div class="s">Every evidence surface, the coverage math, live Gödel-choice telemetry &amp; the verbatim payload — on the diagnostics admin page.</div></div>
+      <a class="lockbtn" href="/machine/admin" style="text-decoration:none;display:inline-block">Open diagnostics ▸</a>
     </div>
-    <div id="blueprint-root"></div>
   </section>
 
   <footer>
@@ -134,7 +134,7 @@ function render(g){
   GMI=g;var neg=(g.verdict||'').indexOf('NOT')>=0||(g.verdict||'').indexOf('FALSIF')>=0;
   var vtxt=(g.verdict||'UNKNOWN').replace(/_/g,' ');
   document.getElementById('verdict').innerHTML='<span class="'+(neg?'neg':'pos')+'">'+esc(vtxt)+'</span>'+
-    '<small>Phase '+(g.phase!=null?g.phase:'?')+' · '+(g.predicates_proven||0)+' of 8 predicates proven</small>';
+    '<small>Phase '+(g.phase!=null?g.phase:'?')+' · '+(g.predicates_proven||0)+' of 8 predicates true · GÖDEL MACHINE = <b style="color:'+(neg?'#ff5c52':'#5bd97b')+'">'+(neg?'FALSE (0)':'TRUE (1)')+'</b></small>';
   document.getElementById('summary').textContent=g.honest_summary||'';
   document.getElementById('gauges').innerHTML=
     ring(g.proof_coverage||0,'#ff5c52','proof coverage')+
@@ -142,22 +142,14 @@ function render(g){
     ring((g.predicates_proven||0)/8,'#5bd97b','predicates proven');
   requestAnimationFrame(function(){document.querySelectorAll('#gauges circle[data-pct]').forEach(function(el){var C=2*Math.PI*46;el.style.strokeDashoffset=(C*(1-parseFloat(el.getAttribute('data-pct')))).toFixed(1);});});
   if(g.blockers&&g.blockers.length){var b=document.getElementById('blockers');b.style.display='block';
-    b.innerHTML='<h3>Honest blockers — why the verdict is “not yet”</h3>'+g.blockers.map(function(x){return '<code>'+esc(x)+'</code>';}).join('');}
+    b.innerHTML='<h3>Objective blockers — why the verdict is FALSE</h3>'+g.blockers.map(function(x){return '<code>'+esc(x)+'</code>';}).join('');}
   document.getElementById('grid').innerHTML=(g.predicates||[]).map(function(p){
-    return '<div class="pred '+vclass(p.verdict)+'" onclick="this.classList.toggle(\'open\')">'+
-      '<div class="id">'+esc(p.id)+'</div><div class="nm">'+esc((p.name||'').replace(/_/g,' '))+'</div>'+
+    var cl=vclass(p.verdict),bit=cl==='ok'?'1':'0';
+    return '<div class="pred '+cl+'" onclick="this.classList.toggle(\'open\')">'+
+      '<div class="id">'+esc(p.id)+' <span class="bit">'+bit+'</span></div><div class="nm">'+esc((p.name||'').replace(/_/g,' '))+'</div>'+
       '<span class="vd">'+esc(p.verdict)+'</span><div class="dt">'+esc(p.detail)+'</div>'+
       '<div class="ev">'+esc(JSON.stringify(p.evidence||{},null,2))+'</div><div class="more">evidence ▾</div></div>';
   }).join('');
-  loadBlueprint(g);   // the entire audit, in admin panelling, public — completes the article linkback
-}
-function loadBlueprint(g){
-  var root=document.getElementById('blueprint-root');
-  if(window.Blueprint){window.Blueprint.render(root,g,null);return;}
-  var s=document.createElement('script');s.src='/static/blueprint.js';
-  s.onload=function(){if(window.Blueprint)window.Blueprint.render(root,g,null);};
-  s.onerror=function(){root.innerHTML='<div style="padding:26px;color:#ff5c52">deep panels unavailable — <a href="/insight/godel/machine" style="color:#4a9eff">raw JSON</a></div>';};
-  document.head.appendChild(s);
 }
 fetch('/insight/godel/machine',{cache:'no-store'}).then(function(r){return r.json();}).then(render)
   .catch(function(){document.querySelector('.hero-in').innerHTML='<div class="err">The self-audit is momentarily unavailable. <a href="/insight/godel/machine">raw JSON</a></div>';});
