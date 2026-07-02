@@ -2103,8 +2103,12 @@ async def dojo_page():
 
 @app.get("/automindx", response_class=_DashResponse, include_in_schema=False)
 @app.get("/automindx.html", response_class=_DashResponse, include_in_schema=False)
-async def automindx_page():
-    """AUTOMINDx — The Origin of mindX."""
+async def automindx_page(request: Request):
+    """AUTOMINDx — The Origin of mindX. Gated to recognized participant (connect
+    a wallet at the realm door) and above."""
+    _g = await _tier_gate(request, "participant", "/automindx")
+    if _g is not None:
+        return _g
     if _AUTOMINDX_HTML_PATH.exists():
         return _DashResponse(content=_AUTOMINDX_HTML_PATH.read_text(encoding="utf-8"))
     return _DashResponse(content="<h1>AUTOMINDx</h1><p>Loading...</p>")
@@ -2460,8 +2464,10 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/activity", "/activity.html",     # Realm door — public shell; identity recognized client-side on connect, redirected per hierarchy
     "/diagnostics", "/diagnostics.html",  # full diagnostics dashboard (moved off the landing; still public)
     "/realm/challenge", "/realm/verify",  # OVERLORD-protocol signature gate (public: sign to earn a tier)
+    "/book",                           # listed public so the middleware defers; the handler _tier_gate enforces MEMBER
     # NOTE: /docs.html, /book, /doc/*, /automindx stay listed public so the MIDDLEWARE
-    # defers to them; the per-handler _tier_gate does the tier enforcement (participant/member).
+    # defers to them; the per-handler _tier_gate does the tier enforcement (participant/member),
+    # redirecting to the /activity realm door (NOT /login, which wants a vault session).
     "/insight/narrative/recent",       # DeltaVerse narrative recap stream (public read)
     "/deltaverse.js",                  # DeltaVerse fabric engine — public asset for 404/landing/realm
     "/realm",                          # REALM surface — overlord-gated at the handler level
@@ -2637,11 +2643,62 @@ async def _tier_gate(request: "Request", min_tier: str, html_from: str):
         return None
     accept = request.headers.get("accept", "")
     if "text/html" in accept and getattr(request, "method", "GET") == "GET":
-        from urllib.parse import quote as _q
-        from starlette.responses import RedirectResponse as _TR
         safe_from = html_from if html_from.startswith("/") and not html_from.startswith("//") else "/"
-        return _TR(url=f"/activity?from={_q(safe_from, safe='/')}", status_code=302)
+        return _DashResponse(content=_access_denied_page(safe_from, min_tier), status_code=403)
     raise HTTPException(status_code=403, detail=f"realm tier '{min_tier}' required — connect at /activity")
+
+
+def _access_denied_page(from_path: str, min_tier: str) -> str:
+    """A solid ACCESS DENIED page for the OVERLORD hierarchy — not a 'not found'.
+    ENTER THE REALM connects the wallet, signs the challenge, and returns to the
+    requested page with the tier token. No wallet → opens MetaMask in a new tab."""
+    import json as _json
+    frm = _json.dumps(from_path)
+    tier = _json.dumps(min_tier)
+    return f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mindX — Access Denied</title><meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="/gfx/favicon.ico" sizes="any">
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{background:#04060b;color:#aeb7c2;font-family:'JetBrains Mono','SF Mono',monospace;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px}}
+.box{{max-width:520px}}
+.lock{{font-size:40px;margin-bottom:16px;filter:drop-shadow(0 0 14px rgba(248,81,73,.4))}}
+h1{{font-size:26px;letter-spacing:.28em;color:#f85149;margin-bottom:14px;text-transform:uppercase}}
+p{{font-size:12.5px;line-height:1.7;color:#7d8590;margin-bottom:8px}}
+b{{color:#e3b341}}
+.enter{{margin-top:26px;display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:#0a0d07;background:linear-gradient(135deg,#e3b341,#caa233);border:none;border-radius:10px;padding:15px 32px;cursor:pointer}}
+.enter:hover{{box-shadow:0 0 30px rgba(227,179,65,.35)}}
+#msg{{margin-top:16px;font-size:11px;color:#f0883e;min-height:16px}}
+a.home{{display:block;margin-top:22px;font-size:10px;color:#6b7480;text-decoration:none;letter-spacing:.1em}}a.home:hover{{color:#aeb7c2}}
+</style></head><body>
+<div class="box">
+  <div class="lock">&#128274;</div>
+  <h1>Access Denied</h1>
+  <p>This is the OVERLORD hierarchy. The page you sought requires <b>{min_tier}</b> tier.</p>
+  <p>Enter the realm — connect your wallet and sign to prove control. Signing grants no funds access.</p>
+  <button class="enter" id="enter">ENTER THE REALM</button>
+  <div id="msg"></div>
+  <a class="home" href="/">&larr; back to the door</a>
+</div>
+<script>
+var FROM={frm}, TIER={tier};
+document.getElementById('enter').addEventListener('click',async function(){{
+  var msg=document.getElementById('msg');
+  if(!window.ethereum){{ msg.textContent='no wallet found — opening MetaMask…'; window.open('https://metamask.io/download/','_blank','noopener'); return; }}
+  try{{
+    var accts=await window.ethereum.request({{method:'eth_requestAccounts'}});
+    var addr=accts&&accts[0]; if(!addr){{msg.textContent='no account';return;}}
+    var ch=await fetch('/realm/challenge?address='+encodeURIComponent(addr)).then(function(r){{return r.json();}});
+    var sig=await window.ethereum.request({{method:'personal_sign',params:[ch.message,addr]}});
+    var v=await fetch('/realm/verify',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{address:addr,nonce:ch.nonce,signature:sig}})}}).then(function(r){{return r.json();}});
+    if(v&&v.realm_token){{
+      try{{localStorage.setItem('mindx_realm_token',v.realm_token);localStorage.setItem('mindx_participant',v.role);if(v.role==='overlord')localStorage.setItem('mindx_overlord_verified','1');}}catch(e){{}}
+      location.href=FROM+(FROM.indexOf('?')>=0?'&':'?')+'t='+encodeURIComponent(v.realm_token);
+    }} else {{ msg.textContent='signature verified, but tier '+TIER+' not met'; }}
+  }}catch(e){{ msg.textContent='sign-in cancelled'; }}
+}});
+</script></body></html>"""
 
 
 async def _reference_gate(request: Request, html_from: str):
