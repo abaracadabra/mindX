@@ -117,7 +117,18 @@
     document.body.appendChild(wrap);
   }
 
+  // OVERLORD protocol: the panel is offered ONLY to the OVERLORD following a
+  // signature-verified login (bankon.eth via /auth/evm). Until a verified
+  // session exists (localStorage 'mindx_overlord_verified', set by the ENTER
+  // THE REALM sign-in on /activity), the panel does not render at all — the
+  // public landing never shows it.
+  function isVerifiedOverlord() {
+    try { return localStorage.getItem('mindx_overlord_verified') === '1'; }
+    catch (e) { return false; }
+  }
+
   function build() {
+    if (!isVerifiedOverlord()) return;   // no verified bankon.eth signature → no panel
     fetch(DATA_URL, { cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) { render(data || { deployments: [] }); })

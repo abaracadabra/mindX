@@ -1331,6 +1331,7 @@ async def improvement_journal_page():
     return _DashResponse(content=_doc_page("Improvement Journal", body + back, "", description="mindX Improvement Journal — timestamped log of autonomous decisions, self-improvement campaigns, belief changes, and system snapshots.", canonical_path="/journal"))
 
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
+_LANDING_HTML_PATH = Path(__file__).parent / "landing.html"
 _FEEDBACK_HTML_PATH = Path(__file__).parent / "feedback.html"
 _NETSTAT_HTML_PATH = Path(__file__).parent / "netstat.html"
 _OVERSEER_HTML_PATH = Path(__file__).parent / "overseer.html"
@@ -2093,11 +2094,24 @@ async def automindx_page():
 
 
 @app.get("/", response_class=_DashResponse, include_in_schema=False)
+async def public_landing():
+    """mindX public landing — succinct corporate expression + CONNECT wallet +
+    the maintained substrate. The full diagnostics moved to /diagnostics; the
+    mind-of-mindX detail lives on /feedback.html."""
+    if _LANDING_HTML_PATH.exists():
+        return _DashResponse(content=_LANDING_HTML_PATH.read_text(encoding="utf-8"))
+    if _DASH_HTML_PATH.exists():   # fallback until landing.html deploys
+        return _DashResponse(content=_DASH_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX</h1><p>Loading…</p>")
+
+
+@app.get("/diagnostics", response_class=_DashResponse, include_in_schema=False)
+@app.get("/diagnostics.html", response_class=_DashResponse, include_in_schema=False)
 async def public_dashboard():
-    """mindX live diagnostics — public, non-interactive, 24/7."""
+    """mindX live diagnostics dashboard — moved off the public landing to here."""
     if _DASH_HTML_PATH.exists():
         return _DashResponse(content=_DASH_HTML_PATH.read_text(encoding="utf-8"))
-    return _DashResponse(content="<h1>mindX</h1><p>Dashboard loading...</p>")
+    return _DashResponse(content="<h1>mindX diagnostics</h1><p>Dashboard loading...</p>")
 
 
 @app.get("/overseer", response_class=_DashResponse, include_in_schema=False)
@@ -2402,6 +2416,8 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/feedback", "/feedback.html", "/feedback.txt",
     "/agentic", "/agentic.html",
     "/activity", "/activity.html",     # Realm door — public shell; identity recognized client-side on connect, redirected per hierarchy
+    "/diagnostics", "/diagnostics.html",  # full diagnostics dashboard (moved off the landing; still public)
+    "/book",                           # the Book of mindX — public (with docs.html)
     "/insight/narrative/recent",       # DeltaVerse narrative recap stream (public read)
     "/deltaverse.js",                  # DeltaVerse fabric engine — public asset for 404/landing/realm
     "/realm",                          # REALM surface — overlord-gated at the handler level
