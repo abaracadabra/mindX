@@ -1,0 +1,13 @@
+# The Dojo engine runs with NOTHING but the Python standard library (simulation
+# mode + the model hub + the installer all work out of the box).
+#
+# For REAL training, DON'T install torch from here — use the platform/GPU-aware
+# installer so you get the right wheel for your hardware (AMD ROCm, NVIDIA CUDA,
+# or CPU). It must not come from PyPI or you get a CPU-only torch by accident.
+#
+#   In-app:  Settings → Install training stack
+#   Script:  python -m dojo_engine.installer --install --target auto
+#            (or scripts/setup.ps1 / scripts/setup.sh)
+#
+# The installer then adds the shared engine deps (transformers<5, peft, datasets,
+# accelerate, diffusers>=0.38,<0.39, safetensors, sentence-transformers, …).

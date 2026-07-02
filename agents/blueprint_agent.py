@@ -34,7 +34,7 @@ from typing import Any, Dict, List, Optional
 # Version + the growing catalogue of blueprint.agent skills. Each new capability is
 # appended here as we discover it; save_version() snapshots (version, skills) to the
 # manifest so every version is preserved with the skills it shipped with.
-__version__ = "1.5.0"
+__version__ = "1.6.0"
 SKILLS: List[Dict[str, str]] = [
     {"name": "gmi",                "kind": "blueprint", "desc": "read the live Gödel Machine Index"},
     {"name": "predicate_report",   "kind": "blueprint", "desc": "structured G1–G8 analysis (verdict + evidence)"},
@@ -58,6 +58,9 @@ SKILLS: List[Dict[str, str]] = [
     {"name": "frequency",          "kind": "monitoring","desc": "chip frequency (MHz) aggregate + per-core"},
     {"name": "cycles",             "kind": "monitoring","desc": "CPU cycles in flight (Gcycle/s), per-core + total"},
     {"name": "inference_correlation","kind": "eval",    "desc": "correlate ollama/vllm engines with live compute — for eval"},
+    {"name": "dojo_updates",       "kind": "training",  "desc": "the-dojo LoRA adapters + datasets available to mindXtrain"},
+    {"name": "training_gate",      "kind": "training",  "desc": "may the training core run now? (armed + temp + core + dojo)"},
+    {"name": "train_step",         "kind": "training",  "desc": "kick the mindXtrain ascent on the training core (dormant unless armed)"},
 ]
 
 # Interaction mapping — every interaction and the substrate/UI effect it produces,
@@ -380,6 +383,71 @@ class BlueprintAgent:
                 return usage or {"error": str(e2)}
         usage.setdefault("source", "resource_monitor")
         return usage
+
+    # ── training core: mindXtrain ascent, fed by the-dojo (LoRA) ───────
+    def dojo_updates(self) -> Dict[str, Any]:
+        """Updates available from the-dojo (LoRA adapters + datasets) for mindXtrain."""
+        try:
+            from mindx.godel.mindxtrain import dojo_bridge
+            return dojo_bridge.dojo_updates()
+        except Exception as e:
+            return {"available": False, "error": str(e)}
+
+    def training_gate(self) -> Dict[str, Any]:
+        """May the training core run the ascent now? Gated by: mindXtrain armed
+        (MINDX_ENABLE_MINDXTRAIN), acceptable temperature, an allocated training core,
+        and any dojo LoRA update to warm-start from."""
+        out: Dict[str, Any] = {"armed": False, "temp_ok": True, "cpu_temp_c": None,
+                               "training_cores": 0, "dojo_lora": None, "may_train": False, "reason": ""}
+        try:
+            from mindx.godel.mindxtrain.bridge import is_enabled
+            out["armed"] = bool(is_enabled())
+        except Exception as e:
+            out["reason"] = f"bridge: {e}"
+        try:
+            from agents.resource_governor import ResourceGovernor
+            g = ResourceGovernor(); t = g._cpu_temp()
+            out["cpu_temp_c"] = t
+            out["temp_ok"] = (t is None or t <= g.max_cpu_temp)
+            out["training_cores"] = (self.plant().get("allocation", {}).get("training", {}) or {}).get("cores", 0)
+        except Exception:
+            pass
+        try:
+            from mindx.godel.mindxtrain import dojo_bridge
+            out["dojo_lora"] = dojo_bridge.latest_lora()
+        except Exception:
+            pass
+        out["may_train"] = bool(out["armed"] and out["temp_ok"] and out["training_cores"] > 0)
+        out["reason"] = ("dormant — set MINDX_ENABLE_MINDXTRAIN=1" if not out["armed"]
+                         else "cpu too hot" if not out["temp_ok"]
+                         else "no training core allocated" if out["training_cores"] < 1 else "ready")
+        return out
+
+    async def train_step(self, generation: int = 1) -> Dict[str, Any]:
+        """Kick one mindXtrain ascent on the training core — /data → dream → mindXmodel,
+        taking the-dojo's datasets (and warm-starting from its latest LoRA) as necessary.
+        DORMANT unless armed; the gate refuses otherwise (never trains uninvited)."""
+        gate = self.training_gate()
+        if not gate["may_train"]:
+            return {"ok": False, "skipped": True, "reason": gate["reason"], "gate": gate}
+        from utils.config import PROJECT_ROOT as _R
+        result: Dict[str, Any] = {"ok": True, "gate": gate}
+        try:
+            from mindx.godel.mindxtrain import dojo_bridge
+            result["dojo_staged"] = dojo_bridge.stage_datasets(_R / "data" / "memory" / "dojo_updates")
+        except Exception as e:
+            result["dojo_staged"] = {"error": str(e)}
+        try:
+            from mindx.godel.mindxtrain.ascend import ascend_recipe
+            from mindx.godel.mindxtrain import settings as _mt_settings
+            recipe = getattr(_mt_settings, "DEFAULT_RECIPE", None) or "mindx"
+            res = await ascend_recipe(work_dir=_R / "data" / "mindxtrain_runs", generation=generation,
+                                      data_memory_dir=_R / "data" / "memory", recipe=recipe,
+                                      cpu_percent=33, use_imprint=True, promote=True)
+            result["ascent"] = res.as_dict() if hasattr(res, "as_dict") else str(res)
+        except Exception as e:
+            result["ascent"] = {"error": str(e)}
+        return result
 
     # ── compute plant: frequency, cycles, per-core role allocation ─────
     def plant(self) -> Dict[str, Any]:

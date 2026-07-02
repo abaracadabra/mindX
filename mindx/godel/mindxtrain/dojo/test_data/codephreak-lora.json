@@ -1,0 +1,1 @@
+{"id":"codephreak-qwen3","name":"codephreak-qwen3","task":"lora","modality":"text","base_model":"Qwen/Qwen3-0.6B","dataset_path":"/home/hacker/the-dojo/datasets/codephreak.jsonl","output_dir":"/home/hacker/the-dojo/outputs/codephreak-qwen3","config":{"epochs":6,"batch_size":1,"learning_rate":0.0003,"rank":16,"alpha":32,"extra":{"max_seq_len":64}}}

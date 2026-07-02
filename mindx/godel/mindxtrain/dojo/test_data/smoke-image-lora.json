@@ -1,0 +1,1 @@
+{"id":"smoke-image-lora","name":"sdxl-lora-smoke","task":"lora","modality":"image","base_model":"hf-internal-testing/tiny-stable-diffusion-xl-pipe","dataset_path":"C:/Users/hr737/the-dojo/test_data/images","output_dir":"C:/Users/hr737/the-dojo/outputs/smoke-image-lora","config":{"epochs":2,"batch_size":1,"learning_rate":0.0001,"rank":4,"alpha":8,"extra":{"resolution":64}}}

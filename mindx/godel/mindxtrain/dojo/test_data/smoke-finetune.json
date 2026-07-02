@@ -1,0 +1,1 @@
+{"id":"smoke-finetune","name":"smoke-finetune","task":"finetune","modality":"text","base_model":"sshleifer/tiny-gpt2","dataset_path":"C:/Users/hr737/the-dojo/test_data/data.jsonl","output_dir":"C:/Users/hr737/the-dojo/outputs/smoke-finetune","config":{"epochs":2,"batch_size":4,"learning_rate":0.0005,"rank":8,"alpha":16,"extra":{"max_seq_len":64}}}
