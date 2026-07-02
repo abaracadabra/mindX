@@ -371,6 +371,54 @@ class ArtistAgent:
         return {"sha256": sha, "cid": descriptor["cid"], "thot_tier": tier,
                 "sidecar": descriptor.get("sidecar")}
 
+    # ── permaweb image toolchain (docs/PERMAWEB_IMAGE_FORMATS.md) ──────
+    # space = money/time → pick the format per role, using the installed
+    # optimizers (mozjpeg/cwebp/avifenc/pngquant/oxipng). All graceful.
+    def optimizers_available(self) -> Dict[str, Any]:
+        """Which permaweb optimizers this host has (paths or None)."""
+        from agents import image_optimize
+        return image_optimize.available()
+
+    async def optimize_for_permaweb(self, src: str, out_base: Optional[str] = None, *,
+                                    width: int = 1024) -> Dict[str, Any]:
+        """Derive the doctrine set from one source: TIFF master + WebP + JPEG
+        (66-99KB standard) + enhanced PNG (+ AVIF where available)."""
+        import asyncio
+        from agents import image_optimize
+        base = out_base or str(self.out_dir / (Path(src).stem + "_permaweb"))
+        return await asyncio.to_thread(image_optimize.permaweb_derivatives, src, base, width=width)
+
+    async def optimize_delivery_jpeg(self, src: str, dst: Optional[str] = None, *,
+                                     width: int = 1024) -> Dict[str, Any]:
+        """Encode a delivery JPEG in the 66-99KB standard (4:2:0, progressive, mozjpeg)."""
+        import asyncio
+        from agents import image_optimize
+        dst = dst or str(self.out_dir / (Path(src).stem + ".jpg"))
+        return await asyncio.to_thread(image_optimize.optimize_jpeg, src, dst, width=width)
+
+    async def to_webp(self, src: str, dst: Optional[str] = None, *, width: int = 1024,
+                      q: int = 75) -> Dict[str, Any]:
+        """WebP — the permaweb-optimal raster."""
+        import asyncio
+        from agents import image_optimize
+        dst = dst or str(self.out_dir / (Path(src).stem + ".webp"))
+        return await asyncio.to_thread(image_optimize.to_webp, src, dst, width=width, q=q)
+
+    def svg_sigil(self, thot_root: str, *, size: int = 512, save: bool = True) -> Dict[str, Any]:
+        """Render an SVG sigil that EMERGES from a THOT root (store the seed, not
+        pixels). Returns the SVG text + (optionally) a written path."""
+        from agents import image_optimize
+        svg = image_optimize.svg_sigil_from_thot(thot_root, size=size)
+        out: Dict[str, Any] = {"success": True, "svg": svg, "thot_root": thot_root,
+                               "bytes": len(svg.encode()), "format": "svg", "from": "THOT"}
+        if save:
+            try:
+                p = self.out_dir / f"sigil_{(thot_root or 'x')[:16]}.svg"
+                p.write_text(svg, encoding="utf-8"); out["path"] = str(p)
+            except Exception as e:  # pragma: no cover
+                logger.warning(f"artist.agent: sigil write failed: {e}")
+        return out
+
     async def _anchor_thot(self, cid: str, dimensions: int) -> Dict[str, Any]:
         """Mint a THOT for the artwork's content CID via the storage anchor
         (owner-gated; returns a not-configured stub without THOT_MINTER_KEY)."""
