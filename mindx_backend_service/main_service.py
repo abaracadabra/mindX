@@ -5230,6 +5230,20 @@ async def insight_godel_machine(request: Request):
     return _maybe_h_text(request, gmi, route_path="/insight/godel/machine")
 
 
+@app.get("/insight/system/live", tags=["insight"], include_in_schema=False)
+async def insight_system_live(request: Request):
+    """Clean-house lightweight system diagnostics — psutil per-core CPU + RAM + disk +
+    the governor's live limit state. No Dash/Plotly/React: this JSON feeds the
+    vanilla-canvas panel on /machine/admin. Read-only, ~0.3s per call."""
+    try:
+        from agents.blueprint_agent import BlueprintAgent
+        b = BlueprintAgent()
+        payload = {"status": "success", "per_core": b.per_core(), "resources": b.resources()}
+    except Exception as e:
+        payload = {"status": "error", "error": str(e)}
+    return _maybe_h_text(request, payload, route_path="/insight/system/live")
+
+
 @app.get("/insight/self/diagnostic", tags=["insight"])
 @_insight_safe
 async def insight_self_diagnostic(request: Request):

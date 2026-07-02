@@ -33,6 +33,16 @@ header.top{display:flex;justify-content:space-between;align-items:center;padding
 .datum .v{font-size:30px;font-weight:700;margin-top:8px;font-variant-numeric:tabular-nums}
 .datum .u{font-size:11px;color:var(--mut);margin-left:3px}
 .datum.crit .v{color:var(--no)}.datum.good .v{color:var(--ok)}.datum.warn .v{color:var(--wait)}.datum.info .v{color:var(--blu)}
+/* clean-house live system panel — per-core bars (no Dash/Plotly, vanilla) */
+.syswrap{margin:30px 0 8px}
+.sysh{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--mut);margin-bottom:14px}
+.sysh #syst{color:var(--blu)}
+.corebar{display:flex;align-items:center;gap:12px;margin:6px 0;font-size:11px}
+.corebar .lab{width:70px;color:var(--mut);letter-spacing:.06em}
+.corebar .track{flex:1;height:9px;background:rgba(120,170,225,.10);border-radius:5px;overflow:hidden;position:relative}
+.corebar .fill{height:100%;border-radius:5px;transition:width .5s ease,background .3s}
+.corebar .ceilmark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--no);opacity:.65}
+.corebar .pct{width:46px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
 footer{border-top:1px solid var(--line);margin-top:36px;padding:26px 0 50px;color:var(--mut);font-size:11px;text-align:center;letter-spacing:.05em;line-height:1.9}
 footer a{color:var(--blu);text-decoration:none}footer code{color:var(--au)}
 .err{color:var(--no);padding:44px;text-align:center}
@@ -56,6 +66,11 @@ footer a{color:var(--blu);text-decoration:none}footer code{color:var(--au)}
   </div>
 
   <div class="data" id="data"></div>
+
+  <div class="syswrap">
+    <div class="sysh">System · Live <span id="syst"></span></div>
+    <div id="syslive"><div style="color:var(--mut);font-size:11px">reading the substrate…</div></div>
+  </div>
 
   <div id="blueprint-root"><div style="padding:40px;color:var(--mut)">Rendering diagnostics…</div></div>
 
@@ -92,6 +107,26 @@ loadGMI(function(g){
   else{var s=document.createElement('script');s.src='/static/blueprint.js';s.onload=paint;
     s.onerror=function(){document.getElementById('blueprint-root').innerHTML='<div class="err">diagnostics module unavailable — <a href="/insight/godel/machine" style="color:#4a9eff">raw JSON</a></div>';};document.head.appendChild(s);}
 });
+
+// clean-house live system panel — polls /insight/system/live (psutil per-core + governor)
+function sysbar(lab,val,over,ceil){
+  var v=Math.max(0,Math.min(100,val||0)), c=over?'#ff5c52':v>70?'#e0ab46':'#5bd97b';
+  var mark=(ceil!=null)?'<div class="ceilmark" style="left:'+ceil+'%"></div>':'';
+  return '<div class="corebar"><span class="lab">'+lab+'</span><div class="track">'+
+    '<div class="fill" style="width:'+v+'%;background:'+c+'"></div>'+mark+'</div><span class="pct">'+Math.round(v)+'%</span></div>';
+}
+function pollSys(){
+  fetch('/insight/system/live',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+    if(!d||d.status!=='success')return;
+    var pc=(d.per_core&&d.per_core.per_core)||[], res=d.resources||{}, gov=res.governor||{}, ceil=gov.cpu_ceiling||null;
+    var html=pc.map(function(v,i){return sysbar('core '+i,v,ceil!=null&&v>ceil,ceil);}).join('');
+    html+=sysbar('memory',res.memory,false,null)+sysbar('disk',res.disk,false,null);
+    document.getElementById('syslive').innerHTML=html;
+    var st=document.getElementById('syst');
+    if(st)st.textContent='· ceiling '+(ceil!=null?ceil+'%':'—')+' · '+(gov.throttling_autonomous?'THROTTLING autonomous':'nominal');
+  }).catch(function(){});
+}
+pollSys(); setInterval(pollSys,3000);
 
 // light intelligence substrate (physics + scale), blueprint-tinted —
 // DEFERRED (idle/after paint) + fades in subtle, so it never delays first render.

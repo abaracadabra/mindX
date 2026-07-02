@@ -355,11 +355,20 @@ class BlueprintAgent:
         # If the monitor hasn't collected yet (cold: cpu_cores==0), read live via psutil.
         if not usage or not usage.get("cpu_cores"):
             try:
-                import psutil
+                import psutil, os as _os
                 vm = psutil.virtual_memory()
-                return {"source": "psutil-live", "cpu": psutil.cpu_percent(interval=0.2),
+                cpu = psutil.cpu_percent(interval=0.2)
+                try:
+                    from agents.resource_governor import ResourceGovernor
+                    _ceil = ResourceGovernor().autonomous_cpu_ceiling
+                    gov = {"cpu_ceiling": _ceil, "over_ceiling": cpu > _ceil,
+                           "throttling_autonomous": cpu > _ceil,
+                           "headroom_pct": round(max(0.0, _ceil - cpu), 1)}
+                except Exception:
+                    gov = {"cpu_ceiling": None}
+                return {"source": "psutil-live", "cpu": cpu, "governor": gov,
                         "cpu_cores": psutil.cpu_count(),
-                        "cpu_load": ", ".join(f"{x:.2f}" for x in __import__("os").getloadavg()) if hasattr(__import__("os"), "getloadavg") else "n/a",
+                        "cpu_load": ", ".join(f"{x:.2f}" for x in _os.getloadavg()) if hasattr(_os, "getloadavg") else "n/a",
                         "memory": vm.percent, "memory_used_gb": round(vm.used / 1e9, 2),
                         "memory_total_gb": round(vm.total / 1e9, 2),
                         "disk": psutil.disk_usage("/").percent}

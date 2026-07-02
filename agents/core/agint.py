@@ -531,6 +531,25 @@ class AGInt:
         if self.last_action_context and not self.last_action_context.get('success', True):
             perception_data['last_action_failure_context'] = self.last_action_context.get('result', 'Unknown error')
             logger.warning(f"{self.log_prefix} Perceiving with failure context: {perception_data['last_action_failure_context']}")
+        # Core self-awareness: fold live resource + governor state into perception and
+        # into state_summary['awareness'] — the machine feels its own substrate load.
+        try:
+            rm = getattr(self, "resource_monitor", None)
+            if rm is not None:
+                ru = rm.get_resource_usage()
+                gov = ru.get("governor", {}) or {}
+                perception_data["resources"] = {"cpu": ru.get("cpu"), "memory": ru.get("memory"),
+                                                 "disk": ru.get("disk"), "governor": gov}
+                self.state_summary["resources"] = perception_data["resources"]
+                cpu, ceil = ru.get("cpu"), gov.get("cpu_ceiling")
+                if gov.get("throttling_autonomous"):
+                    self.state_summary["awareness"] = (f"CPU {cpu}% over the {ceil}% ceiling — "
+                                                       f"throttling autonomous loops, yielding the processor.")
+                elif cpu is not None:
+                    self.state_summary["awareness"] = (f"CPU {cpu}% · mem {ru.get('memory')}% · "
+                                                       f"disk {ru.get('disk')}% — nominal ({gov.get('headroom_pct')}% CPU headroom).")
+        except Exception as e:
+            logger.debug(f"{self.log_prefix} resource awareness skipped: {e}")
         return perception_data
 
     async def _execute_cognitive_task(self, prompt: str, task_type: TaskType, **kwargs) -> Optional[str]:
