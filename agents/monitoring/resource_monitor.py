@@ -347,9 +347,13 @@ class ResourceMonitor:
         # CPU limiter would throttle autonomous loops at the current reading.
         try:
             from agents.resource_governor import ResourceGovernor
-            _ceiling = ResourceGovernor().autonomous_cpu_ceiling
+            _g = ResourceGovernor()
+            _ceiling = _g.effective_ceiling()      # temp-gated (99 while cool, backs off when hot)
+            _temp = _g._cpu_temp()
             _over = round(metrics.cpu_percent, 1) > _ceiling
-            _gov = {"cpu_ceiling": _ceiling, "over_ceiling": _over,
+            _gov = {"cpu_ceiling": _ceiling, "configured_ceiling": _g.autonomous_cpu_ceiling,
+                    "cpu_temp_c": _temp, "max_cpu_temp_c": _g.max_cpu_temp,
+                    "inference_cores": _g.inference_cores, "over_ceiling": _over,
                     "throttling_autonomous": _over,
                     "headroom_pct": round(max(0.0, _ceiling - metrics.cpu_percent), 1)}
         except Exception:

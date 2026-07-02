@@ -70,6 +70,7 @@ footer a{color:var(--blu);text-decoration:none}footer code{color:var(--au)}
   <div class="syswrap">
     <div class="sysh">System · Live <span id="syst"></span></div>
     <div id="syslive"><div style="color:var(--mut);font-size:11px">reading the substrate…</div></div>
+    <div id="plantline" style="font-size:11px;color:var(--mut);margin-top:12px;letter-spacing:.03em;line-height:1.7"></div>
   </div>
 
   <div id="blueprint-root"><div style="padding:40px;color:var(--mut)">Rendering diagnostics…</div></div>
@@ -123,7 +124,14 @@ function pollSys(){
     html+=sysbar('memory',res.memory,false,null)+sysbar('disk',res.disk,false,null);
     document.getElementById('syslive').innerHTML=html;
     var st=document.getElementById('syst');
-    if(st)st.textContent='· ceiling '+(ceil!=null?ceil+'%':'—')+' · '+(gov.throttling_autonomous?'THROTTLING autonomous':'nominal');
+    if(st)st.textContent='· ceiling '+(ceil!=null?ceil+'%':'—')+(gov.cpu_temp_c!=null?' @ '+gov.cpu_temp_c+'°C':'')+' · '+(gov.throttling_autonomous?'THROTTLING autonomous':'nominal');
+    var plant=d.plant||{}, freq=plant.frequency||{}, cyc=plant.cycles||{}, al=plant.allocation||{}, pl=document.getElementById('plantline');
+    if(pl){var s=al.surface||{},tr=al.training||{},sp=al.spare||{},inf=d.inference||{},eng=inf.engines||{};
+      pl.innerHTML='<b style="color:var(--blu)">plant</b> · chip '+(freq.current_mhz||'—')+' MHz · '+(cyc.total_gcycles_per_s!=null?cyc.total_gcycles_per_s:'—')+' Gcycle/s · '+
+        (al.cores_total||'?')+' cores / '+(al.ram_gb||'?')+' GB ('+(al.units||'?')+'× the 1c+2.048GB unit)<br>'+
+        'roles: surface '+(s.cores||0)+'c+'+(s.ram_gb||0)+'GB · training '+(tr.cores||0)+'c · spare '+(sp.cores||0)+'c'+
+        '  ·  engines: ollama '+(eng.ollama?'●':'○')+' vllm '+(eng.vllm?'●':'○');
+    }
   }).catch(function(){});
 }
 pollSys(); setInterval(pollSys,3000);

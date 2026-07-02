@@ -5238,7 +5238,8 @@ async def insight_system_live(request: Request):
     try:
         from agents.blueprint_agent import BlueprintAgent
         b = BlueprintAgent()
-        payload = {"status": "success", "per_core": b.per_core(), "resources": b.resources()}
+        payload = {"status": "success", "per_core": b.per_core(), "resources": b.resources(),
+                   "plant": b.plant(), "inference": b.inference_correlation()}
     except Exception as e:
         payload = {"status": "error", "error": str(e)}
     return _maybe_h_text(request, payload, route_path="/insight/system/live")

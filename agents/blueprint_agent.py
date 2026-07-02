@@ -34,7 +34,7 @@ from typing import Any, Dict, List, Optional
 # Version + the growing catalogue of blueprint.agent skills. Each new capability is
 # appended here as we discover it; save_version() snapshots (version, skills) to the
 # manifest so every version is preserved with the skills it shipped with.
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 SKILLS: List[Dict[str, str]] = [
     {"name": "gmi",                "kind": "blueprint", "desc": "read the live Gödel Machine Index"},
     {"name": "predicate_report",   "kind": "blueprint", "desc": "structured G1–G8 analysis (verdict + evidence)"},
@@ -54,6 +54,10 @@ SKILLS: List[Dict[str, str]] = [
     {"name": "resources",          "kind": "monitoring","desc": "live host resource snapshot (CPU/RAM/disk) via the resource monitor"},
     {"name": "per_core",           "kind": "monitoring","desc": "per-core CPU + RAM observation (percpu)"},
     {"name": "resource_control",   "kind": "control",   "desc": "bounded per-core CPU + RAM load control (governor testing)"},
+    {"name": "plant",              "kind": "monitoring","desc": "compute-plant model — per-core roles, power-of-2 scale, freq, cycles"},
+    {"name": "frequency",          "kind": "monitoring","desc": "chip frequency (MHz) aggregate + per-core"},
+    {"name": "cycles",             "kind": "monitoring","desc": "CPU cycles in flight (Gcycle/s), per-core + total"},
+    {"name": "inference_correlation","kind": "eval",    "desc": "correlate ollama/vllm engines with live compute — for eval"},
 ]
 
 # Interaction mapping — every interaction and the substrate/UI effect it produces,
@@ -376,6 +380,45 @@ class BlueprintAgent:
                 return usage or {"error": str(e2)}
         usage.setdefault("source", "resource_monitor")
         return usage
+
+    # ── compute plant: frequency, cycles, per-core role allocation ─────
+    def plant(self) -> Dict[str, Any]:
+        """The compute-plant model — per-core roles, power-of-2 scale ladder,
+        chip frequency + cycles (powerplant unit = 1 core + 2.048 GB)."""
+        from agents.monitoring import compute_plant
+        return compute_plant.plan()
+
+    def frequency(self) -> Dict[str, Any]:
+        from agents.monitoring import compute_plant
+        return compute_plant.frequency()
+
+    def cycles(self) -> Dict[str, Any]:
+        from agents.monitoring import compute_plant
+        return compute_plant.cycles()
+
+    def inference_correlation(self) -> Dict[str, Any]:
+        """Correlate the inference engines (ollama / vllm) with live compute — the
+        eval signal: is the work-in-flight actually inference, and at what cost?"""
+        engines = {"ollama": False, "vllm": False}
+        engine_cpu: Dict[str, float] = {}
+        try:
+            import psutil
+            for p in psutil.process_iter(attrs=["name"]):
+                nm = ((p.info.get("name") or "") + " " + " ".join(p.cmdline()[:2] if hasattr(p, "cmdline") else [])).lower() if False else (p.info.get("name") or "").lower()
+                for key in engines:
+                    if key in nm:
+                        engines[key] = True
+                        try:
+                            engine_cpu[key] = round(engine_cpu.get(key, 0.0) + (p.cpu_percent(interval=None) or 0.0), 1)
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+        from agents.monitoring import compute_plant
+        cy = compute_plant.cycles()
+        return {"engines": engines, "engine_cpu_pct": engine_cpu,
+                "total_gcycles_per_s": cy.get("total_gcycles_per_s"),
+                "resources": self.resources()}
 
     # ── per-core observation + resource control (governor testing) ─────
     def per_core(self) -> Dict[str, Any]:

@@ -79,6 +79,8 @@ class ResourceGovernor:
         # inference back off below, so the box stays responsive for web-serving.
         # The loop "shares the processor" — full speed when idle, yields under load.
         self.autonomous_cpu_ceiling: float = self._read_ceiling()
+        self.max_cpu_temp: float = self._read_max_temp()      # °C; ceiling backs off above it
+        self.inference_cores: int = self._read_inference_cores()  # cores reserved for inference/training
         self._last_cpu: float = 0.0
         self._last_cpu_ts: float = 0.0
         self._throttling: Optional[tuple] = None  # (label, started_ts) while backing off
@@ -90,18 +92,79 @@ class ResourceGovernor:
 
     @staticmethod
     def _read_ceiling() -> float:
-        """The dynamic autonomous-loop CPU ceiling (percent). Operator default 92."""
+        """The dynamic autonomous-loop CPU ceiling (percent). Default 99 — run the
+        box hot to maximize inference, as long as temperature is acceptable (see
+        effective_ceiling / _cpu_temp). Operator override: MINDX_MAX_AUTONOMOUS_CPU."""
         v = os.getenv("MINDX_MAX_AUTONOMOUS_CPU")
         if v is None:
             try:
                 from utils.config import Config
-                v = Config().get("resource.max_autonomous_loop_cpu", 92.0)
+                v = Config().get("resource.max_autonomous_loop_cpu", 99.0)
             except Exception:
-                v = 92.0
+                v = 99.0
         try:
             return float(v)
         except (TypeError, ValueError):
-            return 92.0
+            return 99.0
+
+    @staticmethod
+    def _read_max_temp() -> float:
+        """Max acceptable CPU temperature (°C). Above it the ceiling backs off.
+        Operator override: MINDX_MAX_CPU_TEMP (default 85)."""
+        v = os.getenv("MINDX_MAX_CPU_TEMP")
+        if v is None:
+            try:
+                from utils.config import Config
+                v = Config().get("resource.max_cpu_temp", 85.0)
+            except Exception:
+                v = 85.0
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return 85.0
+
+    @staticmethod
+    def _read_inference_cores() -> int:
+        """Cores reserved for inference processing at all times. Default 2.
+        Operator override: MINDX_INFERENCE_CORES."""
+        v = os.getenv("MINDX_INFERENCE_CORES")
+        if v is None:
+            try:
+                from utils.config import Config
+                v = Config().get("resource.inference_cores", 2)
+            except Exception:
+                v = 2
+        try:
+            return max(1, int(v))
+        except (TypeError, ValueError):
+            return 2
+
+    @staticmethod
+    def _cpu_temp() -> Optional[float]:
+        """Hottest current CPU core temperature (°C), or None if no sensor (VPS/venv)."""
+        try:
+            temps = psutil.sensors_temperatures()
+        except Exception:
+            return None
+        if not temps:
+            return None
+        best = None
+        for entries in temps.values():
+            for e in entries:
+                if e.current and (best is None or e.current > best):
+                    best = e.current
+        return best
+
+    def effective_ceiling(self) -> float:
+        """The ceiling actually enforced now: the configured ceiling (99) while
+        temperature is acceptable; backed off toward 85% when the CPU runs too hot.
+        Fail-open: no sensor → run at the full ceiling."""
+        base = self.autonomous_cpu_ceiling
+        t = self._cpu_temp()
+        if t is not None and t > self.max_cpu_temp:
+            over = t - self.max_cpu_temp
+            return max(75.0, base - min(base - 75.0, over * 2.0))   # 2 %pts per °C over, floor 75
+        return base
 
     @staticmethod
     def _read_inference_concurrency() -> int:
@@ -144,14 +207,14 @@ class ResourceGovernor:
     def cpu_headroom(self) -> float:
         """Percentage points of CPU below the autonomous ceiling (>=0)."""
         try:
-            return max(0.0, self.autonomous_cpu_ceiling - self._current_cpu())
+            return max(0.0, self.effective_ceiling() - self._current_cpu())
         except Exception:
             return self.autonomous_cpu_ceiling
 
     def should_throttle(self, ceiling: Optional[float] = None) -> bool:
         """True if current CPU is over the ceiling. Fail-open → False."""
         try:
-            return self._current_cpu() > (ceiling or self.autonomous_cpu_ceiling)
+            return self._current_cpu() > (ceiling or self.effective_ceiling())
         except Exception:
             return False
 
@@ -167,7 +230,7 @@ class ResourceGovernor:
         is under the ceiling (caller should PROCEED) or False after max_wait (caller
         should SKIP this cycle rather than pile on). Fail-open: any sensor error
         returns True (work proceeds). This is how the autonomous loop yields CPU."""
-        ceiling = ceiling or self.autonomous_cpu_ceiling
+        ceiling = ceiling or self.effective_ceiling()
         try:
             waited = 0.0
             backoff = 5.0
