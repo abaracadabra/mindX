@@ -34,7 +34,7 @@ from typing import Any, Dict, List, Optional
 # Version + the growing catalogue of blueprint.agent skills. Each new capability is
 # appended here as we discover it; save_version() snapshots (version, skills) to the
 # manifest so every version is preserved with the skills it shipped with.
-__version__ = "1.3.0"
+__version__ = "1.4.0"
 SKILLS: List[Dict[str, str]] = [
     {"name": "gmi",                "kind": "blueprint", "desc": "read the live Gödel Machine Index"},
     {"name": "predicate_report",   "kind": "blueprint", "desc": "structured G1–G8 analysis (verdict + evidence)"},
@@ -52,6 +52,8 @@ SKILLS: List[Dict[str, str]] = [
     {"name": "client-cache",       "kind": "frontend",  "desc": "light sessionStorage GMI cache + deferred substrate"},
     {"name": "analyze_path",       "kind": "analysis",  "desc": "scientific structural analysis of a code directory (LOC, symbols, docstrings)"},
     {"name": "resources",          "kind": "monitoring","desc": "live host resource snapshot (CPU/RAM/disk) via the resource monitor"},
+    {"name": "per_core",           "kind": "monitoring","desc": "per-core CPU + RAM observation (percpu)"},
+    {"name": "resource_control",   "kind": "control",   "desc": "bounded per-core CPU + RAM load control (governor testing)"},
 ]
 
 # Interaction mapping — every interaction and the substrate/UI effect it produces,
@@ -365,6 +367,31 @@ class BlueprintAgent:
                 return usage or {"error": str(e2)}
         usage.setdefault("source", "resource_monitor")
         return usage
+
+    # ── per-core observation + resource control (governor testing) ─────
+    def per_core(self) -> Dict[str, Any]:
+        """Per-core CPU utilisation + RAM — the fine-grained observation side."""
+        from agents.monitoring.resource_control import ResourceController
+        return ResourceController.status()
+
+    def resource_controller(self):
+        """The shared bounded load controller (test-only; every load self-stops)."""
+        from agents.monitoring.resource_control import ResourceController
+        if getattr(self, "_rc", None) is None:
+            self._rc = ResourceController()
+        return self._rc
+
+    def control_cpu(self, targets, duration: float = 15.0) -> Dict[str, Any]:
+        """Load each core to a target percent — {core: pct} or [pct0, pct1, …]."""
+        return self.resource_controller().set_cores(targets, duration=duration)
+
+    def control_ram(self, mb: float, duration: float = 15.0) -> Dict[str, Any]:
+        """Hold `mb` megabytes resident for `duration` seconds."""
+        return self.resource_controller().set_ram(mb, duration=duration)
+
+    def stop_load(self) -> Dict[str, Any]:
+        """Terminate every active test load immediately."""
+        return self.resource_controller().stop()
 
     # ── versioned skills + interaction catalogue ───────────────────────
     def skills(self) -> List[Dict[str, str]]:
