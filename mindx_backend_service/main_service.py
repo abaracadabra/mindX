@@ -2760,14 +2760,15 @@ body.tardis-go #inside{{animation:rabbithole 3.2s cubic-bezier(.4,0,.2,1) both;t
 .tier{{font-size:10px;letter-spacing:.42em;text-transform:uppercase;color:#e3b341;opacity:.85}}
 .connect{{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:.36em;text-transform:uppercase;color:#0a0d07;background:linear-gradient(135deg,#f7d778,#e3b341 52%,#b8902c);border:none;border-radius:16px;padding:24px 72px;cursor:pointer;transition:transform .2s,box-shadow .3s;box-shadow:0 12px 34px rgba(0,0,0,.55),0 0 44px rgba(227,179,65,.4),inset 0 2px 0 rgba(255,255,255,.55),inset 0 -3px 8px rgba(120,80,10,.35);animation:cpulse 2.4s ease-in-out infinite}}
 .connect::before{{content:'';position:absolute;top:0;left:-60%;width:38%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.6),transparent);transform:skewX(-18deg);animation:sheen 3.4s ease-in-out infinite}}
-.connect:hover{{transform:translateY(-2px) scale(1.035);box-shadow:0 16px 44px rgba(0,0,0,.6),0 0 66px rgba(227,179,65,.65),inset 0 2px 0 rgba(255,255,255,.65),inset 0 -3px 8px rgba(120,80,10,.35)}}
+.connect:hover{{transform:translateY(-3px) scale(1.09);box-shadow:0 20px 56px rgba(0,0,0,.6),0 0 96px rgba(227,179,65,.85),inset 0 2px 0 rgba(255,255,255,.7),inset 0 -3px 8px rgba(120,80,10,.35)}}
 .connect:active{{transform:translateY(0) scale(.99)}}
 @keyframes cpulse{{0%,100%{{box-shadow:0 12px 34px rgba(0,0,0,.55),0 0 38px rgba(227,179,65,.32),inset 0 2px 0 rgba(255,255,255,.55),inset 0 -3px 8px rgba(120,80,10,.35)}}50%{{box-shadow:0 12px 34px rgba(0,0,0,.55),0 0 60px rgba(227,179,65,.6),inset 0 2px 0 rgba(255,255,255,.6),inset 0 -3px 8px rgba(120,80,10,.35)}}}}
 @keyframes sheen{{0%{{left:-60%}}55%,100%{{left:130%}}}}
 #msg{{font-size:11px;letter-spacing:.06em;color:#c9d1d9;min-height:15px;opacity:.85}}
 .algo{{font-size:10px;letter-spacing:.16em;color:#c9a0ff;text-decoration:none;opacity:.8}}.algo:hover{{opacity:1;color:#e6edf3}}
-.crown{{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);font-size:30px;color:#e3b341;cursor:grab;user-select:none;-webkit-user-select:none;text-shadow:0 0 16px rgba(227,179,65,.6);z-index:4;touch-action:none}}
-.crown.drag{{cursor:grabbing;text-shadow:0 0 28px rgba(227,179,65,.95)}}
+.crown{{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);font-size:30px;color:#e3b341;cursor:grab;user-select:none;-webkit-user-select:none;text-shadow:0 0 16px rgba(227,179,65,.6);z-index:4;touch-action:none;transition:transform .45s cubic-bezier(.34,1.3,.5,1),text-shadow .45s}}
+.crown:hover{{transform:translateX(-50%) scale(10);text-shadow:0 0 80px rgba(227,179,65,.95);z-index:6}}
+.crown.drag{{cursor:grabbing;text-shadow:0 0 28px rgba(227,179,65,.95);transition:none}}
 .toro{{position:fixed;border:2px solid rgba(227,179,65,.6);border-radius:50%;pointer-events:none;z-index:3;transform:translate(-50%,-50%)}}
 a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color:#6b7480;text-decoration:none;letter-spacing:.14em}}a.back:hover{{color:#aeb7c2}}
 </style></head><body>
@@ -2917,7 +2918,9 @@ document.getElementById('c').addEventListener('click',function(){{
   }},delay);}})(k*90);}}}}
   function down(e){{drag=true;moved=false;cr.classList.add('drag');var p=e.touches?e.touches[0]:e;var r=cr.getBoundingClientRect();ox=p.clientX-(r.left+r.width/2);oy=p.clientY-(r.top+r.height/2);toroid(p.clientX,p.clientY);if(e.cancelable)e.preventDefault();}}
   function move(e){{if(!drag)return;moved=true;var p=e.touches?e.touches[0]:e;cr.style.left=(p.clientX-ox)+'px';cr.style.top=(p.clientY-oy)+'px';cr.style.bottom='auto';cr.style.transform='translate(-50%,-50%)';}}
-  function up(){{drag=false;cr.classList.remove('drag');}}
+  function up(){{ var wasDrop=drag&&moved; drag=false;cr.classList.remove('drag');
+    if(wasDrop){{ cr.style.transition='transform .4s ease,opacity .4s ease';cr.style.transform='translate(-50%,-50%) scale(0)';cr.style.opacity='0'; setTimeout(function(){{cr.style.display='none';}},400); document.getElementById('c').click(); }}  // dropped on the portal → open wallet login, crown vanishes
+  }}
   cr.addEventListener('click',function(){{ if(!moved) document.getElementById('c').click(); }});  // click the crown → CONNECT
   cr.addEventListener('mousedown',down);cr.addEventListener('touchstart',down,{{passive:false}});
   addEventListener('mousemove',move);addEventListener('touchmove',move,{{passive:false}});
