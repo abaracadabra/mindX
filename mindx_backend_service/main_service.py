@@ -2735,7 +2735,7 @@ def _access_denied_page(from_path: str, min_tier: str) -> str:
 *{{margin:0;padding:0;box-sizing:border-box}}
 html,body{{height:100%}}
 body{{font-family:'JetBrains Mono','SF Mono',monospace;color:#e6edf3;background:#04060b;overflow:hidden}}
-.portal{{position:fixed;inset:0;background:url('/gfx/realm-bg.jpg') center/cover no-repeat;transform:scale(1.04);filter:saturate(1.05);transition:transform 1.7s cubic-bezier(.66,0,.2,1),filter 1.5s,opacity 1.5s;will-change:transform,filter}}
+.portal{{position:fixed;inset:0;background:url('/gfx/realm-bg.webp') center/cover no-repeat;transform:scale(1.04);filter:saturate(1.05);transition:transform 1.7s cubic-bezier(.66,0,.2,1),filter 1.5s,opacity 1.5s;will-change:transform,filter}}
 .veil{{position:fixed;inset:0;background:radial-gradient(circle at 50% 42%,rgba(4,6,11,.15),rgba(4,6,11,.86) 72%);transition:opacity 1s}}
 /* TARDIS: the small door opens into the vast interior on ACCESS GRANTED */
 .interior{{position:fixed;inset:0;z-index:1;opacity:0;transition:opacity 1.2s ease .35s;pointer-events:none}}
