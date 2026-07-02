@@ -23,12 +23,51 @@ Toolset (blueprint tools + frontend tools):
 from __future__ import annotations
 
 import json
+import time
 import math
 import shutil
 import hashlib
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+# Version + the growing catalogue of blueprint.agent skills. Each new capability is
+# appended here as we discover it; save_version() snapshots (version, skills) to the
+# manifest so every version is preserved with the skills it shipped with.
+__version__ = "1.1.0"
+SKILLS: List[Dict[str, str]] = [
+    {"name": "gmi",                "kind": "blueprint", "desc": "read the live Gödel Machine Index"},
+    {"name": "predicate_report",   "kind": "blueprint", "desc": "structured G1–G8 analysis (verdict + evidence)"},
+    {"name": "coverage_math",      "kind": "blueprint", "desc": "actual vs blueprint thresholds, pass/below gates"},
+    {"name": "summary_html/text",  "kind": "blueprint", "desc": "deterministic briefs for publications/agents"},
+    {"name": "svg_schematic",      "kind": "blueprint", "desc": "SVG blueprint diagram of the eight predicates"},
+    {"name": "diff",               "kind": "blueprint", "desc": "compare two audit snapshots"},
+    {"name": "export_report",      "kind": "blueprint", "desc": "export the audit as markdown or json"},
+    {"name": "blueprint_doc",      "kind": "blueprint", "desc": "the Gödel Eval Blueprint source"},
+    {"name": "validate_ui",        "kind": "frontend",  "desc": "node JS-syntax check of the UI assets"},
+    {"name": "frontend_tools",     "kind": "frontend",  "desc": "frontend toolchain inventory"},
+    {"name": "optimize_ui_assets", "kind": "frontend",  "desc": "WebP-optimise UI images via artist.agent"},
+    {"name": "frontend-design",    "kind": "skill",     "desc": "distinctive corporate/elegant UI direction"},
+    {"name": "image-toolchain",    "kind": "skill",     "desc": "mozjpeg/cwebp/avifenc/pngquant/oxipng via artist.agent"},
+    {"name": "client-cache",       "kind": "frontend",  "desc": "light sessionStorage GMI cache + deferred substrate"},
+]
+
+# Interaction mapping — every interaction and the substrate/UI effect it produces,
+# catalogued across the realm + machine surfaces as we build them.
+INTERACTIONS: List[Dict[str, str]] = [
+    {"trigger": "hover CONNECT / logo", "surface": "realm gate", "effect": "doorway morph-warp + glow pulse grows with dwell", "physics": "charge ramp × sine pulse"},
+    {"trigger": "cursor move",          "surface": "substrate",  "effect": "gravity well — bodies attract toward the pointer", "physics": "inverse-square, depth-scaled"},
+    {"trigger": "hover mindX logo",     "surface": "machine",    "effect": "intelligence substrate attaches — the field gathers to the logo", "physics": "focus attractor"},
+    {"trigger": "drag logo",            "surface": "machine",    "effect": "reposition (fixed → free)", "physics": "pointer follow"},
+    {"trigger": "scroll on logo",       "surface": "machine",    "effect": "resize 32–320px", "physics": "wheel delta"},
+    {"trigger": "click logo",           "surface": "machine",    "effect": "wallet login if a wallet is found (else MetaMask)", "physics": "—"},
+    {"trigger": "drag crown",           "surface": "realm gate", "effect": "toroid magic rings on pickup", "physics": "expanding tori"},
+    {"trigger": "drop crown on portal", "surface": "realm gate", "effect": "opens wallet login + crown vanishes", "physics": "scale-to-0 fade"},
+    {"trigger": "ACCESS GRANTED",       "surface": "realm gate", "effect": "corkscrew-tornado rabbit-hole draw to the THRONE", "physics": "golden-ratio accel→decel"},
+    {"trigger": "click predicate card", "surface": "machine",    "effect": "expand evidence JSON", "physics": "—"},
+    {"trigger": "page load (deferred)", "surface": "machine",    "effect": "substrate fades in subtle after first paint", "physics": "idle/timeout + opacity ease"},
+    {"trigger": "ambient",              "surface": "substrate",  "effect": "cohesive field with depth", "physics": "Hamiltonian well + spring mesh + z-parallax"},
+]
 
 try:
     from utils.config import PROJECT_ROOT as _ROOT
@@ -251,3 +290,42 @@ class BlueprintAgent:
             return {"success": False, "error": "mindX.png not found"}
         dst = str(src.with_suffix(".webp"))
         return await asyncio.to_thread(image_optimize.to_webp, str(src), dst, width=width, q=82)
+
+    # ── versioned skills + interaction catalogue ───────────────────────
+    def skills(self) -> List[Dict[str, str]]:
+        return list(SKILLS)
+
+    def interaction_map(self) -> List[Dict[str, str]]:
+        """The catalogue of substrate/UI effects produced by each interaction."""
+        return list(INTERACTIONS)
+
+    def manifest(self) -> Dict[str, Any]:
+        return {"version": __version__, "skills": SKILLS, "interactions": INTERACTIONS}
+
+    def versions(self) -> List[Dict[str, Any]]:
+        """The saved version history (each with its skills + interactions)."""
+        p = _ROOT / "data" / "blueprint" / "versions.json"
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            return []
+
+    def save_version(self, note: str = "") -> Dict[str, Any]:
+        """Snapshot this version (skills + interaction map) to the manifest — appends
+        only when the (version, skills, interactions) signature changes, so every
+        distinct version is preserved as we discover new capabilities."""
+        p = _ROOT / "data" / "blueprint" / "versions.json"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        hist = self.versions()
+        skills = [s["name"] for s in SKILLS]
+        inters = [i["trigger"] for i in INTERACTIONS]
+        sig = hashlib.sha256(json.dumps({"v": __version__, "s": skills, "i": inters},
+                                        sort_keys=True).encode()).hexdigest()[:12]
+        if hist and hist[-1].get("sig") == sig:
+            return {"saved": False, "reason": "unchanged", "sig": sig, "count": len(hist)}
+        snap = {"version": __version__, "ts": time.time(), "sig": sig, "note": note,
+                "skills": skills, "interactions": inters}
+        hist.append(snap)
+        p.write_text(json.dumps(hist, indent=2), encoding="utf-8")
+        return {"saved": True, "version": __version__, "sig": sig,
+                "skills": len(skills), "interactions": len(inters), "count": len(hist)}

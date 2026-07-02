@@ -9,7 +9,7 @@
   --serif:Georgia,'Iowan Old Style','Times New Roman',serif;--mono:'JetBrains Mono','SF Mono',ui-monospace,monospace;}
 html,body{height:100%}
 body{font-family:var(--mono);background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased}
-#mesh{position:fixed;inset:0;z-index:0;opacity:.18}
+#mesh{position:fixed;inset:0;z-index:0;opacity:0;transition:opacity 2s ease}
 #grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:56px 56px;mask-image:radial-gradient(ellipse 100% 70% at 50% 0%,#000 30%,transparent 100%);opacity:.26}
 .wrap{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:0 26px}
 header.top{display:flex;justify-content:space-between;align-items:center;padding:22px 0;border-bottom:1px solid var(--line)}
@@ -68,7 +68,14 @@ footer a{color:var(--blu);text-decoration:none}footer code{color:var(--au)}
 <script>
 function esc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
 function datum(cls,k,v,u){return '<div class="datum '+cls+'"><div class="k">'+k+'</div><div class="v">'+v+(u?'<span class="u">'+u+'</span>':'')+'</div></div>';}
-fetch('/insight/godel/machine',{cache:'no-store'}).then(function(r){return r.json();}).then(function(g){
+// light client cache — shared with /machine (sessionStorage, 60s TTL) so the
+// index↔diagnostics hop is instant and reloads don't re-hit the endpoint.
+function loadGMI(cb){var K='mindx_gmi',TTL=60000,c=null;try{c=JSON.parse(sessionStorage.getItem(K)||'null');}catch(e){}
+  if(c&&c.d&&(Date.now()-c.t)<TTL){cb(c.d);return;}
+  fetch('/insight/godel/machine',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    try{sessionStorage.setItem(K,JSON.stringify({t:Date.now(),d:d}));}catch(e){}cb(d);
+  }).catch(function(){document.getElementById('blueprint-root').innerHTML='<div class="err">The self-audit is momentarily unavailable. <a href="/insight/godel/machine">raw JSON</a></div>';});}
+loadGMI(function(g){
   var neg=(g.verdict||'').indexOf('NOT')>=0||(g.verdict||'').indexOf('FALSIF')>=0;
   document.getElementById('sub').textContent=g.honest_summary||'';
   document.getElementById('masthead-r').innerHTML=
@@ -84,14 +91,16 @@ fetch('/insight/godel/machine',{cache:'no-store'}).then(function(r){return r.jso
   if(window.Blueprint)paint();
   else{var s=document.createElement('script');s.src='/static/blueprint.js';s.onload=paint;
     s.onerror=function(){document.getElementById('blueprint-root').innerHTML='<div class="err">diagnostics module unavailable — <a href="/insight/godel/machine" style="color:#4a9eff">raw JSON</a></div>';};document.head.appendChild(s);}
-}).catch(function(){document.getElementById('blueprint-root').innerHTML='<div class="err">The self-audit is momentarily unavailable. <a href="/insight/godel/machine">raw JSON</a></div>';});
+});
 
-// light intelligence substrate (physics + scale), blueprint-tinted
-(function(){var cv=document.getElementById('mesh'),c=cv.getContext('2d'),W,H,st=[],mx=-1,my=-1;
+// light intelligence substrate (physics + scale), blueprint-tinted —
+// DEFERRED (idle/after paint) + fades in subtle, so it never delays first render.
+function startSubstrate(){var cv=document.getElementById('mesh'),c=cv.getContext('2d'),W,H,st=[],mx=-1,my=-1;
  var CL=['74,158,255','227,179,65','91,217,123','167,184,204'];
- function rs(){W=cv.width=innerWidth;H=cv.height=innerHeight;st=[];var n=Math.min(90,Math.floor(W*H/17000));
+ function rs(){W=cv.width=innerWidth;H=cv.height=innerHeight;st=[];var n=Math.min(58,Math.floor(W*H/24000));
    for(var i=0;i<n;i++){var z=Math.random()*1.6+0.35;st.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.18,vy:(Math.random()-.5)*.18,z:z,m:z*z,c:CL[i%4]});}}
  addEventListener('resize',rs);addEventListener('mousemove',function(e){mx=e.clientX;my=e.clientY;});addEventListener('mouseleave',function(){mx=-1;});rs();
+ cv.style.opacity='.15';   // subtle fade-in once deferred work begins
  (function step(){c.clearRect(0,0,W,H);var cxp=W/2,cyp=H*0.3;
    for(var i=0;i<st.length;i++){var a=st[i];a.vx+=(cxp-a.x)*0.00002*a.m;a.vy+=(cyp-a.y)*0.00002*a.m;
      for(var j=i+1;j<st.length;j++){var b=st[j],dx=b.x-a.x,dy=b.y-a.y,q=dx*dx+dy*dy;
@@ -102,5 +111,6 @@ fetch('/insight/godel/machine',{cache:'no-store'}).then(function(r){return r.jso
      if(a.x<-5)a.x=W;if(a.x>W+5)a.x=0;if(a.y<-5)a.y=H;if(a.y>H+5)a.y=0;
      c.beginPath();c.arc(a.x,a.y,a.z*1.25,0,6.28);c.fillStyle='rgba('+a.c+','+(0.14+a.z*0.16).toFixed(3)+')';c.fill();}
    requestAnimationFrame(step);})();
-})();
+}
+if('requestIdleCallback' in window){requestIdleCallback(startSubstrate,{timeout:1400});}else{setTimeout(startSubstrate,700);}
 </script></body></html>
