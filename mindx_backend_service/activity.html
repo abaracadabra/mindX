@@ -64,6 +64,14 @@ canvas#bg.on{opacity:.6}
       <h2>Live activity</h2>
       <div id="act-feed"><div class="muted">loading activity…</div></div>
     </div>
+    <div class="card">
+      <h2>Recommended deploy order</h2>
+      <div id="deploy-order"><div class="muted">loading sequence…</div></div>
+    </div>
+    <div class="card">
+      <h2>Hierarchy</h2>
+      <div id="hierarchy"><div class="muted">loading…</div></div>
+    </div>
   </div>
 
   <!-- Recognized-participant view (after a non-OVERLORD connects) -->
@@ -114,6 +122,20 @@ function renderOverlord(addr){
     if(!items.length){feed.innerHTML='<div class="muted">no recent activity.</div>';return;}
     feed.innerHTML=items.slice(0,30).map(function(e){return '<div class="act-row"><span class="act-tier">'+esc(e.tier||e.agent_tier||'—')+'</span><span class="act-agent">'+esc(e.agent||e.agent_id||'?')+'</span><span class="act-head">'+esc(e.headline||e.type||e.kind||'')+'</span><span class="act-time">'+esc(e.time||e.ts||'')+'</span></div>';}).join('');
   }).catch(function(){document.getElementById('act-feed').innerHTML='<div class="muted">activity feed unavailable.</div>';});
+  // Deploy order + hierarchy, surfaced to the OVERLORD from login
+  fetch('/static/overlord_deployments.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+    if(!d)return;
+    var doEl=document.getElementById('deploy-order');
+    var steps=(d.deploy_order&&d.deploy_order.steps)||[];
+    doEl.innerHTML=steps.length?('<div class="tiers">'+steps.map(function(s){return '<div class="tier"><span>'+esc(s)+'</span></div>';}).join('')+'<div class="muted" style="margin-top:8px">'+esc((d.deploy_order&&d.deploy_order.note)||'')+'</div>'):'<div class="muted">no sequence.</div>';
+    var h=d.hierarchy||{},os=h.OVERSEER||{},ov=h.OVERLORD||{};
+    document.getElementById('hierarchy').innerHTML=
+      '<div class="tiers">'+
+      '<div class="tier"><b>OVERLORD</b><span>'+esc(ov.id||'bankon.eth')+' — '+esc(ov.role||'')+'. '+esc(ov.renounce_note||'')+'</span></div>'+
+      '<div class="tier"><b>OVERSEER</b><span>'+esc(os.id||'mindx.algo')+' — '+esc(os.role||'')+'. '+esc(os.proxy_note||'')+'</span></div>'+
+      '<div class="tier"><b>asymmetry</b><span>'+esc(d.deletion_asymmetry||'')+'</span></div>'+
+      '</div>';
+  }).catch(function(){});
 }
 function renderParticipant(courtesy){
   show('participant-view');startSubstrate();
