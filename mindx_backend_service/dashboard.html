@@ -2460,12 +2460,11 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
   }
 
   // ── Progressive hero links — earned through interaction ──
+  // Fewer links: docs.html is the hub (thesis, manifesto, API, evidence all
+  // reachable from there); feedback.html is the live mind. One of each is enough.
   var _heroLinks=[
-    {at:3, href:'/doc/THESIS', text:'thesis', color:'var(--blue)'},
-    {at:7, href:'/doc/MANIFESTO', text:'manifesto', color:'var(--violet)'},
-    {at:9, href:'/docs.html', text:'262+ docs', color:'var(--blue)'},
-    {at:13, href:'/redoc', text:'API reference', color:'var(--green)'},
-    {at:21, href:'/thesis/evidence', text:'live evidence', color:'var(--green)'},
+    {at:3, href:'/docs.html', text:'docs', color:'var(--blue)'},
+    {at:9, href:'/feedback.html', text:'the mind of mindX', color:'var(--violet)'},
   ];
   var _heroLinksRevealed=0;
   var _heroInteractions=0;
