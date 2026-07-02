@@ -98,6 +98,9 @@
     "typescript": "^5.3.3",
     "vite": "^6.4.2"
   },
+  "overrides": {
+    "underscore": "^1.13.8"
+  },
   "engines": {
     "node": ">=18.0.0"
   },

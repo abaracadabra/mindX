@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "typescript": "^5.4.0",
-    "vitest": "^2.1.0",
+    "vitest": "^3.2.6",
     "@types/node": "^20.16.0"
   },
   "keywords": ["bankoneth", "ens", "cli", "bankon.eth"]
