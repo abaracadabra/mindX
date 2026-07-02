@@ -77,9 +77,9 @@ def issue_challenge(address: str, *, domain: str = "mindx.pythai.net") -> Dict[s
     issued = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     message = (
         f"{domain}\n"
-        f"ACCESS GRANTED to {addr}\n\n"
-        "Welcome, recognized participant.\n"
-        "Your signature proves your identity — it grants no funds access.\n\n"
+        "Welcome, recognized participant\n"
+        f"{addr}\n"
+        "Your signature is your identity.\n\n"
         f"URI: https://{domain}/activity\n"
         "Version: 1\n"
         "Chain ID: 1\n"

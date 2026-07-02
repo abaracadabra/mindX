@@ -2735,8 +2735,18 @@ def _access_denied_page(from_path: str, min_tier: str) -> str:
 *{{margin:0;padding:0;box-sizing:border-box}}
 html,body{{height:100%}}
 body{{font-family:'JetBrains Mono','SF Mono',monospace;color:#e6edf3;background:#04060b;overflow:hidden}}
-.portal{{position:fixed;inset:0;background:url('/gfx/doorway1.webp') center/cover no-repeat;transform:scale(1.04);filter:saturate(1.05)}}
-.veil{{position:fixed;inset:0;background:radial-gradient(circle at 50% 42%,rgba(4,6,11,.15),rgba(4,6,11,.86) 72%)}}
+.portal{{position:fixed;inset:0;background:url('/gfx/doorway1.webp') center/cover no-repeat;transform:scale(1.04);filter:saturate(1.05);transition:transform 1.7s cubic-bezier(.66,0,.2,1),filter 1.5s,opacity 1.5s}}
+.veil{{position:fixed;inset:0;background:radial-gradient(circle at 50% 42%,rgba(4,6,11,.15),rgba(4,6,11,.86) 72%);transition:opacity 1s}}
+/* TARDIS: the small door opens into the vast interior on ACCESS GRANTED */
+.interior{{position:fixed;inset:0;z-index:1;opacity:0;transition:opacity 1.2s ease .35s;pointer-events:none}}
+.interior canvas{{position:absolute;inset:0;width:100%;height:100%}}
+.inside-txt{{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;text-transform:uppercase}}
+.inside-txt .big{{font-size:clamp(18px,4vw,30px);color:#e3b341;letter-spacing:.24em;font-weight:700;text-shadow:0 0 30px rgba(227,179,65,.4)}}
+.inside-txt .sm{{font-size:11px;letter-spacing:.36em;color:#8b949e}}
+body.tardis-go .portal{{transform:scale(7);filter:saturate(1.7) brightness(1.35);opacity:0}}
+body.tardis-go .veil{{opacity:0}}
+body.tardis-go .stage{{opacity:0;transition:opacity .7s;pointer-events:none}}
+body.tardis-go .interior{{opacity:1}}
 .stage{{position:relative;z-index:2;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:24px}}
 .crest{{width:72px;height:72px;filter:drop-shadow(0 0 22px rgba(227,179,65,.4))}}
 .hd{{font-size:22px;letter-spacing:.34em;text-transform:uppercase;font-weight:700;transition:.5s}}
@@ -2750,6 +2760,7 @@ body{{font-family:'JetBrains Mono','SF Mono',monospace;color:#e6edf3;background:
 a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color:#6b7480;text-decoration:none;letter-spacing:.14em}}a.back:hover{{color:#aeb7c2}}
 </style></head><body>
 <div class="portal"></div><div class="veil"></div>
+<div class="interior"><canvas id="inside"></canvas><div class="inside-txt"><div class="big">You are inside</div><div class="sm">the realm is bigger on the inside</div></div></div>
 <div class="stage">
   <img class="crest" src="/gfx/mindX.png" alt="mindX">
   <div class="hd denied" id="hd">Access Denied</div>
@@ -2761,6 +2772,14 @@ a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color
 <a class="back" href="/">&larr;</a>
 <script>
 var FROM={frm}, TIER={tier}, RANK={{public:0,participant:1,member:2,overseer:3,overlord:4}};
+// The vast interior — the substrate that fills the frame once the door opens.
+function startInside(){{
+  var cv=document.getElementById('inside');if(!cv)return;var c=cv.getContext('2d'),W,H,st=[];
+  var CL=['rgba(227,179,65,','rgba(88,166,255,','rgba(86,211,100,','rgba(201,160,255,'];
+  function rs(){{W=cv.width=innerWidth;H=cv.height=innerHeight;st=[];var n=Math.min(160,Math.floor(W*H/7000));for(var i=0;i<n;i++)st.push({{x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4,z:Math.random()*1.8+.5,cl:CL[i%4]}});}}
+  addEventListener('resize',rs);rs();
+  (function d(){{c.fillStyle='rgba(4,6,11,.12)';c.fillRect(0,0,W,H);for(var i=0;i<st.length;i++){{var a=st[i];for(var j=i+1;j<Math.min(st.length,i+10);j++){{var b=st[j],dx=a.x-b.x,dy=a.y-b.y,q=dx*dx+dy*dy;if(q<16000){{c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.strokeStyle=a.cl+(1-q/16000)*.09+')';c.lineWidth=.4;c.stroke();}}}}a.x+=a.vx;a.y+=a.vy;if(a.x<0)a.x=W;if(a.x>W)a.x=0;if(a.y<0)a.y=H;if(a.y>H)a.y=0;c.beginPath();c.arc(a.x,a.y,a.z,0,6.28);c.fillStyle=a.cl+'0.6)';c.fill();}}requestAnimationFrame(d);}})();
+}}
 document.getElementById('c').addEventListener('click',async function(){{
   var m=document.getElementById('msg');
   if(!window.ethereum){{ m.textContent='opening MetaMask…'; window.open('https://metamask.io/download/','_blank','noopener'); return; }}
@@ -2773,7 +2792,7 @@ document.getElementById('c').addEventListener('click',async function(){{
     if(v&&v.realm_token){{
       try{{localStorage.setItem('mindx_realm_token',v.realm_token);localStorage.setItem('mindx_participant',v.role);if(v.role==='overlord')localStorage.setItem('mindx_overlord_verified','1');}}catch(e){{}}
       var hd=document.getElementById('hd');
-      if((RANK[v.role]||0)>=(RANK[TIER]||99)){{ hd.textContent='Access Granted';hd.classList.remove('denied');hd.classList.add('ok'); m.style.color='#56d364';m.textContent='entering…'; setTimeout(function(){{location.href=FROM+(FROM.indexOf('?')>=0?'&':'?')+'t='+encodeURIComponent(v.realm_token);}},650); }}
+      if((RANK[v.role]||0)>=(RANK[TIER]||99)){{ hd.textContent='Access Granted';hd.classList.remove('denied');hd.classList.add('ok'); m.style.color='#56d364';m.textContent='the door opens…'; startInside(); document.body.classList.add('tardis-go'); setTimeout(function(){{location.href=FROM+(FROM.indexOf('?')>=0?'&':'?')+'t='+encodeURIComponent(v.realm_token);}},1800); }}
       else {{ m.style.color='#e3b341';m.textContent='recognized as '+v.role+' — '+TIER+' required'; }}
     }} else {{ m.textContent='not recognized'; }}
   }}catch(e){{ m.textContent='cancelled'; }}
