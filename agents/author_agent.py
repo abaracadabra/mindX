@@ -858,6 +858,66 @@ class AuthorAgent:
             editor_gate=gate, meta=meta,
         )
 
+    async def batch_update_posts(
+        self,
+        updates: List[Dict[str, Any]],
+        *,
+        status: str = "publish",
+        editor_gate: str = "soft",
+        graphics_mode: str = "none",
+    ) -> List[Dict[str, Any]]:
+        """Batch-update existing rage.pythai.net posts IN PLACE (edit by post_id).
+
+        The reusable, first-class form of the ad-hoc "repoint the live posts"
+        script. Each ``update`` is a dict:
+          {"post_id": int, "content_html": str,
+           optional: "title","slug","topic","excerpt","seo_description",
+                     "seo_keywords","status","graphics_mode"}
+        Re-publishes each through ``publish_to_rage(post_id=...)`` (soft editor
+        gate by default; ``graphics_mode="none"`` so an edit does not regenerate
+        the featured image). Non-fatal per item — one bad post never aborts the
+        batch. Returns a per-post result list:
+          [{"post_id", "ok", "url", "status_matches", "error"?}, ...]
+
+        Typical uses: repoint links across many posts (fetch/transform the HTML
+        upstream, then hand the transformed bodies here), fix a shared footer,
+        or restate a claim across a series.
+        """
+        results: List[Dict[str, Any]] = []
+        for upd in updates or []:
+            pid = upd.get("post_id")
+            html = upd.get("content_html")
+            if not pid or not html:
+                results.append({"post_id": pid, "ok": False, "error": "post_id and content_html required"})
+                continue
+            try:
+                res = await self.publish_to_rage(
+                    title=upd.get("title") or "",
+                    content_html=html,
+                    status=upd.get("status") or status,
+                    post_id=int(pid),
+                    slug=upd.get("slug"),
+                    topic=upd.get("topic"),
+                    excerpt=upd.get("excerpt"),
+                    seo_description=upd.get("seo_description"),
+                    seo_keywords=upd.get("seo_keywords"),
+                    graphics_mode=upd.get("graphics_mode") or graphics_mode,
+                    editor_gate=editor_gate,
+                )
+                conf = (res or {}).get("confirmed") or {}
+                results.append({
+                    "post_id": pid,
+                    "ok": bool(res),
+                    "url": (res or {}).get("url"),
+                    "status_matches": conf.get("status_matches"),
+                })
+            except Exception as e:  # pragma: no cover - defensive; batch never aborts
+                logger.warning(f"batch_update_posts: post {pid} failed: {e}")
+                results.append({"post_id": pid, "ok": False, "error": str(e)})
+        ok = sum(1 for r in results if r.get("ok"))
+        logger.info(f"batch_update_posts: {ok}/{len(results)} posts updated in place")
+        return results
+
     async def publish_to_rage(
         self,
         title: str,
