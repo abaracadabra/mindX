@@ -1,0 +1,184 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mindX — Gödel Machine Index</title>
+<meta name="description" content="The Gödel Machine Index: mindX's honest, live self-audit of whether it is a Gödel machine. Eight predicates, machine-checked, and honest when the answer is not yet.">
+<meta name="robots" content="index,follow"><link rel="icon" href="/gfx/favicon.ico" sizes="any">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#04060b;--ink:#e6edf3;--mut:#8b949e;--au:#e3b341;--ok:#56d364;--no:#f85149;--wait:#d9a441;--line:rgba(255,255,255,.08)}
+html,body{height:100%}
+body{font-family:'JetBrains Mono','SF Mono',ui-monospace,monospace;background:var(--bg);color:var(--ink);overflow-x:hidden;line-height:1.5}
+#mesh{position:fixed;inset:0;z-index:0;opacity:.5}
+.wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:0 22px}
+header.top{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:11px;font-weight:700;letter-spacing:.05em}
+.brand img{width:30px;height:30px}
+.navlinks a{color:var(--mut);text-decoration:none;font-size:12px;letter-spacing:.08em;margin-left:18px}
+.navlinks a:hover{color:var(--ink)}
+/* hero — the honest verdict */
+.hero{padding:64px 0 34px;text-align:center}
+.eyebrow{font-size:11px;letter-spacing:.42em;text-transform:uppercase;color:var(--au);margin-bottom:22px}
+.verdict{font-size:clamp(30px,7vw,68px);font-weight:800;letter-spacing:-.01em;line-height:1.02;text-transform:uppercase}
+.verdict .neg{color:var(--no)} .verdict .pos{color:var(--ok)}
+.verdict-sub{margin-top:14px;font-size:13px;color:var(--mut);letter-spacing:.16em;text-transform:uppercase}
+.summary{max-width:760px;margin:26px auto 0;color:#c9d1d9;font-size:14px;line-height:1.75}
+/* gauges */
+.gauges{display:flex;flex-wrap:wrap;justify-content:center;gap:30px;margin:44px 0 10px}
+.gauge{text-align:center;min-width:140px}
+.ring{position:relative;width:128px;height:128px;margin:0 auto}
+.ring svg{transform:rotate(-90deg)} .ring .val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:800}
+.gauge .lab{margin-top:12px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--mut)}
+/* blockers */
+.blockers{margin:28px 0;padding:16px 20px;border:1px solid rgba(248,81,73,.3);background:rgba(248,81,73,.06);border-radius:12px}
+.blockers h3{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--no);margin-bottom:8px}
+.blockers code{color:#ffb4ae;font-size:13px;margin-right:16px}
+/* section */
+.sec-h{margin:52px 0 20px;display:flex;align-items:baseline;gap:14px}
+.sec-h h2{font-size:15px;letter-spacing:.2em;text-transform:uppercase;font-weight:700}
+.sec-h .hint{font-size:11px;color:var(--mut);letter-spacing:.06em}
+/* predicate grid — interactive */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.pred{border:1px solid var(--line);border-left:3px solid var(--mut);border-radius:11px;padding:16px 17px;background:rgba(255,255,255,.02);cursor:pointer;transition:.2s}
+.pred:hover{background:rgba(255,255,255,.045);transform:translateY(-2px)}
+.pred.ok{border-left-color:var(--ok)} .pred.no{border-left-color:var(--no)} .pred.wait{border-left-color:var(--wait)}
+.pred .id{font-size:12px;color:var(--au);font-weight:700;letter-spacing:.1em}
+.pred .nm{font-size:14px;font-weight:700;margin:3px 0 8px;text-transform:capitalize}
+.pred .vd{display:inline-block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:3px 9px;border-radius:20px}
+.pred.ok .vd{background:rgba(86,211,100,.14);color:var(--ok)} .pred.no .vd{background:rgba(248,81,73,.14);color:var(--no)} .pred.wait .vd{background:rgba(217,164,65,.16);color:var(--wait)}
+.pred .dt{margin-top:11px;font-size:12.5px;color:#b6bec9;line-height:1.6}
+.pred .ev{margin-top:12px;padding-top:11px;border-top:1px dashed var(--line);font-size:11.5px;color:var(--mut);display:none;white-space:pre-wrap;word-break:break-word}
+.pred.open .ev{display:block} .pred .more{margin-top:9px;font-size:10px;color:var(--au);letter-spacing:.1em;text-transform:uppercase}
+/* walled admin */
+.wall{margin:56px 0 40px;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.wall-top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:22px 24px;background:linear-gradient(135deg,rgba(227,179,65,.05),transparent)}
+.wall-top .t{font-size:13px;letter-spacing:.2em;text-transform:uppercase;font-weight:700}
+.wall-top .s{font-size:11px;color:var(--mut);margin-top:5px;letter-spacing:.04em}
+.lockbtn{font-family:inherit;font-weight:700;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#0a0d07;background:linear-gradient(135deg,#f7d778,#e3b341 55%,#b8902c);border:none;border-radius:10px;padding:13px 26px;cursor:pointer;white-space:nowrap}
+.lockbtn:hover{box-shadow:0 0 30px rgba(227,179,65,.4)}
+#blueprint-root{border-top:1px solid var(--line)}
+footer{border-top:1px solid var(--line);padding:26px 0 46px;color:var(--mut);font-size:11px;letter-spacing:.06em;text-align:center}
+footer a{color:var(--au);text-decoration:none} .err{color:var(--no);text-align:center;padding:40px}
+@media(prefers-reduced-motion:reduce){#mesh{display:none}}
+</style></head><body>
+<canvas id="mesh"></canvas>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><img src="/gfx/mindX.png" alt="mindX"><span>mindX</span></div>
+    <nav class="navlinks"><a href="/">home</a><a href="/docs.html">docs</a><a href="/insight/godel/machine">json</a><a href="/doc/GODEL_EVAL_BLUEPRINT">blueprint</a></nav>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow">Gödel Machine Index · live self-audit</div>
+    <div class="verdict" id="verdict">measuring…</div>
+    <div class="verdict-sub" id="phase"></div>
+    <p class="summary" id="summary">Reading the machine's honest verdict…</p>
+    <div class="gauges" id="gauges"></div>
+  </section>
+
+  <div class="blockers" id="blockers" style="display:none"></div>
+
+  <div class="sec-h"><h2>The Eight Predicates</h2><span class="hint">tap a card to open its evidence</span></div>
+  <div class="grid" id="grid"></div>
+
+  <section class="wall">
+    <div class="wall-top">
+      <div><div class="t">Deep Diagnostics</div><div class="s">Full evidence surfaces, telemetry &amp; blueprint internals — walled to the OVERLORD.</div></div>
+      <button class="lockbtn" id="unlock">Unlock ▸</button>
+    </div>
+    <div id="blueprint-root"></div>
+  </section>
+
+  <footer>
+    mindX audits itself in the open. Verdict computed live from <code>data/logs/godel_choices.jsonl</code> ·
+    <a href="/insight/godel/machine">raw JSON</a> · <a href="/doc/GODEL_EVAL_BLUEPRINT">the blueprint</a> · <a href="/doc/SCHMIDHUBER_ENGINE">the engine</a>
+  </footer>
+</div>
+
+<script>
+var GMI=null;
+function ring(pct,color,label){
+  var c=2*Math.PI*54, off=c*(1-Math.max(0,Math.min(1,pct)));
+  return '<div class="gauge"><div class="ring"><svg width="128" height="128">'+
+    '<circle cx="64" cy="64" r="54" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="9"/>'+
+    '<circle cx="64" cy="64" r="54" fill="none" stroke="'+color+'" stroke-width="9" stroke-linecap="round" '+
+    'stroke-dasharray="'+c.toFixed(1)+'" stroke-dashoffset="'+c.toFixed(1)+'" style="transition:stroke-dashoffset 1.3s cubic-bezier(.3,0,.2,1)"/></svg>'+
+    '<div class="val" style="color:'+color+'">'+Math.round(pct*100)+'%</div></div><div class="lab">'+label+'</div></div>';
+}
+function vclass(v){ v=(v||'').toUpperCase(); return v.indexOf('PROVEN')>=0?'ok':v.indexOf('FALSIF')>=0?'no':'wait'; }
+function esc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+function render(g){
+  GMI=g; var neg=(g.verdict||'').indexOf('NOT')>=0||(g.verdict||'').indexOf('FALSIF')>=0;
+  var vtxt=(g.verdict||'UNKNOWN').replace(/_/g,' ');
+  document.getElementById('verdict').innerHTML='<span class="'+(neg?'neg':'pos')+'">'+esc(vtxt)+'</span>';
+  document.getElementById('phase').textContent='Phase '+(g.phase!=null?g.phase:'?')+' · '+(g.predicates_proven||0)+'/8 predicates proven';
+  document.getElementById('summary').textContent=g.honest_summary||'';
+  document.getElementById('gauges').innerHTML=
+    ring(g.proof_coverage||0,'#f85149','proof coverage')+
+    ring(g.surrogate_coverage||0,'#e3b341','surrogate coverage')+
+    ring((g.predicates_proven||0)/8,'#56d364','predicates proven');
+  // animate rings
+  setTimeout(function(){document.querySelectorAll('.ring circle:last-child').forEach(function(c){c.style.strokeDashoffset=c.getAttribute('data-off')||c.style.strokeDashoffset;});},50);
+  requestAnimationFrame(function(){document.querySelectorAll('#gauges .ring svg circle:last-child').forEach(function(el,i){var pcts=[g.proof_coverage||0,g.surrogate_coverage||0,(g.predicates_proven||0)/8];var C=2*Math.PI*54;el.style.strokeDashoffset=(C*(1-pcts[i])).toFixed(1);});});
+  if(g.blockers&&g.blockers.length){var b=document.getElementById('blockers');b.style.display='block';
+    b.innerHTML='<h3>Honest blockers — why the verdict is "not yet"</h3>'+g.blockers.map(function(x){return '<code>'+esc(x)+'</code>';}).join('');}
+  var grid=document.getElementById('grid');
+  grid.innerHTML=(g.predicates||[]).map(function(p){
+    var cl=vclass(p.verdict);
+    return '<div class="pred '+cl+'" onclick="this.classList.toggle(\'open\')">'+
+      '<div class="id">'+esc(p.id)+'</div><div class="nm">'+esc((p.name||'').replace(/_/g,' '))+'</div>'+
+      '<span class="vd">'+esc(p.verdict)+'</span>'+
+      '<div class="dt">'+esc(p.detail)+'</div>'+
+      '<div class="ev">'+esc(JSON.stringify(p.evidence||{},null,2))+'</div>'+
+      '<div class="more">evidence ▾</div></div>';
+  }).join('');
+}
+fetch('/insight/godel/machine',{cache:'no-store'}).then(function(r){return r.json();}).then(render)
+  .catch(function(){document.querySelector('.hero').innerHTML='<div class="err">The self-audit is momentarily unavailable. <a href="/insight/godel/machine">raw JSON</a></div>';});
+
+// walled admin — load blueprint.js only for a recognized OVERLORD
+document.getElementById('unlock').addEventListener('click',function(){
+  var tok=null; try{tok=localStorage.getItem('mindx_realm_token');}catch(e){}
+  var verified=false; try{verified=localStorage.getItem('mindx_overlord_verified')==='1';}catch(e){}
+  var root=document.getElementById('blueprint-root'), btn=this;
+  if(!verified||!tok){ btn.textContent='Connect at /activity ▸'; btn.onclick=function(){location.href='/activity?from=/machine';};
+    root.innerHTML='<div style="padding:24px;color:#8b949e;font-size:12px">Deep diagnostics are walled to the OVERLORD. <a href="/activity?from=/machine" style="color:#e3b341">Enter the realm</a> to unlock the full evidence surfaces.</div>'; return; }
+  btn.textContent='Loading…';
+  var s=document.createElement('script'); s.src='/static/blueprint.js?t='+encodeURIComponent(tok);
+  s.onload=function(){ if(window.Blueprint){ window.Blueprint.render(root,GMI,tok); btn.textContent='Unlocked'; btn.disabled=true; } };
+  s.onerror=function(){ root.innerHTML='<div style="padding:24px;color:#f85149">blueprint.js failed to load.</div>'; };
+  document.head.appendChild(s);
+});
+
+// intelligence substrate — a physics field with SCALE (depth/parallax).
+// Hamiltonian central well (nod to the Schmidhüber engine) + pairwise repulsion
+// + spring mesh + cursor gravity; every body has a z-scale driving size, opacity,
+// and parallax speed, so the field reads as depth, not a flat plane.
+(function(){var cv=document.getElementById('mesh'),c=cv.getContext('2d'),W,H,st=[],mx=-1,my=-1;
+ var CL=['227,179,65','88,166,255','86,211,100','201,160,255'];
+ function rs(){W=cv.width=innerWidth;H=cv.height=innerHeight;st=[];
+   var n=Math.min(140,Math.floor(W*H/10500));
+   for(var i=0;i<n;i++){var z=Math.random()*1.7+0.3;
+     st.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.2,z:z,m:z*z,c:CL[i%4]});}}
+ addEventListener('resize',rs);
+ addEventListener('mousemove',function(e){mx=e.clientX;my=e.clientY;});
+ addEventListener('mouseleave',function(){mx=-1;});rs();
+ (function step(){
+   c.clearRect(0,0,W,H); var cxp=W/2, cyp=H*0.46;
+   for(var i=0;i<st.length;i++){var a=st[i];
+     a.vx+=(cxp-a.x)*0.00003*a.m; a.vy+=(cyp-a.y)*0.00003*a.m;         // Hamiltonian central well (mass-scaled)
+     for(var j=i+1;j<st.length;j++){var b=st[j],dx=b.x-a.x,dy=b.y-a.y,q=dx*dx+dy*dy;
+       if(q<220){var f=-1.4/(q+9);a.vx+=dx*f;a.vy+=dy*f;b.vx-=dx*f;b.vy-=dy*f;}          // short-range repulsion
+       if(q<14000){var d=Math.sqrt(q)||1;
+         c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);
+         c.strokeStyle='rgba('+a.c+','+((1-q/14000)*.10).toFixed(3)+')';c.lineWidth=.4;c.stroke();
+         var s=(d-92)*0.00002;a.vx+=dx/d*s;a.vy+=dy/d*s;b.vx-=dx/d*s;b.vy-=dy/d*s;}      // spring mesh (~92px rest)
+     }
+     if(mx>0){var ex=mx-a.x,ey=my-a.y,eq=ex*ex+ey*ey;if(eq<44000&&eq>1){var g=150/eq*a.z;var r=Math.sqrt(eq);a.vx+=ex/r*g;a.vy+=ey/r*g;}}  // cursor gravity (depth-scaled)
+     a.vx*=0.96;a.vy*=0.96; a.x+=a.vx*a.z;a.y+=a.vy*a.z;                // parallax: deeper bodies travel faster
+     if(a.x<-5)a.x=W;if(a.x>W+5)a.x=0;if(a.y<-5)a.y=H;if(a.y>H+5)a.y=0;
+     c.beginPath();c.arc(a.x,a.y,a.z*1.4,0,6.28);c.fillStyle='rgba('+a.c+','+(0.28+a.z*0.28).toFixed(3)+')';c.fill();  // size+opacity ∝ scale
+   }
+   requestAnimationFrame(step);
+ })();
+})();
+</script></body></html>

@@ -1349,6 +1349,7 @@ async def improvement_journal_page():
 
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
 _LANDING_HTML_PATH = Path(__file__).parent / "landing.html"
+_MACHINE_HTML_PATH = Path(__file__).parent / "machine.html"
 _FEEDBACK_HTML_PATH = Path(__file__).parent / "feedback.html"
 _NETSTAT_HTML_PATH = Path(__file__).parent / "netstat.html"
 _OVERSEER_HTML_PATH = Path(__file__).parent / "overseer.html"
@@ -2126,6 +2127,16 @@ async def public_landing():
     return _DashResponse(content="<h1>mindX</h1><p>Loading…</p>")
 
 
+@app.get("/machine", response_class=_DashResponse, include_in_schema=False)
+async def public_machine():
+    """The Gödel Machine Index — clean corporate public display of mindX's honest
+    self-audit (verdict, coverage, G1–G8) + intelligence-substrate physics. Deep
+    admin diagnostics (blueprint.js) are walled to the OVERLORD."""
+    if _MACHINE_HTML_PATH.exists():
+        return _DashResponse(content=_MACHINE_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX — Gödel Machine Index</h1><p><a href='/insight/godel/machine'>raw JSON</a></p>")
+
+
 @app.get("/diagnostics", response_class=_DashResponse, include_in_schema=False)
 @app.get("/diagnostics.html", response_class=_DashResponse, include_in_schema=False)
 async def public_dashboard():
@@ -2516,6 +2527,7 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/diagnostics", "/diagnostics.html",  # full diagnostics dashboard (moved off the landing; still public)
     "/realm/challenge", "/realm/verify",  # OVERLORD-protocol signature gate (public: sign to earn a tier)
     "/realm/deploy/feedback",          # deploy-feedback record (handler-gated to overlord/overseer)
+    "/machine",                        # Gödel Machine Index — public honest self-audit (admin layer walled client-side)
     "/book",                           # listed public so the middleware defers; the handler _tier_gate enforces MEMBER
     # NOTE: /docs.html, /book, /doc/*, /automindx stay listed public so the MIDDLEWARE
     # defers to them; the per-handler _tier_gate does the tier enforcement (participant/member),
