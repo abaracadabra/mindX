@@ -63,7 +63,7 @@ OFFICIAL_LINKS = {
     "rage":        RAGE_HUB,
     "bankon":      BANKON_DOORWAY,
     "gnugui":      GNUGUI_REPO,
-    "github":      "https://github.com/AgenticPlace/mindX",
+    "github":      "https://github.com/abaracadabra/mindX",   # most-current PUBLIC archive (agenticplace/mindX stays private until release-when-ready); open source also in mindXalpha/beta/theta
 }
 
 # High bars, set high on purpose. 0..1. Clarity, genius, AND style.
