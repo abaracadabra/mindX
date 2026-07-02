@@ -14,6 +14,8 @@ Examples
   python scripts/gitmind.py backup             # incremental THOT (skips if unchanged)
   python scripts/gitmind.py backup --full      # force a fresh basis THOT (new THlNK root)
   python scripts/gitmind.py push               # delta-sync the self-hosted origin only
+  python scripts/gitmind.py forgejo            # push to the self-hosted Forgejo forge
+  python scripts/gitmind.py forgejo --status   # show Forgejo config (no push)
   python scripts/gitmind.py thlnk              # show the link of THOTs (lineage)
   python scripts/gitmind.py restore /tmp/clone        # clone from the self-hosted origin
   python scripts/gitmind.py reconstruct /tmp/rebuild  # rebuild from the THlNK bundle chain
@@ -52,6 +54,8 @@ def cmd_status(args) -> int:
     print(f"repo      {gm.root}")
     print(f"head      {st.get('short')} ({st.get('branch')})  dirty={st.get('dirty')}  commits={st.get('commit_count')}")
     print(f"self-host {sh['bare']}  init={sh['initialized']}  refs={len(sh['refs'])}")
+    fj = rep.get("forgejo", {})
+    print(f"forgejo   {fj.get('url') or '(unconfigured)'}  configured={fj.get('configured')}")
     print(f"THlNK     id={_short(tk.get('thlnk_id'))}  thots={tk.get('count')}  head_root={_short(tk.get('head_thot_root'))}")
     print(f"sources   {', '.join(rep['sources'])}   anchor_enabled={rep['anchor_enabled']}")
     lb = rep.get("last_backup")
@@ -72,11 +76,21 @@ def cmd_backup(args) -> int:
     print(f"  parent     {_short(r.get('parent_root'), 18)}")
     print(f"  THlNK      {r.get('thlnk_id')}  ({r.get('thlnk_count')} THOTs)")
     print(f"  replicas   {r.get('replicas')}  cid={r.get('cid')}  arweave={r.get('arweave')}  self_host={r.get('self_host_ok')}")
+    print(f"  forgejo    ok={r.get('forgejo_ok')}  {r.get('forgejo_url') or '(unconfigured)'}")
     return 0 if r.get("ok") else 1
 
 
 def cmd_push(args) -> int:
     r = _gm(args).mirror_push()
+    print(json.dumps(r, indent=2, default=str)); return 0 if r.get("ok") else 1
+
+
+def cmd_forgejo(args) -> int:
+    """Push to (or just inspect) the self-hosted Forgejo forge."""
+    gm = _gm(args)
+    if args.status:
+        print(json.dumps(gm.forgejo.status(), indent=2, default=str)); return 0
+    r = gm.forgejo.push()
     print(json.dumps(r, indent=2, default=str)); return 0 if r.get("ok") else 1
 
 
@@ -110,13 +124,15 @@ def main(argv=None) -> int:
     s = sub.add_parser("status", help="state + self-host + THlNK head"); s.add_argument("--json", action="store_true")
     b = sub.add_parser("backup", help="incremental THOT backup (skips if unchanged)"); b.add_argument("--full", action="store_true")
     sub.add_parser("push", help="delta-sync the self-hosted origin only")
+    fj = sub.add_parser("forgejo", help="push to the self-hosted Forgejo forge (--status to inspect)")
+    fj.add_argument("--status", action="store_true", help="show config only, do not push")
     tk = sub.add_parser("thlnk", help="show the link of THOTs (lineage)"); tk.add_argument("--json", action="store_true")
     r = sub.add_parser("restore", help="clone from the self-hosted origin"); r.add_argument("dest")
     rc = sub.add_parser("reconstruct", help="rebuild from the THlNK bundle chain"); rc.add_argument("dest")
 
     args = p.parse_args(argv)
     return {"status": cmd_status, "backup": cmd_backup, "push": cmd_push, "thlnk": cmd_thlnk,
-            "restore": cmd_restore, "reconstruct": cmd_reconstruct}[args.cmd](args)
+            "forgejo": cmd_forgejo, "restore": cmd_restore, "reconstruct": cmd_reconstruct}[args.cmd](args)
 
 
 if __name__ == "__main__":

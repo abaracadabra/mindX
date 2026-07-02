@@ -109,6 +109,12 @@ Thumbs.db
 # Add any project-specific files/directories you want to ignore
 data/logs/
 data/memory/agent_workspaces/*/
+# Local thin-client: VPS (mindx.pythai.net) is the authoritative store for these.
+# Regenerable / re-pullable from live /core; cleared locally to keep the working set lean.
+# KEEP tracked: data/memory/ltm, data/memory/dreams (machine.dream),
+# data/godel/ascend + data/config/mindxtrain_regimen.json (mindXtrain), data/gitmind (maintained).
+data/memory/stm/
+data/memory/archive/
 data/gemini/
 data/id_manager_work/
 data/mastermind_work/

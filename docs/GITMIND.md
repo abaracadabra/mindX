@@ -81,6 +81,38 @@ pointer (`thot_root` + `cid` + iNFT/x402); the `parent_root` chain to a checkpoi
 the lineage that, on-chain, `MindXCheckpointRegistry` enforces. gitmind realizes that
 model off-chain with git bundles as the THOT bodies.
 
+## Forgejo forge — the web-accessible origin mindX owns (git.pythai.net)
+
+The bare `self.git` is fast but same-disk; the permaweb THlNK is durable but slow to
+clone. **Forgejo** (the GPLv3 [Gitea fork](https://forgejo.org/faq/)) is the third leg
+of the origin triad: a live, browseable, HTTP(S) forge running on mindX's own VPS at
+**https://git.pythai.net** — no GitHub dependency, but a real web UI, issues, and
+`git clone`/`push` over HTTPS. It fits the *repo-private-pending-audit* posture: the
+mirror repo is created **private** by default.
+
+A forge is a git *remote*, not a blob store, so it is **not** a `_Source` — it pushes
+refs (`git push --mirror`) the way `mirror_push` syncs the bare origin. `ForgejoRemote`
+is dormant + guarded until configured, and **never logs the token** (the auth URL is
+only ever a subprocess argument; any echoed token is scrubbed from errors).
+
+| config key (env wins over vault) | meaning | default |
+|---|---|---|
+| `MINDX_FORGEJO_URL` / `forgejo_url` | forge base | — (dormant when unset) |
+| `MINDX_FORGEJO_TOKEN` / `forgejo_token` | access token, scope `write:repository` | — |
+| `MINDX_FORGEJO_USER` / `forgejo_user` | push username | `mindx` |
+| `MINDX_FORGEJO_REPO` / `forgejo_repo` | `owner/name` | `mindx/mindX` |
+
+`backup()` pushes to Forgejo at **step 1b** — before the skip-on-no-change check — so
+ref moves reach the forge even when there are no new commits to bundle. `ensure_repo()`
+best-effort creates the private mirror via the Forgejo API (stdlib only, no SDK) on
+first push. Surfaced in `report()["forgejo"]` and `scripts/gitmind.py forgejo[ --status]`.
+
+**Install (VPS, operator-run):** `scripts/install_forgejo.sh` is idempotent — binary +
+`git` system user + `/var/lib/forgejo` + `/etc/forgejo`, **reuses Postgres** (own DB),
+binds `127.0.0.1:3000`, writes the systemd unit, and creates the admin + a push token.
+It makes **no** Apache/DNS/cert changes itself; it prints the next steps. The reverse
+proxy is `deploy/apache/git-pythai-net.conf` (+ `certbot --apache -d git.pythai.net`).
+
 ## Backup sources (variable, pluggable)
 
 Each incremental THOT (and the THlNK manifest itself) fans out to every configured
@@ -126,6 +158,7 @@ gm.snapshot()                     # monitor tick: record state, classify transit
 await gm.backup()                 # incremental THOT (skips if unchanged) + self-host + THlNK
 await gm.backup(full=True)        # force a fresh basis THOT (new THlNK root)
 gm.mirror_push()                  # delta-sync the self-hosted origin only
+gm.forgejo.push()                 # mirror to the self-hosted Forgejo forge (dormant until configured)
 gm.clone_self_host("/tmp/clone")  # restore a working tree from the self-hosted origin
 gm.reconstruct_from_thlnk("/tmp/rebuild")  # rebuild from the link of THOTs
 gm.thlnk_summary(); gm.report()   # the /insight/gitmind view (+ self_host + thlnk)
@@ -135,6 +168,8 @@ gm.thlnk_summary(); gm.report()   # the /insight/gitmind view (+ self_host + thl
 python scripts/gitmind.py status        # state + self-host + THlNK head
 python scripts/gitmind.py backup         # incremental THOT (skips if unchanged)
 python scripts/gitmind.py thlnk          # the link of THOTs (lineage)
+python scripts/gitmind.py forgejo --status  # Forgejo forge config (no push)
+bash scripts/install_forgejo.sh          # (VPS, operator) stand up git.pythai.net
 python scripts/gitmind.py reconstruct /tmp/rebuild   # rebuild from the THlNK chain
 curl -s https://mindx.pythai.net/insight/gitmind?h=true   # state + backups + rollback history
 ```
@@ -144,6 +179,7 @@ curl -s https://mindx.pythai.net/insight/gitmind?h=true   # state + backups + ro
 - ✅ Incremental THOT bundles (`--all --not basis`) + skip-on-no-change for cheap frequent IPFS/Arweave replication.
 - ✅ Self-hosted bare origin (`mirror_push`) + restore (`clone_self_host`, `reconstruct_from_thlnk`, permaweb back-fill).
 - ✅ THlNK lineage: per-THOT `thot_root` (Keccak/RFC-6962 Merkle) + `parent_root` chain; iNFT/THOT CID anchoring.
+- ✅ Forgejo forge leg: `ForgejoRemote` (`git push --mirror`, token-redacted, API repo auto-create) + `scripts/install_forgejo.sh` + `deploy/apache/git-pythai-net.conf`. *Built locally; not yet installed on the VPS.*
 - Wire `snapshot()` into the heartbeat and `backup()` into the dream cycle (Phase 8 alongside the IPFS offload projector).
 - On-chain THlNK: register the lineage in `MindXCheckpointRegistry`; mint per-THOT ERC-7857 iNFTs binding `thot_root` + `keccak(thlnk)`.
 - Tests: `tests/test_gitmind_efficient.py` (incremental, skip, lineage, self-host clone, full reconstruction).

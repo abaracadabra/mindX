@@ -2,7 +2,7 @@
 
 > Auto-maintained by [AuthorAgent](AUTHOR_AGENT.md). Regenerated on every recognized milestone (`github.awareness`). Do not edit by hand — changes are overwritten. The curated hub is [NAV.md](NAV.md); this is the exhaustive catalogue, grouped as on [/docs.html](https://mindx.pythai.net/docs.html).
 
-_Last regenerated: 2026-06-25 01:15 UTC · 252 documents in 10 categories._
+_Last regenerated: 2026-06-25 10:27 UTC · 252 documents in 10 categories._
 
 [Core Architecture](#core-architecture) (17) · [Agents](#agents) (46) · [Tools](#tools) (33) · [Governance & DAIO](#governance--daio) (7) · [Memory & Knowledge](#memory--knowledge) (11) · [Deployment & Operations](#deployment--operations) (19) · [API & Integration](#api--integration) (18) · [Philosophy & Vision](#philosophy--vision) (13) · [Tutorials & Guides](#tutorials--guides) (4) · [Other](#other) (84)
 

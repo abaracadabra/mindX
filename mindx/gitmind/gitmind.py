@@ -21,6 +21,7 @@ import os
 import shutil
 import subprocess
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -122,6 +123,103 @@ def _vault_get(key: str) -> Optional[str]:
         return None
 
 
+class ForgejoRemote:
+    """A self-hosted **Forgejo** forge (the GPLv3 Gitea fork) running on mindX's own
+    VPS as the web-accessible git origin mindX owns — no GitHub dependency, fully
+    browseable, with HTTP(S) clone/push. It is the third leg of gitmind's origin
+    triad: the local bare `self.git` (same-disk, instant restore) is fast but a
+    single point of failure; the permaweb THlNK (Lighthouse + Arweave) is durable
+    but slow to clone; Forgejo is the live, ownable, queryable home in between.
+
+    A forge is a git *remote*, not a blob store, so this is NOT a `_Source` — it
+    pushes refs (`git push --mirror`) the way `GitMind.mirror_push` syncs the bare
+    origin. Dormant + guarded until configured; never raises, never logs the token.
+
+    Config (env wins over BANKON vault):
+      MINDX_FORGEJO_URL   / forgejo_url    base, e.g. https://git.pythai.net
+      MINDX_FORGEJO_REPO  / forgejo_repo   owner/name (default mindx/mindX)
+      MINDX_FORGEJO_USER  / forgejo_user   push username (default mindx)
+      MINDX_FORGEJO_TOKEN / forgejo_token  access token (scope write:repository)
+    """
+    remote_name = "forgejo"
+
+    def __init__(self, root: Path):
+        self.root = Path(root)
+        self.base_url = (os.getenv("MINDX_FORGEJO_URL") or _vault_get("forgejo_url") or "").rstrip("/")
+        self.repo = os.getenv("MINDX_FORGEJO_REPO") or _vault_get("forgejo_repo") or "mindx/mindX"
+        self.user = os.getenv("MINDX_FORGEJO_USER") or _vault_get("forgejo_user") or "mindx"
+        self._token = os.getenv("MINDX_FORGEJO_TOKEN") or _vault_get("forgejo_token") or ""
+
+    def configured(self) -> bool:
+        return bool(self.base_url and self._token)
+
+    def clone_url(self) -> Optional[str]:
+        """Public, token-free browse/clone URL (safe to log/display)."""
+        return f"{self.base_url}/{self.repo}.git" if self.base_url else None
+
+    def _auth_url(self) -> str:
+        """Push URL with credentials embedded — NEVER log, return, or persist this."""
+        from urllib.parse import urlsplit, quote
+        parts = urlsplit(self.base_url)
+        userinfo = f"{quote(self.user, safe='')}:{quote(self._token, safe='')}"
+        return f"{parts.scheme}://{userinfo}@{parts.netloc}/{self.repo}.git"
+
+    def _scrub(self, text: Optional[str]) -> Optional[str]:
+        """Defang any echoed token (git error messages can contain the push URL)."""
+        if text and self._token:
+            from urllib.parse import quote
+            text = text.replace(self._token, "***").replace(quote(self._token, safe=""), "***")
+        return text
+
+    def _api(self, method: str, path: str, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Stdlib-only Forgejo API call (token auth), guarded — no SDK dependency."""
+        try:
+            data = json.dumps(payload).encode("utf-8") if payload is not None else None
+            req = urllib.request.Request(f"{self.base_url}/api/v1{path}", data=data, method=method)
+            req.add_header("Authorization", f"token {self._token}")
+            req.add_header("Content-Type", "application/json")
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return {"ok": True, "code": resp.status}
+        except urllib.error.HTTPError as e:
+            return {"ok": False, "code": e.code}
+        except Exception as e:
+            return {"ok": False, "error": self._scrub(str(e))}
+
+    def ensure_repo(self) -> Dict[str, Any]:
+        """Best-effort: create the mirror repo (private, matching mindX's posture)
+        via the Forgejo API if it does not exist yet. Idempotent and guarded."""
+        owner, _, name = self.repo.partition("/")
+        if not name:
+            return {"ok": False, "error": "bad repo spec (want owner/name)"}
+        if self._api("GET", f"/repos/{owner}/{name}").get("ok"):
+            return {"ok": True, "existed": True}
+        created = self._api("POST", "/user/repos",
+                            {"name": name, "private": True, "auto_init": False,
+                             "description": "mindX self-hosted mirror (gitmind THlNK origin)"})
+        return {"ok": created.get("ok"), "existed": False, "created": created.get("ok")}
+
+    def push(self) -> Dict[str, Any]:
+        """Mirror every ref to the Forgejo forge. Parallels `mirror_push` to the bare
+        origin; short-circuits cleanly when unconfigured."""
+        if not self.configured():
+            return {"name": self.remote_name, "ok": False,
+                    "status": "not_configured (set MINDX_FORGEJO_URL + forgejo_token)"}
+        self.ensure_repo()
+        try:
+            r = subprocess.run(["git", "push", "--mirror", self._auth_url()],
+                               cwd=str(self.root), capture_output=True, text=True, timeout=300)
+            ok = r.returncode == 0
+            return {"name": self.remote_name, "ok": ok, "url": self.clone_url(),
+                    "error": None if ok else (self._scrub(r.stderr.strip()) or "push failed")[:160]}
+        except Exception as e:
+            return {"name": self.remote_name, "ok": False, "error": self._scrub(str(e))[:160]}
+
+    def status(self) -> Dict[str, Any]:
+        """Redacted public view — host/repo/configured only, never the token."""
+        return {"remote": self.remote_name, "configured": self.configured(),
+                "url": self.clone_url(), "repo": self.repo}
+
+
 class GitMind:
     """Monitor git state, record rollbacks, and replicate bundles to variable sources."""
 
@@ -137,6 +235,10 @@ class GitMind:
         # chain (below) is the durable, permaweb-replicated complement.
         self.self_git = self.dir / "self.git"
         self.remote_name = "gitmind"
+        # Forgejo: the self-hosted, web-accessible forge mindX owns on its own VPS
+        # (git.pythai.net) — the live, browseable origin between the same-disk bare
+        # repo and the permaweb THlNK. Dormant until configured (env/vault).
+        self.forgejo = ForgejoRemote(self.root)
         # THlNK manifest — gitmind's THOT lINK. "THlNK" is THINK spelled with an
         # ell on purpose: a THOT-lINK. Each backup increment is an immutable,
         # content-addressed delta bundle = one **THOT** (a tensor backup anchors as
@@ -498,6 +600,10 @@ class GitMind:
         head = st.get("head")
         # 1. self-hosting first — cheap native delta sync to the bare origin
         self_host = await asyncio.to_thread(self.mirror_push)
+        # 1b. push to the self-hosted Forgejo forge (web-accessible origin mindX owns).
+        #     Runs before the skip check so ref moves reach the forge even when there
+        #     are no new commits to bundle. No-op + cheap when unconfigured.
+        forgejo = await asyncio.to_thread(self.forgejo.push)
         # 2. determine the basis = the last linked THOT's tip (None → full basis)
         thlnk = self._load_thlnk()
         prior = thlnk.get("thots") or []
@@ -505,7 +611,8 @@ class GitMind:
         # 3. extreme efficiency: nothing new → skip bundling entirely
         if prior and self._new_commits(basis) == 0:
             entry = {"kind": "backup_skipped", "head": head, "reason": "no new commits",
-                     "thlnk_id": thlnk.get("thlnk_id"), "self_host_ok": self_host.get("ok")}
+                     "thlnk_id": thlnk.get("thlnk_id"), "self_host_ok": self_host.get("ok"),
+                     "forgejo_ok": forgejo.get("ok")}
             self._append(entry)
             return {"ok": True, "skipped": True, **entry}
         # 4. make the (incremental) THOT bundle
@@ -563,9 +670,10 @@ class GitMind:
             "thot_root": thot_root, "parent_root": parent_root,
             "thlnk_id": thlnk["thlnk_id"], "thlnk_count": thlnk["count"], "thlnk_cid": thlnk_cid,
             "self_host_ok": self_host.get("ok"),
+            "forgejo_ok": forgejo.get("ok"), "forgejo_url": forgejo.get("url"),
         }
         self._append(entry)
-        return {"ok": bool(ok_sources) or self_host.get("ok"), **entry}
+        return {"ok": bool(ok_sources) or self_host.get("ok") or forgejo.get("ok"), **entry}
 
     # ── restore: reconstruct distributed mindX ────────────────────
     def clone_self_host(self, dest: Path) -> Dict[str, Any]:
@@ -741,6 +849,7 @@ class GitMind:
             "access_control": self._ACCESS_TIERS,        # OVERLORD: tier required per asset kind
             "privileged": privileged,
             "self_host": self.self_host_status(),        # the local origin mindX owns
+            "forgejo": self.forgejo.status(),            # the web-accessible forge mindX owns
             "thlnk": self.thlnk_summary(),               # the THOT lINK = distributed mindX
             "last_backup": self._pub_backup(backups[0], privileged) if backups else None,
             "backups_recent": [self._pub_backup(b, privileged) for b in backups],

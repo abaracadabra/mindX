@@ -8,12 +8,13 @@ All on throwaway repos in tmp_path; no network (Lighthouse/Arweave skip cleanly)
 from __future__ import annotations
 
 import asyncio
+import json
 import subprocess
 from pathlib import Path
 
 import pytest
 
-from mindx.gitmind.gitmind import GitMind
+from mindx.gitmind.gitmind import GitMind, ForgejoRemote
 
 
 def _run(*a, cwd=None):
@@ -121,3 +122,39 @@ def test_report_surfaces_self_host_and_thlnk(tmp_path):
     assert rep["self_host"]["initialized"] is True
     assert rep["thlnk"]["count"] == 1 and rep["thlnk"]["head_thot_root"]
     assert "sources" in rep and "local" in rep["sources"]
+    # forgejo leg is present and dormant by default (no env/vault config)
+    assert rep["forgejo"]["configured"] is False
+
+
+# ── Forgejo forge leg ─────────────────────────────────────────────────────
+def test_forgejo_dormant_when_unconfigured(monkeypatch, tmp_path):
+    for k in ("MINDX_FORGEJO_URL", "MINDX_FORGEJO_TOKEN", "MINDX_FORGEJO_USER", "MINDX_FORGEJO_REPO"):
+        monkeypatch.delenv(k, raising=False)
+    fr = ForgejoRemote(tmp_path)
+    assert fr.configured() is False
+    # push short-circuits cleanly (no network), reports not_configured
+    res = fr.push()
+    assert res["ok"] is False and "not_configured" in res["status"]
+    # status is safe to display and contains no token
+    st = fr.status()
+    assert st["configured"] is False and st["url"] is None
+
+
+def test_forgejo_configured_builds_redacted_urls(monkeypatch, tmp_path):
+    monkeypatch.setenv("MINDX_FORGEJO_URL", "https://git.pythai.net")
+    monkeypatch.setenv("MINDX_FORGEJO_TOKEN", "supersecrettoken123")
+    monkeypatch.setenv("MINDX_FORGEJO_USER", "mindx")
+    monkeypatch.setenv("MINDX_FORGEJO_REPO", "mindx/mindX")
+    fr = ForgejoRemote(tmp_path)
+    assert fr.configured() is True
+    # public clone URL is token-free
+    assert fr.clone_url() == "https://git.pythai.net/mindx/mindX.git"
+    assert "supersecrettoken123" not in fr.clone_url()
+    # auth URL embeds creds (used only as a subprocess arg, never logged)
+    assert "supersecrettoken123" in fr._auth_url()
+    # status never leaks the token
+    assert "supersecrettoken123" not in json.dumps(fr.status())
+    # _scrub defangs the token if git echoes it in an error
+    leaked = "fatal: https://mindx:supersecrettoken123@git.pythai.net/... failed"
+    assert "supersecrettoken123" not in fr._scrub(leaked)
+    assert "***" in fr._scrub(leaked)

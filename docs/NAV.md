@@ -278,6 +278,11 @@ Phase A–E shipped 2026-04-26. Pushes old/low-importance STM to IPFS (Lighthous
 - [`agents/memory_agent.fetch_offloaded_memory(memory_id)`](../agents/memory_agent.py) — lazy retrieval: looks up `content_cid` in pgvector, fetches the bundle from MultiProvider, returns the matching record
 - Vault keys (operator action): `lighthouse_api_key`, `nftstorage_api_key`, `arc_rpc_url`, `polygon_rpc_url`, `memory_anchor_treasury_pk` — stored via `python manage_credentials.py store …`
 
+### gitmind (self-hosted git backup/rollback + Forgejo forge)
+
+- [gitmind](GITMIND.md) — mindX's own git monitor + multi-source backup/rollback. Incremental **THOT** bundles linked into a **THlNK** (the THOT lINK) replicated to local + Lighthouse (IPFS) + Arweave = distributed mindX; ancestry-based rollback classification (self-initiated vs external); `GET /insight/gitmind`. Module [`mindx/gitmind/gitmind.py`](../mindx/gitmind/gitmind.py), CLI [`scripts/gitmind.py`](../scripts/gitmind.py).
+- **Forgejo forge** — the web-accessible origin mindX owns at `git.pythai.net` (the GPLv3 [Gitea fork](https://forgejo.org/faq/)): `ForgejoRemote` mirror-push (token-redacted), installer [`scripts/install_forgejo.sh`](../scripts/install_forgejo.sh) (binary + systemd, reuses Postgres), Apache vhost [`deploy/apache/git-pythai-net.conf`](../deploy/apache/git-pythai-net.conf). Config: `MINDX_FORGEJO_URL`/`forgejo_token` (vault). *Built; not yet installed on the VPS.*
+
 ## Governance & Autonomy
 
 ### DAIO (Decentralized Autonomous Intelligence Organization)
