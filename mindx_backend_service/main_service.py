@@ -2749,7 +2749,11 @@ body.tardis-go .interior{{opacity:1}}
 @keyframes rabbithole{{0%{{transform:rotate(0) scale(1.08)}}100%{{transform:rotate(11deg) scale(1)}}}}
 body.tardis-go #inside{{animation:rabbithole 3.2s cubic-bezier(.4,0,.2,1) both;transform-origin:50% 46%}}
 .stage{{position:relative;z-index:2;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:24px}}
-.crest{{width:72px;height:72px;filter:drop-shadow(0 0 22px rgba(227,179,65,.4))}}
+.crest{{width:132px;height:132px;filter:drop-shadow(0 0 30px rgba(227,179,65,.45));cursor:pointer;transition:transform .2s,filter .3s}}
+.crest:hover{{transform:scale(1.05);filter:drop-shadow(0 0 44px rgba(227,179,65,.7))}}
+.crest:active{{transform:scale(.98)}}
+.wbtn{{margin:6px 5px 0;padding:9px 16px;border-radius:9px;border:1px solid rgba(88,166,255,.4);background:rgba(88,166,255,.08);color:#c9d1d9;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;cursor:pointer}}
+.wbtn:hover{{border-color:#58a6ff;color:#fff;box-shadow:0 0 18px rgba(88,166,255,.2)}}
 .hd{{font-size:22px;letter-spacing:.34em;text-transform:uppercase;font-weight:700;transition:.5s}}
 .hd.denied{{color:#f85149;text-shadow:0 0 24px rgba(248,81,73,.35)}}
 .hd.ok{{color:#56d364;text-shadow:0 0 26px rgba(86,211,100,.4)}}
@@ -2766,12 +2770,12 @@ a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color
 <div class="portal"></div><div class="veil"></div>
 <div class="interior"><canvas id="dvfabric"></canvas><canvas id="inside"></canvas></div>
 <div class="stage">
-  <img class="crest" src="/gfx/mindX.png" alt="mindX">
-  <div class="hd denied" id="hd">Access Denied</div>
+  <div class="hd" id="hd"></div>
   <div class="tier">{min_tier} realm</div>
   <button class="connect" id="c">Connect</button>
+  <img class="crest" id="crest" src="/gfx/mindX.png" alt="mindX — connect" title="connect">
   <div id="msg"></div>
-  <a class="algo" href="/overseer">the OVERSEER enters via mindx.algo &rarr;</a>
+  <div id="wallets"></div>
 </div>
 <div class="crown" id="crown" title="drag the crown">&#9819;</div>
 <a class="back" href="/">&larr;</a>
@@ -2828,23 +2832,54 @@ function startInside(){{
   }}
   requestAnimationFrame(draw);
 }}
-document.getElementById('c').addEventListener('click',async function(){{
+// Grant flow shared by every wallet: token stored, TARDIS opens on sufficient tier.
+function granted(v){{
+  var m=document.getElementById('msg'),hd=document.getElementById('hd');
+  if(!v||!v.realm_token){{ m.textContent='not recognized'; return; }}
+  try{{localStorage.setItem('mindx_realm_token',v.realm_token);localStorage.setItem('mindx_participant',v.role);if(v.role==='overlord')localStorage.setItem('mindx_overlord_verified','1');}}catch(e){{}}
+  if((RANK[v.role]||0)>=(RANK[TIER]||99)){{ hd.textContent='Access Granted';hd.classList.remove('denied');hd.classList.add('ok'); m.style.color='#56d364';m.textContent='the door opens…'; startInside(); document.body.classList.add('tardis-go'); setTimeout(function(){{location.href=FROM+(FROM.indexOf('?')>=0?'&':'?')+'t='+encodeURIComponent(v.realm_token);}},3400); }}
+  else {{ m.style.color='#e3b341';m.textContent='recognized as '+v.role+' — '+TIER+' required'; }}
+}}
+async function connectEVM(prov){{
   var m=document.getElementById('msg');
-  if(!window.ethereum){{ m.textContent='opening MetaMask…'; window.open('https://metamask.io/download/','_blank','noopener'); return; }}
   try{{
-    var a=(await window.ethereum.request({{method:'eth_requestAccounts'}}))[0]; if(!a){{return;}}
+    var a=(await prov.request({{method:'eth_requestAccounts'}}))[0]; if(!a)return;
     m.textContent='sign to enter…';
     var ch=await fetch('/realm/challenge?address='+encodeURIComponent(a)).then(function(r){{return r.json();}});
-    var sig=await window.ethereum.request({{method:'personal_sign',params:[ch.message,a]}});
+    var sig=await prov.request({{method:'personal_sign',params:[ch.message,a]}});
     var v=await fetch('/realm/verify',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{address:a,nonce:ch.nonce,signature:sig}})}}).then(function(r){{return r.json();}});
-    if(v&&v.realm_token){{
-      try{{localStorage.setItem('mindx_realm_token',v.realm_token);localStorage.setItem('mindx_participant',v.role);if(v.role==='overlord')localStorage.setItem('mindx_overlord_verified','1');}}catch(e){{}}
-      var hd=document.getElementById('hd');
-      if((RANK[v.role]||0)>=(RANK[TIER]||99)){{ hd.textContent='Access Granted';hd.classList.remove('denied');hd.classList.add('ok'); m.style.color='#56d364';m.textContent='the door opens…'; startInside(); document.body.classList.add('tardis-go'); setTimeout(function(){{location.href=FROM+(FROM.indexOf('?')>=0?'&':'?')+'t='+encodeURIComponent(v.realm_token);}},3400); }}
-      else {{ m.style.color='#e3b341';m.textContent='recognized as '+v.role+' — '+TIER+' required'; }}
-    }} else {{ m.textContent='not recognized'; }}
+    granted(v);
   }}catch(e){{ m.textContent='cancelled'; }}
+}}
+async function connectAlgorand(px){{  // OVERSEER — mindx.algo via PARSEC (Pera-source)
+  var m=document.getElementById('msg');
+  try{{
+    var acct=await px.connect(); var addr=(acct&&(acct.address||acct[0]))||px.address; if(!addr){{m.textContent='no Algorand account';return;}}
+    m.textContent='sign to enter…';
+    var ch=await fetch('/auth/algorand/challenge?address='+encodeURIComponent(addr)).then(function(r){{return r.json();}});
+    var sig=await (px.signChallenge?px.signChallenge(ch.message):px.signBytes(ch.message));
+    var v=await fetch('/auth/algorand/verify',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{address:addr,nonce:ch.nonce,signature:sig}})}}).then(function(r){{return r.json();}});
+    granted({{realm_token:(v.overseer_token||v.jwt||v.token||''),role:(v.role||'overseer')}});
+  }}catch(e){{ m.textContent='cancelled'; }}
+}}
+function detectWallets(){{
+  var out=[],eth=window.ethereum;
+  if(eth){{ (eth.providers&&eth.providers.length?eth.providers:[eth]).forEach(function(p){{
+    out.push({{name:(p.isMetaMask?'MetaMask':p.isCoinbaseWallet?'Coinbase':p.isRabby?'Rabby':p.isPhantom?'Phantom':'EVM Wallet'),kind:'evm',prov:p}}); }}); }}
+  if(window.phantom&&window.phantom.ethereum&&!out.some(function(o){{return o.name==='Phantom';}})) out.push({{name:'Phantom',kind:'evm',prov:window.phantom.ethereum}});
+  if(window.parsec) out.push({{name:'PARSEC',kind:'algorand',prov:window.parsec}});
+  return out;
+}}
+function connectWallet(w){{ document.getElementById('wallets').innerHTML=''; if(w.kind==='algorand') connectAlgorand(w.prov); else connectEVM(w.prov); }}
+document.getElementById('c').addEventListener('click',function(){{
+  var m=document.getElementById('msg'), ws=detectWallets();
+  if(!ws.length){{ m.textContent='no wallet found — opening MetaMask…'; window.open('https://metamask.io/download/','_blank','noopener'); return; }}
+  if(ws.length===1){{ connectWallet(ws[0]); return; }}
+  var box=document.getElementById('wallets'); box.innerHTML=''; m.textContent='choose your wallet';
+  ws.forEach(function(w){{ var b=document.createElement('button'); b.className='wbtn'; b.textContent=w.name; b.onclick=function(){{connectWallet(w);}}; box.appendChild(b); }});
 }});
+// The mindX logo is a CONNECT surface too — press/click it to enter.
+(function(){{var cr=document.getElementById('crest');if(cr)cr.addEventListener('click',function(){{document.getElementById('c').click();}});}})();
 // Optional: a substrate-rendered drag-and-drop crown with toroid magic on pickup.
 (function(){{
   var cr=document.getElementById('crown');if(!cr)return;var drag=false,ox=0,oy=0;
