@@ -145,28 +145,49 @@ function renderParticipant(courtesy){
     var b=document.getElementById('member-btn');if(b){b.textContent='Member access granted';b.disabled=true;b.style.opacity=.6;b.style.cursor='default';}
   }
 }
-function afterConnect(){
-  var a=connectedAddr();
-  if(a&&a.toLowerCase()===OVERLORD)renderOverlord(a);
-  else if(a)renderParticipant(isCourtesy(a));   // courtesy whitelist → member without token
-  else show('door-view');
+function qparam(k){try{return new URLSearchParams(location.search).get(k);}catch(e){return null;}}
+
+// OVERLORD protocol: challenge → EIP-191 sign → /realm/verify → tier-bearing JWT.
+// The JWT is client-held (no cookies) and, when the visitor arrived via a gated
+// page (?from=), we bounce them back with ?t=<jwt> so the tier gate serves them.
+async function signInRealm(){
+  if(!window.ethereum){location.href='/activity';return;}
+  var accts=await window.ethereum.request({method:'eth_requestAccounts'});
+  var addr=(accts&&accts[0])||connectedAddr();
+  if(!addr){show('door-view');return;}
+  try{
+    var ch=await fetch('/realm/challenge?address='+encodeURIComponent(addr)).then(function(r){return r.json();});
+    var sig=await window.ethereum.request({method:'personal_sign',params:[ch.message,addr]});
+    var v=await fetch('/realm/verify',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({address:addr,nonce:ch.nonce,signature:sig})}).then(function(r){return r.json();});
+    if(!v||v.status!=='success'||!v.realm_token){renderParticipant(false);return;}
+    try{
+      localStorage.setItem('mindx_realm_token',v.realm_token);
+      localStorage.setItem('mindx_participant',v.role);
+      if(v.role==='overlord')localStorage.setItem('mindx_overlord_verified','1');
+      else localStorage.removeItem('mindx_overlord_verified');
+    }catch(e){}
+    // Arrived from a gated page → return with the token so the tier gate admits us.
+    var from=qparam('from');
+    if(from&&from.charAt(0)==='/'&&from.charAt(1)!=='/'){
+      location.href=from+(from.indexOf('?')>=0?'&':'?')+'t='+encodeURIComponent(v.realm_token);
+      return;
+    }
+    if(v.role==='overlord')renderOverlord(addr);
+    else renderParticipant(v.role==='member');
+  }catch(e){ renderParticipant(false); }
 }
 
 document.addEventListener('DOMContentLoaded',function(){
   show('door-view'); // outer door only — no substrate, no detail, until connected
   var btn=document.getElementById('connect-btn');
-  if(btn)btn.addEventListener('click',function(){
-    if(!window.ethereum){location.href='/login?as=participant&profile=corporate';return;}
-    window.ethereum.request({method:'eth_requestAccounts'}).then(afterConnect).catch(function(){});
-  });
+  if(btn)btn.addEventListener('click',function(){ signInRealm(); });
   var mb=document.getElementById('member-btn');
-  if(mb)mb.addEventListener('click',function(){
-    // Member privilege comes from the token (or the courtesy whitelist).
-    location.href='/login?as=member&from=/activity';
+  if(mb)mb.addEventListener('click',function(){ signInRealm(); }); // sign proves the tier (member via token/courtesy)
+  if(window.ethereum&&window.ethereum.on)window.ethereum.on('accountsChanged',function(){
+    try{localStorage.removeItem('mindx_realm_token');localStorage.removeItem('mindx_overlord_verified');}catch(e){}
+    show('door-view');
   });
-  // if a wallet is already authorized, honor it (still gated by identity)
-  if(connectedAddr())afterConnect();
-  if(window.ethereum&&window.ethereum.on)window.ethereum.on('accountsChanged',afterConnect);
 });
 </script>
 </body>

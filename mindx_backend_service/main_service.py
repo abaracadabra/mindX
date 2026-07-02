@@ -225,8 +225,12 @@ async def mindx_error_handler(request, exc):
 # ── Public diagnostics dashboard + journal ──
 
 @app.get("/docs.html", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
-async def docs_html_page():
-    """Documentation hub with sidebar navigation, endpoint map, and pgvectorscale index."""
+async def docs_html_page(request: Request):
+    """Documentation hub — gated to recognized participant (connect a wallet at
+    the realm door). THESIS + MANIFESTO stay public via /doc/*."""
+    _g = await _tier_gate(request, "participant", "/docs.html")
+    if _g is not None:
+        return _g
     import re as _re
     book_path = PROJECT_ROOT / "docs" / "BOOK_OF_MINDX.md"
     journal_path = PROJECT_ROOT / "docs" / "IMPROVEMENT_JOURNAL.md"
@@ -965,6 +969,15 @@ async def read_doc(name: str, request: Request):
         _gate_redirect = await _reference_gate(request, f"/doc/{safe}")
         if _gate_redirect:
             return _gate_redirect
+    # OVERLORD protocol: /doc/* content is participant-gated — EXCEPT the public
+    # invitation. THESIS and MANIFESTO stay open to everyone (the invitation is
+    # public; the depth is earned). Anything else routes a wallet-less visitor to
+    # the /activity realm door.
+    _PUBLIC_DOCS = {"THESIS", "MANIFESTO"}
+    if doc_path.stem.upper() not in _PUBLIC_DOCS:
+        _tg = await _tier_gate(request, "participant", f"/doc/{safe}")
+        if _tg is not None:
+            return _tg
     md = doc_path.read_text(encoding="utf-8", errors="replace")
     size_kb = round(doc_path.stat().st_size / 1024, 1)
     # Extract first heading for SEO description
@@ -1162,8 +1175,12 @@ _BOOK_STYLE = """<style>
 </style>"""
 
 @app.get("/book", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
-async def book_of_mindx_page():
-    """The Book of mindX — rendered from latest edition with previous editions linked."""
+async def book_of_mindx_page(request: Request):
+    """The Book of mindX — gated to MEMBER (own a *.bankon.eth subname / token,
+    or the courtesy whitelist). Participants are routed to the realm door."""
+    _g = await _tier_gate(request, "member", "/book")
+    if _g is not None:
+        return _g
     book_path = PROJECT_ROOT / "docs" / "BOOK_OF_MINDX.md"
     if not book_path.exists():
         return _DashResponse(content=_doc_page("The Book of mindX", "<h1>The Book of mindX</h1><p>First edition is being written. Check back in 2 minutes.</p>"))
@@ -2169,6 +2186,31 @@ async def activity_page():
     return _DashResponse(content="<h1>mindX activity</h1><p>Page not deployed.</p>")
 
 
+@app.get("/realm/challenge", tags=["auth"], include_in_schema=False)
+async def realm_challenge(address: str = ""):
+    """OVERLORD protocol: mint a single-use SIWE (EIP-4361) challenge for any
+    wallet to sign at the realm door. Public — signing proves control, grants
+    no funds access."""
+    from mindx_backend_service import realm_session
+    return {"status": "success", **realm_session.issue_challenge(address)}
+
+
+@app.post("/realm/verify", tags=["auth"], include_in_schema=False)
+async def realm_verify(request: Request):
+    """OVERLORD protocol: verify a signed challenge (EIP-191 recovery) and mint a
+    realm-session JWT carrying the resolved tier — participant (any verified
+    wallet), member (token/courtesy), or overlord (bankon.eth). The client holds
+    the JWT and presents it by header/?t= (no cookies)."""
+    from mindx_backend_service import realm_session
+    body = await request.json()
+    try:
+        res = realm_session.verify(
+            str(body.get("address", "")), str(body.get("nonce", "")), str(body.get("signature", "")))
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+    return {"status": "success", **res}
+
+
 @app.get("/reference", response_class=_DashResponse, include_in_schema=False)
 @app.get("/reference.html", response_class=_DashResponse, include_in_schema=False)
 async def reference_page():
@@ -2417,7 +2459,9 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/agentic", "/agentic.html",
     "/activity", "/activity.html",     # Realm door — public shell; identity recognized client-side on connect, redirected per hierarchy
     "/diagnostics", "/diagnostics.html",  # full diagnostics dashboard (moved off the landing; still public)
-    "/book",                           # the Book of mindX — public (with docs.html)
+    "/realm/challenge", "/realm/verify",  # OVERLORD-protocol signature gate (public: sign to earn a tier)
+    # NOTE: /docs.html, /book, /doc/*, /automindx stay listed public so the MIDDLEWARE
+    # defers to them; the per-handler _tier_gate does the tier enforcement (participant/member).
     "/insight/narrative/recent",       # DeltaVerse narrative recap stream (public read)
     "/deltaverse.js",                  # DeltaVerse fabric engine — public asset for 404/landing/realm
     "/realm",                          # REALM surface — overlord-gated at the handler level
@@ -2567,6 +2611,37 @@ async def _reference_access_ok(request: Request) -> bool:
         return True
     except HTTPException:
         return False
+
+
+async def _tier_gate(request: "Request", min_tier: str, html_from: str):
+    """OVERLORD-protocol tier gate. Resolve the viewer's realm tier from the
+    signature-derived JWT (via _viewer_role: Bearer / X-Overlord-Token / ?t=),
+    rank it on the canonical hierarchy ladder (public < participant < member <
+    ... < overlord), and allow when rank(role) >= rank(min_tier). Otherwise 302
+    a browser GET to the /activity realm door (connect → sign → tier — never a
+    dead 401) and raise 403 for API clients. Fail-open on import error so a gate
+    fault can never hard-lock the docs.
+
+    No cookies — web3 JWT is client-held and presented by header/?t=.
+    """
+    try:
+        from mindx_backend_service.deltaverse.routes import _viewer_role
+        from mindx_backend_service.hierarchy import rank
+    except Exception:
+        return None  # gate unavailable → fail-open (do not lock docs on a fault)
+    viewer = _viewer_role(request)
+    role = viewer.get("role") or "public"
+    if viewer.get("verified") and rank(role) < rank("participant"):
+        role = "participant"      # any verified wallet is a recognized participant
+    if rank(role) >= rank(min_tier):
+        return None
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept and getattr(request, "method", "GET") == "GET":
+        from urllib.parse import quote as _q
+        from starlette.responses import RedirectResponse as _TR
+        safe_from = html_from if html_from.startswith("/") and not html_from.startswith("//") else "/"
+        return _TR(url=f"/activity?from={_q(safe_from, safe='/')}", status_code=302)
+    raise HTTPException(status_code=403, detail=f"realm tier '{min_tier}' required — connect at /activity")
 
 
 async def _reference_gate(request: Request, html_from: str):
