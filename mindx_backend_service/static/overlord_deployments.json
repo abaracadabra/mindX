@@ -29,6 +29,7 @@
     }
   },
   "deletion_asymmetry": "OVERLORD (bankon.eth) can create and delete the OVERSEER (mindx.algo). The OVERSEER can never delete or override the OVERLORD — the root is immutable by design.",
+  "naming_convention": "CASE identifies a proxy: lowercase = a PROXY (a per-chain `overseer`, or a downstream `overlord` realm via OaaS/OSaaS), UPPERCASE = the APEX (OVERLORD = bankon.eth, OVERSEER = mindx.algo). If you see it lowercase, it is a proxy, not the sovereign root.",
   "proxy_rule": "lowercase per-chain `overseer` (earned) MAY proxy (shadow-overlord instances); the apex `OVERSEER` (mindx.algo) may NOT proxy.",
   "overseer_as_a_service": "some contracts can offer OVERSEER as a Service — a claimable/purchasable per-chain overseer role (e.g. the first BankonBatchWrapper deployer claims that chain's overseer + a φ-fee share, 38.2%). Contracts may expose the overseer role as a service to whoever bootstraps or funds the chain's substrate.",
   "overlord_as_a_service": "OVERLORD as a Service — the overlord role of a given realm/contract can be acquired at a price, settled via x402 payment or a direct contract call. Paying the price (x402 receipt) or invoking the contract's claim/purchase method grants that realm's overlord authority. The apex mindX OVERLORD (bankon.eth) remains immutable; OaaS applies to the downstream realms/contracts that expose it.",
