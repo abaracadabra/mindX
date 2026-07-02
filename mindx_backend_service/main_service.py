@@ -2735,7 +2735,7 @@ def _access_denied_page(from_path: str, min_tier: str) -> str:
 *{{margin:0;padding:0;box-sizing:border-box}}
 html,body{{height:100%}}
 body{{font-family:'JetBrains Mono','SF Mono',monospace;color:#e6edf3;background:#04060b;overflow:hidden}}
-.portal{{position:fixed;inset:0;background:url('/gfx/doorway1.webp') center/cover no-repeat;transform:scale(1.04);filter:saturate(1.05);transition:transform 1.7s cubic-bezier(.66,0,.2,1),filter 1.5s,opacity 1.5s}}
+.portal{{position:fixed;inset:0;background:url('/gfx/realm-bg.jpg') center/cover no-repeat;transform:scale(1.04);filter:saturate(1.05);transition:transform 1.7s cubic-bezier(.66,0,.2,1),filter 1.5s,opacity 1.5s;will-change:transform,filter}}
 .veil{{position:fixed;inset:0;background:radial-gradient(circle at 50% 42%,rgba(4,6,11,.15),rgba(4,6,11,.86) 72%);transition:opacity 1s}}
 /* TARDIS: the small door opens into the vast interior on ACCESS GRANTED */
 .interior{{position:fixed;inset:0;z-index:1;opacity:0;transition:opacity 1.2s ease .35s;pointer-events:none}}
@@ -2894,28 +2894,31 @@ document.getElementById('c').addEventListener('click',function(){{
     el.addEventListener('mouseenter',on);el.addEventListener('mouseleave',off);
     el.addEventListener('touchstart',on,{{passive:true}});el.addEventListener('touchend',off);}});
   (function loop(){{
-    if(document.body.classList.contains('tardis-go')){{ portal.style.transition='';portal.style.transform='';portal.style.filter='';if(veil)veil.style.background='';return; }}
-    t+=0.05; chg+=((hover?1:0)-chg)*0.035;              // pulse grows while hovering, decays on leave
+    if(document.body.classList.contains('tardis-go')){{ portal.style.transition='';portal.style.transform='';portal.style.filter='';if(veil)veil.style.opacity='';return; }}
+    t+=0.05; chg+=((hover?1:0)-chg)*0.03;                 // pulse grows while hovering, decays on leave
     if(chg>0.003){{
-      var m=chg*(0.62+0.38*(Math.sin(t)*0.5+0.5));       // morph amount = charge × pulse
-      portal.style.transform='scale('+(1.04+m*0.14).toFixed(3)+') rotate('+(m*1.1*Math.sin(t*0.6)).toFixed(3)+'deg) skewX('+(m*2.2*Math.sin(t*0.8)).toFixed(3)+'deg)';
-      portal.style.filter='saturate('+(1.05+m*0.75).toFixed(3)+') hue-rotate('+(m*22).toFixed(1)+'deg) blur('+(m*1.7).toFixed(2)+'px) brightness('+(1+m*0.13).toFixed(3)+')';
-      if(veil)veil.style.background='radial-gradient(circle at 50% 44%,rgba(227,179,65,'+(m*0.13).toFixed(3)+'),rgba(4,6,11,.15),rgba(4,6,11,'+(0.86-m*0.10).toFixed(3)+') 72%)';
-    }} else {{ portal.style.transform='';portal.style.filter='';if(veil)veil.style.background=''; }}
+      var m=chg*(0.6+0.4*(Math.sin(t)*0.5+0.5));          // very gentle pulse
+      // substrate stays SUBTLE; instead the DOOR grows more prominent as you linger —
+      // the veil lifts and the portal brightens, so the doorway emerges toward you.
+      portal.style.transform='scale('+(1.04+m*0.045).toFixed(3)+')';
+      portal.style.filter='saturate('+(1.05+m*0.40).toFixed(3)+') brightness('+(1+m*0.20).toFixed(3)+')';
+      if(veil)veil.style.opacity=(1-m*0.52).toFixed(3);
+    }} else {{ portal.style.transform='';portal.style.filter='';if(veil)veil.style.opacity=''; }}
     requestAnimationFrame(loop);
   }})();
 }})();
 // Optional: a substrate-rendered drag-and-drop crown with toroid magic on pickup.
 (function(){{
-  var cr=document.getElementById('crown');if(!cr)return;var drag=false,ox=0,oy=0;
+  var cr=document.getElementById('crown');if(!cr)return;var drag=false,ox=0,oy=0,moved=false;
   function toroid(x,y){{for(var k=0;k<3;k++){{(function(delay){{setTimeout(function(){{
     var t=document.createElement('div');t.className='toro';t.style.left=x+'px';t.style.top=y+'px';
     t.style.width=t.style.height='10px';document.body.appendChild(t);var s=10;
     var iv=setInterval(function(){{s+=9;t.style.width=t.style.height=s+'px';t.style.opacity=String(Math.max(0,0.9-s/220));if(s>210){{clearInterval(iv);t.remove();}}}},16);
   }},delay);}})(k*90);}}}}
-  function down(e){{drag=true;cr.classList.add('drag');var p=e.touches?e.touches[0]:e;var r=cr.getBoundingClientRect();ox=p.clientX-(r.left+r.width/2);oy=p.clientY-(r.top+r.height/2);toroid(p.clientX,p.clientY);if(e.cancelable)e.preventDefault();}}
-  function move(e){{if(!drag)return;var p=e.touches?e.touches[0]:e;cr.style.left=(p.clientX-ox)+'px';cr.style.top=(p.clientY-oy)+'px';cr.style.bottom='auto';cr.style.transform='translate(-50%,-50%)';}}
+  function down(e){{drag=true;moved=false;cr.classList.add('drag');var p=e.touches?e.touches[0]:e;var r=cr.getBoundingClientRect();ox=p.clientX-(r.left+r.width/2);oy=p.clientY-(r.top+r.height/2);toroid(p.clientX,p.clientY);if(e.cancelable)e.preventDefault();}}
+  function move(e){{if(!drag)return;moved=true;var p=e.touches?e.touches[0]:e;cr.style.left=(p.clientX-ox)+'px';cr.style.top=(p.clientY-oy)+'px';cr.style.bottom='auto';cr.style.transform='translate(-50%,-50%)';}}
   function up(){{drag=false;cr.classList.remove('drag');}}
+  cr.addEventListener('click',function(){{ if(!moved) document.getElementById('c').click(); }});  // click the crown → CONNECT
   cr.addEventListener('mousedown',down);cr.addEventListener('touchstart',down,{{passive:false}});
   addEventListener('mousemove',move);addEventListener('touchmove',move,{{passive:false}});
   addEventListener('mouseup',up);addEventListener('touchend',up);
