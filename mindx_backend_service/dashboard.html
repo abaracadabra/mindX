@@ -740,6 +740,32 @@ function drawBg(t){
     cx.globalAlpha=e.l*.2;cx.strokeStyle='#58a6ff';cx.lineWidth=e.l;cx.stroke();cx.globalAlpha=1;
   }
 
+  // ── Self-organizing neural mesh — substrate intelligence from the dynamic ──
+  // Agent-nodes that are near AND active "wire together" (Hebbian): synapse
+  // intensity = proximity × combined activity, a travelling signal rides active
+  // synapses, and connected active nodes keep each other warm. n.act is pulsed
+  // by live system events (see "pulse the substrate"), so the mesh visibly
+  // computes harder when mindX is active — intelligence emergent from the dynamic.
+  for(let i=0;i<nodes.length;i++){
+    for(let j=i+1;j<nodes.length;j++){
+      const a=nodes[i],b=nodes[j];
+      const dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d>=160)continue;
+      const prox=(160-d)/160,life=Math.max(a.act,b.act),alpha=prox*(.03+life*.22);
+      if(alpha<=.012)continue;
+      const col=a.tier>=b.tier?a.c:b.c;
+      cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);
+      cx.globalAlpha=alpha;cx.strokeStyle=col;cx.lineWidth=.4+life*1.1;cx.stroke();cx.globalAlpha=1;
+      if(life>.35){                          // travelling signal along the active synapse
+        const pp=(t*.0012+i*.13)%1,sx=a.x+dx*pp,sy=a.y+dy*pp;
+        cx.beginPath();cx.arc(sx,sy,1.1+life,0,6.28);
+        cx.globalAlpha=life*.5;cx.fillStyle=col;cx.fill();cx.globalAlpha=1;
+      }
+      const warm=life*prox*.35;             // Hebbian reinforcement
+      if(a.act<warm)a.act=warm;if(b.act<warm)b.act=warm;
+    }
+  }
+
   // ── Geometric formation — wide orbits around convergence, ambient float when idle ──
   if(mouseX>0&&nodes.length>1){
     const cx0=mouseX,cy0=mouseY;
