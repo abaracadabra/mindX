@@ -1335,6 +1335,7 @@ _FEEDBACK_HTML_PATH = Path(__file__).parent / "feedback.html"
 _NETSTAT_HTML_PATH = Path(__file__).parent / "netstat.html"
 _OVERSEER_HTML_PATH = Path(__file__).parent / "overseer.html"
 _AGENTIC_HTML_PATH = Path(__file__).parent / "agentic.html"
+_ACTIVITY_HTML_PATH = Path(__file__).parent / "activity.html"
 _REFERENCE_HTML_PATH = Path(__file__).parent / "reference.html"
 _THOT_HTML_PATH = Path(__file__).parent / "THOT.html"
 _BOARDROOM_HTML_PATH = Path(__file__).parent / "boardroom.html"
@@ -2137,6 +2138,21 @@ async def agentic_page():
     if _AGENTIC_HTML_PATH.exists():
         return _DashResponse(content=_AGENTIC_HTML_PATH.read_text(encoding="utf-8"))
     return _DashResponse(content="<h1>mindX agentic</h1><p>Page not deployed.</p>")
+
+
+@app.get("/activity", response_class=_DashResponse, include_in_schema=False)
+@app.get("/activity.html", response_class=_DashResponse, include_in_schema=False)
+async def activity_page():
+    """OVERLORD-gated activity console. The OVERLORD (bankon.eth) sees the live
+    mindX activity feed + the BUILDER and OVERLORD panels (both menus). Any other
+    login is recognized as a public participant (corporate) and shown the paths
+    to gain privilege from the hierarchy — Activity itself stays OVERLORD-only.
+    Gating is client-side presentation now; the API lockdown follow-up enforces
+    it server-side. Sibling to /feedback.html and /agentic.html.
+    """
+    if _ACTIVITY_HTML_PATH.exists():
+        return _DashResponse(content=_ACTIVITY_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX activity</h1><p>Page not deployed.</p>")
 
 
 @app.get("/reference", response_class=_DashResponse, include_in_schema=False)
