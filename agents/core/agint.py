@@ -77,6 +77,11 @@ class AGInt:
             self.blueprint_agent = None
             logger.debug(f"{self.log_prefix} blueprint.agent unavailable: {e}")
 
+        # simple_coder.agent — the HANDS (sandboxed edits). Lazy: it initialises a
+        # sandbox on construction, so AGInt builds it on first direct_to_simplecoder.
+        # blueprint.agent analyses; simple_coder acts. AGInt directs both.
+        self.simple_coder = None
+
         # Keep a reference to the BeliefSystem so milestone recognition can
         # persist `milestone:*` beliefs (see _on_milestone_candidate_event).
         # The BeliefSystem is a singleton — same instance everywhere.
@@ -272,6 +277,44 @@ class AGInt:
             return {"ok": True, "agent": bp.AGENT_ID, "directive": directive, "result": res}
         except Exception as e:
             return {"ok": False, "error": str(e)}
+
+    def _get_simple_coder(self):
+        """Lazily build + register simple_coder.agent (the HANDS). Cached."""
+        if self.simple_coder is None:
+            try:
+                from agents.simple_coder_agent import SimpleCoderAgent
+                self.simple_coder = SimpleCoderAgent(memory_agent=self.memory_agent, config=self.config)
+                self.tools.setdefault("simple_coder", self.simple_coder)
+                logger.info(f"{self.log_prefix} simple_coder.agent registered — AGInt can direct to the HANDS.")
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} simple_coder.agent unavailable: {e}")
+        return self.simple_coder
+
+    async def direct_to_simplecoder(self, operation: str, **kwargs) -> Dict[str, Any]:
+        """Direct a coding operation to simple_coder.agent (sandboxed HANDS):
+        analyze_code / generate_code / optimize_code / read_file / write_file / …"""
+        sc = self._get_simple_coder()
+        if sc is None:
+            return {"ok": False, "error": "simple_coder.agent unavailable"}
+        try:
+            res = await sc.execute(operation=operation, **kwargs)
+            logger.info(f"{self.log_prefix} directed to simple_coder.agent → {operation}")
+            return {"ok": True, "agent": sc.agent_id, "operation": operation, "result": res}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    async def analyze_then_act(self, target: str = "agents/core", *, act: bool = False,
+                               operation: str = "analyze_code") -> Dict[str, Any]:
+        """The eyes→hands loop: blueprint.agent analyses ``target``; if ``act`` and a
+        largest/most-complex file is found, simple_coder.agent inspects it. Analysis
+        always runs; the HANDS act only when asked (sandboxed, non-destructive read)."""
+        analysis = await self.direct_to_blueprint(f"analyze {target}", target=target)
+        out = {"analysis": analysis}
+        if act and analysis.get("ok"):
+            largest = ((analysis.get("result") or {}).get("largest") or [])
+            if largest:
+                out["action"] = await self.direct_to_simplecoder(operation, file_path=largest[0]["file"])
+        return out
 
     def start(self, directive: str):
         if self.status == AgentStatus.RUNNING: return
