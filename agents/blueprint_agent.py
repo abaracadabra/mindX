@@ -34,7 +34,7 @@ from typing import Any, Dict, List, Optional
 # Version + the growing catalogue of blueprint.agent skills. Each new capability is
 # appended here as we discover it; save_version() snapshots (version, skills) to the
 # manifest so every version is preserved with the skills it shipped with.
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 SKILLS: List[Dict[str, str]] = [
     {"name": "gmi",                "kind": "blueprint", "desc": "read the live Gödel Machine Index"},
     {"name": "predicate_report",   "kind": "blueprint", "desc": "structured G1–G8 analysis (verdict + evidence)"},
@@ -51,6 +51,7 @@ SKILLS: List[Dict[str, str]] = [
     {"name": "image-toolchain",    "kind": "skill",     "desc": "mozjpeg/cwebp/avifenc/pngquant/oxipng via artist.agent"},
     {"name": "client-cache",       "kind": "frontend",  "desc": "light sessionStorage GMI cache + deferred substrate"},
     {"name": "analyze_path",       "kind": "analysis",  "desc": "scientific structural analysis of a code directory (LOC, symbols, docstrings)"},
+    {"name": "resources",          "kind": "monitoring","desc": "live host resource snapshot (CPU/RAM/disk) via the resource monitor"},
 ]
 
 # Interaction mapping — every interaction and the substrate/UI effect it produces,
@@ -338,6 +339,32 @@ class BlueprintAgent:
     def analyze_core(self) -> Dict[str, Any]:
         """Analyze the cognitive core (agents/core — BDI, AGInt, mindXagent, self-eval)."""
         return self.analyze_path("agents/core")
+
+    # ── resource monitoring (host CPU / RAM / disk) ────────────────────
+    def resources(self) -> Dict[str, Any]:
+        """Live host resource snapshot via the resource monitor (psutil fallback).
+        Space/compute is money — the audit reads its own substrate's load."""
+        usage = None
+        try:
+            from agents.monitoring.resource_monitor import get_resource_monitor
+            usage = get_resource_monitor().get_resource_usage()
+        except Exception:
+            usage = None
+        # If the monitor hasn't collected yet (cold: cpu_cores==0), read live via psutil.
+        if not usage or not usage.get("cpu_cores"):
+            try:
+                import psutil
+                vm = psutil.virtual_memory()
+                return {"source": "psutil-live", "cpu": psutil.cpu_percent(interval=0.2),
+                        "cpu_cores": psutil.cpu_count(),
+                        "cpu_load": ", ".join(f"{x:.2f}" for x in __import__("os").getloadavg()) if hasattr(__import__("os"), "getloadavg") else "n/a",
+                        "memory": vm.percent, "memory_used_gb": round(vm.used / 1e9, 2),
+                        "memory_total_gb": round(vm.total / 1e9, 2),
+                        "disk": psutil.disk_usage("/").percent}
+            except Exception as e2:
+                return usage or {"error": str(e2)}
+        usage.setdefault("source", "resource_monitor")
+        return usage
 
     # ── versioned skills + interaction catalogue ───────────────────────
     def skills(self) -> List[Dict[str, str]]:

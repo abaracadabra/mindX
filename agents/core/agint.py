@@ -82,6 +82,17 @@ class AGInt:
         # blueprint.agent analyses; simple_coder acts. AGInt directs both.
         self.simple_coder = None
 
+        # resource monitoring tools — AGInt (and blueprint.agent) read the substrate's
+        # load (CPU/RAM/disk); the resource_governor already gates on this.
+        try:
+            from agents.monitoring.resource_monitor import get_resource_monitor
+            self.resource_monitor = get_resource_monitor()
+            self.tools.setdefault("resources", self.resource_monitor)
+            logger.info(f"{self.log_prefix} resource monitor registered.")
+        except Exception as e:
+            self.resource_monitor = None
+            logger.debug(f"{self.log_prefix} resource monitor unavailable: {e}")
+
         # Keep a reference to the BeliefSystem so milestone recognition can
         # persist `milestone:*` beliefs (see _on_milestone_candidate_event).
         # The BeliefSystem is a singleton — same instance everywhere.
@@ -265,6 +276,8 @@ class AGInt:
                 res = bp.validate_ui()
             elif any(k in d for k in ("coverage", "threshold", "math")):
                 res = bp.coverage_math()
+            elif any(k in d for k in ("resource", "cpu", "memory", "ram", "disk", "health", "load")):
+                res = bp.resources()
             elif any(k in d for k in ("interaction", "substrate", "mapping")):
                 res = bp.interaction_map()
             elif any(k in d for k in ("predicate", "g1", "g8")):
