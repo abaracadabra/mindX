@@ -79,7 +79,7 @@ def issue_challenge(address: str, *, domain: str = "mindx.pythai.net") -> Dict[s
         f"{domain}\n"
         "Welcome, recognized participant\n"
         f"{addr}\n"
-        "Your signature is your identity.\n\n"
+        "Your signature proves your identity.\n\n"
         f"URI: https://{domain}/activity\n"
         "Version: 1\n"
         "Chain ID: 1\n"
