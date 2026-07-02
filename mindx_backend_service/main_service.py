@@ -2758,8 +2758,12 @@ body.tardis-go #inside{{animation:rabbithole 3.2s cubic-bezier(.4,0,.2,1) both;t
 .hd.denied{{color:#f85149;text-shadow:0 0 24px rgba(248,81,73,.35)}}
 .hd.ok{{color:#56d364;text-shadow:0 0 26px rgba(86,211,100,.4)}}
 .tier{{font-size:10px;letter-spacing:.42em;text-transform:uppercase;color:#e3b341;opacity:.85}}
-.connect{{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:14px;letter-spacing:.3em;text-transform:uppercase;color:#0a0d07;background:linear-gradient(135deg,#e3b341,#caa233);border:none;border-radius:12px;padding:17px 44px;cursor:pointer;transition:.25s}}
-.connect:hover{{box-shadow:0 0 40px rgba(227,179,65,.5);transform:translateY(-1px)}}
+.connect{{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:.36em;text-transform:uppercase;color:#0a0d07;background:linear-gradient(135deg,#f7d778,#e3b341 52%,#b8902c);border:none;border-radius:16px;padding:24px 72px;cursor:pointer;transition:transform .2s,box-shadow .3s;box-shadow:0 12px 34px rgba(0,0,0,.55),0 0 44px rgba(227,179,65,.4),inset 0 2px 0 rgba(255,255,255,.55),inset 0 -3px 8px rgba(120,80,10,.35);animation:cpulse 2.4s ease-in-out infinite}}
+.connect::before{{content:'';position:absolute;top:0;left:-60%;width:38%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.6),transparent);transform:skewX(-18deg);animation:sheen 3.4s ease-in-out infinite}}
+.connect:hover{{transform:translateY(-2px) scale(1.035);box-shadow:0 16px 44px rgba(0,0,0,.6),0 0 66px rgba(227,179,65,.65),inset 0 2px 0 rgba(255,255,255,.65),inset 0 -3px 8px rgba(120,80,10,.35)}}
+.connect:active{{transform:translateY(0) scale(.99)}}
+@keyframes cpulse{{0%,100%{{box-shadow:0 12px 34px rgba(0,0,0,.55),0 0 38px rgba(227,179,65,.32),inset 0 2px 0 rgba(255,255,255,.55),inset 0 -3px 8px rgba(120,80,10,.35)}}50%{{box-shadow:0 12px 34px rgba(0,0,0,.55),0 0 60px rgba(227,179,65,.6),inset 0 2px 0 rgba(255,255,255,.6),inset 0 -3px 8px rgba(120,80,10,.35)}}}}
+@keyframes sheen{{0%{{left:-60%}}55%,100%{{left:130%}}}}
 #msg{{font-size:11px;letter-spacing:.06em;color:#c9d1d9;min-height:15px;opacity:.85}}
 .algo{{font-size:10px;letter-spacing:.16em;color:#c9a0ff;text-decoration:none;opacity:.8}}.algo:hover{{opacity:1;color:#e6edf3}}
 .crown{{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);font-size:30px;color:#e3b341;cursor:grab;user-select:none;-webkit-user-select:none;text-shadow:0 0 16px rgba(227,179,65,.6);z-index:4;touch-action:none}}
@@ -2771,7 +2775,6 @@ a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color
 <div class="interior"><canvas id="dvfabric"></canvas><canvas id="inside"></canvas></div>
 <div class="stage">
   <div class="hd" id="hd"></div>
-  <div class="tier">{min_tier} realm</div>
   <button class="connect" id="c">Connect</button>
   <img class="crest" id="crest" src="/gfx/mindX.png" alt="mindX — connect" title="connect">
   <div id="msg"></div>
@@ -2880,6 +2883,28 @@ document.getElementById('c').addEventListener('click',function(){{
 }});
 // The mindX logo is a CONNECT surface too — press/click it to enter.
 (function(){{var cr=document.getElementById('crest');if(cr)cr.addEventListener('click',function(){{document.getElementById('c').click();}});}})();
+// The door senses you: hovering CONNECT or the logo charges a pulse that grows
+// and, as it grows, subtly morphs/warps the whole doorway (especially the portal).
+(function(){{
+  var portal=document.querySelector('.portal'),veil=document.querySelector('.veil');
+  if(!portal)return;var chg=0,hover=false,t=0;
+  portal.style.transition='transform .2s ease, filter .35s ease';
+  function on(){{hover=true;}} function off(){{hover=false;}}
+  ['c','crest'].forEach(function(id){{var el=document.getElementById(id);if(!el)return;
+    el.addEventListener('mouseenter',on);el.addEventListener('mouseleave',off);
+    el.addEventListener('touchstart',on,{{passive:true}});el.addEventListener('touchend',off);}});
+  (function loop(){{
+    if(document.body.classList.contains('tardis-go')){{ portal.style.transition='';portal.style.transform='';portal.style.filter='';if(veil)veil.style.background='';return; }}
+    t+=0.05; chg+=((hover?1:0)-chg)*0.035;              // pulse grows while hovering, decays on leave
+    if(chg>0.003){{
+      var m=chg*(0.62+0.38*(Math.sin(t)*0.5+0.5));       // morph amount = charge × pulse
+      portal.style.transform='scale('+(1.04+m*0.14).toFixed(3)+') rotate('+(m*1.1*Math.sin(t*0.6)).toFixed(3)+'deg) skewX('+(m*2.2*Math.sin(t*0.8)).toFixed(3)+'deg)';
+      portal.style.filter='saturate('+(1.05+m*0.75).toFixed(3)+') hue-rotate('+(m*22).toFixed(1)+'deg) blur('+(m*1.7).toFixed(2)+'px) brightness('+(1+m*0.13).toFixed(3)+')';
+      if(veil)veil.style.background='radial-gradient(circle at 50% 44%,rgba(227,179,65,'+(m*0.13).toFixed(3)+'),rgba(4,6,11,.15),rgba(4,6,11,'+(0.86-m*0.10).toFixed(3)+') 72%)';
+    }} else {{ portal.style.transform='';portal.style.filter='';if(veil)veil.style.background=''; }}
+    requestAnimationFrame(loop);
+  }})();
+}})();
 // Optional: a substrate-rendered drag-and-drop crown with toroid magic on pickup.
 (function(){{
   var cr=document.getElementById('crown');if(!cr)return;var drag=false,ox=0,oy=0;
