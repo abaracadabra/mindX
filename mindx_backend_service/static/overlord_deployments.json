@@ -17,8 +17,9 @@
       "chain": "algorand",
       "role": "community governance, moderation, editing, image updates, and downstream operations",
       "detail": "absolute DAIO OVERSEER (Algorand, mindx.algo via PARSEC) — the singular apex OVERSEER",
-      "authority": "may govern the community, moderate, edit, and update images",
-      "constraint": "OVERLORD can delete the OVERSEER; the OVERSEER cannot delete the OVERLORD (the OVERLORD root is immutable)",
+      "authority": "may govern the community, moderate, edit, update images; issues .algo domains — subdomain.mindx.algo and .algo — via the PARSEC wallet's .algo minter (PERA source). The .algo (Algorand) namespace is kept COMPLETELY SEPARATE from .eth (EVM); OVERSEER is an extension of OVERLORD and does not affect it.",
+      "login": "PARSEC (Pera-source) wallet, substrate recognition of mindx.algo → /auth/algorand → OVERSEER JWT (kept separate from the EVM overlord-session)",
+      "constraint": "OVERSEER is on .algo, OVERLORD is on .eth — completely separate namespaces. Above or below on any ladder is irrelevant: OVERLORD is OVERLORD, the absolute immutable apex. OVERLORD can delete the OVERSEER; the OVERSEER can never delete or affect the OVERLORD.",
       "may_proxy": false,
       "proxy_note": "the apex OVERSEER (mindx.algo) may NOT proxy. The proxy capability belongs to the lowercase per-chain `overseer` (earned as the first BankonBatchWrapper deployer on a chain), which MAY create shadow-overlord proxy instances downstream so the immutable root never changes."
     }

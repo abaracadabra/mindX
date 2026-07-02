@@ -2635,9 +2635,29 @@ async def _tier_gate(request: "Request", min_tier: str, html_from: str):
         from mindx_backend_service.hierarchy import rank
     except Exception:
         return None  # gate unavailable → fail-open (do not lock docs on a fault)
-    viewer = _viewer_role(request)
+    viewer = _viewer_role(request)          # EVM overlord-session: participant/member/overlord
     role = viewer.get("role") or "public"
-    if viewer.get("verified") and rank(role) < rank("participant"):
+    verified = bool(viewer.get("verified"))
+    # OVERSEER recognition — the Algorand (mindx.algo, Pera/PARSEC) identity signs
+    # in via /auth/algorand and carries a DISTINCT overseer JWT that the EVM
+    # overlord-session verifier (_viewer_role) does not read. Recognize it here so
+    # the realm's two sovereign apexes are BOTH honored: OVERLORD (bankon.eth, EVM)
+    # and OVERSEER (mindx.algo, substrate/PARSEC). Ladder: …member<overseer<overlord.
+    if rank(role) < rank("overseer"):
+        _tok = None
+        _auth = request.headers.get("authorization", "")
+        if _auth.lower().startswith("bearer "):
+            _tok = _auth[7:].strip()
+        _tok = (_tok or request.headers.get("x-overseer-token")
+                or request.headers.get("x-overlord-token") or request.query_params.get("t"))
+        if _tok:
+            try:
+                from mindx_backend_service.overseer_auth import verify_overseer_jwt
+                verify_overseer_jwt(_tok)   # asserts scope + mindx.algo signer
+                role, verified = "overseer", True
+            except Exception:
+                pass
+    if verified and rank(role) < rank("participant"):
         role = "participant"      # any verified wallet is a recognized participant
     if rank(role) >= rank(min_tier):
         return None
@@ -2674,6 +2694,7 @@ body{{font-family:'JetBrains Mono','SF Mono',monospace;color:#e6edf3;background:
 .connect{{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:14px;letter-spacing:.3em;text-transform:uppercase;color:#0a0d07;background:linear-gradient(135deg,#e3b341,#caa233);border:none;border-radius:12px;padding:17px 44px;cursor:pointer;transition:.25s}}
 .connect:hover{{box-shadow:0 0 40px rgba(227,179,65,.5);transform:translateY(-1px)}}
 #msg{{font-size:11px;letter-spacing:.06em;color:#c9d1d9;min-height:15px;opacity:.85}}
+.algo{{font-size:10px;letter-spacing:.16em;color:#c9a0ff;text-decoration:none;opacity:.8}}.algo:hover{{opacity:1;color:#e6edf3}}
 a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color:#6b7480;text-decoration:none;letter-spacing:.14em}}a.back:hover{{color:#aeb7c2}}
 </style></head><body>
 <div class="portal"></div><div class="veil"></div>
@@ -2683,6 +2704,7 @@ a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color
   <div class="tier">{min_tier} realm</div>
   <button class="connect" id="c">Connect</button>
   <div id="msg"></div>
+  <a class="algo" href="/overseer">the OVERSEER enters via mindx.algo &rarr;</a>
 </div>
 <a class="back" href="/">&larr;</a>
 <script>
