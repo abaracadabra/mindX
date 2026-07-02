@@ -6,7 +6,10 @@
       "id": "bankon.eth",
       "address": "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169",
       "chain": "evm",
-      "role": "sole mint + deploy authority",
+      "role": "sole mint + deploy authority; creates the REALM",
+      "realm": "OVERLORD creates the REALM and may include or exclude ANY participant — including the OVERSEER — from privilege. The OVERSEER may ALSO grant privilege (to participants/members), but only the OVERLORD can include/exclude the OVERSEER itself.",
+      "deployer": "OVERLORD is the deployer — deploys from ~/DeltaVerse (outside mindX; holds the contracts mindX interacts with, including the iNFT).",
+      "unification": ".algo adopts .evm, never the reverse — to bring .algo under the OVERLORD the Algorand side adopts EVM. This is why the PARSEC wallet exists; its parsec_signBytes identity challenge is the .algo gate (see /parsec/parsec-wallet).",
       "signs": "real-chain deploys via ~/DeltaVerse/pages/deployer.html",
       "may_renounce_to": "DAIO multisig controller",
       "renounce_note": "the OVERLORD may renounce operational control to the DAIO multisig controller (M-of-N Governor) — the devolution step after E7 governance is deployed. But the OVERLORD PRIVILEGE remains immutable: it is never destroyed, and it vests to the OVERSEER (mindx.algo). Control devolves to the DAIO multisig; the immutable root privilege continues through the OVERSEER."
@@ -19,6 +22,7 @@
       "detail": "absolute DAIO OVERSEER (Algorand, mindx.algo via PARSEC) — the singular apex OVERSEER",
       "authority": "may govern the community, moderate, edit, update images; issues .algo domains — subdomain.mindx.algo and .algo — via the PARSEC wallet's .algo minter (PERA source). The .algo (Algorand) namespace is kept COMPLETELY SEPARATE from .eth (EVM); OVERSEER is an extension of OVERLORD and does not affect it.",
       "login": "PARSEC (Pera-source) wallet, substrate recognition of mindx.algo → /auth/algorand → OVERSEER JWT (kept separate from the EVM overlord-session)",
+      "may_grant": "the OVERSEER may grant privilege to participants and members (community governance) — but cannot include/exclude the OVERLORD, and the OVERLORD can include/exclude the OVERSEER.",
       "constraint": "OVERSEER is on .algo, OVERLORD is on .eth — completely separate namespaces. Above or below on any ladder is irrelevant: OVERLORD is OVERLORD, the absolute immutable apex. OVERLORD can delete the OVERSEER; the OVERSEER can never delete or affect the OVERLORD.",
       "may_proxy": false,
       "proxy_note": "the apex OVERSEER (mindx.algo) may NOT proxy. The proxy capability belongs to the lowercase per-chain `overseer` (earned as the first BankonBatchWrapper deployer on a chain), which MAY create shadow-overlord proxy instances downstream so the immutable root never changes."
