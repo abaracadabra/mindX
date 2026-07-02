@@ -3464,6 +3464,96 @@ class AuthorAgent:
                    f"{headline}. {len(commits)} commit(s), +{total_ins} lines.")[:300]
         return title, body, excerpt, "milestone"
 
+    async def assess_gitmind_milestones(self, *, window: int = 50, publish: bool = True) -> Dict[str, Any]:
+        """AuthorAgent's editorial discretion over the local gitmind history.
+
+        Scans recent commits (a local ``git log`` — the same history gitmind
+        mirrors, credential-independent), skips ones already chronicled and pure
+        churn (auto-commits, backups, merges), then applies the deterministic
+        ``assess_milestone`` rubric to decide — at AuthorAgent's own discretion —
+        whether the batch rises to a milestone. If it does, it is chronicled to
+        MILESTONES.md and (when ``publish``) published to rage.pythai.net.
+
+        Cadence: the orchestrator calls this once per publishing slot (8h), so a
+        backlog of milestones drains one per slot → 0–3 milestone posts/day."""
+        import subprocess, json as _json
+        seen = set()
+        try:
+            if MILESTONE_LOG.exists():
+                for ln in MILESTONE_LOG.read_text(encoding="utf-8").splitlines():
+                    try:
+                        r = _json.loads(ln); seen.add(r.get("sha")); seen.add(r.get("short_sha"))
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        commits_meta: List[Dict[str, Any]] = []
+        try:
+            raw = subprocess.run(
+                ["git", "-C", str(PROJECT_ROOT), "log", "-n", str(int(window)),
+                 "--pretty=format:%H%x1f%h%x1f%cI%x1f%s%x1f%b%x1e"],
+                capture_output=True, text=True, timeout=15).stdout
+        except Exception as e:
+            logger.debug(f"assess_gitmind_milestones: git log failed: {e}")
+            return {"recognized": 0, "error": str(e)}
+        for rec in raw.split("\x1e"):
+            rec = rec.strip("\n")
+            if not rec:
+                continue
+            parts = rec.split("\x1f")
+            if len(parts) < 4:
+                continue
+            sha, short_sha, date, subject = parts[0], parts[1], parts[2], parts[3]
+            body = parts[4] if len(parts) > 4 else ""
+            if sha in seen or short_sha in seen:
+                continue
+            sl = subject.lower()
+            if any(k in sl for k in ("auto-commit", "scheduled daily backup", "wip", "merge branch", "merge pull")):
+                continue  # discretion: churn is not a milestone
+            commits_meta.append({"sha": sha, "short_sha": short_sha, "date": date,
+                                 "subject": subject, "body": body,
+                                 "url": f"https://github.com/AgenticPlace/mindX/commit/{sha}"})
+        if not commits_meta:
+            return {"recognized": 0, "reason": "no new commits"}
+        # Score-only first (journal=False) so discretion decides before we chronicle.
+        rec = self.recognize_milestone_explicit(commits_meta, journal=False)
+        decision = (rec or {}).get("decision") or {}
+        if not decision.get("worthy"):
+            return {"recognized": len(commits_meta), "worthy": False, "reason": "not milestone-worthy (discretion)"}
+        if publish:
+            try:
+                res = await self.publish_milestone_explicit(
+                    commits_meta, status="publish", editor_gate="soft", journal=True)
+                return {"recognized": len(commits_meta), "worthy": True,
+                        "published": bool(res), "url": (res or {}).get("url")}
+            except Exception as e:
+                logger.warning(f"assess_gitmind_milestones: publish failed: {e}")
+                return {"recognized": len(commits_meta), "worthy": True, "published": False, "error": str(e)}
+        self.recognize_milestone_explicit(commits_meta, journal=True)  # chronicle only
+        return {"recognized": len(commits_meta), "worthy": True, "published": False}
+
+    async def request_schedule_review_from_mastermind(self, *, reason: str = "periodic") -> Dict[str, Any]:
+        """AuthorAgent proposes, Mastermind disposes: ask the MastermindAgent
+        whether the publishing cadence should change (target 0–3 articles/day,
+        one per 8h slot). Non-fatal if the mastermind is unavailable."""
+        ps = self.get_publishing_schedule().get("protocol_series", {})
+        directive = (
+            "Review AuthorAgent publishing cadence "
+            f"(interval={ps.get('interval_seconds')}s ≈ {ps.get('interval_hours')}h, "
+            f"max_publications={ps.get('max_publications')}, published={ps.get('published_count')}). "
+            f"Target 0–3 articles/day, one per 8h slot, draining any backlog. "
+            f"Recommend a schedule change via set_publishing_frequency if warranted. Reason: {reason}."
+        )
+        try:
+            from agents.orchestration.mastermind_agent import MastermindAgent
+            mm = await MastermindAgent.get_instance()
+            if hasattr(mm, "command_augmentic_intelligence"):
+                res = await mm.command_augmentic_intelligence(directive)
+                return {"queried": True, "directive": directive, "result": res}
+        except Exception as e:
+            logger.debug(f"request_schedule_review_from_mastermind: {e}")
+        return {"queried": False, "directive": directive}
+
     def recognize_milestone_explicit(
         self,
         commits_meta: List[Dict[str, Any]],
