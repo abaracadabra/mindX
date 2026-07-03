@@ -423,7 +423,8 @@ class BlueprintAgent:
                          else "no training core allocated" if out["training_cores"] < 1 else "ready")
         return out
 
-    async def train_step(self, generation: int = 1) -> Dict[str, Any]:
+    async def train_step(self, generation: int = 1,
+                          recipe: str = "mindx_fallback_qwen3_1_5b_cpu_real") -> Dict[str, Any]:
         """Kick one mindXtrain ascent on the training core — /data → dream → mindXmodel,
         taking the-dojo's datasets (and warm-starting from its latest LoRA) as necessary.
         DORMANT unless armed; the gate refuses otherwise (never trains uninvited)."""
@@ -439,11 +440,10 @@ class BlueprintAgent:
             result["dojo_staged"] = {"error": str(e)}
         try:
             from mindx.godel.mindxtrain.ascend import ascend_recipe
-            from mindx.godel.mindxtrain import settings as _mt_settings
-            recipe = getattr(_mt_settings, "DEFAULT_RECIPE", None) or "mindx"
             res = await ascend_recipe(work_dir=_R / "data" / "mindxtrain_runs", generation=generation,
                                       data_memory_dir=_R / "data" / "memory", recipe=recipe,
                                       cpu_percent=33, use_imprint=True, promote=True)
+            result["recipe"] = recipe
             result["ascent"] = res.as_dict() if hasattr(res, "as_dict") else str(res)
         except Exception as e:
             result["ascent"] = {"error": str(e)}
