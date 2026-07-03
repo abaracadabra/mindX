@@ -1,0 +1,22 @@
+{
+  "name": "@bankoneth/registration-relayer",
+  "version": "0.1.0",
+  "description": "x402 gateway relayer for BankonSubnameRegistrar.register() — quotes price, gates on an x402 payment, and issues the EIP-712 GATEWAY_SIGNER voucher the contract verifies. The missing L1 service piece for bankon.eth subname-as-a-service.",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "hono": "^4.6.0",
+    "viem": "^2.35.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "typescript": "^5.4.0"
+  }
+}
