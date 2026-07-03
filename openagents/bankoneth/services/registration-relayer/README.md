@@ -7,6 +7,11 @@ paymentReceiptHash, deadline)`. Payment settles **off-chain via x402**; this
 relayer takes the payment and issues the voucher. The user then submits
 `register(...)` on L1 with the voucher.
 
+**Fee model: take it, own it.** A subname is a **one-time purchase**, permanent
+ownership, no annual renewal. The voucher requests the maximum expiry (ENS
+NameWrapper caps it to the `bankon.eth` parent), so the name is owned for as long
+as the operator keeps `bankon.eth` alive. There is no `/renew`.
+
 ```
 customer → GET /quote → POST /register (402 → pay x402 → voucher)
         → register(label,owner,expiry,receiptHash,deadline,gatewaySig,meta) on mainnet
@@ -17,9 +22,8 @@ customer → GET /quote → POST /register (402 → pay x402 → voucher)
 | Route | Purpose |
 |---|---|
 | `GET /health` | signer address, chain, registrar, x402 mode |
-| `GET /quote?label=&years=` | price (USD, from `BankonPriceOracle` or length tiers) |
-| `POST /register` | `{label, owner, years}` → **402** with x402 payment requirements, or (once paid) the signed **Registration** voucher |
-| `POST /renew` | same, **Renewal** voucher |
+| `GET /quote?label=` | one-time price (USD, from `BankonPriceOracle` or length tiers) |
+| `POST /register` | `{label, owner}` → **402** with x402 payment requirements, or (once paid) the signed **Registration** voucher |
 
 The voucher response carries `{label, owner, expiry, paymentReceiptHash,
 deadline, gatewaySig, registrar, chainId}` — the exact args for `register()`.

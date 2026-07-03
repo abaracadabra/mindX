@@ -5,10 +5,14 @@
  * on-chain `register()` is gated by a voucher signed by a key holding
  * GATEWAY_SIGNER_ROLE, binding (label, owner, expiry, paymentReceiptHash,
  * deadline). This relayer:
- *   1. GET  /quote?label=&years=   → price (USD, from BankonPriceOracle)
+ * Fee model: TAKE IT, OWN IT — a subname is a ONE-TIME purchase, permanent
+ * ownership, no annual renewal. On L1 (ENS NameWrapper has expiry by protocol)
+ * the voucher requests the maximum expiry (capped to the bankon.eth parent), so
+ * the name is owned for as long as the operator keeps bankon.eth alive.
+ *
+ *   1. GET  /quote?label=          → one-time price (USD)
  *   2. POST /register              → x402-gated; on paid, returns the voucher
- *   3. POST /renew                 → same, Renewal typehash
- *   4. GET  /health
+ *   3. GET  /health
  *
  * The voucher matches the contract EXACTLY:
  *   domain  = EIP712("BankonSubnameRegistrar","1"), chainId, verifyingContract=registrar
@@ -44,7 +48,9 @@ const SIGNER_PK   = (process.env.GATEWAY_SIGNER_PK ?? "") as Hex;     // holds G
 const RPC_URL     = process.env.RPC_URL ?? "";
 const PRICE_ORACLE = (process.env.PRICE_ORACLE_ADDR ?? "") as Address;
 const VOUCHER_TTL = Number(process.env.VOUCHER_TTL ?? 900);          // 15 min
-const DEFAULT_YEARS_SECONDS = 365n * 24n * 60n * 60n;
+// Take it, own it: request the maximum expiry. ENS NameWrapper caps a child's
+// expiry to the parent's, so this = "owned as long as bankon.eth lives".
+const OWN_IT_EXPIRY = (1n << 64n) - 1n;                              // type(uint64).max
 // x402: how a payment receipt is accepted. "facilitator" verifies against the
 // x402 facilitator; "trusted-header" accepts a pre-settled receipt id from a
 // trusted upstream (the x402 middleware / BankonX402Attestor flow). Never
@@ -78,35 +84,29 @@ const REGISTRATION_TYPES = {
     { name: "deadline", type: "uint256" },
   ],
 } as const;
-const RENEWAL_TYPES = {
-  Renewal: [
-    { name: "label", type: "string" },
-    { name: "newExpiry", type: "uint64" },
-    { name: "paymentReceiptHash", type: "bytes32" },
-    { name: "deadline", type: "uint256" },
-  ],
-} as const;
+// No RENEWAL type — take it, own it: subnames are a one-time purchase, no renewal.
 
 // ── pricing ──────────────────────────────────────────────────────────
-// length-tiered USD/year, matching BankonPriceOracle (3=$320,4=$80,5=$5,6=$3,7+=$1)
+// length-tiered ONE-TIME USD (take it, own it): 3=$320,4=$80,5=$5,6=$3,7+=$1
 const TIER_USD: Record<number, number> = { 3: 320, 4: 80, 5: 5, 6: 3 };
-function tierUsd(label: string, years: number): number {
+function tierUsd(label: string): number {
   const n = [...label].length;
-  const per = n <= 2 ? 320 : (TIER_USD[n] ?? 1);
-  return per * Math.max(1, years);
+  return n <= 2 ? 320 : (TIER_USD[n] ?? 1);
 }
 const ORACLE_ABI = [{
   type: "function", name: "priceUSD", stateMutability: "view",
   inputs: [{ name: "label", type: "string" }, { name: "years_", type: "uint256" }],
   outputs: [{ name: "", type: "uint256" }],
 }] as const;
-async function priceUsd6(label: string, years: number): Promise<bigint> {
+// one-time price. The oracle prices per-year; the take-it-own-it fee is the
+// single base price (years_ = 1) charged once.
+async function priceUsd6(label: string): Promise<bigint> {
   if (pub && PRICE_ORACLE) {
     try {
-      return await pub.readContract({ address: PRICE_ORACLE, abi: ORACLE_ABI, functionName: "priceUSD", args: [label, BigInt(years)] }) as bigint;
+      return await pub.readContract({ address: PRICE_ORACLE, abi: ORACLE_ABI, functionName: "priceUSD", args: [label, 1n] }) as bigint;
     } catch { /* fall through to tiers */ }
   }
-  return BigInt(Math.round(tierUsd(label, years) * 1_000_000)); // 6-dec USD
+  return BigInt(Math.round(tierUsd(label) * 1_000_000)); // 6-dec USD
 }
 
 // ── label validation (ENS rules) ─────────────────────────────────────
@@ -171,66 +171,48 @@ app.get("/health", (c) => c.json({
 
 app.get("/quote", async (c) => {
   const label = (c.req.query("label") ?? "").toLowerCase();
-  const years = Math.max(1, Number(c.req.query("years") ?? 1));
   const err = labelError(label);
   if (err) return c.json({ error: err }, 400);
-  const usd6 = await priceUsd6(label, years);
-  return c.json({ label, years, priceUsd6: usd6.toString(), priceUsd: Number(usd6) / 1e6, payTo: X402_PAYTO, asset: X402_ASSET });
+  const usd6 = await priceUsd6(label);
+  return c.json({ label, model: "take-it-own-it", priceUsd6: usd6.toString(), priceUsd: Number(usd6) / 1e6, payTo: X402_PAYTO, asset: X402_ASSET });
 });
 
-async function issueVoucher(c: any, kind: "register" | "renew") {
+// register a subname — one-time fee, permanent ownership (take it, own it).
+app.post("/register", async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const label = (body.label ?? "").toLowerCase();
-  const years = Math.max(1, Number(body.years ?? 1));
   const err = labelError(label);
   if (err) return c.json({ error: err }, 400);
   const owner = body.owner as Address;
-  if (kind === "register" && !/^0x[0-9a-fA-F]{40}$/.test(owner ?? "")) return c.json({ error: "owner address required" }, 400);
+  if (!/^0x[0-9a-fA-F]{40}$/.test(owner ?? "")) return c.json({ error: "owner address required" }, 400);
 
   // ── x402 gate ──
   const pay = await verifyPayment({ receiptId: body.paymentReceiptId, header: c.req.header("X-PAYMENT") });
-  if (!pay.ok) {
-    const usd6 = await priceUsd6(label, years);
-    return c.json(paymentRequired(usd6), 402);
-  }
+  if (!pay.ok) return c.json(paymentRequired(await priceUsd6(label)), 402);
 
   const now = Math.floor(Date.now() / 1000);
   const deadline = BigInt(now + VOUCHER_TTL);
-  const expiry = BigInt(now) + DEFAULT_YEARS_SECONDS * BigInt(years);
+  const expiry = OWN_IT_EXPIRY;                       // take it, own it — capped to parent by NameWrapper
   const paymentReceiptHash = pay.hash!;
 
-  let signature: Hex;
-  if (kind === "register") {
-    signature = await signer.signTypedData({
-      domain: DOMAIN, types: REGISTRATION_TYPES, primaryType: "Registration",
-      message: { label, owner, expiry, paymentReceiptHash, deadline },
-    });
-  } else {
-    signature = await signer.signTypedData({
-      domain: DOMAIN, types: RENEWAL_TYPES, primaryType: "Renewal",
-      message: { label, newExpiry: expiry, paymentReceiptHash, deadline },
-    });
-  }
+  const signature = await signer.signTypedData({
+    domain: DOMAIN, types: REGISTRATION_TYPES, primaryType: "Registration",
+    message: { label, owner, expiry, paymentReceiptHash, deadline },
+  });
   issued.add(paymentReceiptHash);
 
   return c.json({
-    kind, label, owner: kind === "register" ? owner : undefined,
+    label, owner, model: "take-it-own-it",
     expiry: expiry.toString(),
     paymentReceiptHash, deadline: deadline.toString(),
     gatewaySig: signature, gatewaySigner: signer.address,
     registrar: REGISTRAR, chainId: CHAIN_ID,
-    // the exact call the client submits on L1:
-    call: kind === "register"
-      ? "register(label, owner, expiry, paymentReceiptHash, deadline, gatewaySig, meta)"
-      : "renew(label, newExpiry, paymentReceiptHash, deadline, gatewaySig)",
+    call: "register(label, owner, expiry, paymentReceiptHash, deadline, gatewaySig, meta)",
   });
-}
-
-app.post("/register", (c) => issueVoucher(c, "register"));
-app.post("/renew", (c) => issueVoucher(c, "renew"));
+});
 
 console.log(`bankon registration-relayer :${PORT} · chain ${CHAIN_ID} · registrar ${REGISTRAR} · gateway signer ${signer.address} · x402 ${X402_MODE}`);
 export default { port: PORT, fetch: app.fetch };
 
 // Exported for tests (voucher construction is the load-bearing part).
-export const _internal = { DOMAIN, REGISTRATION_TYPES, RENEWAL_TYPES, signer, priceUsd6, labelError, verifyPayment };
+export const _internal = { DOMAIN, REGISTRATION_TYPES, signer, priceUsd6, labelError, verifyPayment };
