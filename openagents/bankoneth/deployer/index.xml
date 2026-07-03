@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  index.xml — the deployer "solution".
+
+  A solution is a manifest of deployable contracts. index.html (the protective
+  layer) reads this file and offers each <contract> for a two-event deploy:
+    DEPLOY  arms the deployment (resolves constructor args, encodes the tx — no cost)
+    LAUNCH  fires it FROM VALUE — pays with a token or proves identity by signature,
+            then broadcasts; the participant's public key (wallet / bankon.eth) is the
+            identity that receives the privilege.
+
+  `bytecode`/`abi` point at standard Foundry artifacts so the deployer reads the
+  exact compiled output (auditable). `value/@kind` is `signature` (sign to deploy)
+  or `token` (pay `amount` of `asset`, address(0)=native). `privilege/@service` is
+  the pay2play service the deployment confers.
+
+  Always open source. (c) BANKON all rights preserved.
+-->
+<solution name="bankon-deployer" version="1" chainHint="31337">
+
+  <!-- Blockchain isolation targets (0G, ETH, Base, ARC, GLMR…). -->
+  <chains src="chains.xml"/>
+
+  <!-- Deploying a bundle is a pay-to-play service: the fee goes to mindX /
+       AgenticPlace (the OpenBSD-secured rail), settled native or via x402.
+       Set `recipient` to the AgenticPlace treasury before mainnet use. -->
+  <fee recipient="0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169"
+       asset="0x0000000000000000000000000000000000000000"
+       amount="0"
+       service="deploy.bundle"
+       x402="https://agenticplace.pythai.net/x402/deploy"/>
+
+  <contract id="service-registry"
+            name="BankonServiceRegistry"
+            summary="The BANKON-as-a-Service catalogue (one row per service).">
+    <abi src="../pay2play/out/BankonServiceRegistry.sol/BankonServiceRegistry.json"/>
+    <bytecode src="../pay2play/out/BankonServiceRegistry.sol/BankonServiceRegistry.json"/>
+    <constructor>
+      <arg name="admin" type="address" from="wallet"/>
+    </constructor>
+    <value kind="signature"/>
+    <privilege service="vault.create" tier="1"/>
+  </contract>
+
+  <contract id="entitlement"
+            name="BankonEntitlement"
+            summary="Identity ledger: who holds which entitlement (persistence.state).">
+    <abi src="../pay2play/out/BankonEntitlement.sol/BankonEntitlement.json"/>
+    <bytecode src="../pay2play/out/BankonEntitlement.sol/BankonEntitlement.json"/>
+    <constructor>
+      <arg name="admin" type="address" from="wallet"/>
+    </constructor>
+    <value kind="signature"/>
+    <privilege service="identity.register" tier="1"/>
+  </contract>
+
+  <contract id="arc-settlement"
+            name="Pay2PlayArcSettlement"
+            summary="ARC-chain USDC x402 settlement layer (requires registry + entitlement first).">
+    <abi src="../pay2play/out/Pay2PlayArcSettlement.sol/Pay2PlayArcSettlement.json"/>
+    <bytecode src="../pay2play/out/Pay2PlayArcSettlement.sol/Pay2PlayArcSettlement.json"/>
+    <constructor>
+      <arg name="admin"       type="address" from="wallet"/>
+      <arg name="registry"    type="address" from="deployed:service-registry"/>
+      <arg name="entitlement" type="address" from="deployed:entitlement"/>
+      <arg name="arcChainId"  type="uint64"  value="0"/>
+      <arg name="arcUsdc"     type="address" from="wallet"/>
+    </constructor>
+    <value kind="token" asset="0x0000000000000000000000000000000000000000" amount="0"/>
+    <privilege service="allchain.access" tier="3"/>
+  </contract>
+
+  <!-- ── openBDK: governance control plane, OWNER-custodial ──────────────────
+       One LAUNCH stands up the OWNER-custodial openBDK stack: an OVERLORD timelock
+       (proposer/executor = the connected wallet), a ValidatorRegistry proxy whose
+       admin IS that timelock, and an allocations vault owned by the timelock.
+       The constructor takes STATIC args only (the proxy `bytes` init lives inside
+       OpenBDKDeployer, not the browser encoder). OWNER holds the key; software
+       holds nothing once the tx confirms. -->
+  <contract id="openbdk-deployer"
+            name="OpenBDKDeployer"
+            summary="OWNER-custodial openBDK control plane: OVERLORD timelock + ValidatorRegistry + allocations, all admin'd by the OWNER's timelock.">
+    <abi src="../openbdk/out/OpenBDKDeployer.sol/OpenBDKDeployer.json"/>
+    <bytecode src="../openbdk/out/OpenBDKDeployer.sol/OpenBDKDeployer.json"/>
+    <constructor>
+      <arg name="owner"            type="address" from="wallet"/>
+      <arg name="timelockMinDelay" type="uint256" value="172800"/>           <!-- 2 days -->
+      <arg name="stakingToken"     type="address" from="wallet"/>            <!-- replace with THRUST/gov token -->
+      <arg name="minimumStake"     type="uint256" value="1000000000000000000000"/> <!-- 1000e18 -->
+      <arg name="unbondingPeriod"  type="uint256" value="100"/>
+      <arg name="allocationToken"  type="address" value="0x0000000000000000000000000000000000000000"/>
+    </constructor>
+    <value kind="signature"/>
+    <privilege service="overlord.handoff" tier="3"/>
+  </contract>
+
+  <!-- ── openBDK: whitelist-as-a-service (rooms + databanks) ─────────────────
+       Multi-room public-key whitelist; capacity expands via databanks added only
+       by an authorized gate/registry/holding. admin = the connected wallet. -->
+  <contract id="openbdk-whitelist"
+            name="Whitelist"
+            summary="Whitelist-as-a-service: rooms of public keys, capacity-expandable via gated databanks.">
+    <abi src="../openbdk/out/whitelist.sol/Whitelist.json"/>
+    <bytecode src="../openbdk/out/whitelist.sol/Whitelist.json"/>
+    <constructor>
+      <arg name="admin" type="address" from="wallet"/>
+    </constructor>
+    <value kind="signature"/>
+    <privilege service="whitelist.create" tier="2"/>
+  </contract>
+
+  <!-- ── Topic bundles (hundreds of contracts, by topic) ────────────────────
+       Each include is a self-contained bundle manifest. The deployer merges them
+       and groups by topic; DEPLOY BUNDLE arms a whole topic in stage order, LAUNCH
+       fires it. Build the referenced artifacts (forge build) before launching. -->
+  <!-- ── BANKON minter system (the subdomain.bankon.eth deployment) ─────────
+       Generated from script/export-abis.mjs (DEPLOY_SEQUENCES — single source of
+       truth). bankon.eth is the immutable admin + fee recipient (from="owner");
+       singletons marked create2 land at the same address on every chain. The ENS
+       bundle is pinned to mainnet + Sepolia (NameWrapper-bound). -->
+  <include src="bundles/bankon-ens.xml"/>
+  <include src="bundles/bankon-inft.xml"/>
+  <include src="bundles/bankon-arc.xml"/>
+  <include src="bundles/bankon-treasury.xml"/>
+  <include src="bundles/bankon-custody.xml"/>
+
+  <!-- ── Adjacent topic bundles (daio / deltaverse) ─────────────────────────── -->
+  <include src="bundles/daio-inft.xml"/>
+  <include src="bundles/deltaverse.xml"/>
+
+</solution>

@@ -1,0 +1,14 @@
+# dato EVM substrate — scoped Foundry profile (mirrors daio/contracts conventions).
+# Zero-import production contracts (airgap-compileable); forge-std is reused from
+# the daio/contracts checkout for tests only (no vendoring).
+[profile.default]
+src = "."
+out = "out"
+test = "test"
+libs = ["../../daio/contracts/lib"]
+auto_detect_remappings = false
+solc = "0.8.24"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+remappings = ["forge-std/=../../daio/contracts/lib/forge-std/src/"]

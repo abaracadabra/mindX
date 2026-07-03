@@ -1,0 +1,77 @@
+{
+  "project": "agenticplace_demo",
+  "version": "1.0.0",
+  "required_min_tier": "tier2",
+  "required_approvers": ["guardian_agent_main"],
+  "mainnet_two_step": true,
+  "stages": [
+    {
+      "chain": "anvil-local",
+      "chain_id": 1337,
+      "driver": "foundry",
+      "is_mainnet": false,
+      "rpc_env": "ANVIL_RPC_URL",
+      "deployer_entity": "blockchain.deployer.anvil-local",
+      "gas_budget_usd": 0,
+      "foundry": {
+        "contracts_root": "daio/contracts",
+        "script": "script/DeployTemplate.s.sol:DeployTemplate",
+        "profile": "thot_commitment",
+        "receipt_stage": "agenticplace_demo",
+        "verify": false,
+        "env": { "DEPLOY_TARGET": "true" }
+      }
+    },
+    {
+      "chain": "algorand-localnet",
+      "chain_id": 4160,
+      "driver": "algorand",
+      "is_mainnet": false,
+      "rpc_env": "ALGOD_LOCALNET_URL",
+      "deployer_entity": "algorand.deployer.localnet",
+      "gas_budget_usd": 0,
+      "algorand": {
+        "artifacts_root": "daio/contracts/agenticplace/out",
+        "contracts": ["AgenticMinter"],
+        "network": "localnet",
+        "algod_env": "ALGOD_LOCALNET_URL",
+        "deployer_mnemonic_env": "ALGORAND_DEPLOYER_MNEMONIC_LOCALNET",
+        "app_args": []
+      }
+    },
+    {
+      "chain": "base-sepolia",
+      "chain_id": 84532,
+      "driver": "foundry",
+      "is_mainnet": false,
+      "rpc_env": "BASE_SEPOLIA_RPC_URL",
+      "deployer_entity": "blockchain.deployer.base-sepolia",
+      "gas_budget_usd": 5,
+      "foundry": {
+        "contracts_root": "daio/contracts",
+        "script": "script/DeployTemplate.s.sol:DeployTemplate",
+        "profile": "thot_commitment",
+        "receipt_stage": "agenticplace_demo",
+        "verify": true,
+        "env": { "DEPLOY_TARGET": "true" }
+      }
+    },
+    {
+      "chain": "algorand-testnet",
+      "chain_id": 416002,
+      "driver": "algorand",
+      "is_mainnet": false,
+      "rpc_env": "ALGORAND_ALGOD_URL",
+      "deployer_entity": "algorand.deployer.algorand-testnet",
+      "gas_budget_usd": 0.1,
+      "algorand": {
+        "artifacts_root": "daio/contracts/agenticplace/out",
+        "contracts": ["AgenticMinter"],
+        "network": "algorand-testnet",
+        "algod_env": "ALGORAND_ALGOD_URL",
+        "deployer_mnemonic_env": "ALGORAND_DEPLOYER_MNEMONIC_TESTNET",
+        "app_args": []
+      }
+    }
+  ]
+}

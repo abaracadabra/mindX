@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BANKON · admin console</title>
+<link rel="stylesheet" href="./styled.css" />
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><span class="mark">BANKON</span><span class="eth">.eth</span>
+      <span class="tagline">Admin · Sovereign Console</span></div>
+    <span class="spacer"></span>
+    <span class="row" data-conn></span>
+  </div>
+
+  <section class="hero">
+    <img class="crest" src="/gfx/vault.png" alt="admin" onerror="this.src='/gfx/THOTH.png';this.onerror=null" />
+    <h1>bankon.eth admin console</h1>
+    <p class="sub">You own <code>bankon.eth</code> — set pricing, fees, hosting, and run the BANKON vault.</p>
+  </section>
+
+  <nav class="tabs">
+    <button data-tab="pricing" class="active">Pricing</button>
+    <button data-tab="fees">Fees</button>
+    <button data-tab="hosting">Hosting</button>
+    <button data-tab="registry">Registry</button>
+    <button data-tab="vault">BANKON Vault</button>
+    <button data-tab="dev">Explorer</button>
+  </nav>
+  <main id="view"></main>
+  <div class="foot">All setter txs require the bankon.eth owner's signature (roles granted via GrantOwnerRoles.s.sol).</div>
+</div>
+
+<script type="module" src="./webgl-bg.js"></script>
+<script type="module">
+import { BANKON, F, ethers, connect, login, whoami, topbar, toast, el, stringify } from "./app-common.js";
+
+const BANKON_NODE = "0x79c178642317fc2d61d186f3b412440f06590d8314f126362d6a88929a6cbe1a";
+const view = () => document.getElementById("view");
+const show = (n, t, c = "") => { n.style.display = "block"; n.className = "result " + c; n.textContent = t; };
+let activeTab = "pricing";
+
+async function onLogin() { await login(); topbar({ onLogin }); }
+
+async function ctx(key, abiName) {
+  if (!BANKON.deployments) BANKON.deployments = await F.loadDeployments(BANKON.PUBLIC_BASE, BANKON.chainId || 1);
+  const address = F.addressFor(BANKON.deployments, key);
+  if (!address) throw new Error(`${abiName} not deployed on this network`);
+  return { address, abi: await F.loadAbi(BANKON.PUBLIC_BASE, abiName) };
+}
+function field(label, id, val = "", hint = "") {
+  return el("label", { cls: "field" }, [
+    el("span", { cls: "lbl", html: label + (hint ? ` <span class="muted">${hint}</span>` : "") }),
+    el("input", { attrs: { type: "text", id, value: val } }),
+  ]);
+}
+const v = (id) => document.getElementById(id).value.trim();
+
+async function writeTx(key, abiName, fn, args, value, out) {
+  show(out, "awaiting signature…");
+  try {
+    const { address, abi } = await ctx(key, abiName);
+    const signer = await BANKON.browserProvider.getSigner();
+    const tx = await F.writeContract({ signer, address, abi, fn, args, value, ethers });
+    show(out, "sent: " + tx.hash + "\nwaiting…"); const r = await tx.wait();
+    show(out, `✅ ${fn} confirmed, block ${r.blockNumber}`, "ok");
+  } catch (e) { show(out, "✗ " + (e.shortMessage || e.message), "err"); }
+}
+
+function render() {
+  const root = view(); root.innerHTML = "";
+  if (activeTab === "pricing") return renderPricing(root);
+  if (activeTab === "fees") return renderFees(root);
+  if (activeTab === "hosting") return renderHosting(root);
+  if (activeTab === "registry") return renderRegistry(root);
+  if (activeTab === "vault") return renderVault(root);
+  if (activeTab === "dev") { location.href = "./bankoneth.html"; }
+}
+
+function renderPricing(root) {
+  const p = el("div", { cls: "panel" });
+  p.append(el("h3", { text: "Length-tiered price (USD, 6dp)" }),
+    field("3-char /yr", "p3", "320000000"), field("4-char /yr", "p4", "80000000"),
+    field("5-char /yr", "p5", "5000000"), field("6-char /yr", "p6", "3000000"),
+    field("7+ char /yr", "p7", "1000000"));
+  const out1 = el("div", { cls: "result", attrs: { style: "display:none" } });
+  p.append(el("button", { cls: "primary", text: "setPrices", on: { click: () => writeTx("priceOracle", "BankonPriceOracle", "setPrices", [v("p3"), v("p4"), v("p5"), v("p6"), v("p7")].map(BigInt), undefined, out1) } }), out1);
+  const out2 = el("div", { cls: "result", attrs: { style: "display:none" } });
+  p.append(el("hr"), field("PYTHAI discount (bps)", "disc", "2000", "2000 = 20%"),
+    el("button", { text: "setPythaiDiscount", on: { click: () => writeTx("priceOracle", "BankonPriceOracle", "setPythaiDiscount", [BigInt(v("disc"))], undefined, out2) } }), out2);
+  root.append(p);
+}
+
+function renderFees(root) {
+  const p = el("div", { cls: "panel" });
+  p.append(el("h3", { text: "Revenue split (bps, sum = 10000)" }),
+    field("treasury", "ft", "4000"), field("buyback", "fb", "2500"), field("public goods", "fp", "1500"),
+    field("ops", "fo", "1000"), field("squat reserve", "fs", "1000"));
+  const out = el("div", { cls: "result", attrs: { style: "display:none" } });
+  p.append(el("button", { cls: "primary", text: "setSplits", on: { click: () => writeTx("paymentRouter", "BankonPaymentRouter", "setSplits", [v("ft"), v("fb"), v("fp"), v("fo"), v("fs")].map(Number), undefined, out) } }), out);
+  root.append(p);
+}
+
+function renderHosting(root) {
+  const p = el("div", { cls: "panel" });
+  p.append(el("h3", { text: "Enroll bankon.eth (enables the storefront)" }),
+    el("div", { cls: "note", text: "Enroll the bankon.eth parent so visitors can buy *.bankon.eth via DomainHosting.issue. You must own bankon.eth (you do)." }),
+    field("price / label (USD 6dp)", "hpl", "5000000"),
+    field("price / label (ETH wei)", "hpe", "2000000000000000", "0.002 ETH"),
+    field("child fuses", "hcf", "327685", "0x50005 soulbound"),
+    field("default expiry (unix)", "hde", String(Math.floor(Date.now() / 1000) + 31536000)),
+    field("owner share (bps)", "hos", "9000"));
+  const out = el("div", { cls: "result", attrs: { style: "display:none" } });
+  p.append(
+    el("button", { cls: "primary", text: "enroll bankon.eth", on: { click: () => writeTx("domainHosting", "BankonDomainHosting", "enroll", [BANKON_NODE, BigInt(v("hpl")), BigInt(v("hpe")), Number(v("hcf")), BigInt(v("hde")), Number(v("hos"))], undefined, out) } }),
+    el("button", { text: "update price only", on: { click: () => writeTx("domainHosting", "BankonDomainHosting", "setPrices", [BANKON_NODE, BigInt(v("hpl")), BigInt(v("hpe"))], undefined, out) } }), out);
+  root.append(p);
+}
+
+function renderRegistry(root) {
+  const p = el("div", { cls: "panel" });
+  p.append(el("h3", { text: "Registrar controls" }));
+  const out = el("div", { cls: "result", attrs: { style: "display:none" } });
+  p.append(el("div", { cls: "row" }, [
+    el("button", { text: "pause", on: { click: () => writeTx("subnameRegistrar", "BankonSubnameRegistrar", "pause", [], undefined, out) } }),
+    el("button", { text: "unpause", on: { click: () => writeTx("subnameRegistrar", "BankonSubnameRegistrar", "unpause", [], undefined, out) } }),
+  ]), out);
+  root.append(p);
+}
+
+// ── BANKON Vault (admin-tier cookie session gates /vault/*) ───────────────────
+function renderVault(root) {
+  const p = el("div", { cls: "panel" });
+  p.append(el("h3", { text: "BANKON Vault — encrypted credentials" }),
+    el("div", { cls: "note gold", text: "AES-256-GCM + HKDF. Secrets are stored encrypted; this console talks to the gate's /vault routes (admin-tier only)." }));
+  const status = el("div", { cls: "result", attrs: { style: "display:none" } });
+  const list = el("div", { cls: "result", attrs: { style: "display:none" } });
+  p.append(el("div", { cls: "row" }, [
+    el("button", { text: "status", on: { click: async () => api("/vault/credentials/status", "GET", null, status) } }),
+    el("button", { text: "list", on: { click: async () => api("/vault/credentials/list", "GET", null, list) } }),
+    el("button", { text: "providers", on: { click: async () => api("/vault/credentials/providers", "GET", null, status) } }),
+  ]), status, list);
+  p.append(el("hr"), el("h3", { text: "Store a credential" }),
+    field("provider id", "vpid", "etherscan_api_key"), field("value", "vval", ""));
+  const sout = el("div", { cls: "result", attrs: { style: "display:none" } });
+  p.append(el("button", { cls: "primary", text: "store (encrypt)", on: { click: () => api("/vault/credentials/store", "POST", { provider_id: v("vpid"), value: v("vval") }, sout) } }), sout);
+  p.append(el("hr"), el("div", { cls: "note", html: "Cabinet provisioning & the signing oracle use the shadow-overlord challenge flow — see <a href='../docs/BANKON_VAULT.md'>BANKON_VAULT.md</a>." }));
+  root.append(p);
+}
+
+async function api(path, method, body, out) {
+  show(out, "…");
+  try {
+    const r = await fetch(path, { method, headers: body ? { "content-type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
+    const j = await r.json().catch(() => ({}));
+    show(out, (r.ok ? "" : `[${r.status}] `) + stringify(j), r.ok ? "ok" : "err");
+  } catch (e) { show(out, "✗ " + e.message, "err"); }
+}
+
+for (const b of document.querySelectorAll("nav.tabs button"))
+  b.addEventListener("click", () => { if (b.dataset.tab === "dev") return render.call(null, activeTab = "dev"); activeTab = b.dataset.tab; for (const x of document.querySelectorAll("nav.tabs button")) x.classList.toggle("active", x === b); render(); });
+
+(async function () {
+  await whoami();
+  await connect().catch(() => {});
+  topbar({ onLogin });
+  if (BANKON.tier !== "admin") {
+    // ensure a fresh on-chain check via a sign-in, else the server already gated us here
+    const r = await login().catch(() => null);
+    if (!r || r.tier !== "admin") { location.href = "/index.html"; return; }
+    topbar({ onLogin });
+  }
+  render();
+})();
+</script>
+</body>
+</html>

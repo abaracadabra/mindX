@@ -1,0 +1,24 @@
+{
+  "name": "@bankoneth/parsec-view",
+  "version": "0.1.0",
+  "description": "Native parsec-wallet view-module for the bankon.eth subdomain minter + agent registry + generic ABI explorer (vanilla TS, no Lit).",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+  },
+  "files": ["dist", "src", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "ethers": "^6"
+  },
+  "devDependencies": {
+    "ethers": "^6",
+    "typescript": "^5.4"
+  }
+}

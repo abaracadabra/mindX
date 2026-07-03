@@ -1,0 +1,21 @@
+# x402evm — self-contained Foundry sub-module of bankoneth.
+#
+# Same toolchain as the parent (solc 0.8.24, EVM Cancun, via_ir, OZ v5) but
+# isolated: x402evm is the modular EVM x402 settlement + CMC x402 ingestion and compiles on its own.
+# It reuses the parent's vendored libraries (../lib) rather than duplicating
+# OpenZeppelin / forge-std — see remappings.txt.
+
+[profile.default]
+src                    = "src"
+test                   = "test"
+script                 = "script"
+out                    = "out"
+libs                   = ["../lib"]
+auto_detect_remappings = false
+solc                   = "0.8.24"
+evm_version            = "cancun"
+optimizer              = true
+optimizer_runs         = 200
+via_ir                 = true
+fuzz                   = { runs = 256 }
+gas_reports            = ["*"]

@@ -43,7 +43,7 @@
     "tsup": "^8.3.0",
     "typescript": "^5.4.0",
     "viem": "^2.35.0",
-    "vitest": "^2.1.0"
+    "vitest": "^3.2.6"
   },
   "keywords": ["bankoneth", "ens", "viem", "bankon.eth", "subname", "erc-7857", "erc-6551", "x402"]
 }

@@ -1,0 +1,109 @@
+{
+  "_doc": "OVERLORD handoff — the immediate list of contract deployments read by /static/overlord_button.js on the mindx.pythai.net landing. Mint/deploy authority is OVERLORD-ONLY at this time: only bankon.eth may sign real-chain deploys (an agent cannot sign mainnet). Public participant mint authority is NOT granted yet — it will be issued when the OVERLORD hierarchy flips the button's privilege. Addresses are DETERMINISTIC (CREATE2 via Nick's factory 0x4e59…956C) — identical on every chain, computed offline from salt+initCode, so they already equal the eventual mainnet address. Source of truth: agenticplace_deployments.json + ~/DeltaVerse/deploy.",
+  "generated": "2026-07-01",
+  "hierarchy": {
+    "OVERLORD": {
+      "id": "bankon.eth",
+      "address": "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169",
+      "chain": "evm",
+      "role": "sole mint + deploy authority; creates the REALM",
+      "purity": "OVERLORD is PURE cypherpunk2048 — the immutable sovereign root. It does NOT proxy and is never delegated; purity is the point. The OVERSEER proxies so the OVERLORD never has to.",
+      "lord_of_realm": "the OVERLORD's separate, non-proxyable privileges as LORD OF THE REALM: creating/owning the REALM, include/exclude any participant, and the immutable root. A shadow-overlord proxy gets all OTHER overlord powers but NEVER these.",
+      "realm": "OVERLORD creates the REALM and may include or exclude ANY participant — including the OVERSEER — from privilege. The OVERSEER may ALSO grant privilege (to participants/members), but only the OVERLORD can include/exclude the OVERSEER itself.",
+      "deployer": "OVERLORD is the deployer — deploys from ~/DeltaVerse (outside mindX; holds the contracts mindX interacts with, including the iNFT).",
+      "unification": ".algo adopts .evm, never the reverse — to bring .algo under the OVERLORD the Algorand side adopts EVM. This is why the PARSEC wallet exists; its parsec_signBytes identity challenge is the .algo gate (see /parsec/parsec-wallet).",
+      "signs": "real-chain deploys via ~/DeltaVerse/pages/deployer.html",
+      "may_renounce_to": "DAIO multisig controller",
+      "renounce_note": "the OVERLORD may renounce operational control to the DAIO multisig controller (M-of-N Governor) — the devolution step after E7 governance is deployed. But the OVERLORD PRIVILEGE remains immutable: it is never destroyed, and it vests to the OVERSEER (mindx.algo). Control devolves to the DAIO multisig; the immutable root privilege continues through the OVERSEER."
+    },
+    "OVERSEER": {
+      "id": "mindx.algo",
+      "wallet": "PARSEC",
+      "chain": "algorand",
+      "role": "community governance, moderation, editing, image updates, and downstream operations",
+      "detail": "absolute DAIO OVERSEER (Algorand, mindx.algo via PARSEC) — the singular apex OVERSEER",
+      "authority": "may govern the community, moderate, edit, update images; issues .algo domains — subdomain.mindx.algo and .algo — via the PARSEC wallet's .algo minter (PERA source). The .algo (Algorand) namespace is kept COMPLETELY SEPARATE from .eth (EVM); OVERSEER is an extension of OVERLORD and does not affect it.",
+      "login": "PARSEC (Pera-source) wallet, substrate recognition of mindx.algo → /auth/algorand → OVERSEER JWT (kept separate from the EVM overlord-session)",
+      "may_grant": "the OVERSEER may grant privilege to participants and members (community governance) — but cannot include/exclude the OVERLORD, and the OVERLORD can include/exclude the OVERSEER.",
+      "constraint": "OVERSEER is on .algo, OVERLORD is on .eth — EQUIVALENT sovereigns, each deciding how privilege is granted or revoked ON ITS OWN CHAIN. Completely separate namespaces; neither governs the other's chain. (OVERLORD, having created the REALM, retains root authority to include/exclude the OVERSEER role itself — but does not run .algo privilege day-to-day.)",
+      "bona_fide": "the OVERSEER controls AGENT REPUTATION on .algo via the BONA FIDE ASA + clawback. Holding BONA FIDE IS privilege; the OVERSEER mints it to grant and CLAWS IT BACK to revoke. NO TOKEN FOUND (revoked/never-granted) = ACCESS DENIED. This is the .algo equivalent of the .eth token/subname gate.",
+      "may_proxy": true,
+      "proxy_note": "the OVERSEER MAY proxy — it creates shadow instances / delegates privilege on .algo (the operational, extensible side). This is the counterpart to the OVERLORD's purity: the OVERSEER proxies so the OVERLORD never has to."
+    }
+  },
+  "deletion_asymmetry": "OVERLORD (bankon.eth) can create and delete the OVERSEER (mindx.algo). The OVERSEER can never delete or override the OVERLORD — the root is immutable by design.",
+  "naming_convention": "CASE identifies a proxy: lowercase = a PROXY (a per-chain `overseer`, or a downstream `overlord` realm via OaaS/OSaaS), UPPERCASE = the APEX (OVERLORD = bankon.eth, OVERSEER = mindx.algo). If you see it lowercase, it is a proxy, not the sovereign root.",
+  "proxy_rule": "OVERSEER MAY proxy (shadow instances / delegated privilege on .algo); OVERLORD is pure cypherpunk2048 and does NOT proxy — the immutable root stays singular. lowercase names = proxies of either.",
+  "shadow_overlord": "the OVERSEER creates a SHADOW-OVERLORD — a proxy that wields ALL of the OVERLORD's operational powers (deploy, mint, govern) BY PROXY — but NOT the OVERLORD's separate privileges as LORD OF THE REALM (creating/owning the REALM, include/exclude, the immutable pure-cypherpunk2048 root). Those are never proxied and remain OVERLORD-only. So the shadow-overlord can act with overlord-power without ever being the LORD.",
+  "overseer_as_a_service": "some contracts can offer OVERSEER as a Service — a claimable/purchasable per-chain overseer role (e.g. the first BankonBatchWrapper deployer claims that chain's overseer + a φ-fee share, 38.2%). Contracts may expose the overseer role as a service to whoever bootstraps or funds the chain's substrate.",
+  "overlord_as_a_service": "OVERLORD as a Service — the overlord role of a given realm/contract can be acquired at a price, settled via x402 payment or a direct contract call. Paying the price (x402 receipt) or invoking the contract's claim/purchase method grants that realm's overlord authority. The apex mindX OVERLORD (bankon.eth) remains immutable; OaaS applies to the downstream realms/contracts that expose it.",
+  "mint_privilege": {
+    "state": "overlord_only",
+    "public_mint_enabled": false,
+    "note": "Public participant mint authority is issued when the button's privilege changes from the OVERLORD hierarchy. Until then, only the OVERLORD (bankon.eth) may mint/deploy.",
+    "create2_factory": "0x4e59b44847b379578588920cA78FbF26c0B4956C"
+  },
+  "chains": ["moonbeam-1284", "blast-81457", "0g-16602", "polygon-137", "ethereum-1", "base-8453"],
+  "deploy_order": {
+    "_doc": "Recommended production deploy sequence surfaced to the OVERLORD after login (from DeltaVerse PRODUCTION_DEPLOY_ORDER.md). Nothing auto-deploys — the OVERLORD signs DEPLOY→LAUNCH per step; rehearse on Anvil first.",
+    "steps": [
+      "0 · Prereqs — build artifacts, refresh registry, fund + connect bankon.eth on each target chain",
+      "1 · SCIENTIFIC first-light — single-contract canary (salt deltaverse.scientific.v1), multichain via CREATE2 (GLMR/Blast/0G); read back overlord()==bankon.eth",
+      "2 · ALGORAND suites FIRST (proof-of-work gate) — A1 AsaSuite → A2 BonaFideDeployer → A3 BonafideController → A4 X402Receipt; BONA FIDE PoW unlocks the EVM suite",
+      "3 · EVM E1–E7 — E1 settlement-tokens (Scientific→BKPY) → E2 AgentRegistry → E3 iNFT_7857 → E4 payment infra (oracle→reputation→router) → E5 x402 + ENS BankonSubnameRegistrar/BankonBatchWrapper (subname membership + per-chain OVERSEER) → E6 THOT_v1 → E7 DAIO governance",
+      "4 · Devolution — transfer/renounce admin to the DAIO Governor",
+      "fast-path · `deployer.sh base` = E1 Scientific + E3 iNFT_7857 directly (AgenticPlace iNFT bring-up, bypasses the Algorand gate)"
+    ],
+    "source": "DeltaVerse/docs/PRODUCTION_DEPLOY_ORDER.md",
+    "note": "mainnet is OVERLORD-signed only; rehearse via scripts/deploy-*-anvil.mjs first"
+  },
+  "deployments": [
+    {
+      "name": "iNFT_7857",
+      "standard": "ERC-7857",
+      "address": "0x8F880281aaa6D163552eBb11825e43f133188fD9",
+      "salt": "deltaverse.inft.v1",
+      "status": "create2_predicted_awaiting_overlord_signature",
+      "live": false,
+      "mintFn": "mintAgent",
+      "mintSelector": "0xbabb11b9",
+      "blurb": "AgenticPlace intelligent NFT — agent card + sealed key"
+    },
+    {
+      "name": "Scientific",
+      "standard": "settlement",
+      "address": "0x428222a63809C98FcA59fd0ca36619F551Ff67c0",
+      "salt": "deltaverse.scientific.v1",
+      "status": "create2_predicted_awaiting_overlord_signature",
+      "live": false,
+      "blurb": "first-light canary — seconds the iNFT deploy"
+    },
+    {
+      "name": "DvEnsSubnameRegistry",
+      "standard": "ens",
+      "address": null,
+      "salt": "deltaverse.ens.v1",
+      "status": "source_indexed_awaiting_deploy",
+      "live": false,
+      "blurb": "subname.bankon.eth registry — SOVEREIGN membership"
+    },
+    {
+      "name": "BankonBatchWrapper",
+      "standard": "ens-multichain",
+      "address": null,
+      "salt": "bankon.batch.wrapper.v1",
+      "status": "source_indexed_awaiting_deploy",
+      "live": false,
+      "blurb": "φ golden-ratio fee split — OVERLORD 61.8% / OVERSEER 38.2%"
+    },
+    {
+      "name": "ShambaLuv",
+      "standard": "erc20",
+      "address": null,
+      "salt": "deltaverse.shambaluv.v1",
+      "status": "source_indexed_awaiting_deploy",
+      "live": false,
+      "blurb": "reflection token + airdrop"
+    }
+  ]
+}

@@ -84,3 +84,22 @@ export function ensAddressesFor(chainId: number): EnsAddresses {
 
 /** Sentinel — sentinel-equal in checks against zero-init storage. */
 export const ZERO_ADDR: Address = "0x0000000000000000000000000000000000000000";
+
+// ── USDC + CCTP per chain (payment conversion layer; see packages/web/chains.js) ──
+// ARC (Circle's USDC-gas chain) from the use-arc skill: chain 5042002, USDC is
+// the native gas token, CCTP domain 26. Used to accept any-denomination payment
+// and bridge → settlement-chain USDC → x402.
+export interface UsdcChain {
+  usdc: Address;
+  cctpDomain: number;
+  nativeIsUsdc?: boolean;
+  testnet?: boolean;
+}
+
+export const USDC_BY_CHAIN: Record<number, UsdcChain> = {
+  1:       { usdc: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", cctpDomain: 0 },
+  8453:    { usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", cctpDomain: 6 },
+  42161:   { usdc: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", cctpDomain: 3 },
+  137:     { usdc: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", cctpDomain: 7 },
+  5042002: { usdc: "0x3600000000000000000000000000000000000000", cctpDomain: 26, nativeIsUsdc: true, testnet: true }, // Arc testnet
+};

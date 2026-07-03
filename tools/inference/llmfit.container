@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: Apache-2.0
+# (c) 2026 BANKON — all rights reserved.
+#
+# llmfit.container — Podman Quadlet sidecar for the llmfit (MIT) node oracle.
+# Install: ~/.config/containers/systemd/llmfit.container
+# Reload:  systemctl --user daemon-reload && systemctl --user start llmfit
+#
+# Security posture (matches mindX): published ONLY to 127.0.0.1. The REST
+# surface is a node-internal oracle, never LAN/public. The CLI fallback in
+# llmfit_tool.py means this sidecar is an optimisation, not a dependency.
+
+[Unit]
+Description=llmfit node capability oracle (MIT, sidecar)
+After=network-online.target
+
+[Container]
+Image=ghcr.io/alexsjones/llmfit:latest
+ContainerName=llmfit
+# bind inside the container; publish only to host loopback
+Exec=serve --host 0.0.0.0 --port 8787
+PublishPort=127.0.0.1:8787:8787
+# llmfit needs to read host hardware to score fit; expose probes read-only
+AddDevice=/dev/dri:/dev/dri
+Environment=LLMFIT_DASHBOARD_HOST=127.0.0.1
+
+[Service]
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

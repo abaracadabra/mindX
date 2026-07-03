@@ -452,10 +452,118 @@ class HourlyRateLimiter:
         }
 
 
+class DailyRateLimiter:
+    """
+    Daily rate limiter tracking API calls per rolling 24h window, keyed per
+    provider so each free tier's published `daily_request_cap` is honored
+    independently (e.g. gemini 1500/day, groq 14400/day).
+
+    Persistent (survives restarts) — the daily free quota is a *daily* budget,
+    so it must not reset when the process does. One JSON file holds a dict of
+    {provider_key: [timestamps]}.
+    """
+    _WINDOW_S = 86400  # 24h
+
+    def __init__(
+        self,
+        requests_per_day: int,
+        key: str = "global",
+        storage_path: Optional[Path] = None,
+    ):
+        self.requests_per_day = requests_per_day
+        self.key = key or "global"
+        self.storage_path = storage_path or (PROJECT_ROOT / "data" / "monitoring" / "daily_rate_limits.json")
+        self.storage_path.parent.mkdir(parents=True, exist_ok=True)
+        self.lock = asyncio.Lock()
+        self.call_history: list = []
+        self._load_history()
+        logger.info(f"DailyRateLimiter[{self.key}] initialized. Rate: {requests_per_day}/day")
+
+    def _read_all(self) -> Dict[str, Any]:
+        try:
+            if self.storage_path.exists():
+                with self.storage_path.open("r", encoding="utf-8") as f:
+                    return json.load(f) or {}
+        except Exception as e:
+            logger.warning(f"Failed to read daily rate limit store: {e}. Starting fresh.")
+        return {}
+
+    def _load_history(self):
+        data = self._read_all()
+        providers = data.get("providers", {}) if isinstance(data, dict) else {}
+        self.call_history = list(providers.get(self.key, []))
+        self._clean_old_entries()
+
+    def _save_history(self):
+        """Persist this provider's history, preserving other providers' entries."""
+        try:
+            data = self._read_all()
+            if not isinstance(data, dict):
+                data = {}
+            providers = data.get("providers", {})
+            if not isinstance(providers, dict):
+                providers = {}
+            providers[self.key] = self.call_history
+            data["providers"] = providers
+            data["last_updated"] = time.time()
+            with self.storage_path.open("w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to save daily rate limit history: {e}")
+
+    def _clean_old_entries(self):
+        cutoff = time.time() - self._WINDOW_S
+        self.call_history = [ts for ts in self.call_history if ts > cutoff]
+
+    async def check_and_record(self) -> bool:
+        """Check the rolling-24h cap and record the call. False if over cap."""
+        async with self.lock:
+            # Re-read so concurrent handlers for the same provider stay consistent.
+            self._load_history()
+            if len(self.call_history) >= self.requests_per_day:
+                logger.warning(
+                    f"Daily rate limit exceeded for [{self.key}]: "
+                    f"{len(self.call_history)}/{self.requests_per_day} calls/day."
+                )
+                return False
+            self.call_history.append(time.time())
+            self._save_history()
+            return True
+
+    def get_remaining_calls(self) -> int:
+        self._clean_old_entries()
+        return max(0, self.requests_per_day - len(self.call_history))
+
+    def get_metrics(self) -> Dict[str, Any]:
+        self._clean_old_entries()
+        oldest = min(self.call_history) if self.call_history else time.time()
+        seconds_until_reset = max(0, self._WINDOW_S - (time.time() - oldest))
+        return {
+            "requests_per_day": self.requests_per_day,
+            "calls_today": len(self.call_history),
+            "remaining_calls": self.get_remaining_calls(),
+            "utilization": len(self.call_history) / self.requests_per_day if self.requests_per_day > 0 else 0.0,
+            "seconds_until_reset": seconds_until_reset,
+            "at_limit": len(self.call_history) >= self.requests_per_day,
+        }
+
+    def get_status_summary(self) -> Dict[str, Any]:
+        m = self.get_metrics()
+        return {
+            "rate_limit": f"{self.requests_per_day}/day",
+            "calls_today": m["calls_today"],
+            "remaining": m["remaining_calls"],
+            "utilization": f"{m['utilization']:.1%}",
+            "status": "at_limit" if m["at_limit"] else "available",
+            "reset_in": f"{m['seconds_until_reset']/3600:.1f}h" if m["seconds_until_reset"] > 0 else "now",
+        }
+
+
 class DualLayerRateLimiter:
     """
-    Combines per-minute and per-hour rate limiting for dual-layer protection.
-    Wraps both RateLimiter and HourlyRateLimiter.
+    Combines per-minute, per-hour and (optionally) per-day rate limiting.
+    Wraps RateLimiter + HourlyRateLimiter + DailyRateLimiter. The name is kept
+    for backward compatibility; the daily layer is opt-in via requests_per_day.
     """
     def __init__(
         self,
@@ -471,6 +579,11 @@ class DualLayerRateLimiter:
         safety_margin: int = 0,
         tpm_limit: Optional[int] = None,
         slowdown_threshold: float = 0.80,
+        # Per-day free quota (e.g. gemini 1500/day). Opt-in; None disables the
+        # daily layer (preserves prior minute+hour behavior). provider_name
+        # keys the persistent daily counter so providers don't share a budget.
+        requests_per_day: Optional[int] = None,
+        provider_name: Optional[str] = None,
     ):
         self.minute_limiter = RateLimiter(
             requests_per_minute=requests_per_minute,
@@ -483,15 +596,23 @@ class DualLayerRateLimiter:
             slowdown_threshold=slowdown_threshold,
         )
         self.hourly_limiter = HourlyRateLimiter(requests_per_hour=requests_per_hour)
+        self.daily_limiter: Optional[DailyRateLimiter] = (
+            DailyRateLimiter(requests_per_day=requests_per_day, key=provider_name or "global")
+            if requests_per_day else None
+        )
 
         logger.info(
             f"DualLayerRateLimiter initialized. "
             f"Rate: {requests_per_minute}/min, {requests_per_hour}/hour"
+            + (f", {requests_per_day}/day" if requests_per_day else "")
             + (f", TPM={tpm_limit}, safety_margin={safety_margin}" if (tpm_limit or safety_margin) else "")
         )
 
     async def reserve(self, estimated_tokens: int = 0) -> bool:
         """Token-aware reservation. Falls back to wait() when TPM is off."""
+        if self.daily_limiter and not await self.daily_limiter.check_and_record():
+            logger.warning("Daily rate limit exceeded. Request blocked.")
+            return False
         if not await self.hourly_limiter.check_and_record():
             logger.warning("Hourly rate limit exceeded. Request blocked.")
             return False
@@ -507,11 +628,14 @@ class DualLayerRateLimiter:
         Wait until both minute and hourly limits allow a request.
         Returns True if successful, False if retries exhausted.
         """
-        # First check hourly limit (non-blocking check)
+        # First check daily quota (free-tier per-day cap), then hourly.
+        if self.daily_limiter and not await self.daily_limiter.check_and_record():
+            logger.warning("Daily rate limit exceeded. Request blocked.")
+            return False
         if not await self.hourly_limiter.check_and_record():
             logger.warning("Hourly rate limit exceeded. Request blocked.")
             return False
-        
+
         # Then wait for minute limit (may block with retries)
         return await self.minute_limiter.wait()
     
@@ -520,15 +644,20 @@ class DualLayerRateLimiter:
         minute_metrics = self.minute_limiter.get_metrics()
         hourly_metrics = self.hourly_limiter.get_metrics()
         
+        daily_metrics = self.daily_limiter.get_metrics() if self.daily_limiter else None
+        daily_available = (not daily_metrics["at_limit"]) if daily_metrics else True
         return {
             "minute_limiter": minute_metrics,
             "hourly_limiter": hourly_metrics,
+            "daily_limiter": daily_metrics,
             "combined_status": {
                 "minute_available": minute_metrics.get("success_rate", 0) > 0.5,
                 "hourly_available": not hourly_metrics["at_limit"],
+                "daily_available": daily_available,
                 "overall_available": (
-                    minute_metrics.get("success_rate", 0) > 0.5 and 
-                    not hourly_metrics["at_limit"]
+                    minute_metrics.get("success_rate", 0) > 0.5 and
+                    not hourly_metrics["at_limit"] and
+                    daily_available
                 )
             }
         }
@@ -537,12 +666,15 @@ class DualLayerRateLimiter:
         """Get combined status summary."""
         minute_status = self.minute_limiter.get_status_summary()
         hourly_status = self.hourly_limiter.get_status_summary()
-        
+        daily_status = self.daily_limiter.get_status_summary() if self.daily_limiter else None
+
         return {
             "minute_limiter": minute_status,
             "hourly_limiter": hourly_status,
+            "daily_limiter": daily_status,
             "overall_status": "healthy" if (
-                minute_status.get("status") == "healthy" and 
-                hourly_status.get("status") == "available"
+                minute_status.get("status") == "healthy" and
+                hourly_status.get("status") == "available" and
+                (daily_status is None or daily_status.get("status") == "available")
             ) else "degraded"
         }

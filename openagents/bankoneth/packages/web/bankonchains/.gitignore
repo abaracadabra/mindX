@@ -1,0 +1,6 @@
+# secrets — NEVER commit. The CoinMarketCap API key is server-side only.
+.env
+.env.local
+holders.json
+*.key
+*.secret

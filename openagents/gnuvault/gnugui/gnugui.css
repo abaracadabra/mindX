@@ -1,0 +1,78 @@
+/* GNUGUI — cypherpunk2048 theme. GPL-3.0-or-later. */
+:root{
+  --bg:#0a0a12; --panel:#101220; --gold:#d4af37; --gold-dim:#7a6322;
+  --green:#36966e; --blue:#4078c8; --ink:#e4e4ec; --muted:#9698a8;
+}
+*{ box-sizing:border-box; }
+html,body{ margin:0; height:100%; background:radial-gradient(120% 120% at 50% 0%,#121426 0%,var(--bg) 60%); color:var(--ink);
+  font-family:"DejaVu Sans",system-ui,Arial,sans-serif; display:grid; place-items:center; }
+#gnugui{ width:min(420px,94vw); }
+
+.gg-win{ position:relative; padding:16px; border:1px solid var(--gold);
+  border-radius:16px; background:linear-gradient(160deg,rgba(20,18,28,.92),rgba(8,11,20,.92));
+  box-shadow:0 0 0 1px rgba(54,150,110,.18) inset, 0 18px 60px rgba(0,0,0,.6); }
+/* No "armed" state — recognition is silent. The window looks identical whether
+   or not a wallet address is present (security by obscurity). */
+
+.gg-crest{ width:42px; height:42px; margin:0 auto 6px; background:no-repeat center/contain;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><circle cx='100' cy='100' r='78' fill='none' stroke='%23d4af37' stroke-width='3'/><circle cx='100' cy='100' r='58' fill='none' stroke='%2336966e' stroke-width='3'/><circle cx='100' cy='86' r='13' fill='%23d4af37'/><path d='M93 95 h14 l-4 30 h-6 z' fill='%23d4af37'/></svg>"); }
+.gg-crest.big{ width:84px; height:84px; }
+
+.gg-disp{ background:rgba(0,0,0,.42); border:1px solid var(--gold-dim); border-radius:10px;
+  padding:14px 14px 10px; margin-bottom:12px; min-height:74px; text-align:right; }
+.gg-expr{ font-family:"DejaVu Sans Mono",monospace; font-size:26px; color:var(--gold);
+  word-break:break-all; line-height:1.2; min-height:31px; }
+
+.gg-track{ overflow:hidden; border-radius:10px; }
+.gg-panels{ display:flex; width:300%; transition:transform .28s cubic-bezier(.4,0,.2,1); }
+.gg-pad{ width:33.333%; flex:0 0 33.333%; display:grid; gap:8px; padding:2px; }
+
+.gg-key{ appearance:none; border:0; cursor:pointer; user-select:none;
+  padding:14px 0; border-radius:10px; font-size:18px; font-weight:600;
+  background:#1a1c2a; color:var(--ink); transition:background .12s, transform .05s; }
+.gg-key:hover{ background:#23263a; }
+.gg-key:active{ transform:translateY(1px); }
+.gg-key.op{ background:#1d2438; color:var(--blue); }
+.gg-key.fn{ background:#181a28; color:var(--muted); font-size:15px; }
+.gg-key.eq{ background:linear-gradient(135deg,var(--green),#245c45); color:#fff; }
+.gg-key.plus{ position:relative; overflow:hidden; background:linear-gradient(135deg,var(--gold),#b8932f); color:#1a1306; font-size:22px; }
+/* The + button is just the + button. Only while it is being held (and only when
+   a wallet address is present) does a subtle fill confirm the gesture — feedback
+   for the one performing it, never an advertisement of the door. */
+.gg-key.plus.charging::after{ content:""; position:absolute; inset:0; background:rgba(54,150,110,.45);
+  transform-origin:left; transform:scaleX(0); animation:gg-charge .65s linear forwards; }
+@keyframes gg-charge{ to{ transform:scaleX(1); } }
+
+.gg-nav{ display:flex; align-items:center; justify-content:space-between; margin-top:12px; }
+.gg-arrow{ background:none; border:0; color:var(--gold); font-size:24px; cursor:pointer; padding:0 8px; }
+.gg-dots{ display:flex; gap:8px; }
+.gg-dot{ width:8px; height:8px; border-radius:50%; background:#2a2d40; cursor:pointer; }
+.gg-dot.on{ background:var(--gold); box-shadow:0 0 8px var(--gold); }
+
+.gg-status{ margin-top:10px; text-align:center; font-size:.72rem; color:var(--gold-dim); }
+
+.gg-vault{ position:fixed; inset:0; display:none; place-items:center; background:rgba(5,6,12,.86); backdrop-filter:blur(6px); }
+.gg-vault.show{ display:grid; animation:gg-fade .5s ease; }
+@keyframes gg-fade{ from{ opacity:0; } to{ opacity:1; } }
+.gg-vault-card{ width:min(420px,92vw); text-align:center; padding:28px; border:1px solid var(--gold);
+  border-radius:16px; background:linear-gradient(160deg,#141426,#0a0a12); }
+.gg-vault-card h2{ color:var(--gold); margin:.4em 0; }
+.gg-vault-card p{ color:var(--ink); font-size:.92rem; }
+.gg-vault-card code{ color:var(--green); word-break:break-all; }
+.gg-sig{ margin:14px 0; font-size:.74rem; color:var(--muted); }
+.gg-vault-card .gg-key{ margin-top:8px; width:100%; }
+
+/* mausoleum */
+.gg-tombs{ list-style:none; margin:12px 0; padding:0; max-height:34vh; overflow:auto; text-align:left; }
+.gg-tombs li{ display:flex; justify-content:space-between; align-items:center; gap:8px;
+  padding:9px 10px; border:1px solid var(--gold-dim); border-radius:8px; margin-bottom:6px; background:rgba(0,0,0,.25); }
+.gg-tombs li.empty{ justify-content:center; color:var(--muted); border-style:dashed; }
+.gg-tombs .t{ color:var(--gold); font-family:"DejaVu Sans Mono",monospace; word-break:break-all; }
+.gg-tombs .lk{ background:none; border:0; color:var(--green); cursor:pointer; font-size:.82rem; padding:2px 6px; }
+.gg-tombs .lk:hover{ color:var(--gold); }
+.gg-inter{ display:grid; grid-template-columns:1fr 1fr auto; gap:8px; margin:8px 0; }
+.gg-inter input{ background:rgba(0,0,0,.4); border:1px solid var(--gold-dim); border-radius:8px;
+  color:var(--ink); padding:10px; font-size:.9rem; min-width:0; }
+.gg-inter .gg-key.plus{ padding:10px 14px; font-size:14px; }
+.gg-out{ min-height:1.2em; margin:6px 0; font-size:.8rem; color:var(--green); word-break:break-all; }
+.gg-out code{ color:var(--gold); }

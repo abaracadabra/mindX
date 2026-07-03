@@ -27,6 +27,7 @@ class TaskType(Enum):
     DATA_ANALYSIS = "data_analysis"
     WRITING = "writing"
     SPEED_SENSITIVE = "speed_sensitive"
+    HEALTH_CHECK = "health_check"   # lightweight liveness probe (AGInt status check / self-repair verify)
 
 class ModelCapability:
     """A data structure representing the known capabilities and metrics of a single LLM."""

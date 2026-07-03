@@ -1,0 +1,43 @@
+{
+  "project": "sample",
+  "version": "0.1.0",
+  "required_min_tier": "tier1",
+  "required_approvers": [],
+  "mainnet_two_step": true,
+  "stages": [
+    {
+      "chain": "anvil-local",
+      "chain_id": 1337,
+      "driver": "foundry",
+      "is_mainnet": false,
+      "rpc_env": "ANVIL_RPC_URL",
+      "deployer_entity": "blockchain.deployer.anvil-local",
+      "gas_budget_usd": 0,
+      "foundry": {
+        "contracts_root": "daio/contracts",
+        "script": "script/DeployTemplate.s.sol:DeployTemplate",
+        "profile": "thot_commitment",
+        "receipt_stage": "sample",
+        "verify": false,
+        "env": { "DEPLOY_TARGET": "true" }
+      }
+    },
+    {
+      "chain": "algorand-localnet",
+      "chain_id": 4160,
+      "driver": "algorand",
+      "is_mainnet": false,
+      "rpc_env": "ALGOD_LOCALNET_URL",
+      "deployer_entity": "algorand.deployer.localnet",
+      "gas_budget_usd": 0,
+      "algorand": {
+        "artifacts_root": "daio/contracts/agenticplace/out",
+        "contracts": ["AgenticMinter"],
+        "network": "localnet",
+        "algod_env": "ALGOD_LOCALNET_URL",
+        "deployer_mnemonic_env": "ALGORAND_DEPLOYER_MNEMONIC_LOCALNET",
+        "app_args": []
+      }
+    }
+  ]
+}

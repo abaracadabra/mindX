@@ -1,0 +1,25 @@
+{
+  "_comment": "Hierarchical participant authorization for the multi-chain deployer (agents/deployer). A UI wallet authorizes a deploy by signing a challenge; the recovered signer maps to a participant entity (daio/agents/agent_map.json), whose dojo verification tier + the rules below decide whether the deploy proceeds and whether it needs operator confirmation. FAILS CLOSED: if this file is missing/empty the conservative `default` applies.",
+  "default": {
+    "min_tier": "tier2",
+    "rate_limit_per_hour": 3
+  },
+  "entities": {
+    "guardian_agent_main": {
+      "authorized_chains": ["anvil-local", "algorand-localnet", "base-sepolia", "algorand-testnet", "base", "algorand-mainnet"],
+      "min_tier": "tier3",
+      "rate_limit_per_hour": 20
+    },
+    "ceo_agent_main": {
+      "authorized_chains": ["anvil-local", "algorand-localnet", "base-sepolia", "algorand-testnet", "base", "algorand-mainnet"],
+      "min_tier": "tier4",
+      "rate_limit_per_hour": 10
+    },
+    "coordinator_agent_main": {
+      "authorized_chains": ["anvil-local", "algorand-localnet", "base-sepolia", "algorand-testnet"],
+      "min_tier": "tier2",
+      "rate_limit_per_hour": 10
+    }
+  },
+  "mainnet_required_approvers": ["guardian_agent_main"]
+}

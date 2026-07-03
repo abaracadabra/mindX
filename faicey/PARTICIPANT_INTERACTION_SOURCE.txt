@@ -1,0 +1,1 @@
+participant_interaction.js lives in ../facerig/voicey2/ — extracted from mindX dashboard 2026-06

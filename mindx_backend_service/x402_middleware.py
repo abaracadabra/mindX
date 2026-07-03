@@ -37,7 +37,9 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, Response
+
+from mindx_backend_service import x402_protocol as xp
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,12 @@ logger = logging.getLogger(__name__)
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _PRICING_PATH = _PROJECT_ROOT / "data" / "config" / "x402_pricing.json"
 _QUOTA_LEDGER_PATH = _PROJECT_ROOT / "data" / "governance" / "free_quota_ledger.json"
+# Persistent settlement ledger — doubles as the permanent replay guard (seen
+# nonces/txids never expire) AND the unified cross-rail audit journal.
+_SETTLEMENT_LEDGER_PATH = _PROJECT_ROOT / "data" / "governance" / "x402_settlement_ledger.json"
+# SIWx (CAIP-122) sessions — an account that settled within its window may skip
+# re-payment on subsequent calls (reference §5).
+_SIWX_SESSIONS_PATH = _PROJECT_ROOT / "data" / "governance" / "x402_siwx_sessions.json"
 
 _pricing_cache: Dict[str, Any] = {}
 _pricing_loaded_at: float = 0.0
@@ -143,10 +151,14 @@ def _record_quota_use(wallet: str) -> None:
     _save_quota_ledger(ledger)
 
 
-# ─── Settlement verification ─────────────────────────────────────────────
+# ─── Settlement ledger (permanent replay guard + unified audit journal) ───
 
 
-_settlement_cache: Dict[str, Tuple[float, Dict[str, Any]]] = {}
+# Short in-memory idempotency window so a *network retry* of the exact same
+# payment within seconds returns the same receipt instead of re-hitting the
+# facilitator. The *permanent* guard is the on-disk seen-key ledger below.
+_idem_cache: Dict[str, Tuple[float, Dict[str, Any]]] = {}
+_seen_keys: Optional[set] = None  # lazily hydrated from the ledger file
 
 
 def _settlement_cache_ttl() -> int:
@@ -155,31 +167,73 @@ def _settlement_cache_ttl() -> int:
     return int(ido.get("settlement_cache_ttl_seconds", 60))
 
 
-def _verify_x_payment(header_value: str, endpoint_id: str, max_amount: int) -> Dict[str, Any]:
-    """Verify a base64-encoded X-PAYMENT envelope.
-
-    The full contract is in ``docs/services/x402_as_a_service.md`` §3. This
-    implementation does *syntactic* verification on every request and defers
-    *cryptographic* verification to the facilitator at the URL configured in
-    pricing config.
-
-    In test / dev mode (``MINDX_X402_TEST_MODE=1``), the function accepts any
-    syntactically-valid envelope and returns a stub success — the receipt
-    contains ``tx_hash="0xtest"`` to make the test path observable.
-
-    Returns the verified settlement record (with ``tx_hash``, ``rail``,
-    ``amount_microusd``) on success. Raises ``HTTPException(402)`` on failure
-    so the caller falls back to the standard 402 path.
-    """
+def _load_settlement_ledger() -> List[Dict[str, Any]]:
+    if not _SETTLEMENT_LEDGER_PATH.exists():
+        return []
     try:
-        decoded = base64.b64decode(header_value).decode("utf-8")
-        env = json.loads(decoded)
-    except Exception as exc:
-        raise HTTPException(status_code=402, detail={
-            "code": "x402_malformed_payment",
-            "reason": f"could not decode X-PAYMENT: {exc}",
-        })
+        with _SETTLEMENT_LEDGER_PATH.open("r", encoding="utf-8") as fh:
+            raw = json.load(fh)
+        return raw if isinstance(raw, list) else []
+    except Exception:
+        return []
 
+
+def _seen_replay_keys() -> set:
+    """Hydrate (once) and return the set of permanent replay keys."""
+    global _seen_keys
+    if _seen_keys is None:
+        _seen_keys = {
+            e.get("replay_key") for e in _load_settlement_ledger() if e.get("replay_key")
+        }
+    return _seen_keys
+
+
+def _append_settlement(record: Dict[str, Any]) -> None:
+    """Append a settled payment to the unified ledger and mark its replay key."""
+    try:
+        _SETTLEMENT_LEDGER_PATH.parent.mkdir(parents=True, exist_ok=True)
+        ledger = _load_settlement_ledger()
+        ledger.append(record)
+        tmp = _SETTLEMENT_LEDGER_PATH.with_suffix(".json.tmp")
+        with tmp.open("w", encoding="utf-8") as fh:
+            json.dump(ledger, fh, indent=2)
+        tmp.replace(_SETTLEMENT_LEDGER_PATH)
+        if record.get("replay_key"):
+            _seen_replay_keys().add(record["replay_key"])
+    except Exception as exc:
+        logger.warning(f"x402: failed to persist settlement ledger: {exc}")
+
+
+# ─── Settlement verification ─────────────────────────────────────────────
+
+
+def _rail_facilitator(network: str) -> Optional[str]:
+    """Return the facilitator URL for ``network`` — the rail's own
+    ``extra.facilitator`` (e.g. GoPlausible for AVM) wins over the global one."""
+    cfg = _load_pricing()
+    if not isinstance(cfg, dict):
+        return None
+    caip2 = xp.to_caip2(network)
+    for rail in (cfg.get("rails", {}) or {}).values():
+        if not isinstance(rail, dict):
+            continue
+        if xp.to_caip2(str(rail.get("network", ""))) == caip2:
+            fac = (rail.get("extra", {}) or {}).get("facilitator")
+            if fac:
+                return str(fac)
+    return (cfg.get("facilitator") or {}).get("url")
+
+
+def _verify_payment(env: Dict[str, Any], endpoint_id: str, max_amount: int) -> Dict[str, Any]:
+    """Verify a decoded x402 payment envelope (v1 or v2).
+
+    Syntactic checks on every request; cryptographic verification deferred to the
+    rail's facilitator. Permanent replay protection via the on-disk seen-key
+    ledger (EIP-3009 nonce / AVM txid). In test mode (``MINDX_X402_TEST_MODE=1``)
+    a syntactically-valid envelope returns a stub success (``tx_hash="0xtest"``).
+
+    Raises ``HTTPException(402)`` on malformed/unverified, ``409`` on replay.
+    """
     if not isinstance(env, dict):
         raise HTTPException(status_code=402, detail={"code": "x402_malformed_payment"})
 
@@ -192,33 +246,35 @@ def _verify_x_payment(header_value: str, endpoint_id: str, max_amount: int) -> D
             "reason": "envelope must have scheme='exact', network, payload",
         })
 
-    # Idempotency cache: a verified settlement is honored for ~60s on retry.
-    cache_key = f"{network}:{json.dumps(payload, sort_keys=True)[:256]}"
     now = time.time()
-    ttl = _settlement_cache_ttl()
-    cached = _settlement_cache.get(cache_key)
-    if cached and (now - cached[0]) < ttl:
+    rkey = xp.replay_key(str(network), payload)
+
+    # Permanent replay guard: a nonce/txid settled before is never honored again.
+    if rkey and rkey in _seen_replay_keys():
+        raise HTTPException(status_code=409, detail={
+            "code": "x402_replay",
+            "reason": "this payment authorization has already been settled",
+            "replay_key": rkey,
+        })
+
+    # Short idempotency window for benign network retries (same payment, seconds).
+    idem_key = rkey or f"{xp.to_caip2(str(network))}:{json.dumps(payload, sort_keys=True)[:256]}"
+    cached = _idem_cache.get(idem_key)
+    if cached and (now - cached[0]) < _settlement_cache_ttl():
         return cached[1]
 
     test_mode = os.environ.get("MINDX_X402_TEST_MODE", "0").strip() == "1"
     if test_mode:
-        record = {
-            "rail": network,
-            "tx_hash": "0xtest",
-            "amount_microusd": max_amount,
-            "verified_at": now,
-            "facilitator": "test-stub",
-        }
-        _settlement_cache[cache_key] = (now, record)
+        record = _settlement_record(network, "0xtest", max_amount, now, "test-stub", rkey, endpoint_id, payload)
+        _idem_cache[idem_key] = (now, record)
+        _append_settlement(record)
         return record
 
-    # Production path: call the facilitator's /verify endpoint.
-    cfg = _load_pricing()
-    fac = (cfg.get("facilitator") or {}).get("url") if isinstance(cfg, dict) else None
+    fac = _rail_facilitator(str(network))
     if not fac:
         raise HTTPException(status_code=503, detail={
             "code": "x402_facilitator_not_configured",
-            "reason": "facilitator URL missing from x402_pricing.json",
+            "reason": "no facilitator URL for this rail in x402_pricing.json",
         })
 
     try:
@@ -228,7 +284,7 @@ def _verify_x_payment(header_value: str, endpoint_id: str, max_amount: int) -> D
                 fac.rstrip("/") + "/verify",
                 json={
                     "scheme": scheme,
-                    "network": network,
+                    "network": xp.to_caip2(str(network)),
                     "payload": payload,
                     "endpoint": endpoint_id,
                     "max_amount_microusd": max_amount,
@@ -236,47 +292,66 @@ def _verify_x_payment(header_value: str, endpoint_id: str, max_amount: int) -> D
             )
     except Exception as exc:
         raise HTTPException(status_code=503, detail={
-            "code": "x402_facilitator_unreachable",
-            "reason": str(exc),
+            "code": "x402_facilitator_unreachable", "reason": str(exc),
         })
 
     if resp.status_code != 200:
         raise HTTPException(status_code=402, detail={
-            "code": "x402_facilitator_rejected",
-            "status": resp.status_code,
-            "body": resp.text[:512],
+            "code": "x402_facilitator_rejected", "status": resp.status_code, "body": resp.text[:512],
         })
-
     try:
         body = resp.json()
     except Exception:
         raise HTTPException(status_code=402, detail={"code": "x402_facilitator_bad_response"})
-
     if not body.get("verified"):
         raise HTTPException(status_code=402, detail={
-            "code": "x402_settlement_not_verified",
-            "reason": body.get("reason", ""),
+            "code": "x402_settlement_not_verified", "reason": body.get("reason", ""),
         })
 
-    record = {
-        "rail": network,
-        "tx_hash": body.get("txHash", ""),
-        "amount_microusd": int(body.get("amount", max_amount)),
-        "verified_at": now,
+    record = _settlement_record(
+        network, body.get("txHash", ""), int(body.get("amount", max_amount)), now, fac, rkey, endpoint_id, payload
+    )
+    _idem_cache[idem_key] = (now, record)
+    _append_settlement(record)
+    return record
+
+
+def _settlement_record(network, tx_hash, amount, ts, fac, rkey, endpoint_id, payload) -> Dict[str, Any]:
+    """Build a unified-ledger settlement record (one shape across all rails)."""
+    auth = payload.get("authorization") if isinstance(payload, dict) else {}
+    return {
+        "rail": xp.rail_for(str(network)) if _rail_ok(network) else str(network),
+        "network": xp.to_caip2(str(network)),
+        "scheme": "exact",
+        "tx_hash": tx_hash,
+        "amount_microusd": int(amount),
+        "payer": (auth or {}).get("from", "") if isinstance(auth, dict) else "",
+        "payTo": (auth or {}).get("to", "") if isinstance(auth, dict) else "",
+        "endpoint": endpoint_id,
+        "replay_key": rkey,
+        "verified_at": ts,
         "facilitator": fac,
     }
-    _settlement_cache[cache_key] = (now, record)
-    return record
+
+
+def _rail_ok(network) -> bool:
+    try:
+        xp.rail_for(str(network))
+        return True
+    except Exception:
+        return False
 
 
 # ─── 402 envelope builder ────────────────────────────────────────────────
 
 
-def _build_402_envelope(endpoint_id: str, max_amount: int) -> Dict[str, Any]:
-    """Construct the triple-rail 402 envelope per the spec.
+def _build_402_envelope(endpoint_id: str, max_amount: int) -> Tuple[Dict[str, Any], str]:
+    """Construct the triple-rail 402 challenge (x402 v2 + v1 body).
 
-    The endpoint_id is used to fill in the ``resource`` field; max_amount
-    overrides the rail's default amount when present.
+    Returns ``(json_body, payment_required_header)``. Networks are emitted in
+    CAIP-2 form; the body carries both ``accepts`` (v2) and ``paymentRequirements``
+    (v1) so either client finds what it expects. Rails whose ``payTo`` is unset
+    are skipped (advertised-but-not-settling).
     """
     cfg = _load_pricing()
     rails_cfg = cfg.get("rails", {}) if isinstance(cfg, dict) else {}
@@ -284,7 +359,6 @@ def _build_402_envelope(endpoint_id: str, max_amount: int) -> Dict[str, Any]:
     for name, rail in rails_cfg.items():
         if not isinstance(rail, dict):
             continue
-        # Skip rails whose payTo is empty / zero (rail advertised but not settling yet).
         pay_to = str(rail.get("payTo", "")).strip()
         if not pay_to or pay_to == "0x0000000000000000000000000000000000000000":
             continue
@@ -292,22 +366,49 @@ def _build_402_envelope(endpoint_id: str, max_amount: int) -> Dict[str, Any]:
             "scheme": rail.get("scheme", "exact"),
             "network": rail.get("network", name),
             "asset": rail.get("asset", ""),
-            "maxAmountRequired": str(max_amount),
+            "amount": str(max_amount),                # v2 field name
+            "maxAmountRequired": str(max_amount),     # v1 field name
             "payTo": pay_to,
             "resource": endpoint_id,
             "description": rail.get("_comment", ""),
             "mimeType": "application/json",
+            "maxTimeoutSeconds": 60,
             "extra": rail.get("extra", {}),
         })
 
-    return {
-        "code": "x402_payment_required",
-        "message": "This endpoint requires payment. Settle on any of the offered rails and re-submit with X-PAYMENT.",
-        "endpoint": endpoint_id,
-        "paymentRequirements": requirements,
-        "x402Version": 1,
-        "_note": "See docs/services/x402_as_a_service.md for the protocol contract.",
-    }
+    body, header = xp.encode_requirements(
+        endpoint_id, requirements,
+        message="This endpoint requires payment. Settle on an offered rail and retry with PAYMENT-SIGNATURE (v2) or X-PAYMENT (v1).",
+    )
+    body["_note"] = "See docs/services/x402_as_a_service.md for the protocol contract."
+    return body, header
+
+
+# ─── SIWx (CAIP-122) sessions ─────────────────────────────────────────────
+
+
+def _siwx_session_ok(request: Request) -> bool:
+    """True if the request carries a still-valid SIWx session that already
+    settled within its window — lets autonomous repeat calls skip re-payment.
+
+    The session token is an ``X-SIWX-SESSION`` header naming a CAIP-10 account.
+    Sessions are minted out-of-band (POST /x402/siwx) after one settled payment
+    and stored in ``data/governance/x402_siwx_sessions.json``.
+    """
+    token = request.headers.get("X-SIWX-SESSION")
+    if not token:
+        return False
+    try:
+        if not _SIWX_SESSIONS_PATH.exists():
+            return False
+        with _SIWX_SESSIONS_PATH.open("r", encoding="utf-8") as fh:
+            sessions = json.load(fh)
+        sess = sessions.get(token) if isinstance(sessions, dict) else None
+        if not isinstance(sess, dict):
+            return False
+        return float(sess.get("expires", 0)) > time.time()
+    except Exception:
+        return False
 
 
 # ─── Catalogue mirror ────────────────────────────────────────────────────
@@ -390,7 +491,7 @@ def x402_required(endpoint_id: str, max_amount_microusd: Optional[int] = None) -
     (``/agents/{agent_id}/evolve``) — the middleware uses it as a key, not
     a route match.
     """
-    async def _dep(request: Request) -> Dict[str, Any]:
+    async def _dep(request: Request, response: Response) -> Dict[str, Any]:
         cfg = _load_pricing()
         endpoints = cfg.get("endpoints", {}) if isinstance(cfg, dict) else {}
         rule = endpoints.get(endpoint_id, {})
@@ -404,21 +505,41 @@ def x402_required(endpoint_id: str, max_amount_microusd: Optional[int] = None) -
             await _emit_free_quota_event(wallet, endpoint_id, used, limit)
             return {"path": "free_quota", "wallet": wallet, "used": used + 1, "limit": limit}
 
-        x_payment = request.headers.get("X-PAYMENT")
-        if x_payment:
-            record = _verify_x_payment(x_payment, endpoint_id, amount)
-            await _emit_settlement_event(wallet, endpoint_id, record)
-            return {"path": "x402_settled", "wallet": wallet, **record}
+        # SIWx (CAIP-122) session: a wallet that established a session by paying
+        # once may skip re-payment within its window (autonomous repeat calls).
+        if _siwx_session_ok(request):
+            return {"path": "siwx_session", "wallet": wallet}
 
-        envelope = _build_402_envelope(endpoint_id, amount)
-        if not envelope["paymentRequirements"]:
-            # No rails currently settling → upgrade to 503 so the caller knows
-            # the operator hasn't finished configuring x402 yet.
+        # Accept the payment in either v2 (PAYMENT-SIGNATURE) or v1 (X-PAYMENT).
+        raw_present = bool(
+            request.headers.get(xp.HEADER_PAYMENT_SIGNATURE) or request.headers.get(xp.HEADER_X_PAYMENT)
+        )
+        env, version = xp.decode_payment(request.headers)
+        if env is not None:
+            record = _verify_payment(env, endpoint_id, amount)
+            await _emit_settlement_event(wallet, endpoint_id, record)
+            # Echo settlement in both v2 + v1 response headers.
+            for hk, hv in xp.settlement_headers(record).items():
+                response.headers[hk] = hv
+            return {"path": "x402_settled", "wallet": wallet, "x402Version": version, **record}
+        if raw_present:
+            # A payment header was sent but could not be decoded — surface it
+            # rather than silently re-issuing the challenge.
+            raise HTTPException(status_code=402, detail={
+                "code": "x402_malformed_payment",
+                "reason": "payment header present but could not be base64/JSON-decoded",
+            })
+
+        body, payment_required_header = _build_402_envelope(endpoint_id, amount)
+        if not body.get("accepts"):
+            # No rails currently settling → 503 so the caller knows the operator
+            # hasn't finished configuring x402 yet.
             raise HTTPException(status_code=503, detail={
                 "code": "x402_no_rails_configured",
                 "reason": "No x402 rails have a payTo address yet. Operator must update data/config/x402_pricing.json.",
             })
-        raise HTTPException(status_code=402, detail=envelope)
+        # 402 carries the v2 PAYMENT-REQUIRED header AND the v1/v2 JSON body.
+        raise HTTPException(status_code=402, detail=body, headers={xp.HEADER_PAYMENT_REQUIRED: payment_required_header})
 
     _dep.__name__ = f"x402_required_for_{endpoint_id.strip('/').replace('/', '_').replace('{', '').replace('}', '')}"
     return _dep

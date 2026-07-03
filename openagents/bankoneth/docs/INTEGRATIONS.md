@@ -4,20 +4,28 @@ How to consume bankoneth from each canonical consumer.
 
 ## PARSEC (first-class)
 
-`@bankoneth/parsec-adapter` ships a `BankonethComponent` that conforms to
-PARSEC's wallet-component contract. Register it once at PARSEC startup:
+Use **`@bankoneth/parsec-view`** — a native parsec view-module (vanilla TS +
+Blueprint, no Lit). Copy `packages/parsec-view/src/parsec-adapter.example.ts`
+into `parsec-wallet/src/views/bankon-deploy.ts`, register the route, and serve
+`packages/web/public/*` under the wallet's `/bankon` path:
 
 ```ts
-import { BankonethComponent } from "@bankoneth/parsec-adapter";
-
-parsec.registerComponent(new BankonethComponent());
+// parsec-wallet/src/main.ts
+registerView('bankon-deploy',
+  lazyView(async () => (await import('./views/bankon-deploy')).bankonDeployView));
+// reach it: store.navigate('bankon-deploy')
 ```
 
-PARSEC then surfaces "bankon.eth" as a tab. Inside it, the user sees all
-three flows (A subname / B `.eth` purchase / C hosted-`.eth` issuance) with
-the standard tri-rail payment picker.
+It renders through parsec's own `el`/`btn`/`store`/`ethers`, so the user gets
+the subname mint, agent registry, resolve, and a generic ABI explorer as a
+first-class parsec view. The `bankon` namespace already exists in
+`parsec-wallet/src/lib/namespaces/registry` (the `name-*` views, Algorand/NFD);
+this adds the EVM bankon.eth surface alongside it. See
+[`../packages/parsec-view/README.md`](../packages/parsec-view/README.md).
 
-The `nfdminter` sibling (for `.algo` names) is registered the same way.
+> **Superseded:** the Lit `@bankoneth/parsec-adapter` (`BankonethComponent`)
+> predates the discovery that parsec is vanilla-TS, not Lit. It still works for
+> genuinely Lit-based hosts, but for parsec-wallet use `parsec-view`.
 
 ## mindX
 

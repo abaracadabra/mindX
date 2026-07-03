@@ -1,0 +1,64 @@
+/*!
+ * m4r2d2-player.css — Music 4 Robots 2 Dance 2 pro player styling.
+ * Theme via [data-theme="dark"|"light"]. GPL-3.0 · take·own·use·share.
+ */
+.m4r2d2 { --m4-accent: #ff5500; --m4-bg: #111; --m4-fg: #eee; --m4-muted: #999;
+  display: block; max-width: 100%; }
+.m4r2d2[data-theme="light"] { --m4-bg: #f6f6f6; --m4-fg: #161616; --m4-muted: #666; }
+
+.m4r2d2 .m4r2d2__iframe { display: block; width: 100%; border: 0; border-radius: 8px 8px 0 0; }
+
+/* control bar */
+.m4r2d2 .m4r2d2__bar {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--m4-bg); color: var(--m4-fg);
+  padding: 8px 10px; border-radius: 0 0 8px 8px;
+  font: 12px/1.2 Interstate, "Lucida Grande", Verdana, Tahoma, sans-serif;
+}
+.m4r2d2 .m4r2d2__btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; padding: 0; cursor: pointer;
+  color: var(--m4-fg); background: transparent; border: 0; border-radius: 50%;
+}
+.m4r2d2 .m4r2d2__btn:hover { background: rgba(127,127,127,.18); }
+.m4r2d2 .m4r2d2__btn--play { color: #fff; background: var(--m4-accent); }
+.m4r2d2 .m4r2d2__btn--play:hover { filter: brightness(1.08); }
+.m4r2d2 .m4r2d2__time { color: var(--m4-muted); min-width: 34px; text-align: center; font-variant-numeric: tabular-nums; }
+.m4r2d2 .m4r2d2__seek { flex: 1 1 auto; accent-color: var(--m4-accent); height: 4px; }
+.m4r2d2 .m4r2d2__vol { width: 70px; accent-color: var(--m4-accent); height: 4px; }
+
+/* lazy facade */
+.m4r2d2 .m4r2d2__facade {
+  position: relative; display: flex; align-items: center; gap: 14px;
+  width: 100%; min-height: 96px; padding: 16px 18px; cursor: pointer;
+  color: #fff; text-align: left; border: 0; border-radius: 8px;
+  background: var(--m4-bg) center/cover no-repeat;
+  font: 14px/1.3 Interstate, "Lucida Grande", Verdana, Tahoma, sans-serif;
+}
+.m4r2d2 .m4r2d2__facade::after {
+  content: ""; position: absolute; inset: 0; border-radius: 8px;
+  background: linear-gradient(90deg, rgba(0,0,0,.66), rgba(0,0,0,.30));
+}
+.m4r2d2 .m4r2d2__facade > * { position: relative; z-index: 1; }
+.m4r2d2 .m4r2d2__facade-play {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 52px; height: 52px; flex: 0 0 auto; color: #fff;
+  background: var(--m4-accent); border-radius: 50%;
+}
+.m4r2d2 .m4r2d2__facade-play svg { width: 26px; height: 26px; }
+.m4r2d2 .m4r2d2__facade-meta { display: flex; flex-direction: column; }
+.m4r2d2 .m4r2d2__facade-meta strong { font-size: 16px; }
+.m4r2d2 .m4r2d2__facade-meta span { color: #cfcfcf; }
+.m4r2d2 .m4r2d2__facade.is-loading { opacity: .6; pointer-events: none; }
+
+/* sticky dock — docks to bottom of viewport once playing */
+.m4r2d2.m4r2d2--sticky.m4r2d2--stuck {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 9999;
+  max-width: none; box-shadow: 0 -4px 24px rgba(0,0,0,.4);
+}
+.m4r2d2.m4r2d2--sticky.m4r2d2--stuck .m4r2d2__iframe { height: 0 !important; }
+.m4r2d2.m4r2d2--sticky.m4r2d2--stuck .m4r2d2__bar { border-radius: 0; padding: 10px 16px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .m4r2d2 * { transition: none !important; }
+}

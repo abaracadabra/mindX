@@ -27,13 +27,17 @@ def _uuid7_like() -> str:
 
 EventKind = Literal[
     "memory.write",          # MemoryAgent.save_timestamped_memory
+    "memory.embed",          # doc/chunk embedded into pgvector (semantic index)
     "memory.consolidate",    # STM → LTM promotion
     "memory.dream",          # MachineDreamCycle phase event
     "memory.offload",        # IPFS push (storage.offload_projector)
     "memory.anchor",         # on-chain CID anchor (storage.anchor)
     "godel.choice",          # MemoryAgent.log_godel_choice
+    "train.ascended",        # mindXtrain right-apex ascent ran (knowledge->weights)
+    "train.promoted",        # ascended generation accepted + served as Ollama model
     "board.session",         # boardroom session completion
     "board.vote",            # individual vote within a session
+    "dojo.decision",         # DojoArbiter consensus decision (boardroom/warcouncil/mindXtrain/DAIO → one verdict)
     "tool.invoke",           # BaseTool.execute() entry (opt-in)
     "tool.result",           # BaseTool.execute() exit (opt-in)
     "skill.invoke",          # future: skill registry
@@ -53,12 +57,17 @@ EventKind = Literal[
     "marketing.boardroom_routed",    # marketinga.agent — campaign routed through Boardroom; outcome + per-soldier votes
     "marketing.soldier_skill_executed",  # any soldier — per-soldier marketing skill ran post-vote
     "narrative.recap",               # NarratorAgent autonomous summary OR operator-pinned recap (DeltaVerse narrative channel)
-    "publication.attempted",         # PublicationOrchestrator — publish_to_rage invoked
-    "publication.published",         # PublicationOrchestrator — publish_to_rage returned a post_id
-    "publication.coalesced",         # PublicationOrchestrator — trigger fell within MIN_GAP_S, recorded as coalesced
+    "publication.attempted",         # PublicationOrchestrator picked a trigger and started the publish pipeline
+    "publication.published",         # AuthorAgent.publish_to_rage returned post_id + url
+    "publication.coalesced",         # publish suppressed by MIN_GAP_S rate limit
     "bug.crushed",                   # operator/SEA/CI — security alert batch closed (severities + count in payload)
     "dreaming.improved",             # machine_dreaming — code change OR statistical-outlier insight burst
     "milestone.recognized",          # AGInt.milestone_recognition — system-state milestone recognized
+    "contract.deploy.intent",        # DeployerService — wallet-authorized deploy intent created (preflight, no broadcast)
+    "contract.deploy.confirmed",     # DeployerService — per-chain contract/app deploy broadcast + recorded
+    "deltaverse.gate.event",         # DeltaVerseGate — gate opened/opening/blocked/failed (wordpress.agent /gate)
+    "deltaverse.room.created",       # DeltaVerseGate — BubbleRoomV4.mintRoom confirmed (roomId)
+    "deltaverse.bubbleroom.spawned", # DeltaVerseGate — BubbleRoomSpawn.spawnFromRoom confirmed (emergenceId)
 ]
 
 EVENT_KINDS: tuple[str, ...] = tuple(EventKind.__args__)  # type: ignore[attr-defined]

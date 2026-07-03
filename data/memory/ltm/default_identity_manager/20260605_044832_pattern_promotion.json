@@ -1,0 +1,47 @@
+{
+  "agent_id": "default_identity_manager",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 16,
+  "patterns": {
+    "success_patterns": [
+      {
+        "pattern": "success_rate_observed",
+        "success_rate": 1.0,
+        "success_count": 4,
+        "top_processes": [
+          "id_manager_wallet_created",
+          "id_manager_wallet_created",
+          "id_manager_wallet_created",
+          "id_manager_wallet_created"
+        ],
+        "timestamp": "2026-06-05T04:48:32.026235"
+      }
+    ],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Success rate: 100.0% (4 success, 0 failure)",
+      "Top processes: id_manager_wallet_exists(4), id_manager_address_lookup(4), id_manager_wallet_created(4), id_manager_address_not_found(4)",
+      "Peak activity hour: 15:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 16
+        },
+        "process_distribution": {
+          "id_manager_wallet_exists": 4,
+          "id_manager_address_lookup": 4,
+          "id_manager_wallet_created": 4,
+          "id_manager_address_not_found": 4
+        },
+        "total_memories": 16,
+        "timestamp": "2026-06-05T04:48:32.026249"
+      }
+    ]
+  },
+  "promoted_at": "2026-06-05T04:48:32.026254",
+  "promotion_criteria": {
+    "pattern_threshold": 2,
+    "days_analyzed": 7
+  }
+}

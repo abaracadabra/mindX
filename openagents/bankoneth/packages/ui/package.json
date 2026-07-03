@@ -23,7 +23,7 @@
     "@bankoneth/core": "workspace:*",
     "viem":            "^2.21.0",
     "typescript":      "^5.4.0",
-    "vitest":          "^2.1.0"
+    "vitest":          "^3.2.6"
   },
   "keywords": ["bankoneth", "ens", "lit", "web-components", "bankon.eth"]
 }

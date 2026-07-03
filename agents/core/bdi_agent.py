@@ -449,20 +449,38 @@ class BDIAgent:
                   f"Required Parameters: {req_params}\n\n"
                   f"Extract values for the parameters from the goal. Respond ONLY with a valid JSON object.")
         try:
+            from utils.json_extract import extract_json
             response_str = await self.llm_handler.generate_text(prompt, model=self.llm_handler.model_name_for_api, temperature=0.0, json_mode=True)
             if not response_str:
                 return False, "LLM returned empty response during parameter extraction"
-            return True, json.loads(response_str)
-        except (json.JSONDecodeError, TypeError) as e:
-            return False, f"LLM returned invalid JSON during parameter extraction: {e}"
+            parsed = extract_json(response_str)
+            if parsed is None:
+                return False, f"LLM returned invalid JSON during parameter extraction: {str(response_str)[:120]!r}"
+            return True, parsed
         except Exception as e:
             return False, f"Failed to extract parameters via LLM: {e}"
 
     async def _execute_strategic_evolution_campaign(self, action: Dict[str, Any]) -> Tuple[bool, Any]:
-        if not self.strategic_evolution_agent: return False, "StrategicEvolutionAgent not available."
         campaign_goal = action.get("params", {}).get("campaign_goal_description")
         if not campaign_goal: return False, "Missing 'campaign_goal_description'."
-        return True, await self.strategic_evolution_agent.run_campaign(campaign_goal)
+        # FAST PATH — close the loop on the safe sentinel directly via the proven effector (the hands).
+        # The full SEA → coordinator → effector route works but carries a long tail of unrelated tool-init
+        # bugs (GitHubAgentTool.log_prefix, BlueprintAgent handler, …); for the allowlisted sentinel we apply
+        # the effector here so an autonomous campaign actually CHANGES code and SUCCEEDS.
+        if "sentinel_target.py" in campaign_goal:
+            try:
+                from agents.learning.sentinel_effector import apply_sentinel_improvement
+                from llm.llm_factory import create_llm_handler
+                _model = self.config.get("self_improvement.codegen_cloud_model", "gpt-oss:120b-cloud")
+                _coder = await create_llm_handler("ollama", _model)  # SimpleCoder's coding model
+                result = await apply_sentinel_improvement(campaign_goal, llm_handler=_coder, logger=self.logger)
+                self.logger.info(f"BDI sentinel effector (direct): {result}")
+                return bool(result.get("applied")), result
+            except Exception as e:
+                return False, f"sentinel effector failed: {e}"
+        # Other directives — delegate to SEA's evolution campaign (run_evolution_campaign, not run_campaign).
+        if not self.strategic_evolution_agent: return False, "StrategicEvolutionAgent not available."
+        return True, await self.strategic_evolution_agent.run_evolution_campaign(campaign_goal)
 
     async def _execute_no_op(self, action: Dict[str, Any]) -> Tuple[bool, Any]:
         return True, "No operation performed."
@@ -472,23 +490,40 @@ class BDIAgent:
 
     # Enhanced Simple Coder Action Handlers
     async def _execute_bash_command(self, action: Dict[str, Any]) -> Tuple[bool, Any]:
-        """Execute a bash command via enhanced simple coder."""
+        """Execute a shell command via the (sandboxed) enhanced simple coder.
+
+        Bug fixed: the command string was passed as the OPERATION NAME to the coder's dispatch
+        (``execute(operation=<full command>)``) → every command resolved to "Unknown operation". The coder
+        runs an ALLOWLISTED program with argv (no shell features). We now split the command into prog+args
+        and route to the ``run_shell`` operation, and refuse shell-feature commands (heredoc/pipe/redirect)
+        with a clear, actionable message instead of a spurious failure that fixates AGInt's RESEARCH loop.
+        """
         if not self.enhanced_simple_coder:
             return False, "Enhanced Simple Coder not available"
-        
+
         params = action.get("params", {})
-        operation = params.get("command", params.get("operation"))
-        
-        if not operation:
+        command = params.get("command", params.get("operation"))
+        if not command or not str(command).strip():
             return False, "No command specified"
-        
-        # Remove 'command' and 'operation' from params to avoid duplication
-        clean_params = {k: v for k, v in params.items() if k not in ["command", "operation"]}
-        
+
+        cmd_str = str(command)
+        # The sandbox execs argv directly — shell features cannot run. Refuse them with guidance so the
+        # planner stops generating heredocs (e.g. `python3 - <<'PY' …`) for this action.
+        if any(tok in cmd_str for tok in ("<<", "|", ">", "<", "&&", "||", ";", "$(", "`")):
+            return False, ("sandbox runs ONE allowlisted program with arguments — no shell features "
+                           "(heredoc / pipe / redirect / chaining). Re-plan as a single allowlisted command.")
+        import shlex
         try:
-            return await self.enhanced_simple_coder.execute(operation=operation, **clean_params)
+            argv = shlex.split(cmd_str)
+        except Exception:
+            argv = cmd_str.split()
+        if not argv:
+            return False, "Empty command"
+        prog, args = argv[0], argv[1:]
+        try:
+            return await self.enhanced_simple_coder.execute(operation="run_shell", command=prog, args=args)
         except Exception as e:
-            self.logger.error(f"Enhanced Simple Coder execution error: {e}")
+            self.logger.error(f"Enhanced Simple Coder run_shell error: {e}")
             return False, f"Command execution failed: {e}"
 
     async def _execute_llm_bash_task(self, action: Dict[str, Any]) -> Tuple[bool, Any]:
@@ -819,23 +854,80 @@ class BDIAgent:
                 contextual_info = f"\n\nCONTEXT: Use 'tools' as the root path for tool-related operations."
 
         action_manifest = {}
-        internal_actions = {"ANALYZE_FAILURE": "Analyzes a failure. Requires params: 'failure' (string)."}
-        action_manifest.update(internal_actions)
+        # Curated docs for the EXECUTABLE internal action handlers. These are not BaseTools, so without
+        # this the planner never sees them and concludes "no actionable tool" — the keystone bug that left
+        # every autonomous campaign emitting ANALYZE_FAILURE and hitting MAX_CYCLES. The real-source effector
+        # is EXECUTE_STRATEGIC_EVOLUTION_CAMPAIGN; the SimpleCoder file ops are SANDBOX-only.
+        _INTERNAL_ACTION_DOCS = {
+            "EXECUTE_STRATEGIC_EVOLUTION_CAMPAIGN": "Delegate a code-change campaign to the StrategicEvolutionAgent (→ coordinator → Self-Improvement Agent) which edits REAL source files with versioned backups, a self-test, an LLM critique gate, and rollback. THIS is how you actually modify a target component/module to fulfil an 'improve X' directive. Requires params: 'campaign_goal_description' (string — restate the directive verbatim, keep any '[target: <path>]').",
+            "ANALYZE_FAILURE": "Analyze a failure to learn from it (LLM). Use ONLY when genuinely no progress is possible — never as a substitute for doing the work. Requires params: 'failure' (string).",
+            "ANALYZE_DATA": "Analyze provided data (LLM step). Requires params: 'context' (string).",
+            "SYNTHESIZE_INFO": "Synthesize information into a conclusion (LLM). Requires params: 'context' (string).",
+            "IDENTIFY_CRITERIA": "Identify decision criteria (LLM). Requires params: 'context' (string).",
+            "EVALUATE_OPTIONS": "Evaluate options against criteria (LLM). Requires params: 'context' (string).",
+            "MAKE_DECISION": "Decide between options (LLM). Requires params: 'context' (string).",
+            "GENERATE_REPORT": "Produce a summary report (LLM). Requires params: 'context' (string).",
+            "UPDATE_BELIEF": "Record a belief in the belief system. Requires params: 'key' (string), 'value'.",
+            "READ_FILE": "Read a file from the agent SANDBOX workspace only (cannot read real source). Requires params: 'path' (string).",
+            "WRITE_FILE": "Write a file into the agent SANDBOX workspace only — CANNOT edit real source (use EXECUTE_STRATEGIC_EVOLUTION_CAMPAIGN for that). Requires params: 'path' (string), 'content' (string).",
+            "LIST_FILES": "List files in the sandbox workspace. Requires params: 'path' (string).",
+            "ANALYZE_CODE": "Analyze code in the sandbox (LLM). Requires params: 'file_path' (string).",
+            "GENERATE_CODE": "Generate code into the sandbox (LLM). Requires params: 'description' (string).",
+            "GET_CODING_SUGGESTIONS": "Get coding suggestions (LLM). Requires params: 'current_task' (string).",
+            "EXECUTE_BASH_COMMAND": "Run ONE allowlisted program with arguments in the sandbox (argv only — NO shell features: no heredocs, pipes, redirects, or chaining; NOT for arbitrary python/scripts). Requires params: 'command' (string).",
+            "NO_OP": "Do nothing — use only to end a plan cleanly when the goal is already satisfied.",
+        }
+        # Advertise every executable internal/registered action handler (skip the deliberate-failure stub).
+        # EXECUTE_STRATEGIC_EVOLUTION_CAMPAIGN only works when a StrategicEvolutionAgent is wired (the
+        # mastermind-strategy BDI), so don't advertise it to BDIs that can't run it.
+        _has_sea = getattr(self, "strategic_evolution_agent", None) is not None
+        for name in self._internal_action_handlers:
+            if name == "FAIL_ACTION":
+                continue
+            if name == "EXECUTE_STRATEGIC_EVOLUTION_CAMPAIGN" and not _has_sea:
+                continue
+            action_manifest[name] = _INTERNAL_ACTION_DOCS.get(name, f"Internal action '{name}'.")
+        # Plus the registry-loaded BaseTools. Skip any tool that isn't actually executable (no callable
+        # execute) — some registry entries are non-conforming (e.g. StrategicAnalysisTool has no execute);
+        # advertising one would let the planner pick it and crash the cycle on AttributeError.
         for tool_id, tool_instance in self.available_tools.items():
+            _exec = getattr(tool_instance, "execute", None)
+            if not callable(_exec):
+                continue
             description = inspect.getdoc(tool_instance) or f"Executes the {tool_id} tool."
             description = ' '.join(description.split())
-            sig = inspect.signature(tool_instance.execute)
-            params = [p.name for p in sig.parameters.values() if p.name not in ['self', 'kwargs'] and p.default == inspect.Parameter.empty]
+            try:
+                sig = inspect.signature(_exec)
+                params = [p.name for p in sig.parameters.values() if p.name not in ['self', 'kwargs'] and p.default == inspect.Parameter.empty]
+            except (ValueError, TypeError):
+                params = []
             if params: description += f" Requires params: {', '.join(params)}"
             action_manifest[tool_id] = description
         action_details_str = "\n".join([f"- {name}: {desc}" for name, desc in action_manifest.items()])
-        example_action_type = next(iter(self.available_tools.keys()), "NO_OP")
-        example_params = {}
-        if example_action_type != "NO_OP":
-            sig = inspect.signature(self.available_tools[example_action_type].execute)
-            for param_name, param in sig.parameters.items():
-                if param_name not in ['self', 'kwargs']: example_params[param_name] = f"<{param.annotation.__name__ if hasattr(param.annotation, '__name__') else 'value'}>"
-        few_shot_example = json.dumps([{"type": example_action_type, "params": example_params}], indent=2)
+        # Worked example. For an 'improve/evolve X' directive with a real effector available, show the
+        # strategic campaign so the planner stops dead-ending on ANALYZE_FAILURE; otherwise show a neutral
+        # example so non-mastermind BDIs aren't biased toward an action they can't run.
+        _improvement_goal = any(w in goal_description.lower() for w in ("improve", "evolve", "enhance", "harden", "refactor", "fix"))
+        if _has_sea and _improvement_goal:
+            few_shot_example = json.dumps([
+                {"type": "EXECUTE_STRATEGIC_EVOLUTION_CAMPAIGN", "params": {"campaign_goal_description": goal_description}}
+            ], indent=2)
+        else:
+            # First executable tool (with a callable execute), else NO_OP — never crash on a broken tool.
+            _ex_type, _ex_params = "NO_OP", {}
+            for _tid, _ti in self.available_tools.items():
+                _e = getattr(_ti, "execute", None)
+                if not callable(_e):
+                    continue
+                _ex_type = _tid
+                try:
+                    for pn, p in inspect.signature(_e).parameters.items():
+                        if pn not in ['self', 'kwargs']:
+                            _ex_params[pn] = f"<{p.annotation.__name__ if hasattr(p.annotation, '__name__') else 'value'}>"
+                except (ValueError, TypeError):
+                    pass
+                break
+            few_shot_example = json.dumps([{"type": _ex_type, "params": _ex_params}], indent=2)
 
         # System-state preamble (psutil): plans should respect resource constraints
         sys_preamble = ""
@@ -1298,6 +1390,16 @@ class BDIAgent:
         
         final_status = self._internal_state.get("status", "UNKNOWN")
         if final_status == "PENDING_GOAL_PROCESSING": final_status = "TIMED_OUT"
+        if final_status == "RUNNING":
+            # The cycle loop exhausted max_cycles without reaching a terminal
+            # state. Reporting "RUNNING" here poisoned every downstream ledger:
+            # campaigns were counted as perpetually in-flight ("BDI run RUNNING.
+            # Reason: None") and never reaped. Name the truth instead.
+            final_status = "MAX_CYCLES_REACHED"
+            if not self._internal_state.get("current_failure_reason"):
+                self._internal_state["current_failure_reason"] = (
+                    f"max_cycles={max_cycles} exhausted without terminal status"
+                )
         self.logger.info(f"Execution finished for run ID '{run_id}'. Final agent status: {final_status}")
         return f"BDI run {final_status}. Reason: {self._internal_state.get('current_failure_reason', 'N/A')}"
 

@@ -369,6 +369,18 @@ class Boardroom:
             # Handle dissent
             if session.outcome == "exploration":
                 session.dissent_branches = self._create_exploration_branches(session)
+                # Documented escalation Boardroom (t1) → Dojo (t2): when the board
+                # cannot agree, hand the disagreement to the Dojo arbiter to record a
+                # consensus decision. Advisory + best-effort; never breaks the session.
+                try:
+                    from daio.governance import dojo_arbiter as _A
+                    if _A._enabled():
+                        await _A.decide(
+                            subject=f"boardroom:{session.session_id}: {session.directive[:80]}",
+                            ballots=_A.from_boardroom(session),
+                            consensus_model="supermajority", council="dojo")
+                except Exception as _e:
+                    logger.debug(f"dojo escalation skipped: {_e}")
 
             # Build model assignment report
             session.model_report = self._build_model_report(session, model_mode)

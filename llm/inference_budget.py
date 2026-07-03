@@ -43,6 +43,15 @@ _UNLIMITED = {"ollama", "vllm", "local", "ollama_local"}
 # strategy. Raise toward 1.0 to consume the free tier more aggressively.
 _SAFETY = 0.9
 
+# Operator reference (2026-06-24): "3 per hour is a conversation." The reasonable
+# inquiry floor — a single autonomous thread should engage at least at a
+# conversational cadence, and the per-model throttle should never look like an
+# automated firehose. 3/hr = 72/day per thread. The DAILY CEILING is the sum of
+# free-tier daily caps (target = ceiling − 1, "max−1"): consume the free tiers
+# fully but stop one short of the wall. daily_budget() reports both bounds.
+_CONVERSATIONAL_PER_HOUR = 3
+_CONVERSATIONAL_PER_DAY = _CONVERSATIONAL_PER_HOUR * 24  # 72
+
 # Real free-tier limits as (window_seconds, request_limit) tuples — headroom is
 # the MIN across all windows, so the tightest binding constraint governs.
 _PROVIDER_WINDOWS: Dict[str, List[Tuple[int, int]]] = {
@@ -247,6 +256,16 @@ class InferenceBudget:
                tokens: int = 0, retry_after: Optional[float] = None) -> None:
         try:
             p = self._norm(provider)
+            # Lifetime token appetite — count ACTUAL ingested tokens from EVERY
+            # provider, INCLUDING local CPU (Ollama / unlimited), so this must run
+            # BEFORE the unlimited-provider early-return. Cloud vs CPU is split by
+            # whether the provider is rate-limited (_UNLIMITED == local/CPU).
+            if ok and tokens and tokens > 0:
+                try:
+                    from llm.token_appetite import add as _appetite_add
+                    _appetite_add(int(tokens), cpu=(p in _UNLIMITED))
+                except Exception:
+                    pass
             if not p or p in _UNLIMITED:
                 return
             b = self._get(p)
@@ -261,6 +280,66 @@ class InferenceBudget:
         try:
             now = time.time()
             return {p: b.snapshot(now) for p, b in self._providers.items()}
+        except Exception:
+            return {}
+
+    def daily_budget(self) -> Dict[str, Any]:
+        """Aggregate daily inference budget — the overall calls/day ceiling and
+        what has been consumed today (the operator's "do the math on a complete
+        day" request). The ceiling is the sum of free-tier daily caps; target is
+        ceiling−1 ("max−1"). Floor reference is the conversational cadence
+        (3/hr = 72/day per thread).
+
+        Per provider we take the longest-span window as the daily proxy, scaling
+        sub-day windows to a full day (limit × 86400/span) so an RPM-only tier
+        (e.g. mistral) still contributes a daily number.
+        """
+        try:
+            now = time.time()
+            DAY = 86400.0
+            per_provider: Dict[str, Any] = {}
+            ceiling = 0.0
+            used = 0.0
+            # Union of configured + live providers so the ceiling reflects all
+            # known free tiers, not just the ones touched this process.
+            names = set(self._windows) | set(self._providers)
+            for name in sorted(names):
+                wins = self._windows.get(name, _DEFAULT_WINDOWS)
+                if not wins:
+                    continue
+                span, limit = max(wins, key=lambda w: w[0])  # longest-span window
+                scale = DAY / span if span < DAY else 1.0
+                day_limit = round(limit * scale)
+                # used: count timestamps in the matching live window if present
+                day_used = 0
+                b = self._providers.get(name)
+                if b is not None:
+                    w = next((w for w in b.windows if w.span == span), None)
+                    if w is not None:
+                        w.trim(now)
+                        day_used = round(len(w.ts) * scale)
+                ceiling += day_limit
+                used += day_used
+                per_provider[name] = {
+                    "day_limit": day_limit,
+                    "day_used": day_used,
+                    "remaining": max(0, day_limit - day_used),
+                    "window_span_s": span,
+                    "rpm_derived": span < DAY,
+                }
+            ceiling = int(ceiling)
+            used = int(used)
+            return {
+                "ceiling_per_day": ceiling,
+                "target_per_day": max(0, ceiling - 1),  # max−1
+                "used_today": used,
+                "remaining_today": max(0, ceiling - used),
+                "utilization_pct": round(100.0 * used / ceiling, 2) if ceiling else 0.0,
+                "conversational_floor_per_hour": _CONVERSATIONAL_PER_HOUR,
+                "conversational_floor_per_day": _CONVERSATIONAL_PER_DAY,
+                "concurrent_conversations_supported": (ceiling // _CONVERSATIONAL_PER_DAY) if _CONVERSATIONAL_PER_DAY else 0,
+                "per_provider": per_provider,
+            }
         except Exception:
             return {}
 
@@ -292,3 +371,7 @@ def record(provider: Optional[str], *, ok: bool = True,
 
 def snapshot() -> Dict[str, Any]:
     return InferenceBudget.instance().snapshot()
+
+
+def daily_budget() -> Dict[str, Any]:
+    return InferenceBudget.instance().daily_budget()

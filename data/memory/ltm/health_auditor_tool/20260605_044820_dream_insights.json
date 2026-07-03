@@ -1,0 +1,62 @@
+{
+  "agent_id": "health_auditor_tool",
+  "dream_timestamp": "2026-06-05T04:48:20.813946",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "behavioral",
+      "description": "Top processes: health_audit(185)",
+      "score": 0.3631,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 185
+    },
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (185 occurrences)",
+      "score": 0.3631,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 185
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 4, 3, 21",
+      "score": 0.1286,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 33
+    },
+    {
+      "type": "behavioral",
+      "description": "Active: 185 memories",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: health_audit(185)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 4:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 6
+}

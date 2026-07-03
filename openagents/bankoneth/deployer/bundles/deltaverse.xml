@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  bundle: deltaverse — the NeuralNode room suite for cross-chain games.
+
+  Targets GLMR (Moonbeam — almost free) and Polygon. A gate event mints a room
+  (BubbleRoomV4) then spawns a bubbleroom (BubbleRoomSpawn) — the on-chain lineage
+  the Python agents/deltaverse/DeltaVerseGate broadcasts at runtime.
+
+  The 8 NeuralNode contracts are vendored at openagents/bankoneth/neuralnode/
+  (sourced from github.com/deltav-deltaverse/neuralnode, reconciled to solc 0.8.24
+  / OZ v5). `forge build` there, then DEPLOY BUNDLE arms all 8 in stage order and
+  LAUNCH fires them. Each contract is Ownable(msg.sender) — the connected wallet
+  becomes the owner; there is NO `admin` constructor arg. After launch, copy the
+  addresses into data/config/blockchain_addresses.json ("137" Polygon / "1284"
+  Moonbeam) to flip DeltaVerseGate from fail-closed to live.
+-->
+<bundle name="deltaverse" chains="moonbeam,polygon">
+
+  <!-- stage 1: roots (no dependencies, no constructor args) -->
+  <contract id="bubbleroom-v4" name="BubbleRoomV4" stage="1"
+            summary="Origin room — mintRoom(...) → roomId. The first node of the gate lineage.">
+    <abi src="../neuralnode/out/BubbleRoomV4.sol/BubbleRoomV4.json"/>
+    <bytecode src="../neuralnode/out/BubbleRoomV4.sol/BubbleRoomV4.json"/>
+    <constructor/>
+    <value kind="signature"/>
+    <privilege service="deltaverse.room" tier="3"/>
+  </contract>
+
+  <contract id="delta-genesis-sbt" name="DeltaGenesisSBT" stage="1"
+            summary="Soulbound identity for DeltaVerse participants.">
+    <abi src="../neuralnode/out/DeltaGenesisSBT.sol/DeltaGenesisSBT.json"/>
+    <bytecode src="../neuralnode/out/DeltaGenesisSBT.sol/DeltaGenesisSBT.json"/>
+    <constructor/>
+    <value kind="signature"/>
+    <privilege service="deltaverse.identity" tier="3"/>
+  </contract>
+
+  <contract id="seed-registry" name="SeedRegistry" stage="1"
+            summary="12 agent lineages (GENESIS → MASTERMIND → … → THRUST).">
+    <abi src="../neuralnode/out/SeedRegistry.sol/SeedRegistry.json"/>
+    <bytecode src="../neuralnode/out/SeedRegistry.sol/SeedRegistry.json"/>
+    <constructor/>
+    <value kind="signature"/>
+    <privilege service="deltaverse.seed" tier="3"/>
+  </contract>
+
+  <!-- stage 2: depend on the room -->
+  <contract id="orchestrator" name="DeltaVerseOrchestrator" stage="2"
+            summary="EIP-712 gasless minting against the room.">
+    <abi src="../neuralnode/out/DeltaVerseOrchestrator.sol/DeltaVerseOrchestrator.json"/>
+    <bytecode src="../neuralnode/out/DeltaVerseOrchestrator.sol/DeltaVerseOrchestrator.json"/>
+    <constructor>
+      <arg name="bubbleRoom" type="address" from="deployed:bubbleroom-v4"/>
+    </constructor>
+    <value kind="signature"/>
+    <privilege service="deltaverse.orchestrate" tier="3"/>
+  </contract>
+
+  <contract id="bubbleroom-spawn" name="BubbleRoomSpawn" stage="2"
+            summary="Emergence spawner — spawnFromRoom(originRoomId,...) → emergenceId.">
+    <abi src="../neuralnode/out/BubbleRoomSpawn.sol/BubbleRoomSpawn.json"/>
+    <bytecode src="../neuralnode/out/BubbleRoomSpawn.sol/BubbleRoomSpawn.json"/>
+    <constructor>
+      <arg name="bubbleRoom" type="address" from="deployed:bubbleroom-v4"/>
+    </constructor>
+    <value kind="signature"/>
+    <privilege service="deltaverse.spawn" tier="3"/>
+  </contract>
+
+  <!-- stage 3: depend on room + spawn / sbt / traits -->
+  <contract id="emergence-traits" name="EmergenceTraits" stage="3"
+            summary="6 on-chain emergence traits, fed by room + spawn.">
+    <abi src="../neuralnode/out/EmergenceTraits.sol/EmergenceTraits.json"/>
+    <bytecode src="../neuralnode/out/EmergenceTraits.sol/EmergenceTraits.json"/>
+    <constructor>
+      <arg name="bubbleRoom" type="address" from="deployed:bubbleroom-v4"/>
+      <arg name="spawn"      type="address" from="deployed:bubbleroom-spawn"/>
+    </constructor>
+    <value kind="signature"/>
+    <privilege service="deltaverse.traits" tier="3"/>
+  </contract>
+
+  <contract id="swarm-governance" name="SwarmGovernance" stage="3"
+            summary="Consensus DAO over rooms + traits.">
+    <abi src="../neuralnode/out/SwarmGovernance.sol/SwarmGovernance.json"/>
+    <bytecode src="../neuralnode/out/SwarmGovernance.sol/SwarmGovernance.json"/>
+    <constructor>
+      <arg name="bubbleRoom" type="address" from="deployed:bubbleroom-v4"/>
+      <arg name="traits"     type="address" from="deployed:emergence-traits"/>
+    </constructor>
+    <value kind="signature"/>
+    <privilege service="deltaverse.govern" tier="3"/>
+  </contract>
+
+  <contract id="tomb-registry" name="TombRegistry" stage="3"
+            summary="Encrypted vaults (GPLv3 homage to GNU Tomb).">
+    <abi src="../neuralnode/out/TombRegistry.sol/TombRegistry.json"/>
+    <bytecode src="../neuralnode/out/TombRegistry.sol/TombRegistry.json"/>
+    <constructor>
+      <arg name="bubbleRoom" type="address" from="deployed:bubbleroom-v4"/>
+      <arg name="sbt"        type="address" from="deployed:delta-genesis-sbt"/>
+      <arg name="traits"     type="address" from="deployed:emergence-traits"/>
+    </constructor>
+    <value kind="signature"/>
+    <privilege service="deltaverse.tomb" tier="3"/>
+  </contract>
+
+</bundle>

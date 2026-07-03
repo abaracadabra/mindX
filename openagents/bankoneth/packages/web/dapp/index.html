@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- index.html — secure-by-default landing. Nothing privileged is shown until a wallet
+     connects; on login it redirects to the dApp (dapp.html). -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BANKON · dApp</title>
+<link rel="stylesheet" href="./styled.css" />
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div class="wrap">
+  <div class="center">
+    <div class="hero">
+      <div class="brand">BANKON <span class="g">dApp</span></div>
+      <h1>Sovereign rails for <span class="gold-t">bankon.eth</span></h1>
+      <p class="sub">Client-side, open-source, no backend. Connect a wallet to enter — the dApp surface
+        loads only after you authenticate. Every fee rakes home to bankon.eth.</p>
+      <div class="row" style="justify-content:center;margin-top:18px">
+        <button id="connectBtn" class="primary">Connect wallet → enter dApp</button>
+      </div>
+      <p class="sub" id="status" style="margin-top:14px"></p>
+      <p style="margin-top:18px"><span class="pill"><span class="dot"></span> security default: no privileged content pre-login</span></p>
+    </div>
+  </div>
+</div>
+<script type="module" src="../webgl-bg.js"></script>
+<script type="module">
+import { Dapp, short } from "./dapp.js";
+const $ = (id) => document.getElementById(id);
+// already connected this session → go straight in
+if (Dapp.isLoggedIn()) $("status").innerHTML = `Connected as <span class="mono">${short(sessionStorage.getItem("bankon_connected"))}</span> · <a href="./dapp.html">enter dApp →</a>`;
+$("connectBtn").onclick = async () => {
+  try {
+    $("connectBtn").disabled = true; $("connectBtn").textContent = "connecting…";
+    await Dapp.connect();
+    $("status").innerHTML = `✓ ${short(Dapp.address)} — redirecting…`;
+    Dapp.redirectToDapp();
+  } catch (e) {
+    $("connectBtn").disabled = false; $("connectBtn").textContent = "Connect wallet → enter dApp";
+    $("status").innerHTML = `<span class="err">${e.message || e}</span>`;
+  }
+};
+</script>
+</body>
+</html>

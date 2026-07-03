@@ -260,6 +260,10 @@ body{font-family:'Inter','SF Pro Text',system-ui,sans-serif;background:#050810;c
 
 </div>
 
+<!-- shared archetype SSOT (same source the landing BUILDER uses) -->
+<script src="/static/archetypes.js"></script>
+<!-- AgenticPlace mint module — ready for post-contract inclusion -->
+<script src="/static/inft_mint.js"></script>
 <script>
 // Tab switching
 function switchTab(n) {
@@ -332,28 +336,71 @@ function queryTHOT() {
   }, null, 2));
 }
 
-function mintIntelligent() {
-  const data = {
-    function: 'mintIntelligent(address,NFTMetadata,IntelligenceConfig)',
-    params: {
-      to: document.getElementById('inft_to').value,
-      nftMetadata: {
-        name: document.getElementById('inft_name').value,
-        description: document.getElementById('inft_desc').value,
-        imageURI: document.getElementById('inft_image').value,
-        externalURI: '', thotCID: document.getElementById('inft_thot').value,
-        isDynamic: true, lastUpdated: 0
-      },
-      intelConfig: {
-        agentAddress: document.getElementById('inft_agent').value,
-        autonomous: document.getElementById('inft_auto').value === 'true',
-        behaviorCID: document.getElementById('inft_behavior').value,
-        thotCID: document.getElementById('inft_thot').value,
-        intelligenceLevel: parseInt(document.getElementById('inft_level').value)
-      }
+async function mintIntelligent() {
+  var g = id => (document.getElementById(id) || {}).value || '';
+  var spec = {
+    to: g('inft_to') || walletAddress,
+    archetype: (new URLSearchParams(location.search)).get('archetype') || '',
+    meta: {
+      name: g('inft_name'), description: g('inft_desc'),
+      imageURI: g('inft_image'), externalURI: '', thotCID: g('inft_thot'),
+      isDynamic: true, lastUpdated: 0
+    },
+    cfg: {
+      agentAddress: g('inft_agent') || walletAddress,
+      autonomous: g('inft_auto') === 'true',
+      behaviorCID: g('inft_behavior'), thotCID: g('inft_thot'),
+      intelligenceLevel: parseInt(g('inft_level')) || 0
     }
   };
-  showResult('inft_result', JSON.stringify(data, null, 2));
+  if (!spec.meta.name) { showResult('inft_result', 'Give the agent a name first.', true); return; }
+
+  if (!window.inftMint) {
+    showResult('inft_result', JSON.stringify({ function: 'mintIntelligent(address,NFTMetadata,IntelligenceConfig)', spec }, null, 2));
+    return;
+  }
+  try {
+    var r = await window.inftMint.mint(spec);
+    if (r.mode === 'minted') {
+      showResult('inft_result', '✓ Minted on AgenticPlace\ncontract: ' + r.to + '\ntx: ' + r.tx);
+    } else if (r.mode === 'wrong_chain') {
+      showResult('inft_result', 'Switch your wallet to the AgenticPlace chain (' + r.need + ') and mint again.\nPrepared calldata:\n' + r.data, true);
+    } else { // handoff — contract not yet deployed
+      showResult('inft_result',
+        'IntelligentNFT contract not yet deployed — your iNFT spec (with avatar) is READY.\n' +
+        'Status: ' + r.status + '\n\n' +
+        'Mint opens on AgenticPlace the moment the contract is included. Continue there:\n' + r.url +
+        '\n\nPrepared spec:\n' + JSON.stringify(spec, null, 2));
+      var card = document.getElementById('inft_result');
+      if (card && !document.getElementById('inft_handoff_btn')) {
+        var a = document.createElement('a');
+        a.id = 'inft_handoff_btn'; a.href = r.url; a.target = '_blank'; a.rel = 'noopener';
+        a.className = 'btn btn-primary'; a.style.cssText = 'display:inline-block;margin-top:10px;text-decoration:none';
+        a.textContent = 'Mint on AgenticPlace →';
+        card.parentNode.insertBefore(a, card.nextSibling);
+      }
+    }
+  } catch (e) {
+    showResult('inft_result', 'Mint error: ' + (e && e.message ? e.message : e), true);
+  }
+}
+
+// Reflect contract-deployment status in the header pill.
+function refreshMintStatus() {
+  if (!window.inftMint) return;
+  window.inftMint.load().then(function () {
+    var el = document.getElementById('ciIntNFT'); if (!el) return;
+    var c = window.inftMint.inftContract();
+    var short = a => a ? (a.slice(0,8) + '…' + a.slice(-6)) : '';
+    if (window.inftMint.isDeployed()) {            // signed & live on-chain
+      el.textContent = short(c.address) + ' (live)'; el.style.color = '#56d364';
+    } else if (window.inftMint.hasPredictedAddress()) {  // CREATE2 known, awaiting OVERLORD signature
+      el.textContent = short(c.address) + ' (CREATE2 predicted)'; el.style.color = '#79c0ff';
+      el.title = c.standard + ' ' + (c.name||'') + ' — awaiting OVERLORD deploy; mint via AgenticPlace';
+    } else {
+      el.textContent = 'awaiting deployment'; el.style.color = '#e3b341';
+    }
+  });
 }
 
 function agentInteract() {
@@ -441,7 +488,48 @@ function readToken(type) {
 }
 
 // Auto-connect on load
+// Archetype prefill — when arriving from the landing BUILDER
+// (/inft?archetype=meta&level=92&autonomous=true), seed the IntelligentNFT mint
+// form and attach the matching wireframe avatar (data: URI → iNFT imageURI), so
+// the avatar is born compatible with AgenticPlace iNFT.
+function prefillFromArchetype() {
+  try {
+    var p = new URLSearchParams(location.search);
+    var key = p.get('archetype');
+    if (!key || !window.mindxArchetype) return;
+    var a = window.mindxArchetype(key);
+    if (!a) return;
+    switchTab(1); // IntelligentNFT panel
+    var lvl = parseInt(p.get('level'), 10); if (isNaN(lvl)) lvl = a.lvl;
+    var auto = p.get('autonomous'); auto = (auto == null) ? a.auto : (auto === 'true');
+    var setV = function (id, v) { var el = document.getElementById(id); if (el != null) el.value = v; };
+    setV('inft_name', 'mindX ' + a.label + ' Agent');
+    setV('inft_desc', a.label + ' archetype — ' + a.blurb + '. A mindX persona forged as an autonomous on-chain agent.');
+    setV('inft_level', lvl);
+    setV('inft_auto', String(auto));
+    setV('inft_behavior', 'archetype:' + a.key);
+    if (window.mindxAvatarDataURI) setV('inft_image', window.mindxAvatarDataURI(a, 256));
+
+    // Banner with the live avatar at the top of the mint panel.
+    var panel = document.getElementById('panel1');
+    if (panel && !document.getElementById('archetype-banner')) {
+      var b = document.createElement('div');
+      b.id = 'archetype-banner';
+      b.style.cssText = 'display:flex;align-items:center;gap:14px;margin:0 0 16px;padding:14px 16px;' +
+        'border:1px solid ' + a.accent + '66;border-left:3px solid ' + a.accent + ';border-radius:10px;' +
+        'background:' + a.accent + '0d;font-family:monospace';
+      b.innerHTML = '<span style="line-height:0">' + window.mindxAvatarSVG(a, 44) + '</span>' +
+        '<span><div style="font-size:14px;font-weight:700;color:' + a.accent + ';text-transform:capitalize">Forging: ' + a.label + ' archetype</div>' +
+        '<div style="font-size:11px;color:#7d8590;margin-top:2px">' + a.blurb + ' · iq ' + lvl + ' · ' +
+        (auto ? 'autonomous' : 'owner-approved') + ' · AgenticPlace iNFT-ready</div></span>';
+      panel.insertBefore(b, panel.firstChild);
+    }
+  } catch (e) { /* prefill is best-effort */ }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  prefillFromArchetype();
+  refreshMintStatus();
   if (window.ethereum) connectWallet();
 });
 window.ethereum?.on('accountsChanged', () => connectWallet());

@@ -314,11 +314,12 @@ async def create_llm_handler(
         registry_entry = _load_provider_registry().get(eff_provider_name, {}) or {}
         ft_safety_margin = int(registry_entry.get("safety_margin_rpm", 0)) if registry_entry.get("free_tier") else 0
         ft_tpm_limit = registry_entry.get("default_rate_limit_tpm") if registry_entry.get("free_tier") else None
+        ft_daily_cap = registry_entry.get("daily_request_cap") if registry_entry.get("free_tier") else None
         if registry_entry.get("free_tier"):
             # Honor the registry's published RPM (already at free-tier value).
             requests_per_minute = registry_entry.get("default_rate_limit_rpm", requests_per_minute)
 
-        # Use dual-layer rate limiter (minute + hourly)
+        # Use dual-layer rate limiter (minute + hourly + optional per-day free cap)
         rate_limiter = DualLayerRateLimiter(
             requests_per_minute=requests_per_minute,
             requests_per_hour=requests_per_hour,
@@ -326,6 +327,8 @@ async def create_llm_handler(
             initial_backoff_s=initial_backoff,
             safety_margin=ft_safety_margin,
             tpm_limit=ft_tpm_limit,
+            requests_per_day=ft_daily_cap,
+            provider_name=eff_provider_name,
         )
         
         # Get execution timeout from config

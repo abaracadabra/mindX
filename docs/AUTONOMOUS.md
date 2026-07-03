@@ -52,6 +52,35 @@ In basegen_config.json:
   // ...
 }
 ```
+
+## Dynamic CPU ceiling — "I coexist" (sharing the processor)
+
+The autonomous loops are designed to be lightweight and to **yield the processor**
+to web-serving on the shared VPS, in keeping with the thesis/manifesto principle
+*"I control my own resource appetite … I coexist"* ([DEPLOYMENT_MINDX_PYTHAI_NET.md]).
+
+Before the heavy (inference-driven) part of each cycle, both the Mastermind
+strategic loop (`agents/orchestration/mastermind_agent.py::_run_autonomous_loop`)
+and the MindXAgent improvement loop (`agents/core/mindXagent.py::_autonomous_improvement_loop`)
+consult `ResourceGovernor.throttle_for_cpu(...)`. If system CPU is over the
+**autonomous ceiling** (default **92%**, the same family as `max_cpu_before_sia`),
+the loop backs off in a bounded loop (5s → ×1.5 → cap 30s) and, if still saturated,
+**defers the campaign/cycle** rather than piling heavy inference onto a busy CPU.
+This is a graceful degradation gate, **not** a hard throttle — full speed when the
+box is idle, yields under pressure.
+
+- Ceiling config: `resource.max_autonomous_loop_cpu` (default `92.0`), env override
+  `MINDX_MAX_AUTONOMOUS_CPU`.
+- Local (CPU) inference demand is additionally serialized through a background-only
+  semaphore (`resource.inference_concurrency`, default `1`; env
+  `MINDX_INFERENCE_CONCURRENCY`) so concurrent background embeds can't peg both
+  cores. Interactive/web-triggered inference bypasses the gate.
+- The live reading is surfaced on `/diagnostics/live` under `governor.cpu`
+  (`current`, `ceiling`, `headroom`, `throttling`, `throttle_label`) and on the
+  public dashboard ("CPU (live)" row).
+- Fail-open: any CPU-sensor error lets work proceed — the gate can never hang the
+  loop or block all inference.
+
 # Enable Mastermind's Autonomous Strategic Loop:
 This loop makes the MastermindAgent periodically:
 Execute its BDI agent with a default high-level directive (e.g., "Proactively monitor and evolve mindX...").

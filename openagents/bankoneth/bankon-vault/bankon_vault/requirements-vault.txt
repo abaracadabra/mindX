@@ -1,0 +1,7 @@
+# bankon-vault + shadow-overlord standalone dependencies.
+# Imported from mindx_backend_service/bankon_vault (see docs/BANKON_VAULT.md).
+fastapi>=0.110
+cryptography>=42.0
+eth-account>=0.11
+web3>=6.15
+pyjwt>=2.8

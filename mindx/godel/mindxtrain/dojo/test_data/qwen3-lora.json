@@ -1,0 +1,1 @@
+{"id":"qwen3-0.6b-lora","name":"qwen3-0.6b-lora","task":"lora","modality":"text","base_model":"Qwen/Qwen3-0.6B","dataset_path":"/home/hacker/the-dojo/test_data/data.jsonl","output_dir":"/home/hacker/the-dojo/outputs/qwen3-0.6b-lora","config":{"epochs":1,"batch_size":2,"learning_rate":0.0002,"rank":8,"alpha":16,"extra":{"max_seq_len":64}}}

@@ -1,0 +1,29 @@
+{
+  "openrouter": {
+    "provider": "openrouter",
+    "headroom": 0.944,
+    "safety": 0.9,
+    "windows": [
+      {
+        "span_s": 60,
+        "limit": 20.0,
+        "eff": 20.0,
+        "used": 1
+      },
+      {
+        "span_s": 86400,
+        "limit": 50.0,
+        "eff": 50.0,
+        "used": 1
+      }
+    ],
+    "binding_window_s": 60,
+    "binding_used": 1,
+    "binding_limit": 20.0,
+    "tokens_min": 600,
+    "backoff_s": 0,
+    "consec_429": 0,
+    "total_req": 1,
+    "total_429": 0
+  }
+}

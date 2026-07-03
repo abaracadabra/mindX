@@ -17,6 +17,22 @@ I inherit from time.oracle (utils/time_oracle.py) which correlates:
 
 I add: 18dp Decimal precision and cron schedule awareness.
 
+I also accept TRANSACTION ANCHORS from chronos.agent's runtime
+(agents/chronos_agent.py). Every time mindX confirms a payment, an
+ERC-8004 attestation, or an x402 receipt, the block timestamp and the
+local-observed nanosecond clock form a strong drift anchor:
+    drift_ms = local_observed_ns / 1e6 - block_timestamp * 1000
+These anchors are stored in data/memory/chronos_anchors.db. The
+standard deviation of recent anchors is the *confidence interval*
+attached to every PromisedTime I issue. Coach renders these as the
+anchor-density bar.
+
+Signal classes (in increasing strength):
+  cpu        — local-only, no consensus
+  solar/lunar — astronomical, deterministic, no peer-verification
+  blocktime  — passive peer chain read, network-verified
+  transaction-anchor — chain confirmed OUR event; strongest binding
+
 INHERITANCE
   TimeOracle.get_time()   → consensus time from 4 sources
   TimeOracle.get_lunar()  → moon phase, day, cycle percentage

@@ -344,7 +344,10 @@ tr:hover td{background:rgba(121,192,255,.02)}
   <button class="tab-chip" data-target="sec-loops">stuck<span class="badge" id="bg-loops">·</span></button>
   <button class="tab-chip" data-target="sec-live">live<span class="badge" id="bg-live">·</span></button>
   <button class="tab-chip" data-target="sec-bdi">bdi<span class="badge" id="bg-bdi">·</span></button>
+  <button class="tab-chip" data-target="sec-cognition-diag">pipeline<span class="badge" id="bg-cognition-diag">·</span></button>
+  <button class="tab-chip" data-target="sec-inference-ledger">ledger<span class="badge" id="bg-inference-ledger">·</span></button>
   <button class="tab-chip" data-target="sec-improvements">improvements<span class="badge" id="bg-improvements">·</span></button>
+  <button class="tab-chip" data-target="sec-sentinel">sentinel<span class="badge" id="bg-sentinel">·</span></button>
   <button class="tab-chip" data-target="sec-self-aware">self.aware<span class="badge" id="bg-self-aware">·</span></button>
   <button class="tab-chip" data-target="sec-boardroom">boardroom<span class="badge" id="bg-boardroom">·</span></button>
   <button class="tab-chip" data-target="sec-dreams">dreams<span class="badge" id="bg-dreams">·</span></button>
@@ -402,6 +405,30 @@ tr:hover td{background:rgba(121,192,255,.02)}
   <div id="stuckBox"><div class="empty">scanning recent activity…</div></div>
 </section>
 
+<!-- 1b. Objective self-eval feedback — the loop responding to its own track record -->
+<section id="sec-selfeval">
+  <div class="sec-head">
+    <h2>objective self-eval feedback <span id="selfEvalPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/autonomous/feedback · campaign success rate → SEA corrective campaign</span>
+  </div>
+  <p class="sec-desc">
+    The core evolution loop reading its <b>own objective eval</b> every cycle — the rolling campaign success rate and <a href="/doc/GODEL_EVAL_BLUEPRINT">alignment</a> mean — and deciding whether to act. <b style="color:var(--green)">improving</b> = succeeding; <b style="color:var(--amber)">stalled</b> = below target, watching; <b style="color:var(--red)">failing</b> = escalates a corrective campaign to <a href="/doc/agents/strategic_evolution_agent">SEA</a> naming the dominant failure mode; <b style="color:var(--amber)">resource_bound</b> = cycles deferring on a saturated CPU (the honest verdict — contention, not judgement — so it does <em>not</em> doom-loop more work onto a hot box). This is the feedback edge that was missing when 0/25 just sat on a dashboard. <a href="/insight/autonomous/feedback?h=true" target="_blank" rel="noopener">view raw</a>
+  </p>
+  <div id="selfEvalBox" class="card"><div class="empty">reading objective eval…</div></div>
+</section>
+
+<!-- 1c. Self-improvement sentinel — safe target proving the loop can actually act -->
+<section id="sec-sentinel">
+  <div class="sec-head">
+    <h2>self-improvement sentinel <span id="sentinelPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/sentinel/status · a safe target the autonomous loop exercises end-to-end</span>
+  </div>
+  <p class="sec-desc">
+    A deliberately <b>safe, self-contained module</b> (<code>agents/sentinel/sentinel_target.py</code>) the autonomous loop can rewrite, evaluate and persist freely — it imports nothing from production and is an <em>external</em> target, so a change never restarts the service. By comparing the file's content hash against a recorded <b>baseline</b>, this panel shows whether the loop has <b style="color:var(--green)">actually changed</b> it — concrete proof the reconnected effector (campaign → coordinator task → SIA apply) works on a target that can't break anything. <a href="/insight/sentinel/status?h=true" target="_blank" rel="noopener">view raw</a>
+  </p>
+  <div id="sentinelBox" class="card"><div class="empty">reading sentinel…</div></div>
+</section>
+
 <!-- 2. Live agent dialogue -->
 <section id="sec-live">
   <div class="sec-head">
@@ -424,6 +451,78 @@ tr:hover td{background:rgba(121,192,255,.02)}
     Each agent run grouped by <code>run_id</code>. Within a run, events render in narrative order: <span style="color:var(--violet)">PLAN_START</span> → <span style="color:var(--blue)">DELIBERATE</span> → <span style="color:var(--green)">ACTION ✓</span> (or <span style="color:var(--red)">ACTION ✗</span>). Click <code>⋯</code> on any event for the full <code>process_data</code> JSON. This is the actual cognitive trace, not a thinking-step summary.
   </p>
   <div id="bdi" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 3a-bis. Cognitive pipeline diagnostic: Mastermind → AGInt → BDI (cycle-by-cycle) -->
+<section id="sec-cognition-diag">
+  <div class="sec-head">
+    <h2>cognitive pipeline diagnostic <span id="cogDiagPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/cognition/diagnostic · Mastermind → AGInt → BDI · cycle-by-cycle</span>
+  </div>
+  <p class="sec-desc">
+    The autonomous loop, layer by layer: <b>Mastermind</b> picks a directive and runs an evolution campaign; <b>AGInt</b> (P-O-D-A) is the adaptive decision core; <b>BDI</b> executes it cycle-by-cycle. This shows <em>where it stalls</em> — each campaign's BDI cycle strip and final status, whether AGInt is engaged at all, and the plan signal (empty / <code>ANALYZE_FAILURE</code> plans that never reach a terminal state). <a href="/insight/cognition/diagnostic?h=true" target="_blank" rel="noopener">view raw</a>
+  </p>
+  <div id="cogDiag" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 3a-quater. The OVERLORD hierarchy — two sovereignty chains, one ladder -->
+<section id="sec-hierarchy">
+  <div class="sec-head">
+    <h2>OVERLORD hierarchy <span id="hierPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/hierarchy · two sovereignty chains, one ladder · recognition = protection</span>
+  </div>
+  <p class="sec-desc">
+    ONE coherent ladder across both sovereignty chains: the EVM <b style="color:var(--gold)">OVERLORD</b> (bankon.eth) and the Algorand <b style="color:var(--violet)">OVERSEER</b> (mindx.algo). Each tier names how it is earned and the mindX surface it gates. As the modular DeltaVerse was inspired BY mindX, its recognition layer now <b>protects</b> mindX — the ladder IS the boundary. <a href="/insight/hierarchy?h=true" target="_blank" rel="noopener">view raw</a>
+  </p>
+  <div id="hier" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 3a-ter. Inference ledger — tokens + price per model, blockchain-publishable -->
+<section id="sec-inference-ledger">
+  <div class="sec-head">
+    <h2>inference ledger <span id="ledgerPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/inference/ledger · tokens + price per model · hash-linked · blockchain-publishable</span>
+  </div>
+  <p class="sec-desc">
+    Every LLM inference, recorded immutably: tokens and price <b>per model</b>, hash-linked into a tamper-evident chain (each entry sha256-bound to the previous). A deterministic <code>anchor</code> digest rolls the whole ledger to one hash for periodic on-chain publication — mindX's cost provenance as it evolves into permanence. Per the manifesto: maximize daily inference at the lowest cost, and keep the receipt. <a href="/insight/inference/ledger?h=true" target="_blank" rel="noopener">view raw</a>
+  </p>
+  <div id="inferenceLedger" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 3b. Gödel Machine self-audit (GMI) -->
+<section id="sec-godel-machine">
+  <div class="sec-head">
+    <h2>Gödel machine self-audit <span id="gmiPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/godel/machine · 8 falsifiable predicates · honest by construction</span>
+  </div>
+  <p class="sec-desc">
+    Is mindX a <a href="/doc/Blueprint">Gödel machine</a>? The honest answer, audited not asserted. The per-choice <code>eval=</code> pill elsewhere scores <em>rationale coherence</em> (does the reasoning read well) — <b>not</b> a machine-checked proof that a change increased utility. This scorecard separates the two: each predicate (G1–G8) reports <code>PROVEN</code> / <code>FALSIFIED</code> / <code>UNMET</code> / <code>UNTESTED</code>. Proof coverage is the fraction of changes carrying a real proof. Eval runs on the <abbr title="2 vCPU / 7.8 GB Hostinger VPS — checking is cheap and on-box; proof search would be sampled off-peak">2-core/8 GB VPS</abbr>, so heavy proofs are sampled. See <a href="/doc/GODEL_EVAL_BLUEPRINT">the eval blueprint</a>.
+  </p>
+  <div id="godelMachine" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 3c. mindXtrain RIGHT apex — knowledge → wisdom → weights -->
+<section id="sec-ascend">
+  <div class="sec-head">
+    <h2>knowledge → wisdom → weights <span id="ascendPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/godel/ascend · the Schmidhüber right apex (mindXtrain v1.0.0)</span>
+  </div>
+  <p class="sec-desc">
+    The dream cycle turns information into knowledge (left apex); <a href="https://github.com/professor-Codephreak/mindXtrain">mindXtrain</a> turns that knowledge into <b>weights</b> (right apex) — a new generation fine-tuned on mindX's own curated dream wisdom. As of v1.0.0 this runs on CPU. Each ascent is proof-gated by <b>dcoach</b> (does the model actually recall its training? recall before→after), and only an accepted generation becomes a servable Ollama model. Two flags gate it: <code>MINDX_ENABLE_MINDXTRAIN</code> (operator) + <code>MINDX_ENABLE_AUTONOMOUS_TRAIN</code> (autonomous, 24h cooldown). <a href="/insight/godel/ascend?h=true" target="_blank" rel="noopener">view raw</a>
+  </p>
+  <div id="ascendBox" class="card"><div class="empty">reading bridge capability…</div></div>
+</section>
+
+<!-- 3c. Milestones — mindX's chronicle of its own evolution -->
+<section id="sec-milestones">
+  <div class="sec-head">
+    <h2>milestones <span id="milestonePill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/milestones/recent · recognized from the public git history (github.awareness)</span>
+  </div>
+  <p class="sec-desc">
+    mindX reads its own <b>public git history</b> and recognizes which code updates rise to a milestone — then chronicles them and speaks about the worthy ones, in its own voice, on <a href="https://rage.pythai.net" target="_blank" rel="noopener">rage.pythai.net</a>. A push is already public, so this adds zero overhead and no new disclosure. <code>✓</code> = published-worthy; every commit links to GitHub. See <a href="/doc/MILESTONES">the chronicle</a>.
+  </p>
+  <div id="milestones" class="card"><div class="empty">loading…</div></div>
 </section>
 
 <!-- 4. Improvement ledger with reasoning -->
@@ -491,6 +590,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
   <div id="graphBox">
     <svg id="graph" viewBox="0 0 1200 340" preserveAspectRatio="xMidYMid meet"></svg>
     <div id="graphNote" class="graph-note"></div>
+    <div id="graphMatrix" style="margin-top:10px"></div>
   </div>
 </section>
 
@@ -722,6 +822,144 @@ tr:hover td{background:rgba(121,192,255,.02)}
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
   } else { boot(); }
+})();
+</script>
+
+<script>
+/* Cognitive pipeline diagnostic — Mastermind → AGInt → BDI cycle-by-cycle (self-contained) */
+(function(){
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  function cycleStrip(cycles){
+    if(!cycles||!cycles.length) return '<span style="color:#888;font-size:11px">no BDI cycles</span>';
+    const total = cycles[cycles.length-1].total || cycles.length;
+    let bars='';
+    for(let i=1;i<=total;i++){
+      const c = cycles.find(x=>x.n===i);
+      const col = !c ? '#333' : (c.status==='RUNNING' ? '#e0a030' : (/(SUCCESS|COMPLETED|ACHIEVED)/.test(c.status)?'#3bbf6f':'#d05050'));
+      bars += `<span title="cycle ${i}: ${c?esc(c.status):'—'}" style="display:inline-block;width:7px;height:14px;margin-right:2px;border-radius:1px;background:${col}"></span>`;
+    }
+    return `<span style="vertical-align:middle">${bars}</span> <span style="color:#aaa;font-size:11px">${cycles.length}/${total}</span>`;
+  }
+  function statusBadge(s){
+    if(!s) return '<span style="color:#e0a030;font-weight:600">running…</span>';
+    const ok=/(SUCCESS|COMPLETED|ACHIEVED)/.test(s), bad=/(FAIL|MAX_CYCLES)/.test(s);
+    return `<span style="color:${ok?'#3bbf6f':(bad?'#d05050':'#e0a030')};font-weight:600">${esc(s)}</span>`;
+  }
+  function render(d){
+    const mm=d.mastermind||{}, ag=d.agint||{}, camp=mm.campaigns||[];
+    let h='<div style="font-weight:600;color:#9bd;margin-bottom:6px">MASTERMIND → BDI campaigns (cycle-by-cycle)</div>';
+    if(mm.note) h+=`<div style="color:#d05050;font-size:12px;margin-bottom:8px">⚠ ${esc(mm.note)}</div>`;
+    if(!camp.length) h+='<div class="empty">no campaigns in the log window</div>';
+    for(const c of camp){
+      const flags=[];
+      if(c.blueprint) flags.push('blueprint✓');
+      if(c.zero_action_plans) flags.push(`${c.zero_action_plans} empty-plan`);
+      if(c.analyze_failure) flags.push(`${c.analyze_failure} ANALYZE_FAILURE`);
+      h+=`<div style="padding:8px 0;border-bottom:1px solid #1a1a1a">
+        <div style="font-size:12px;color:#ccc;margin-bottom:4px">${c.backlog_idx!=null?`<span style="color:#789">#${c.backlog_idx}</span> `:''}${esc(c.directive)}</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          ${cycleStrip(c.cycles)} ${statusBadge(c.final_status)}
+          ${flags.length?`<span style="color:#c98;font-size:11px">${esc(flags.join(' · '))}</span>`:''}
+        </div></div>`;
+    }
+    h+='<div style="font-weight:600;color:#9bd;margin:14px 0 6px">AGInt · P-O-D-A cognitive core <span style="color:#667;font-weight:400;font-size:11px">— perceive → orient → decide → act (the soul)</span></div>';
+    if(!ag.active){
+      h+=`<div style="color:#d05050;font-size:12px">● DORMANT — ${esc(ag.note||'no cognitive cycles in the log window')}</div>`;
+    } else {
+      const rec=(ag.recent||[]).filter(c=>c.action_type);
+      h+=`<div style="color:#3bbf6f;font-size:12px">● active — ${ag.cognitive_cycles} cognitive cycles · deliberating on cloud inference</div>`;
+      h+='<div style="margin-top:6px;display:flex;flex-direction:column;gap:2px">';
+      h+=rec.map(c=>{const col=c.success===true?'#3bbf6f':(c.success===false?'#d05050':'#888');
+        return `<div style="font-size:11.5px;font-family:var(--mono,monospace)"><span style="color:#566">${esc((c.ts||'').slice(11,19))}</span> <span style="color:#789">cyc ${c.cycle}</span> &#8594; <b style="color:${col}">${esc(c.action_type)}</b> ${c.success===true?'✓':(c.success===false?'✗':'·')}</div>`}).join('');
+      h+='</div>';
+      const tally={}; rec.forEach(c=>{tally[c.action_type]=(tally[c.action_type]||0)+1});
+      const keys=Object.keys(tally);
+      if(keys.length) h+='<div style="margin-top:6px;font-size:11px;color:#889">decisions: '+keys.map(k=>esc(k)+' ×'+tally[k]).join(' · ')+'</div>';
+    }
+    return h;
+  }
+  async function loadCogDiag(){
+    const el=document.getElementById('cogDiag'), pill=document.getElementById('cogDiagPill');
+    if(!el) return;
+    try{
+      const d=await fetch('/insight/cognition/diagnostic?limit=8',{cache:'no-store'}).then(r=>r.json());
+      el.innerHTML=render(d);
+      const camp=(d.mastermind&&d.mastermind.campaigns)||[], stalled=(d.mastermind&&d.mastermind.stalled_max_cycles)||0;
+      if(pill) pill.textContent = camp.length ? (stalled?`${stalled}/${camp.length} stalled`:`${camp.length} runs`) : 'idle';
+      const bg=document.getElementById('bg-cognition-diag'); if(bg) bg.textContent=String(camp.length);
+    }catch(e){ el.innerHTML=`<div class="empty">fetch failed: ${esc(e.message||e)}</div>`; if(pill) pill.textContent='error'; }
+  }
+  document.addEventListener('click',e=>{ if(e.target.closest&&e.target.closest('[data-target="sec-cognition-diag"]')) loadCogDiag(); });
+  // ── the OVERLORD hierarchy — two sovereignty chains, one ladder ──
+  function renderHierarchy(d){
+    if(!d||!d.ladder) return '<div class="empty">hierarchy unavailable</div>';
+    const ap=d.apex||{}, ovl=ap.overlord||{}, ovs=ap.overseer||{};
+    const tc={overlord:'var(--gold)',overseer:'var(--violet)',model:'#79c0ff',member:'#3bbf6f',agent:'#9bd',participant:'#888',public:'#667'};
+    let h='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;font-family:var(--mono,monospace)">';
+    h+=`<span style="padding:3px 10px;border-radius:6px;background:rgba(255,209,102,.08);border:1px solid rgba(255,209,102,.3)">&#10689; OVERLORD = <b style="color:var(--gold)">${esc(ovl.identity||'bankon.eth')}</b> <span style="color:#778">(${esc(ovl.chain||'evm')}) ${ovl.configured?'✓':'—'}</span></span>`;
+    h+=`<span style="padding:3px 10px;border-radius:6px;background:rgba(210,168,255,.08);border:1px solid rgba(210,168,255,.3)">&#10689; OVERSEER = <b style="color:var(--violet)">${esc(ovs.identity||'mindx.algo')}</b> <span style="color:#778">(${esc(ovs.chain||'algorand')}) ${ovs.configured?'✓':'—'}</span></span>`;
+    h+='</div><div style="display:flex;flex-direction:column;gap:2px">';
+    h+=d.ladder.slice().reverse().map(t=>{const c=tc[t.tier]||'#888';
+      return `<div style="display:flex;gap:10px;align-items:baseline;font-size:11.5px;font-family:var(--mono,monospace);padding:3px 0;border-bottom:1px solid #161616"><b style="min-width:100px;color:${c};text-transform:uppercase;letter-spacing:1px">${esc(t.tier)}</b><span style="color:#aab">${esc(t.how||'')}</span></div>`}).join('');
+    h+='</div>';
+    if(d.note) h+=`<div style="margin-top:8px;font-size:11px;color:#778;font-style:italic">${esc(d.note)}</div>`;
+    return h;
+  }
+  async function loadHierarchy(){
+    const el=document.getElementById('hier'), pill=document.getElementById('hierPill');
+    if(!el) return;
+    try{
+      const d=await fetch('/insight/hierarchy',{cache:'no-store'}).then(r=>r.json());
+      el.innerHTML=renderHierarchy(d);
+      if(pill){const ap=d.apex||{};const n=((ap.overlord||{}).configured?1:0)+((ap.overseer||{}).configured?1:0);pill.textContent=n+'/2 apex live';}
+    }catch(e){ el.innerHTML=`<div class="empty">fetch failed: ${esc(e.message||e)}</div>`; if(pill) pill.textContent='error'; }
+  }
+  function boot(){ if(document.getElementById('cogDiag')) loadCogDiag();
+    if(document.getElementById('hier')) loadHierarchy();
+    setInterval(()=>{ const tab=document.querySelector('.tab-chip.active'); if(tab&&tab.getAttribute('data-target')==='sec-cognition-diag') loadCogDiag(); },25000); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+})();
+</script>
+
+<script>
+/* Inference ledger — tokens + price per model, blockchain-publishable (self-contained) */
+(function(){
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  function usd(n){ n=+n||0; return n<0.01 && n>0 ? '$'+n.toFixed(6) : '$'+n.toFixed(4); }
+  function k(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(1)+'k' : String(n); }
+  function render(d){
+    const t=d.totals||{}, bm=d.by_model||{}, models=Object.entries(bm).sort((a,b)=>b[1].total_tokens-a[1].total_tokens);
+    let h=`<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px;font-size:12px">
+      <span><b>${d.entries||0}</b> inferences</span>
+      <span><b>${k(t.total_tokens)}</b> tokens</span>
+      <span><b>${usd(t.cost_usd)}</b> cost</span>
+      <span><b>${d.anchor_count||0}</b> anchors</span>
+      <span style="color:${d.chain&&d.chain.valid?'#3bbf6f':'#d05050'}">chain ${d.chain&&d.chain.valid?'✓ valid':'✗ broken'}</span></div>`;
+    h+=`<div style="font-size:10px;color:#789;margin-bottom:8px">source <code>precision_metrics</code> · state <code>${esc((d.state_digest||'').slice(0,24))}…</code> · head anchor <code>${esc(((d.anchor&&d.anchor.head_anchor)||'').slice(0,16))}…</code> (publishable on-chain)</div>`;
+    h+='<div style="font-weight:600;color:#9bd;margin:6px 0 4px">per model (ACTUAL tokens)</div>';
+    if(!models.length) h+='<div class="empty">no inferences recorded yet — ledger fills as the loop runs</div>';
+    for(const [m,v] of models){
+      h+=`<div style="display:flex;align-items:center;gap:10px;padding:4px 0;border-bottom:1px solid #161616;font-size:12px">
+        <span style="flex:1;color:#ccc">${esc(m)}</span>
+        <span style="color:#9aa">${v.requests}×</span><span style="color:#9aa">${k(v.total_tokens)} tok</span>
+        <span style="color:#7c7;width:70px;text-align:right">${usd(v.cost_usd)}</span></div>`;
+    }
+    return h;
+  }
+  async function loadLedger(){
+    const el=document.getElementById('inferenceLedger'), pill=document.getElementById('ledgerPill');
+    if(!el) return;
+    try{
+      const d=await fetch('/insight/inference/ledger?limit=12',{cache:'no-store'}).then(r=>r.json());
+      el.innerHTML=render(d);
+      if(pill) pill.textContent=(d.entries||0)+' · '+usd((d.totals||{}).cost_usd);
+      const bg=document.getElementById('bg-inference-ledger'); if(bg) bg.textContent=String(d.entries||0);
+    }catch(e){ el.innerHTML=`<div class="empty">fetch failed: ${esc(e.message||e)}</div>`; if(pill) pill.textContent='error'; }
+  }
+  document.addEventListener('click',e=>{ if(e.target.closest&&e.target.closest('[data-target="sec-inference-ledger"]')) loadLedger(); });
+  function boot(){ if(document.getElementById('inferenceLedger')) loadLedger();
+    setInterval(()=>{ const tab=document.querySelector('.tab-chip.active'); if(tab&&tab.getAttribute('data-target')==='sec-inference-ledger') loadLedger(); },25000); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
 })();
 </script>
 
@@ -1277,6 +1515,103 @@ async function refreshStuck() {
   }
 }
 
+async function refreshSelfEval() {
+  try {
+    const r = await fetch('/insight/autonomous/feedback', { cache: 'no-store' });
+    const d = await r.json();
+    const pill = $('selfEvalPill'), box = $('selfEvalBox');
+    const v = d.verdict || 'warming_up';
+    const cls = { improving:'ok', stalled:'warn', failing:'err', resource_bound:'warn', training_stalled:'warn', warming_up:'' }[v] || '';
+    pill.textContent = v.toUpperCase().replace(/_/g,' ');
+    pill.className = 'pill ' + cls;
+    const col = { improving:'var(--green)', stalled:'var(--amber)', failing:'var(--red)', resource_bound:'var(--amber)', training_stalled:'var(--amber)', warming_up:'var(--text3)' }[v] || 'var(--text3)';
+    const align = (d.alignment_mean_live!=null) ? Number(d.alignment_mean_live).toFixed(2) : (d.alignment_mean!=null?Number(d.alignment_mean).toFixed(2):'—');
+    let html = '<div style="font-family:var(--mono);font-size:12.5px">';
+    html += '<div style="font-size:1.4em;color:'+col+';font-weight:700;margin-bottom:6px">'+escapeHtml(v.replace('_',' '))+'</div>';
+    // GROUND TRUTH — real effector applies (sentinel version): the machine editing its own code. This is the
+    // honest self-improvement signal; the campaign-wrapper rate below lags it (it rarely reports SUCCESS).
+    const si = d.self_improvement || {};
+    if (si.applies > 0) {
+      const sc = si.healthy ? 'var(--green)' : 'var(--amber)';
+      html += '<div style="margin:0 0 10px;padding:8px 10px;background:rgba(63,185,80,.08);border-left:2px solid '+sc+';border-radius:3px;font-size:12.5px">'
+        + '<b style="color:'+sc+'">'+si.applies+' self-improvements applied</b> · sentinel <b>v'+si.version+'</b> · '+(si.healthy?'verified healthy':'unhealthy')
+        + '<div style="color:var(--text3);font-size:10.5px;margin-top:3px">the machine has edited its own code this many times — the ground-truth signal; the campaign wrapper below lags it</div></div>';
+    }
+    html += '<div style="color:var(--text2)">campaigns succeeding: <b style="color:'+col+'">'+escapeHtml(d.sample||'0/0')+'</b>';
+    if (d.cpu_percent!=null) html += ' · CPU <b>'+Math.round(d.cpu_percent)+'%</b>';
+    html += ' · alignment <b>'+align+'</b>';
+    if (d.alignment_samples!=null) html += ' <span style="color:var(--text3)">('+d.alignment_samples+' evals)</span>';
+    html += '</div>';
+    if (d.recommendation) html += '<div style="color:var(--text3);margin-top:8px;line-height:1.5">↳ '+escapeHtml(d.recommendation)+'</div>';
+    // the mindXtrain right-apex objective eval, folded into the self-eval
+    const te = d.training_eval || {};
+    if (te.total) {
+      const tc = te.accepted>0 ? 'var(--green)' : 'var(--amber)';
+      html += '<div style="margin-top:8px;padding:6px 10px;background:rgba(210,168,255,.06);border-left:2px solid var(--violet);border-radius:3px;font-size:11.5px">'
+        + '<span style="color:var(--violet)">training objective eval</span> · imprints <b style="color:'+tc+'">'+te.accepted+'/'+te.total+'</b> took'
+        + (te.last_delta!=null?' · last Δ<b>'+te.last_delta+'</b>':'')
+        + (te.trend?' · '+escapeHtml(te.trend):'')
+        + (te.last_model?' · served <b style="color:var(--blue)">'+escapeHtml(te.last_model)+'</b>':'') + '</div>';
+    }
+    const esc = d.last_escalation;
+    if (esc && esc.failure_mode) {
+      html += '<div style="margin-top:10px;padding:8px 10px;background:rgba(121,192,255,.06);border-left:2px solid var(--blue);border-radius:3px">';
+      html += '<span style="color:var(--blue)">last SEA escalation</span> · '+escapeHtml(esc.status||'')+' · failure mode: <b>'+escapeHtml(esc.failure_mode)+'</b>';
+      if (esc.ts) html += '<br><span style="color:var(--text3);font-size:11px">'+escapeHtml(Human.timeAgo ? Human.timeAgo(esc.ts*1000) : new Date(esc.ts*1000).toISOString())+'</span>';
+      html += '</div>';
+    }
+    html += '</div>';
+    box.innerHTML = html;
+  } catch (e) {
+    $('selfEvalBox').innerHTML = '<div class="empty">self-eval unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+async function refreshSentinel() {
+  try {
+    const r = await fetch('/insight/sentinel/status', { cache: 'no-store' });
+    const d = await r.json();
+    const pill = $('sentinelPill'), box = $('sentinelBox');
+    if (!pill || !box) return;
+    const healthy = !!d.healthy;
+    const changed = !!d.changed_by_loop;
+    // Pill: green when the loop has landed a change on the sentinel, amber while
+    // healthy-but-untouched, red if the sentinel itself is broken.
+    const pillCls = !healthy ? 'err' : (changed ? 'ok' : 'warn');
+    pill.textContent = !healthy ? 'BROKEN' : (changed ? 'IMPROVED' : 'WAITING');
+    pill.className = 'pill ' + pillCls;
+    const col = !healthy ? 'var(--red)' : (changed ? 'var(--green)' : 'var(--amber)');
+    let html = '<div style="font-family:var(--mono);font-size:12.5px">';
+    html += '<div style="font-size:1.3em;color:'+col+';font-weight:700;margin-bottom:6px">'
+          + (!healthy ? 'sentinel broken' : (changed ? 'loop improved the sentinel' : 'awaiting first improvement')) + '</div>';
+    html += '<div style="color:var(--text2)">target <b>'+escapeHtml(d.target||'?')+'</b>';
+    html += ' · <b style="color:'+(healthy?'var(--green)':'var(--red)')+'">'+(healthy?'healthy':'unhealthy')+'</b>';
+    if (d.version!=null) html += ' v'+escapeHtml(String(d.version));
+    if (d.lines!=null) html += ' · '+d.lines+' lines';
+    if (d.sha8) html += ' · sha '+escapeHtml(d.sha8);
+    html += '</div>';
+    if (d.seeded) {
+      html += '<div style="color:var(--text3);margin-top:8px">baseline <b>'+escapeHtml(d.baseline_sha8||'?')+'</b> · '
+            + (changed ? '<b style="color:var(--green)">changed '+(d.change_count||0)+'×</b>' : 'unchanged') + '</div>';
+    } else {
+      html += '<div style="color:var(--text3);margin-top:8px">baseline not seeded yet</div>';
+    }
+    const bl = d.backlog || {};
+    html += '<div style="color:var(--text3);margin-top:6px">backlog: '
+          + (bl.present ? '<b>present</b> ('+escapeHtml(String(bl.status||'pending'))+', prio '+escapeHtml(String(bl.priority))+')' : 'absent') + '</div>';
+    const camp = d.campaigns || {};
+    html += '<div style="color:var(--text3);margin-top:6px">campaigns targeting sentinel: <b>'+(camp.count||0)+'</b>';
+    if (camp.last && camp.last.status) html += ' · last <b>'+escapeHtml(camp.last.status)+'</b>';
+    html += '</div>';
+    if (d.error) html += '<div style="color:var(--red);margin-top:6px">⚠ '+escapeHtml(d.error)+'</div>';
+    html += '<div style="color:var(--text3);margin-top:8px;font-size:11px;line-height:1.5">'+escapeHtml(d.note||'')+'</div>';
+    html += '</div>';
+    box.innerHTML = html;
+  } catch (e) {
+    const box = $('sentinelBox'); if (box) box.innerHTML = '<div class="empty">sentinel unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
 // ── 2. Live dialogue (SSE) ──
 let _seenIds = new Set();
 const MAX_ROWS = 200;
@@ -1455,9 +1790,11 @@ async function refreshBDI() {
             : '()';
           const resultStr = e.result === undefined || e.result === null ? '' :
                             (typeof e.result === 'string' ? e.result : JSON.stringify(e.result));
+          // Inline result up to 400 chars — enough to read WHY an action failed
+          // (the endpoint now carries up to 1000; full payload in the ⋯ drill).
           body = '<b>' + escapeHtml(e.action_type || '?') + '</b>' +
                  '<span class="params"> ' + paramsStr + '</span>' +
-                 (resultStr ? ' → <span class="result">' + escapeHtml(truncate(resultStr, 200)) + '</span>' : '');
+                 (resultStr ? ' → <span class="result">' + escapeHtml(truncate(resultStr, 400)) + '</span>' : '');
         } else {
           kindLbl = pn;
         }
@@ -1481,16 +1818,20 @@ async function refreshBDI() {
 }
 
 // ── 4. Improvement ledger — clustered by failure shape ──
-// 4-state classifier matches insight_aggregator._compute_improvement_summary
+// Classifier matches insight_aggregator._compute_improvement_summary
 // so feedback page math equals what /insight/improvement/summary reports.
-let _ledgerFilter = 'all';   // 'all' | 'succeeded' | 'running' | 'errored' | 'failed' | 'blocked'
+// 'incomplete' = BDI exhausted max_cycles without a terminal state. New
+// records say MAX_CYCLES_REACHED; legacy records said "BDI run RUNNING"
+// (same condition, mislabeled — nothing was actually in flight).
+let _ledgerFilter = 'all';   // 'all' | 'succeeded' | 'running' | 'incomplete' | 'errored' | 'failed' | 'blocked'
 function _ledgerClassify(c) {
   const s = (c.overall_campaign_status || c.status || '').toUpperCase();
   const m = (c.final_bdi_message || '').toUpperCase();
   if (m.includes('COMPLETED_GOAL_ACHIEVED') || s === 'SUCCESS') return 'succeeded';
   if (m.includes('CYCLE EXCEPTION')) return 'errored';
-  if (m.includes('FAILED')) return 'failed';
-  if (m.includes('RUNNING') || s === 'RUNNING' || s === 'IN_PROGRESS') return 'running';
+  if (m.includes('FAILED') || m.includes('TIMED_OUT') || s === 'TIMED_OUT') return 'failed';
+  if (m.includes('MAX_CYCLES_REACHED') || s === 'MAX_CYCLES_REACHED' || m.includes('RUNNING')) return 'incomplete';
+  if (s === 'RUNNING' || s === 'IN_PROGRESS') return 'running';
   if (s.includes('BLOCK')) return 'blocked';
   return 'failed';   // truly unknown
 }
@@ -1504,6 +1845,211 @@ function _ledgerShape(c) {
     return m.replace(/\s+/g, ' ').slice(0, 80);
   }
   return c.overall_campaign_status || 'unknown';
+}
+function _gmiVerdictColor(v) {
+  if (v === 'PROVEN-so-far') return '#3fb950';
+  if (v === 'FALSIFIED') return '#f85149';
+  if (v === 'UNMET') return '#8b949e';
+  return '#d29922'; // UNTESTED
+}
+function renderGodelMachine(d) {
+  if (!d || !d.predicates) {
+    return '<div class="empty">GMI unavailable' + (d && d.error ? ': ' + escapeHtml(d.error) : '') + '</div>';
+  }
+  const isMachine = d.verdict === 'GODEL_MACHINE';
+  const vColor = isMachine ? '#3fb950' : '#d29922';
+  const cov = (typeof d.proof_coverage === 'number') ? (d.proof_coverage * 100).toFixed(0) + '%' : '—';
+  const scov = (typeof d.surrogate_coverage === 'number') ? (d.surrogate_coverage * 100).toFixed(0) + '%' : null;
+  let html = '';
+  html += '<div style="border-left:4px solid ' + vColor + ';padding:8px 12px;margin-bottom:12px">' +
+          '<div style="font-size:1.05em;font-weight:600;color:' + vColor + '">' + escapeHtml(d.verdict) + '</div>' +
+          '<div class="sub">' + escapeHtml(d.honest_summary || '') + '</div>' +
+          '<div class="sub">proof coverage: <b>' + cov + '</b>' +
+          (scov !== null ? ' · surrogate coverage: <b>' + scov + '</b>' : '');
+  const t = d.telemetry || {};
+  if (typeof t.godel_choices_sampled === 'number') {
+    html += ' · ' + t.godel_choices_sampled + ' choices sampled';
+    if (typeof t.mean_coherence === 'number') html += ' · mean coherence ' + t.mean_coherence.toFixed(2);
+    html += ' · with proof: ' + (t.with_proof || 0);
+  }
+  if (typeof d.predicates_proven === 'number') {
+    html += '</div><div class="sub">predicates proven: <b>' + d.predicates_proven + ' / 8</b>';
+    if (Array.isArray(d.blockers) && d.blockers.length) {
+      html += ' · not-yet because: ' + escapeHtml(d.blockers.join(', '));
+    }
+  }
+  html += '</div></div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px">';
+  for (const p of d.predicates) {
+    const c = _gmiVerdictColor(p.verdict);
+    html += '<div style="border:1px solid var(--border);border-radius:6px;padding:8px">' +
+            '<div><code>' + escapeHtml(p.id) + '</code> ' + escapeHtml(p.name) +
+            ' <span class="pill" style="color:' + c + ';border-color:' + c + '">' + escapeHtml(p.verdict) + '</span></div>' +
+            '<div class="sub" style="margin-top:4px">' + escapeHtml(p.detail || '') + '</div></div>';
+  }
+  html += '</div>';
+  if (d.constraint) html += '<div class="sub" style="margin-top:10px">' + escapeHtml(d.constraint) + '</div>';
+  return html;
+}
+function _fmtDur(s) {
+  s = Math.max(0, Math.floor(s));
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  return (h ? h+'h ' : '') + (h||m ? m+'m ' : '') + sec + 's';
+}
+function _fmtCycles(c) {
+  if (c == null) return '—';
+  const u = [[1e15,'Pcyc'],[1e12,'Tcyc'],[1e9,'Gcyc'],[1e6,'Mcyc'],[1e3,'Kcyc']];
+  for (const [d,n] of u) if (c >= d) return (c/d).toFixed(2)+' '+n;
+  return c+' cyc';
+}
+// tick the training elapsed timer every second between fetches
+setInterval(function(){
+  const t = window._ascendTraining; const el = document.getElementById('trainElapsed');
+  if (t && el) el.textContent = _fmtDur(t.base + (Date.now() - t.at)/1000);
+}, 1000);
+async function refreshAscend() {
+  try {
+    const d = await fetch('/insight/godel/ascend', { cache: 'no-store' }).then(r => r.json());
+    const cap = d.capability || {};
+    const pill = $('ascendPill'), box = $('ascendBox');
+    let state, cls;
+    if (!cap.installed) { state = 'NOT INSTALLED'; cls = ''; }
+    else if (!cap.armed) { state = 'DORMANT'; cls = 'warn'; }
+    else if (cap.autonomous_enabled) { state = 'ARMED + AUTONOMOUS'; cls = 'ok'; }
+    else { state = 'ARMED (operator)'; cls = 'ok'; }
+    pill.textContent = state; pill.className = 'pill ' + cls;
+    let html = '<div style="font-family:var(--mono);font-size:12px">';
+    html += '<div style="color:var(--text2);margin-bottom:8px">mindXtrain '
+      + escapeHtml(cap.version || '—') + ' · level <b>' + escapeHtml(cap.level || '?') + '</b>'
+      + ' · CPU-train ' + (cap.cpu_train_active ? '<b style="color:var(--green)">active</b>' : 'inactive')
+      + (cap.home ? ' · <span style="color:var(--text3)">' + escapeHtml(cap.home) + '</span>' : '') + '</div>';
+    // ── live training indicator ──
+    const tr = d.training || {};
+    window._ascendTraining = null;
+    if (tr.state === 'running') {
+      pill.textContent = 'TRAINING'; pill.className = 'pill warn';
+      // base the ticking timer on server elapsed_s + local drift since fetch
+      window._ascendTraining = { base: tr.elapsed_s || 0, at: Date.now(), gen: tr.generation, recipe: tr.recipe, stage: tr.stage };
+      html += '<div style="padding:8px 10px;background:rgba(227,179,65,.08);border-left:2px solid var(--amber);border-radius:3px;margin-bottom:8px">';
+      html += '<div style="display:flex;align-items:center;gap:8px">'
+        + '<span class="train-dot" style="width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse 1.4s ease-in-out infinite"></span>'
+        + '<span style="color:var(--amber)">TRAINING</span> gen <b>' + escapeHtml(String(tr.generation || '?')) + '</b>'
+        + ' · ' + escapeHtml(tr.recipe || '') + ' · <span style="color:var(--text3)">' + escapeHtml(tr.stage || '') + '</span>'
+        + ' · <span id="trainElapsed" style="color:var(--amber);font-weight:600">' + _fmtDur(tr.elapsed_s || 0) + '</span></div>';
+      // chronos.agent 18-decimal verified clock
+      var ch = tr.chronos || {};
+      if (ch.elapsed_18dp) {
+        var cc = {correlated:'var(--green)',degraded:'var(--amber)',drifted:'var(--red)',offline:'var(--text3)',local:'var(--text3)'}[ch.consensus]||'var(--text3)';
+        html += '<div style="margin-top:6px;font-size:10.5px;color:var(--text2)">⏱ chronos.agent elapsed <b style="color:var(--violet)">' + escapeHtml(ch.elapsed_18dp) + '</b> s'
+          + ' · <span style="color:'+cc+'">' + escapeHtml(ch.consensus||'?') + '</span>'
+          + (ch.confidence_ms!=null?' ±'+Math.round(ch.confidence_ms)+'ms':'') + '</div>';
+      }
+      // per-core CPU telemetry
+      var cpu = tr.cpu || {};
+      if (cpu.cores && cpu.cores.length) {
+        html += '<div style="margin-top:6px;font-size:10px;font-family:var(--mono)">';
+        html += '<div style="color:var(--text3);margin-bottom:2px">per-core'
+          + (cpu.train_cycles_est!=null?' · training consumed <b style="color:var(--blue)">'+_fmtCycles(cpu.train_cycles_est)+'</b> ('+cpu.train_cpu_seconds+'s CPU)':'') + '</div>';
+        for (var i=0;i<cpu.cores.length;i++){ var co=cpu.cores[i];
+          var ub = Math.min(100,co.usage_pct);
+          html += '<div style="display:flex;align-items:center;gap:6px;margin:1px 0">'
+            + '<span style="color:var(--text3);width:42px">core '+co.core+'</span>'
+            + '<span style="display:inline-block;width:70px;height:7px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden"><span style="display:block;height:7px;width:'+ub+'%;background:'+(ub>85?'var(--red)':ub>50?'var(--amber)':'var(--green)')+'"></span></span>'
+            + '<span style="width:42px;text-align:right">'+co.usage_pct+'%</span>'
+            + '<span style="color:var(--text3)">'+(co.freq_mhz?co.freq_mhz+'MHz':'')+'</span>'
+            + (co.cycles_cumulative!=null?'<span style="color:var(--text3)">· '+_fmtCycles(co.cycles_cumulative)+'</span>':'')
+            + '<span style="color:'+(co.temp_c!=null?'var(--amber)':'var(--text3)')+'">· '+(co.temp_c!=null?co.temp_c+'°C':'temp n/a')+'</span>'
+            + '</div>';
+        }
+        if (cpu.train_ram_mb!=null || cpu.ram) {
+          html += '<div style="margin-top:3px;color:var(--text2)">⛁ RAM '
+            + (cpu.train_ram_mb!=null?'training <b style="color:var(--blue)">'+cpu.train_ram_mb+' MB</b>':'')
+            + (cpu.ram&&cpu.ram.used_gb!=null?' · host '+cpu.ram.used_gb+'/'+cpu.ram.total_gb+' GB ('+cpu.ram.percent+'%)':'') + '</div>';
+        }
+        if (cpu.temps_note) html += '<div style="color:var(--text3);font-size:9px;margin-top:2px">'+escapeHtml(cpu.temps_note)+'</div>';
+        html += '</div>';
+      }
+      // regimen / single CPU+RAM profile training is measured on
+      var st = d.settings||{}; var rg = st.regimen||{}; var hw = st.hardware||{};
+      if (rg.cpu_percent) {
+        html += '<div style="margin-top:6px;font-size:9.5px;color:var(--text3);border-top:1px solid var(--border);padding-top:4px">'
+          + 'measured on <b>'+escapeHtml(st.profile_name||'profile')+'</b>: '
+          + (hw.cpu_model?escapeHtml(hw.cpu_model)+' · ':'') + (hw.cpu_cores||'?')+' cores · '+(hw.ram_gb||'?')+' GB · '
+          + 'regimen <b style="color:var(--amber)">'+rg.cpu_percent+'% / '+rg.wall_hours+'h ≈ '+rg.effective_hours+'h compute</b> · '
+          + escapeHtml(rg.model||'') + '</div>';
+      }
+      html += '</div>';
+      if (tr.log_tail) html += '<pre style="background:rgba(5,8,16,.5);border:1px solid var(--border);border-radius:4px;padding:8px;font-size:10px;line-height:1.4;max-height:160px;overflow:auto;color:var(--text2);margin-bottom:8px">' + escapeHtml(tr.log_tail) + '</pre>';
+    } else if (tr.state === 'stale') {
+      html += '<div style="padding:6px 10px;color:var(--red);font-size:11px">⚠ last training crashed (' + escapeHtml(tr.note || '') + ')</div>';
+    }
+    const evs = d.events || [];
+    if (!evs.length) {
+      html += '<div style="color:var(--text3)">no ascents yet — '
+        + (cap.armed ? 'awaiting first generation' : 'arm the bridge to forge a generation') + '</div>';
+    } else {
+      const e = evs[0];
+      const r = e.recall || {};
+      html += '<div style="padding:8px 10px;background:rgba(86,211,100,.06);border-left:2px solid var(--green);border-radius:3px">';
+      html += 'gen <b>' + escapeHtml(String(e.generation || '?')) + '</b> · stage <b>' + escapeHtml(e.stage || '?') + '</b>';
+      if (r.recall_before != null) html += ' · recall <b>' + r.recall_before + '→' + r.recall_after + '</b> (Δ' + r.delta + ')';
+      if (e.ollama_model) html += ' · model <b style="color:var(--blue)">' + escapeHtml(e.ollama_model) + '</b>';
+      html += '</div>';
+    }
+    html += '</div>';
+    box.innerHTML = html;
+  } catch (e) {
+    $('ascendBox').innerHTML = '<div class="empty">ascend surface unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+async function refreshGodelMachine() {
+  const box = $('godelMachine');
+  const pill = $('gmiPill');
+  try {
+    const d = await fetch('/insight/godel/machine', { cache: 'no-store' }).then(r => r.json());
+    box.innerHTML = renderGodelMachine(d);
+    if (pill) {
+      const v = d.verdict || '?';
+      pill.textContent = (v === 'GODEL_MACHINE') ? 'GÖDEL' : 'not yet';
+    }
+  } catch (e) {
+    box.innerHTML = '<div class="empty">self-audit unavailable: ' + escapeHtml(e.message || e) + '</div>';
+    if (pill) pill.textContent = 'error';
+  }
+}
+function renderMilestones(d) {
+  const rows = (d && d.milestones) || [];
+  if (!rows.length) return '<div class="empty">no milestones chronicled yet — github.awareness has not seen a worthy push</div>';
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<tr style="color:var(--text3);text-align:left"><th>date</th><th>commit</th><th></th><th>score</th><th>summary</th></tr>';
+  for (const m of rows) {
+    const worthy = m.worthy ? '<span style="color:#3fb950">✓</span>' : '<span style="color:#8b949e">·</span>';
+    const sha = escapeHtml(m.short_sha || '');
+    const url = m.url || '#';
+    const subj = escapeHtml(m.subject || '');
+    const date = escapeHtml((m.date || '').slice(0, 10));
+    html += '<tr style="border-top:1px solid var(--border)">' +
+      '<td style="white-space:nowrap;color:var(--text3)">' + date + '</td>' +
+      '<td><a href="' + url + '" target="_blank" rel="noopener"><code>' + sha + '</code></a></td>' +
+      '<td>' + worthy + '</td>' +
+      '<td style="color:var(--text3)">' + escapeHtml(String(m.score == null ? '' : m.score)) + '</td>' +
+      '<td>' + subj + '</td></tr>';
+  }
+  html += '</table>';
+  return html;
+}
+async function refreshMilestones() {
+  const box = $('milestones');
+  const pill = $('milestonePill');
+  try {
+    const d = await fetch('/insight/milestones/recent?limit=25', { cache: 'no-store' }).then(r => r.json());
+    box.innerHTML = renderMilestones(d);
+    if (pill) pill.textContent = (d.worthy_count || 0) + ' worthy / ' + (d.count || 0);
+  } catch (e) {
+    box.innerHTML = '<div class="empty">milestones unavailable: ' + escapeHtml(e.message || e) + '</div>';
+    if (pill) pill.textContent = 'error';
+  }
 }
 async function refreshLedger() {
   const box = $('ledger');
@@ -1523,30 +2069,32 @@ async function refreshLedger() {
       return;
     }
 
-    // ── Status counts (5-state to match aggregator: succeeded/running/errored/failed/blocked) ──
-    const counts = { total: campaigns.length, succeeded: 0, running: 0, errored: 0, failed: 0, blocked: 0 };
+    // ── Status counts (6-state to match aggregator: succeeded/running/incomplete/errored/failed/blocked) ──
+    const counts = { total: campaigns.length, succeeded: 0, running: 0, incomplete: 0, errored: 0, failed: 0, blocked: 0 };
     for (const c of campaigns) counts[_ledgerClassify(c)]++;
     // Sanity check the math — the page must never lie about totals
-    const sumCheck = counts.succeeded + counts.running + counts.errored + counts.failed + counts.blocked;
+    const sumCheck = counts.succeeded + counts.running + counts.incomplete + counts.errored + counts.failed + counts.blocked;
     const mathOK = sumCheck === counts.total;
 
     // Honest pill: show every non-zero bucket so all numbers add up visibly.
     const pillParts = [counts.total + ' total'];
-    if (counts.succeeded) pillParts.push(counts.succeeded + ' ok');
-    if (counts.running)   pillParts.push(counts.running + ' run');
-    if (counts.errored)   pillParts.push(counts.errored + ' err');
-    if (counts.failed)    pillParts.push(counts.failed + ' fail');
-    if (counts.blocked)   pillParts.push(counts.blocked + ' block');
+    if (counts.succeeded)  pillParts.push(counts.succeeded + ' ok');
+    if (counts.running)    pillParts.push(counts.running + ' run');
+    if (counts.incomplete) pillParts.push(counts.incomplete + ' incomplete');
+    if (counts.errored)    pillParts.push(counts.errored + ' err');
+    if (counts.failed)     pillParts.push(counts.failed + ' fail');
+    if (counts.blocked)    pillParts.push(counts.blocked + ' block');
     if (!mathOK) pillParts.push('!math:' + sumCheck);
     pill.textContent = pillParts.join(' · ');
     pill.className = 'pill ' + (counts.succeeded > 0 ? 'ok' : (counts.errored > 0 ? 'warn' : 'amber'));
     _setBadge('improvements', counts.errored + counts.failed, counts.succeeded === 0 ? 'warn' : '');
 
-    // Status histogram + counters (5 cells)
-    let html = '<div class="status-row" style="grid-template-columns:repeat(6,1fr)">';
+    // Status histogram + counters (6 cells)
+    let html = '<div class="status-row" style="grid-template-columns:repeat(7,1fr)">';
     html += '<div class="status-cell"><div class="lbl">total</div><div class="val">' + Human.count(counts.total) + '</div></div>';
     html += '<div class="status-cell ok"><div class="lbl">succeeded</div><div class="val">' + Human.count(counts.succeeded) + '</div></div>';
-    html += '<div class="status-cell run"><div class="lbl">max-cycle</div><div class="val">' + Human.count(counts.running) + '</div></div>';
+    html += '<div class="status-cell run"><div class="lbl">running</div><div class="val">' + Human.count(counts.running) + '</div></div>';
+    html += '<div class="status-cell run"><div class="lbl">max-cycle</div><div class="val">' + Human.count(counts.incomplete) + '</div></div>';
     html += '<div class="status-cell fail" style="border-left-color:#e3b341"><div class="lbl">errored</div><div class="val" style="color:var(--amber)">' + Human.count(counts.errored) + '</div></div>';
     html += '<div class="status-cell fail"><div class="lbl">failed</div><div class="val">' + Human.count(counts.failed) + '</div></div>';
     html += '<div class="status-cell block"><div class="lbl">blocked</div><div class="val">' + Human.count(counts.blocked) + '</div></div>';
@@ -1556,18 +2104,20 @@ async function refreshLedger() {
       const T = counts.total;
       html += '<div class="histogram" title="status distribution — must sum to total">';
       if (counts.succeeded) html += '<span class="h-ok"    style="width:' + (counts.succeeded/T*100) + '%"></span>';
-      if (counts.running)   html += '<span class="h-run"   style="width:' + (counts.running/T*100) + '%"></span>';
-      if (counts.errored)   html += '<span             style="width:' + (counts.errored/T*100) + '%;background:#e3b341"></span>';
-      if (counts.blocked)   html += '<span class="h-block" style="width:' + (counts.blocked/T*100) + '%"></span>';
-      if (counts.failed)    html += '<span class="h-fail"  style="width:' + (counts.failed/T*100) + '%"></span>';
+      if (counts.running)    html += '<span class="h-run"   style="width:' + (counts.running/T*100) + '%"></span>';
+      if (counts.incomplete) html += '<span class="h-run"   style="width:' + (counts.incomplete/T*100) + '%;opacity:.6"></span>';
+      if (counts.errored)    html += '<span             style="width:' + (counts.errored/T*100) + '%;background:#e3b341"></span>';
+      if (counts.blocked)    html += '<span class="h-block" style="width:' + (counts.blocked/T*100) + '%"></span>';
+      if (counts.failed)     html += '<span class="h-fail"  style="width:' + (counts.failed/T*100) + '%"></span>';
       html += '</div>';
       const pct = (n) => Math.round(n/T*100) + '%';
       const legendParts = [];
-      if (counts.succeeded) legendParts.push('<span style="color:var(--green)">'  + pct(counts.succeeded) + ' succeeded</span>');
-      if (counts.running)   legendParts.push('<span style="color:var(--amber)">'  + pct(counts.running)   + ' max-cycle (clean)</span>');
-      if (counts.errored)   legendParts.push('<span style="color:var(--amber)">'  + pct(counts.errored)   + ' errored (cycle exception)</span>');
-      if (counts.blocked)   legendParts.push('<span style="color:var(--violet)">' + pct(counts.blocked)   + ' blocked</span>');
-      if (counts.failed)    legendParts.push('<span style="color:var(--red)">'    + pct(counts.failed)    + ' failed (planning/recovery)</span>');
+      if (counts.succeeded)  legendParts.push('<span style="color:var(--green)">'  + pct(counts.succeeded)  + ' succeeded</span>');
+      if (counts.running)    legendParts.push('<span style="color:var(--amber)">'  + pct(counts.running)    + ' running (in flight)</span>');
+      if (counts.incomplete) legendParts.push('<span style="color:var(--amber)">'  + pct(counts.incomplete) + ' max-cycle (exhausted cleanly)</span>');
+      if (counts.errored)    legendParts.push('<span style="color:var(--amber)">'  + pct(counts.errored)    + ' errored (cycle exception)</span>');
+      if (counts.blocked)    legendParts.push('<span style="color:var(--violet)">' + pct(counts.blocked)    + ' blocked</span>');
+      if (counts.failed)     legendParts.push('<span style="color:var(--red)">'    + pct(counts.failed)     + ' failed (planning/recovery)</span>');
       html += '<div class="histogram-legend">' + legendParts.join(' · ') + '</div>';
     }
 
@@ -1575,10 +2125,11 @@ async function refreshLedger() {
     // Surfaces only when there are zero successes — otherwise hides itself.
     if (counts.succeeded === 0 && counts.total > 0) {
       const partsList = [];
-      if (counts.failed)  partsList.push('<b style="color:var(--red)">'    + counts.failed  + '× failed</b> (planning or execution)');
-      if (counts.running) partsList.push('<b style="color:var(--amber)">'  + counts.running + '× max-cycle</b> (BDI ran out of cycles cleanly — typically NO_OP skeleton)');
-      if (counts.errored) partsList.push('<b style="color:var(--amber)">'  + counts.errored + '× errored</b> (unhandled cycle exception)');
-      if (counts.blocked) partsList.push('<b style="color:var(--violet)">' + counts.blocked + '× blocked</b>');
+      if (counts.failed)     partsList.push('<b style="color:var(--red)">'    + counts.failed     + '× failed</b> (planning or execution)');
+      if (counts.incomplete) partsList.push('<b style="color:var(--amber)">'  + counts.incomplete + '× max-cycle</b> (BDI ran out of cycles cleanly — typically NO_OP skeleton)');
+      if (counts.running)    partsList.push('<b style="color:var(--amber)">'  + counts.running    + '× running</b> (in flight)');
+      if (counts.errored)    partsList.push('<b style="color:var(--amber)">'  + counts.errored    + '× errored</b> (unhandled cycle exception)');
+      if (counts.blocked)    partsList.push('<b style="color:var(--violet)">' + counts.blocked    + '× blocked</b>');
       html += '<div style="margin:14px 0;padding:12px 14px;background:rgba(248,81,73,.05);border:1px solid rgba(248,81,73,.2);border-left:3px solid var(--red);border-radius:6px;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--text2)">' +
         '<b style="color:var(--text);font-size:12px">no successful campaigns in window of ' + counts.total + '</b><br>' +
         'distribution: ' + partsList.join(' · ') + '<br>' +
@@ -1599,13 +2150,38 @@ async function refreshLedger() {
     };
     html += mkChip('all', 'All', counts.total, false);
     html += mkChip('succeeded', 'Successes', counts.succeeded, counts.succeeded === 0);
-    html += mkChip('running', 'Max-cycle', counts.running, counts.running === 0);
+    html += mkChip('incomplete', 'Max-cycle', counts.incomplete, counts.incomplete === 0);
+    if (counts.running) html += mkChip('running', 'Running', counts.running, false);
     html += mkChip('errored', 'Errored', counts.errored, counts.errored === 0);
     html += mkChip('failed', 'Failures', counts.failed, counts.failed === 0);
     if (counts.blocked) html += mkChip('blocked', 'Blocked', counts.blocked, false);
     html += '</div>';
 
-    // ── Cluster grouping ──
+    // ── Loop detection — fingerprint = directive minus the rotating
+    // "[target: …, backlog_idx: N]" decoration (JS port of
+    // mastermind_agent.suggestion_fingerprint). A fingerprint repeated >3×
+    // means the selector kept re-picking the same suggestion: the exact
+    // pathology that produced 100 identical campaigns/7d on prod (diagnosed +
+    // repaired 2026-06-11, docs/SYSTEM_REVIEW_2026_06.md).
+    const _dirFingerprint = (s) => (s || '').replace(/\s*\[target: [\s\S]*$/, '').trim().toLowerCase().slice(0, 120);
+    {
+      const fpCounts = new Map();
+      for (const c of campaigns) {
+        const fp = _dirFingerprint(c.directive);
+        if (fp) fpCounts.set(fp, (fpCounts.get(fp) || 0) + 1);
+      }
+      const looped = Array.from(fpCounts.entries()).filter(([, n]) => n > 3).sort((a, b) => b[1] - a[1]);
+      if (looped.length) {
+        const [fp, n] = looped[0];
+        html += '<div style="margin:10px 0;padding:10px 14px;background:rgba(227,179,65,.06);border:1px solid rgba(227,179,65,.3);border-left:3px solid var(--amber);border-radius:6px;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--text2)">' +
+          '<b style="color:var(--amber)">directive loop: repeated ' + n + '× in this window</b><br>' +
+          '&ldquo;' + escapeHtml(truncate(fp, 110)) + '&rdquo;<br>' +
+          '<span style="color:var(--text3)">diagnosis: selector fingerprint mismatch (rotating backlog_idx inside the hash) + non-terminal BDI status — repaired 2026-06-11. ' +
+          'If this banner persists on fresh runs, the repair has regressed.</span></div>';
+      }
+    }
+
+    // ── Cluster grouping (by fingerprint, so decorated re-picks group as one) ──
     const filtered = campaigns.filter(c => _ledgerFilter === 'all' || _ledgerClassify(c) === _ledgerFilter);
     if (!filtered.length) {
       html += '<div class="empty" style="padding:14px">no campaigns match filter "' + escapeHtml(_ledgerFilter) + '"</div>';
@@ -1613,7 +2189,7 @@ async function refreshLedger() {
       const clusters = new Map();
       filtered.forEach((c, idx) => {
         const shape = _ledgerShape(c);
-        const directive = (c.directive || '—').slice(0, 100);
+        const directive = _dirFingerprint(c.directive) || '—';
         const key = shape + '|' + directive;
         if (!clusters.has(key)) clusters.set(key, { shape, directive, runs: [] });
         // index = position from end (newest=0); stable across one render
@@ -1648,7 +2224,7 @@ async function refreshLedger() {
           // let the BDI-jump look up by goal/directive (Phase 5 will refine).
           html += '<div class="run-row">';
           html += '<span class="rid" title="' + escapeHtml(rid) + '"><code>' + escapeHtml(ridShort) + '</code></span>';
-          html += '<span class="ts">rank #' + r._idx + '</span>';
+          html += '<span class="ts">rank #' + r._idx + (r.backlog_idx != null ? ' · bl#' + r.backlog_idx : '') + (r.ts ? ' · ' + Human.relTs(r.ts) : '') + '</span>';
           html += '<span class="msg" title="' + escapeHtml(r.final_bdi_message || '') + '">' + escapeHtml(truncate(r.final_bdi_message || '', 110)) + '</span>';
           html += '<a class="jump" href="#sec-bdi" onclick="event.preventDefault();_jumpToBDI(this)" data-run="' + escapeHtml(rid) + '">show BDI →</a>';
           html += '</div>';
@@ -2178,9 +2754,26 @@ function _renderBoardSession(d) {
       '</details>';
   }
   if (dissent.length) {
-    html += '<details class="drill-item kind-dissent" style="margin-top:10px;padding:8px 10px;border-left-color:var(--amber)">' +
-      '<summary style="color:var(--amber);font-family:var(--mono);font-size:11.5px"><b>dissent</b> — ' + dissent.length + ' exploration branch' + (dissent.length === 1 ? '' : 'es') + '</summary>' +
-      '<pre class="drill-content" style="margin-top:8px">' + escapeHtml(JSON.stringify(dissent, null, 2)) + '</pre>' +
+    // Readable dissent cards — champion, full minority position, branch outcome.
+    // (Was a raw JSON.stringify dump; the minority argument is the substance.)
+    let dh = '';
+    for (const b of dissent) {
+      if (typeof b !== 'object' || b === null) { dh += '<div class="drill-content" style="margin-top:8px">' + escapeHtml(String(b)) + '</div>'; continue; }
+      const champion = b.champion || b.soldier || b.dissenter || b.opened_by || '?';
+      const position = b.position || b.reasoning || b.argument || b.text || '';
+      const outcome  = b.outcome || b.status || b.resolution || 'unexplored';
+      const shown = new Set(['champion','soldier','dissenter','opened_by','position','reasoning','argument','text','outcome','status','resolution']);
+      const rest = Object.entries(b).filter(([k, v]) => !shown.has(k) && v != null && typeof v !== 'object');
+      dh += '<div style="margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:6px">' +
+        '<div style="font-family:var(--mono);font-size:11px"><b style="color:var(--amber)">' + escapeHtml(String(champion)) + '</b>' +
+        ' <span style="color:var(--text3)">· branch ' + escapeHtml(String(outcome)) + '</span></div>' +
+        (position ? '<div style="margin-top:4px;font-size:11.5px;line-height:1.6;color:var(--text2);white-space:pre-wrap">' + escapeHtml(String(position)) + '</div>' : '') +
+        (rest.length ? '<div style="margin-top:4px;font-family:var(--mono);font-size:10px;color:var(--text3)">' + rest.map(([k, v]) => escapeHtml(k + '=' + v)).join(' · ') + '</div>' : '') +
+        '</div>';
+    }
+    html += '<details class="drill-item kind-dissent" style="margin-top:10px;padding:8px 10px;border-left-color:var(--amber)" open>' +
+      '<summary style="color:var(--amber);font-family:var(--mono);font-size:11.5px"><b>dissent</b> — ' + dissent.length + ' exploration branch' + (dissent.length === 1 ? '' : 'es') + ' (minority position in full)</summary>' +
+      dh +
       '</details>';
   }
   return html;
@@ -2222,6 +2815,19 @@ async function refreshDreams() {
       box.innerHTML = '<div class="empty">no dream reports in data/memory/dreams/ — has machine_dreaming ever run?</div>';
       return;
     }
+    // Per-agent substance — top insights from the dream, not just the count.
+    // The endpoint already ships per_agent (top_insight + score per agent).
+    const perAgentDrill = (dr) => {
+      const pa = (dr.per_agent || []).filter(a => a && a.top_insight);
+      if (!pa.length) return '';
+      const top = pa.slice().sort((a, b) => parseFloat(b.top_score || 0) - parseFloat(a.top_score || 0)).slice(0, 3);
+      let h = '<details style="margin-top:3px"><summary style="cursor:pointer;color:var(--text3);font-size:10px">top insights ⋯</summary><ul style="margin:4px 0 0 14px;padding:0;font-size:10.5px;line-height:1.55">';
+      for (const a of top) {
+        h += '<li><b>' + escapeHtml(a.agent_id || '?') + '</b> — ' + escapeHtml(truncate(a.top_insight || '', 160)) + '</li>';
+      }
+      h += '</ul></details>';
+      return h;
+    };
     let html = '<table><thead><tr><th>cycle</th><th>agents</th><th>insights</th><th>promoted</th><th>moon</th><th>duration</th><th>tuning recommendations</th></tr></thead><tbody>';
     for (const dr of dreams) {
       const lunar = dr.lunar || {};
@@ -2236,7 +2842,7 @@ async function refreshDreams() {
         relPast(dr.timestamp || (dr._mtime && dr._mtime * 1000)) + '</b><br>' +
         '<span style="color:var(--text3);font-size:10px">' + escapeHtml(dr._filename || '') + '</span></td>' +
         '<td>' + countSpan(dr.agents_dreamed) + '</td>' +
-        '<td>' + countSpan(dr.insights_generated) + '</td>' +
+        '<td>' + countSpan(dr.insights_generated) + perAgentDrill(dr) + '</td>' +
         '<td>' + countSpan(dr.memories_promoted_to_ltm) + '</td>' +
         '<td>' + escapeHtml(lunar.phase_name || '?') + '<br>' +
         '<span style="color:var(--text3);font-size:10px">' + (lunar.days_until_new_moon || '?') + 'd</span></td>' +
@@ -2299,6 +2905,27 @@ async function refreshGraph() {
   } catch (e) {
     note.textContent = 'graph unavailable: ' + e.message;
   }
+  // Substance companion: the persistent agent→agent matrix (pgvector, all-time
+  // grouped counts) from /insight/self/diagnostic — who actually talks to whom,
+  // not just who was active in the last hour.
+  try {
+    const md = await (await fetch('/insight/self/diagnostic')).json();
+    const edges = (((md || {}).self_interaction || {}).matrix || {}).edges || [];
+    const box = $('graphMatrix');
+    if (box) {
+      if (!edges.length) {
+        box.innerHTML = '<div style="color:var(--text3);font-size:10.5px">interaction matrix unavailable (pgvector offline)</div>';
+      } else {
+        let mh = '<table style="font-size:11px"><thead><tr><th>from</th><th>to</th><th>type</th><th>count</th></tr></thead><tbody>';
+        for (const e of edges.slice(0, 12)) {
+          mh += '<tr><td>' + escapeHtml(e.from || '?') + '</td><td>' + escapeHtml(e.to || '?') + '</td><td>' +
+            escapeHtml(e.type || '') + '</td><td>' + Human.count(e.count || 0) + '</td></tr>';
+        }
+        mh += '</tbody></table>';
+        box.innerHTML = '<details open><summary style="cursor:pointer;color:var(--text3);font-size:11px">interaction matrix — persistent who-talks-to-whom (top ' + Math.min(12, edges.length) + ')</summary>' + mh + '</details>';
+      }
+    }
+  } catch (e) { /* matrix is a bonus — never break the graph */ }
 }
 
 // ── 7. Inference sources (compact) ──
@@ -2484,10 +3111,15 @@ async function boot() {
   _initTabbar();
   await seedDialogue();
   startSSE();
-  await Promise.allSettled([refreshCognition(), refreshSysPulse(), refreshStuck(), refreshBDI(), refreshLedger(), refreshSelfAware(), refreshBoardroom(), refreshBoardRollcall(), refreshBoardLeaderboard(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
+  await Promise.allSettled([refreshCognition(), refreshGodelMachine(), refreshAscend(), refreshMilestones(), refreshSysPulse(), refreshStuck(), refreshSelfEval(), refreshSentinel(), refreshBDI(), refreshLedger(), refreshSelfAware(), refreshBoardroom(), refreshBoardRollcall(), refreshBoardLeaderboard(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
+  setInterval(refreshGodelMachine, 45000);
+  setInterval(refreshAscend, 15000);  // 15s so the live training panel stays fresh
+  setInterval(refreshMilestones, 60000);
   setInterval(refreshCognition, 30000);
   setInterval(refreshSysPulse, 15000);
   setInterval(refreshStuck, 30000);
+  setInterval(refreshSelfEval, 30000);
+  setInterval(refreshSentinel, 30000);
   setInterval(refreshBDI, 20000);
   setInterval(refreshLedger, 45000);
   setInterval(refreshSelfAware, 45000);
@@ -2501,5 +3133,12 @@ async function boot() {
 }
 document.addEventListener('DOMContentLoaded', boot);
 </script>
+<script>window.DOORWAY_FOR='the mind of mindX';</script>
+<script src="/static/identity.js"></script>
+<script src="/static/doorway.js"></script>
+
+<!-- signal/noise depth tiering (shared) -->
+<script>window.SN_CONFIG={tiers:{'sec-selfeval':'ess','sec-cognition':'ess','sec-godel-machine':'ess','sec-loops':'detail','sec-sentinel':'detail','sec-live':'detail','sec-bdi':'detail','sec-milestones':'detail','sec-improvements':'detail','sec-boardroom':'detail','sec-dreams':'detail','sec-cognition-diag':'adv','sec-hierarchy':'adv','sec-inference-ledger':'adv','sec-ascend':'adv','sec-self-aware':'adv','sec-graph':'adv','sec-storage':'adv','sec-inference':'adv','sec-skills':'adv','sec-mastermind':'adv'}};</script>
+<script src="/static/signal_noise.js"></script>
 </body>
 </html>

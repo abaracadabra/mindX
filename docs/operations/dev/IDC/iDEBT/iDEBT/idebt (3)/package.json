@@ -1,0 +1,48 @@
+{
+  "name": "@deltaverse/idebt",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cryptographic Inheritance of Global DEBT — DeltaVerseDebtOracle, DAIO, AgenticPlace/mindX/BANKON integration, x402 Algorand payments.",
+  "license": "MIT",
+  "author": "codephreak <gregory@pythai.net>",
+  "homepage": "https://agenticplace.pythai.net",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PYTHAI/idebt"
+  },
+  "workspaces": [
+    "api",
+    "frontend"
+  ],
+  "scripts": {
+    "build":        "forge build",
+    "test":         "forge test -vv",
+    "test:fuzz":    "FOUNDRY_PROFILE=ci forge test --match-path 'test/fuzz/**'",
+    "coverage":     "forge coverage --report lcov",
+    "gas":          "forge test --gas-report",
+    "fmt":          "forge fmt",
+    "slither":      "slither . --config-file slither.config.json",
+    "deploy:sepolia":  "forge script script/deploy/DeployTestnet.s.sol --rpc-url sepolia  --broadcast --verify",
+    "deploy:polygon":  "forge script script/deploy/Deploy.s.sol        --rpc-url polygon  --broadcast --verify",
+    "deploy:arbitrum": "forge script script/deploy/Deploy.s.sol        --rpc-url arbitrum --broadcast --verify",
+    "deploy:base":     "forge script script/deploy/Deploy.s.sol        --rpc-url base     --broadcast --verify",
+    "deploy:mainnet":  "forge script script/deploy/Deploy.s.sol        --rpc-url mainnet  --broadcast --verify",
+    "configure":       "forge script script/deploy/Configure.s.sol     --rpc-url $RPC     --broadcast"
+  },
+  "keywords": [
+    "solidity",
+    "foundry",
+    "erc721",
+    "chainlink",
+    "pyth",
+    "synthetix",
+    "algorand",
+    "x402",
+    "parsec",
+    "deltaverse",
+    "bankon",
+    "agenticplace",
+    "mindx",
+    "daio"
+  ]
+}

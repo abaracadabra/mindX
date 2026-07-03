@@ -1,0 +1,72 @@
+{
+  "official_sdk": {
+    "name": "a2a-python",
+    "url": "https://github.com/a2aproject/a2a-python",
+    "description": "Official Python SDK for A2A Protocol",
+    "install": "pip install a2a-sdk",
+    "install_extras": {
+      "http-server": "pip install 'a2a-sdk[http-server]'",
+      "grpc": "pip install 'a2a-sdk[grpc]'",
+      "all": "pip install 'a2a-sdk[all]'"
+    },
+    "features": [
+      "HTTP server integration (FastAPI/Starlette)",
+      "gRPC communication support",
+      "OpenTelemetry tracing",
+      "SQL database backends (PostgreSQL, MySQL, SQLite)",
+      "Optional encryption"
+    ],
+    "python_version": "3.10+",
+    "api_docs": "https://a2a-protocol.org",
+    "api_reference": "https://a2a-protocol.org/latest/sdk/python/api/"
+  },
+  "agenticplace": {
+    "organization": "AgenticPlace",
+    "url": "https://github.com/AgenticPlace",
+    "description": "Agent marketplace and interoperability ecosystem",
+    "repositories": {
+      "A2A": {
+        "url": "https://github.com/AgenticPlace/A2A",
+        "description": "Open protocol for agent communication and interoperability",
+        "license": "Apache-2.0"
+      },
+      "mindXalpha": {
+        "url": "https://github.com/AgenticPlace/mindXalpha",
+        "description": "Self-healing mindX augmentic deployment with Darwin Godel architecture"
+      },
+      "mindXbeta": {
+        "url": "https://github.com/AgenticPlace/mindXbeta",
+        "description": "mindX Augmentic Intelligence platform"
+      },
+      "mindXgamma": {
+        "url": "https://github.com/AgenticPlace/mindXgamma",
+        "description": "mindX augmentic intelligence (forked from abaracadabra/mindX)"
+      },
+      "SimpleCoder": {
+        "url": "https://github.com/AgenticPlace/SimpleCoder",
+        "description": "Coding agent working standalone and with mindX BDI control",
+        "license": "Apache-2.0"
+      },
+      "mcp.agent": {
+        "url": "https://github.com/AgenticPlace/mcp.agent",
+        "description": "Google Cloud MCP server/client for agents"
+      },
+      "ROMA": {
+        "url": "https://github.com/AgenticPlace/ROMA",
+        "description": "Meta-agent framework for high-performance multi-agent systems"
+      },
+      "DeepResearchAgent": {
+        "url": "https://github.com/AgenticPlace/DeepResearchAgent",
+        "description": "Hierarchical multi-agent system for deep research and task solving"
+      },
+      "agentic": {
+        "url": "https://github.com/AgenticPlace/agentic",
+        "description": "AGENTIC creation kit"
+      },
+      "StormCloudRun": {
+        "url": "https://github.com/AgenticPlace/StormCloudRun",
+        "description": "Deploy GitHub source code to Google Cloud Run"
+      }
+    }
+  }
+}

@@ -1,0 +1,46 @@
+MIT License
+
+Copyright (c) 2026 Professor Codephreak / openBDK contributors / DELTAVERSE ecosystem
+Copyright (c) 2023-2024 Polygon Labs (for inherited canonical contracts)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+ATTRIBUTION
+
+This software incorporates and adapts code from the following sources:
+
+1. BuildOnPolygon/usdc-lxly (https://github.com/BuildOnPolygon/usdc-lxly)
+   Original author: Polygon Labs
+   License: MIT
+
+2. BuildOnPolygon/zkevm-stb (https://github.com/BuildOnPolygon/zkevm-stb)
+   Original author: Polygon Labs / sepyke.eth
+   License: MIT
+
+3. agglayer/agglayer-contracts (https://github.com/agglayer/agglayer-contracts)
+   Original author: Polygon Labs / Hermez Labs
+   License: AGPL-3.0 (interfaces only, original code re-licensed where derivable)
+
+We gratefully acknowledge the Polygon Labs engineering team for the foundational
+work that openBDK extends. Their investment in cross-chain infrastructure
+security represents the largest body of production-validated bridge code in
+the EVM ecosystem, and openBDK's value derives substantially from this
+inheritance.

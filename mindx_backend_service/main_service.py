@@ -35,7 +35,7 @@ from api.command_handler import CommandHandler
 from utils.logging_config import setup_logging, get_logger, LOG_DIR, LOG_FILENAME
 from mindx_backend_service.vault_manager import get_vault_manager
 # require_admin_access: session-token gated by security.admin_addresses
-from mindx_backend_service.security_middleware import require_admin_access
+from mindx_backend_service.security_middleware import require_admin_access, require_overseer
 # x402_required: per-endpoint paywall dependency. Contract documented in
 # docs/services/x402_as_a_service.md. Applied on cost-center routes below.
 from mindx_backend_service.x402_middleware import x402_required
@@ -225,8 +225,12 @@ async def mindx_error_handler(request, exc):
 # ── Public diagnostics dashboard + journal ──
 
 @app.get("/docs.html", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
-async def docs_html_page():
-    """Documentation hub with sidebar navigation, endpoint map, and pgvectorscale index."""
+async def docs_html_page(request: Request):
+    """Documentation hub — gated to recognized participant (connect a wallet at
+    the realm door). THESIS + MANIFESTO stay public via /doc/*."""
+    _g = await _tier_gate(request, "participant", "/docs.html")
+    if _g is not None:
+        return _g
     import re as _re
     book_path = PROJECT_ROOT / "docs" / "BOOK_OF_MINDX.md"
     journal_path = PROJECT_ROOT / "docs" / "IMPROVEMENT_JOURNAL.md"
@@ -267,7 +271,12 @@ async def docs_html_page():
     db_doc_count = 0
     try:
         from agents import memory_pgvector as _mpg_docs
+        from utils.reference_corpus import is_private_doc as _is_private_doc
         indexed_docs = await _safe_await(_mpg_docs.get_indexed_docs(), timeout_s=3.0, default=[])
+        # Reference-corpus docs are embedded for mindX's own retrieval but are
+        # gated — never linked from this public page.
+        private_doc_count = sum(1 for d in indexed_docs if _is_private_doc(d["doc_name"]))
+        indexed_docs = [d for d in indexed_docs if not _is_private_doc(d["doc_name"])]
         db_doc_count = len(indexed_docs)
         if indexed_docs:
             db_items = []
@@ -281,6 +290,10 @@ async def docs_html_page():
                     f'<span style="color:#4a5060">({size}KB, {chunks} chunks)</span> '
                     f'<span class="tag tag-ref">EMBEDDED</span></li>')
             db_docs_html = '<ul style="list-style:none;padding:0">' + "".join(db_items) + "</ul>"
+            if private_doc_count:
+                db_docs_html += (f'<div style="color:#4a5060;font-size:10px;margin-top:4px">'
+                                 f'+{private_doc_count} private reference docs &mdash; '
+                                 f'<a href="/reference" style="color:#6e7681">/reference</a> (gated)</div>')
     except Exception:
         pass
 
@@ -305,21 +318,21 @@ async def docs_html_page():
                 pass
             entry = f'<li><a href="/doc/{name}">{name}.md</a> <span class="sz">({size_kb}KB)</span></li>'
             nl = name.lower()
-            if any(k in nl for k in ["technical","orchestration","core","architect","hierarchy","codebase"]):
+            if any(k in nl for k in ["technical","orchestration","core","architect","hierarchy","codebase","godel","schmidhuber","blueprint"]):
                 categories["Core Architecture"].append(entry)
-            elif any(k in nl for k in ["agent","agint","mindx","automindx","ceo","mastermind","persona","coordinator"]):
+            elif any(k in nl for k in ["agent","agint","mindx","automindx","ceo","mastermind","persona","coordinator","author"]):
                 categories["Agents"].append(entry)
             elif any(k in nl for k in ["tool","shell","registry","factory","calculator"]):
                 categories["Tools"].append(entry)
             elif any(k in nl for k in ["daio","governance","constitution","boardroom","dojo","voting"]):
                 categories["Governance & DAIO"].append(entry)
-            elif any(k in nl for k in ["memory","belief","knowledge","pgvector"]):
+            elif any(k in nl for k in ["memory","belief","knowledge","pgvector","dream"]):
                 categories["Memory & Knowledge"].append(entry)
-            elif any(k in nl for k in ["deploy","production","monitor","performance","security","resource"]):
+            elif any(k in nl for k in ["deploy","production","monitor","performance","security","resource","survive","milestone"]):
                 categories["Deployment & Operations"].append(entry)
-            elif any(k in nl for k in ["api","mistral","gemini","ollama","model","inference","llm"]):
+            elif any(k in nl for k in ["api","mistral","gemini","ollama","model","inference","llm","torch","pytorch"]):
                 categories["API & Integration"].append(entry)
-            elif any(k in nl for k in ["manifesto","thesis","whitepaper","press","philosophy","ataraxia","civilization","roadmap","todo"]):
+            elif any(k in nl for k in ["manifesto","thesis","whitepaper","press","philosophy","ataraxia","civilization","roadmap","todo","eval"]):
                 categories["Philosophy & Vision"].append(entry)
             elif any(k in nl for k in ["guide","usage","instruction","quickref","tutorial","hackathon"]):
                 categories["Tutorials & Guides"].append(entry)
@@ -396,6 +409,18 @@ async def docs_html_page():
                 nav_content_html += f'<blockquote>{m_blockquote.group(1)}</blockquote>\n'
             elif m_code:
                 pass  # Skip code fences in nav
+    # De-link gated reference-corpus targets that NAV.md references (e.g.
+    # operations/ runbooks): the label stays for context, the link goes —
+    # this page must never link into the private subtrees.
+    try:
+        from utils.reference_corpus import is_private_doc as _ipd_nav
+        from urllib.parse import unquote as _unq_nav
+        def _strip_private_link(m):
+            return m.group(2) if _ipd_nav(_unq_nav(m.group(1))) else m.group(0)
+        nav_content_html = _re.sub(r'<a href="/doc/([^"]+)"[^>]*>(.*?)</a>',
+                                   _strip_private_link, nav_content_html)
+    except Exception:
+        pass
     sidebar_html = "\n".join(sidebar_items)
 
     return _DashResponse(content=f"""<!DOCTYPE html><html lang="en"><head>
@@ -791,7 +816,7 @@ def _doc_page(title: str, body_html: str, meta: str = "", description: str = "",
     canon = f'https://mindx.pythai.net{canonical_path}' if canonical_path else ''
     canon_tag = f'<link rel="canonical" href="{canon}">' if canon else ''
     nav = '''<div class="nav">
-<div class="nav-row"><span class="brand">mind<b>X</b></span><a href="/">dashboard</a><span class="sep">/</span><a href="/docs.html">docs</a><span class="sep">/</span><a href="/book">book</a><span class="sep">/</span><a href="/journal">journal</a><span class="sep">/</span><a href="/redoc" class="dim">api</a><span class="sep">/</span><a href="/dojo/standings" class="dim">dojo</a><span class="sep">/</span><a href="/inference/status" class="dim">inference</a><span class="sep">/</span><a href="/governance/status" class="dim">governance</a><span class="sep">/</span><a href="/automindx" class="dim" style="color:#d2a8ff">origin</a></div>
+<div class="nav-row"><span class="brand">mind<b>X</b></span><a href="/">dashboard</a><span class="sep">/</span><a href="/docs.html">docs</a><span class="sep">/</span><a href="/book">book</a><span class="sep">/</span><a href="/journal">journal</a><span class="sep">/</span><a href="/redoc" class="dim">api</a><span class="sep">/</span><a href="/dojo/standings" class="dim">dojo</a><span class="sep">/</span><a href="/inference/status" class="dim">inference</a><span class="sep">/</span><a href="/governance/status" class="dim">governance</a><span class="sep">/</span><a href="/insight/gitmind?h=true" class="dim">gitmind</a><span class="sep">/</span><a href="/automindx" class="dim" style="color:#d2a8ff">origin</a></div>
 <div class="nav-row"><span class="grp">philosophy</span><a href="/doc/MANIFESTO" class="dim">manifesto</a><a href="/doc/THESIS" class="dim">thesis</a><a href="/doc/AUTOMINDX_ORIGIN" class="dim">origin</a><a href="/doc/whitepaper" class="dim">whitepaper</a><a href="/doc/ATARAXIA" class="dim">ataraxia</a><a href="/doc/roadmap" class="dim">roadmap</a><a href="/doc/PRESS" class="dim">press</a><span class="sep">|</span><span class="grp">arch</span><a href="/doc/TECHNICAL" class="dim">overview</a><a href="/doc/ORCHESTRATION" class="dim">orchestration</a><a href="/doc/codebase_map" class="dim">codebase</a><a href="/doc/hierarchy" class="dim">hierarchy</a><a href="/doc/CORE" class="dim">core</a><span class="sep">|</span><span class="grp">agents</span><a href="/doc/mindXagent" class="dim">mindXagent</a><a href="/doc/CEO" class="dim">ceo</a><a href="/doc/ORCHESTRATION" class="dim">mastermind</a><a href="/doc/bdi_parameter_processing" class="dim">bdi</a><a href="/doc/AUTONOMOUS" class="dim">evolution</a><a href="/doc/AUTHOR_AGENT" class="dim">author</a><a href="/doc/AGENTS" class="dim">all</a></div>
 <div class="nav-row"><span class="grp">gov</span><a href="/doc/DAIO" class="dim">daio</a><a href="/doc/DAIO_CIVILIZATION_GOVERNANCE" class="dim">civilization</a><a href="/doc/IDENTITY" class="dim">identity</a><a href="/doc/SECURITY_VULNERABILITIES" class="dim">security</a><span class="sep">|</span><span class="grp">memory</span><a href="/doc/pgvectorscale_memory_integration" class="dim">pgvector</a><a href="/doc/EMBEDDING_SYSTEM" class="dim">embed</a><a href="/doc/aglm" class="dim">aglm</a><a href="/doc/memory" class="dim">memory</a><span class="sep">|</span><span class="grp">inference</span><a href="/doc/VLLM_INTEGRATION" class="dim">vllm</a><a href="/doc/ollama_api_integration" class="dim">ollama</a><a href="/doc/mistral_api" class="dim">mistral</a><a href="/doc/gemini_handler" class="dim">gemini</a><span class="sep">|</span><span class="grp">time</span><a href="/doc/TIME_ORACLE" class="dim">oracle</a></div>
 <div class="nav-row"><span class="grp">tools</span><a href="/doc/TOOLS_INDEX" class="dim">index</a><a href="/doc/TOOLS" class="dim">tools</a><a href="/doc/a2a_tool" class="dim">a2a</a><a href="/doc/mcp_tool" class="dim">mcp</a><a href="/doc/shell_command_tool" class="dim">shell</a><span class="sep">|</span><span class="grp">publish</span><a href="/doc/AUTHOR_AGENT" class="dim">authoragent</a><a href="/book" class="dim">book</a><a href="/journal" class="dim">journal</a><span class="sep">|</span><span class="grp">deploy</span><a href="/doc/DEPLOYMENT_MINDX_PYTHAI_NET" class="dim">production</a><a href="/doc/security" class="dim">security</a><a href="/doc/performance_monitor" class="dim">monitoring</a><span class="sep">|</span><span class="grp">api</span><a href="/redoc" class="dim">reference</a><a href="/docs" class="dim">swagger</a><span class="sep">|</span><span class="grp">learn</span><a href="/doc/USAGE" class="dim">usage</a><a href="/doc/INSTRUCTIONS" class="dim">guide</a><a href="/doc/hackathon" class="dim">hackathon</a></div>
@@ -890,7 +915,7 @@ try{const fs=localStorage.getItem('mindx_fs');if(fs)document.addEventListener('D
 <style>{_DOC_STYLE}</style></head><body><div class="page">{nav}{meta_html}{body_html}</div>{font_ctrl}</body></html>'''
 
 @app.get("/doc/{name:path}", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
-async def read_doc(name: str):
+async def read_doc(name: str, request: Request):
     """Render any markdown doc from docs/ directory (supports subdirectories)."""
     import re as _re2
     # Sanitize: allow alphanumeric, underscore, hyphen, dot, forward slash (for subdirs)
@@ -931,6 +956,28 @@ async def read_doc(name: str):
                     break
     if not doc_path.exists() or not doc_path.is_file():
         return _DashResponse(content=_doc_page("Not Found", f"<h1>Document not found</h1><p><code>{safe}</code> does not exist in docs/</p><p>Browse all documents at <a href='/docs.html'>docs</a> or read <a href='/book'>The Book of mindX</a>.</p>"), status_code=404)
+    # Reference-corpus gate: /doc/ is a public prefix, but the private
+    # subtrees (utils.reference_corpus) require a session. Checked against the
+    # *resolved* file so case-insensitive and fallback lookups can't bypass it.
+    try:
+        from utils.reference_corpus import is_private_doc as _is_private_doc
+        _rel = doc_path.resolve().relative_to((PROJECT_ROOT / "docs").resolve())
+        _private = _is_private_doc(_rel.as_posix())
+    except ValueError:
+        _private = False  # resolved outside docs/ (project-root fallback like CLAUDE.md) — public
+    if _private:
+        _gate_redirect = await _reference_gate(request, f"/doc/{safe}")
+        if _gate_redirect:
+            return _gate_redirect
+    # OVERLORD protocol: /doc/* content is participant-gated — EXCEPT the public
+    # invitation. THESIS and MANIFESTO stay open to everyone (the invitation is
+    # public; the depth is earned). Anything else routes a wallet-less visitor to
+    # the /activity realm door.
+    _PUBLIC_DOCS = {"THESIS", "MANIFESTO"}
+    if doc_path.stem.upper() not in _PUBLIC_DOCS:
+        _tg = await _tier_gate(request, "participant", f"/doc/{safe}")
+        if _tg is not None:
+            return _tg
     md = doc_path.read_text(encoding="utf-8", errors="replace")
     size_kb = round(doc_path.stat().st_size / 1024, 1)
     # Extract first heading for SEO description
@@ -952,6 +999,116 @@ async def read_doc(name: str):
     # Add back-links footer
     back_links = f'{related_html}<hr style="margin:16px 0 12px;border-color:rgba(88,166,255,.12)"><div style="font-size:12px;color:#4a5060;display:flex;gap:16px;flex-wrap:wrap"><a href="/docs.html" style="color:#58a6ff">All Documents</a><a href="/doc/INDEX" style="color:#79c0ff">Document Index</a><a href="/book" style="color:#d2a8ff">The Book of mindX</a><a href="/journal" style="color:#3fb950">Improvement Journal</a><a href="/redoc" style="color:#d29922">API Reference</a></div>'
     return _DashResponse(content=_doc_page(safe, body + back_links, f"{safe} &middot; {size_kb} KB", description=_first_heading or f"mindX documentation: {safe}", canonical_path=f"/doc/{name}"))
+
+
+# ── Reference corpus: gated catalogue of everything /docs.html does not link ──
+# /reference/ is a public *prefix* (the middleware can't carry localStorage
+# tokens on navigation), so every data route below gates itself via
+# _require_reference_access — same pattern as /admin/shadow/ and /realm.
+
+def _md_title(path) -> str:
+    """First '# ' heading from the head of a markdown file (cheap read)."""
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as fh:
+            for line in fh.read(2048).split("\n"):
+                if line.startswith("# "):
+                    return line[2:].strip()[:160]
+    except Exception:
+        pass
+    return ""
+
+
+@app.get("/reference/catalog", tags=["documentation"], include_in_schema=False)
+async def reference_catalog(request: Request):
+    """Catalogue of every docs/ file the public /docs.html does not link
+    (all subdirectory files + top-level non-markdown), grouped by folder.
+    Gated: session token, API key, or shadow-overlord JWT."""
+    await _require_reference_access(request)
+    from datetime import timezone as _tz_ref
+    from utils.reference_corpus import iter_unlinked_docs, is_private_doc, PRIVATE_DOC_PREFIXES
+    docs_dir = PROJECT_ROOT / "docs"
+    embedded: set = set()
+    try:
+        from agents import memory_pgvector as _mpg_ref
+        embedded = {d["doc_name"] for d in await _safe_await(_mpg_ref.get_indexed_docs(), timeout_s=3.0, default=[])}
+    except Exception:
+        pass
+    groups: dict = {}
+    total = 0
+    for relpath, path in iter_unlinked_docs(docs_dir):
+        top = relpath.split("/", 1)[0] if "/" in relpath else "(top-level)"
+        try:
+            st = path.stat()
+        except OSError:
+            continue
+        stem_rel = relpath.rsplit(".", 1)[0]
+        groups.setdefault(top, []).append({
+            "relpath": relpath,
+            "name": path.name,
+            "ext": path.suffix.lower().lstrip("."),
+            "size_kb": round(st.st_size / 1024, 1),
+            "mtime": datetime.fromtimestamp(st.st_mtime, tz=_tz_ref.utc).strftime("%Y-%m-%d"),
+            "private": is_private_doc(relpath),
+            "title": _md_title(path) if path.suffix.lower() == ".md" else "",
+            "embedded": stem_rel in embedded,
+            "href": "/reference/file/" + relpath,
+        })
+        total += 1
+    return {
+        "total": total,
+        "groups": {k: groups[k] for k in sorted(groups)},
+        "private_prefixes": list(PRIVATE_DOC_PREFIXES),
+        "embedded_count": sum(1 for items in groups.values() for it in items if it["embedded"]),
+    }
+
+
+@app.get("/reference/file/{relpath:path}", include_in_schema=False)
+async def reference_file(relpath: str, request: Request):
+    """Serve any docs/ file to an authenticated caller — handles the
+    space/apostrophe-named reference files /doc/'s sanitizer cannot."""
+    # Privilege OR payment (the WISDOM model). Privilege — a session, API key, or OVERSEER/OVERLORD JWT —
+    # bypasses payment. Otherwise the file is the entitlement surface: an x402 settlement grants read
+    # (the `paid` tier). Browsers with no payment intent get the login doorway; x402 clients get a 402.
+    if not await _reference_access_ok(request):
+        accept = request.headers.get("accept", "")
+        has_pay = bool(request.headers.get("X-PAYMENT") or request.headers.get("PAYMENT-SIGNATURE")
+                       or request.headers.get("X-SIWX-SESSION"))
+        if ("text/html" in accept) and not has_pay:
+            from starlette.responses import RedirectResponse
+            return RedirectResponse(url="/login?from=/reference", status_code=302)
+        try:
+            from mindx_backend_service.x402_middleware import x402_required
+            from starlette.responses import Response as _Resp402
+            await x402_required("/reference/file")(request, _Resp402())   # settles + grants, or raises 402 with the price
+        except HTTPException:
+            raise                                                        # 402 (pay) / 503 (no rails) — propagate
+        except Exception:
+            # x402 not available/configured on this deployment → fall back to privilege-required.
+            raise HTTPException(status_code=401, detail="Reference corpus requires privilege (OVERSEER/OVERLORD JWT, session, or API key); x402 pay-to-read is not configured here")
+    docs_dir = (PROJECT_ROOT / "docs").resolve()
+    try:
+        target = (docs_dir / relpath).resolve()
+        rel = target.relative_to(docs_dir)
+    except (ValueError, OSError):
+        raise HTTPException(status_code=404, detail="Not found")
+    if any(part.startswith(".") or part == "__pycache__" for part in rel.parts):
+        raise HTTPException(status_code=404, detail="Not found")
+    if not target.is_file():
+        raise HTTPException(status_code=404, detail="Not found")
+    suffix = target.suffix.lower()
+    if suffix == ".md":
+        md = target.read_text(encoding="utf-8", errors="replace")
+        size_kb = round(target.stat().st_size / 1024, 1)
+        body = _render_md(md)
+        footer = '<hr style="margin:16px 0 12px;border-color:rgba(88,166,255,.12)"><div style="font-size:12px;color:#4a5060"><a href="/reference" style="color:#58a6ff">Reference Corpus</a> &middot; <a href="/docs.html" style="color:#79c0ff">Public Docs</a></div>'
+        return _DashResponse(content=_doc_page(rel.as_posix(), body + footer, f"{rel.as_posix()} &middot; {size_kb} KB &middot; reference corpus (gated)"))
+    from starlette.responses import FileResponse
+    import mimetypes
+    mt = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+    disposition = "inline" if suffix in (".pdf", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".txt", ".html") else "attachment"
+    return FileResponse(str(target), media_type=mt, filename=target.name,
+                        content_disposition_type=disposition)
+
 
 _BOOK_STYLE = """<style>
 /* ── Book of mindX — typography overlay (scoped to /book only) ──────── */
@@ -1018,8 +1175,12 @@ _BOOK_STYLE = """<style>
 </style>"""
 
 @app.get("/book", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
-async def book_of_mindx_page():
-    """The Book of mindX — rendered from latest edition with previous editions linked."""
+async def book_of_mindx_page(request: Request):
+    """The Book of mindX — gated to MEMBER (own a *.bankon.eth subname / token,
+    or the courtesy whitelist). Participants are routed to the realm door."""
+    _g = await _tier_gate(request, "member", "/book")
+    if _g is not None:
+        return _g
     book_path = PROJECT_ROOT / "docs" / "BOOK_OF_MINDX.md"
     if not book_path.exists():
         return _DashResponse(content=_doc_page("The Book of mindX", "<h1>The Book of mindX</h1><p>First edition is being written. Check back in 2 minutes.</p>"))
@@ -1187,8 +1348,15 @@ async def improvement_journal_page():
     return _DashResponse(content=_doc_page("Improvement Journal", body + back, "", description="mindX Improvement Journal — timestamped log of autonomous decisions, self-improvement campaigns, belief changes, and system snapshots.", canonical_path="/journal"))
 
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
+_LANDING_HTML_PATH = Path(__file__).parent / "landing.html"
+_MACHINE_HTML_PATH = Path(__file__).parent / "machine.html"
+_MACHINE_ADMIN_HTML_PATH = Path(__file__).parent / "machine_admin.html"
 _FEEDBACK_HTML_PATH = Path(__file__).parent / "feedback.html"
 _NETSTAT_HTML_PATH = Path(__file__).parent / "netstat.html"
+_OVERSEER_HTML_PATH = Path(__file__).parent / "overseer.html"
+_AGENTIC_HTML_PATH = Path(__file__).parent / "agentic.html"
+_ACTIVITY_HTML_PATH = Path(__file__).parent / "activity.html"
+_REFERENCE_HTML_PATH = Path(__file__).parent / "reference.html"
 _THOT_HTML_PATH = Path(__file__).parent / "THOT.html"
 _BOARDROOM_HTML_PATH = Path(__file__).parent / "boardroom.html"
 _CABINET_HTML_PATH = Path(__file__).parent / "cabinet.html"
@@ -1937,19 +2105,65 @@ async def dojo_page():
 
 @app.get("/automindx", response_class=_DashResponse, include_in_schema=False)
 @app.get("/automindx.html", response_class=_DashResponse, include_in_schema=False)
-async def automindx_page():
-    """AUTOMINDx — The Origin of mindX."""
+async def automindx_page(request: Request):
+    """AUTOMINDx — The Origin of mindX. Gated to recognized participant (connect
+    a wallet at the realm door) and above."""
+    _g = await _tier_gate(request, "participant", "/automindx")
+    if _g is not None:
+        return _g
     if _AUTOMINDX_HTML_PATH.exists():
         return _DashResponse(content=_AUTOMINDX_HTML_PATH.read_text(encoding="utf-8"))
     return _DashResponse(content="<h1>AUTOMINDx</h1><p>Loading...</p>")
 
 
 @app.get("/", response_class=_DashResponse, include_in_schema=False)
+async def public_landing():
+    """mindX public landing — succinct corporate expression + CONNECT wallet +
+    the maintained substrate. The full diagnostics moved to /diagnostics; the
+    mind-of-mindX detail lives on /feedback.html."""
+    if _LANDING_HTML_PATH.exists():
+        return _DashResponse(content=_LANDING_HTML_PATH.read_text(encoding="utf-8"))
+    if _DASH_HTML_PATH.exists():   # fallback until landing.html deploys
+        return _DashResponse(content=_DASH_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX</h1><p>Loading…</p>")
+
+
+@app.get("/machine", response_class=_DashResponse, include_in_schema=False)
+async def public_machine():
+    """The Gödel Machine Index — clean corporate public display of mindX's honest
+    self-audit (verdict, coverage, G1–G8) + intelligence-substrate physics. Deep
+    admin diagnostics (blueprint.js) are walled to the OVERLORD."""
+    if _MACHINE_HTML_PATH.exists():
+        return _DashResponse(content=_MACHINE_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX — Gödel Machine Index</h1><p><a href='/insight/godel/machine'>raw JSON</a></p>")
+
+
+@app.get("/machine/admin", response_class=_DashResponse, include_in_schema=False)
+async def public_machine_admin():
+    """Gödel Machine diagnostics — the complete audit in scientific, corporate-elegant
+    admin panelling (public data; the deep companion page linked once from /machine).
+    Maintained by blueprint.agent."""
+    if _MACHINE_ADMIN_HTML_PATH.exists():
+        return _DashResponse(content=_MACHINE_ADMIN_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX — Diagnostics</h1><p><a href='/machine'>◂ index</a> · <a href='/insight/godel/machine'>raw JSON</a></p>")
+
+
+@app.get("/diagnostics", response_class=_DashResponse, include_in_schema=False)
+@app.get("/diagnostics.html", response_class=_DashResponse, include_in_schema=False)
 async def public_dashboard():
-    """mindX live diagnostics — public, non-interactive, 24/7."""
+    """mindX live diagnostics dashboard — moved off the public landing to here."""
     if _DASH_HTML_PATH.exists():
         return _DashResponse(content=_DASH_HTML_PATH.read_text(encoding="utf-8"))
-    return _DashResponse(content="<h1>mindX</h1><p>Dashboard loading...</p>")
+    return _DashResponse(content="<h1>mindX diagnostics</h1><p>Dashboard loading...</p>")
+
+
+@app.get("/overseer", response_class=_DashResponse, include_in_schema=False)
+@app.get("/overseer.html", response_class=_DashResponse, include_in_schema=False)
+async def overseer_page():
+    """OVERSEER surface — Algorand deployment suites. Public shell; data gated by the OVERSEER JWT."""
+    if _OVERSEER_HTML_PATH.exists():
+        return _DashResponse(content=_OVERSEER_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>OVERSEER</h1><p>Page not deployed.</p>")
 
 
 @app.get("/netstat", response_class=_DashResponse, include_in_schema=False)
@@ -1968,6 +2182,121 @@ async def feedback_page():
     if _FEEDBACK_HTML_PATH.exists():
         return _DashResponse(content=_FEEDBACK_HTML_PATH.read_text(encoding="utf-8"))
     return _DashResponse(content="<h1>mindX feedback</h1><p>Page not deployed.</p>")
+
+
+@app.get("/agentic", response_class=_DashResponse, include_in_schema=False)
+@app.get("/agentic.html", response_class=_DashResponse, include_in_schema=False)
+async def agentic_page():
+    """Agentic activity console — AuthorAgent publish audit, alignment-eval
+    gate health, stuck-loop watch, live agent activity feed.
+
+    Public, read-only. Refreshes every 30s. Sibling to /feedback.html.
+    """
+    if _AGENTIC_HTML_PATH.exists():
+        return _DashResponse(content=_AGENTIC_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX agentic</h1><p>Page not deployed.</p>")
+
+
+@app.get("/activity", response_class=_DashResponse, include_in_schema=False)
+@app.get("/activity.html", response_class=_DashResponse, include_in_schema=False)
+async def activity_page():
+    """OVERLORD-gated activity console. The OVERLORD (bankon.eth) sees the live
+    mindX activity feed + the BUILDER and OVERLORD panels (both menus). Any other
+    login is recognized as a public participant (corporate) and shown the paths
+    to gain privilege from the hierarchy — Activity itself stays OVERLORD-only.
+    Gating is client-side presentation now; the API lockdown follow-up enforces
+    it server-side. Sibling to /feedback.html and /agentic.html.
+    """
+    if _ACTIVITY_HTML_PATH.exists():
+        return _DashResponse(content=_ACTIVITY_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX activity</h1><p>Page not deployed.</p>")
+
+
+@app.get("/realm/challenge", tags=["auth"], include_in_schema=False)
+async def realm_challenge(address: str = ""):
+    """OVERLORD protocol: mint a single-use SIWE (EIP-4361) challenge for any
+    wallet to sign at the realm door. Public — signing proves control, grants
+    no funds access."""
+    from mindx_backend_service import realm_session
+    return {"status": "success", **realm_session.issue_challenge(address)}
+
+
+@app.post("/realm/verify", tags=["auth"], include_in_schema=False)
+async def realm_verify(request: Request):
+    """OVERLORD protocol: verify a signed challenge (EIP-191 recovery) and mint a
+    realm-session JWT carrying the resolved tier — participant (any verified
+    wallet), member (token/courtesy), or overlord (bankon.eth). The client holds
+    the JWT and presents it by header/?t= (no cookies)."""
+    from mindx_backend_service import realm_session
+    body = await request.json()
+    try:
+        res = realm_session.verify(
+            str(body.get("address", "")), str(body.get("nonce", "")), str(body.get("signature", "")))
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+    return {"status": "success", **res}
+
+
+def _resolve_sovereign(request: Request) -> Optional[str]:
+    """Return 'overlord' or 'overseer' if the caller presents a valid sovereign
+    token (EVM overlord-session or Algorand OVERSEER JWT), else None."""
+    try:
+        from mindx_backend_service.deltaverse.routes import _viewer_role
+        v = _viewer_role(request)
+        if (v.get("role") or "").lower() == "overlord" and v.get("verified"):
+            return "overlord"
+    except Exception:
+        pass
+    _tok = None
+    _auth = request.headers.get("authorization", "")
+    if _auth.lower().startswith("bearer "):
+        _tok = _auth[7:].strip()
+    _tok = _tok or request.headers.get("x-overseer-token") or request.query_params.get("t")
+    if _tok:
+        try:
+            from mindx_backend_service.overseer_auth import verify_overseer_jwt
+            verify_overseer_jwt(_tok)
+            return "overseer"
+        except Exception:
+            pass
+    return None
+
+
+@app.post("/realm/deploy/feedback", tags=["overlord"], include_in_schema=False)
+async def realm_deploy_feedback(request: Request):
+    """OVERLORD/OVERSEER-gated: record on-chain deploy feedback (tx, address/ASA,
+    status) for a step of the deploy sequence. Closes the handoff loop — the
+    signed deploy's result flows back into the live sequence + improvement awareness."""
+    who = _resolve_sovereign(request)
+    if not who:
+        raise HTTPException(status_code=403, detail="overlord or overseer session required to record deploy feedback")
+    from mindx_backend_service import deploy_feedback
+    b = await request.json()
+    entry = deploy_feedback.record(
+        step=b.get("step", ""), contract=b.get("contract", ""), chain=b.get("chain", ""),
+        tx_hash=b.get("tx_hash", ""), address=b.get("address", ""), asa_id=b.get("asa_id"),
+        status=b.get("status", "confirmed"), by=who, note=b.get("note", ""))
+    return {"status": "success", "recorded": entry}
+
+
+@app.get("/insight/deploy/feedback", tags=["insight"], include_in_schema=False)
+async def insight_deploy_feedback(limit: int = 50):
+    """Public: the live deploy-sequence feedback — what deployed, where, tx, status.
+    No secrets stored; this is the confirmed-on-chain record surfaced to the handoff."""
+    from mindx_backend_service import deploy_feedback
+    fb = deploy_feedback.recent(limit)
+    return {"status": "success", "count": len(fb), "feedback": fb}
+
+
+@app.get("/reference", response_class=_DashResponse, include_in_schema=False)
+@app.get("/reference.html", response_class=_DashResponse, include_in_schema=False)
+async def reference_page():
+    """Reference-corpus shell — public page, but every byte of catalogue data
+    comes from the handler-gated /reference/catalog. Sibling to /agentic.html.
+    """
+    if _REFERENCE_HTML_PATH.exists():
+        return _DashResponse(content=_REFERENCE_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX reference</h1><p>Page not deployed.</p>")
 
 
 @app.get("/thot", response_class=_DashResponse, include_in_schema=False)
@@ -2095,8 +2424,63 @@ async def feedback_text(request: Request):
     except Exception as e:
         lines.append(f"  (dialogue unavailable: {e})")
 
+    # Self-diagnostic truth lines — last REAL change + campaign/backlog honesty
+    # (from the 60s-cached /insight/self/diagnostic aggregator).
+    try:
+        from mindx_backend_service.self_diagnostic import get_cached as _sd_cached
+        sd = await _sd_cached()
+        rc = sd.get("real_changes") or {}
+        # LEAD with the honest verdict (real change first, not the campaign 0/X).
+        vline = (sd.get("verdict") or {}).get("line")
+        if vline:
+            lines.append(f"verdict  {vline[:180]}")
+        # Real self-improvement: sentinel applies + dream→mindXtrain imprints.
+        si = rc.get("self_improvement") or {}
+        tr = rc.get("training") or {}
+        si_bits = []
+        if si.get("applies"):
+            si_bits.append(f"sentinel v{si.get('version')} ({si['applies']} self-improvements"
+                           + (", healthy" if si.get("healthy") else "") + ")")
+        if tr.get("total"):
+            si_bits.append(f"mindXtrain imprints {tr.get('accepted', 0)}/{tr['total']} from dreams")
+        if si_bits:
+            lines.append("improve  " + " · ".join(si_bits))
+        ms = (rc.get("milestones") or [{}])[0]
+        if ms.get("subject"):
+            lines.append(
+                f"changed  last real change: [milestone] {ms['subject'][:70]} · "
+                f"{text_render.human_rel_ts(ms.get('ts'))}"
+            )
+        c7 = (sd.get("process_health") or {}).get("campaigns_7d") or {}
+        bl = (sd.get("process_health") or {}).get("backlog") or {}
+        lines.append(
+            f"campaigns 7d  {c7.get('succeeded', 0)} ok · {c7.get('failed', 0)} failed · "
+            f"{c7.get('max_cycles_reached', 0)} max_cycles · backlog {bl.get('unique', 0)} unique"
+            + (" (dedup live)" if bl.get("dedup_live") else f" of {bl.get('size', 0)}")
+            + "  [campaign wrapper under-reports — see verdict]"
+        )
+        # Inference appetite — connections + tokens + utilization (public hunger).
+        ap = (sd.get("process_health") or {}).get("inference_appetite") or {}
+        bud = ap.get("budget") or {}
+        mods = ap.get("models") or {}
+        lt = ap.get("lifetime") or {}
+        if lt.get("total") is not None:
+            lines.append(
+                f"tokens  {text_render.human_count(lt.get('total'))} ingested lifetime "
+                f"(seed {text_render.human_count(lt.get('seed'))} + {text_render.human_count(lt.get('ingested_since_seed'))} actual · "
+                f"{text_render.human_count(lt.get('cpu_tokens', 0))} CPU/{text_render.human_count(lt.get('cloud_tokens', 0))} cloud)"
+            )
+        if bud.get("ceiling_per_day"):
+            lines.append(
+                f"appetite  {bud.get('used_today', 0)}/{bud.get('ceiling_per_day')} calls/day "
+                f"({bud.get('utilization_pct', 0)}%) · models {mods.get('live', 0)} live/"
+                f"{mods.get('dead', 0)} dead · {text_render.human_count(mods.get('total_tokens', 0))} tokens"
+            )
+    except Exception as e:
+        lines.append(f"changed  (self-diagnostic unavailable: {e})")
+
     lines.append("")
-    lines.append("see also: /feedback.html · /insight/storage/status?h=true")
+    lines.append("see also: /feedback.html · /insight/self/diagnostic?h=true · /insight/storage/status?h=true")
     return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain; charset=utf-8")
 
 # Add CORS middleware — production origins + development fallback
@@ -2134,13 +2518,34 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/", "/health",
     "/login", "/login.html",
     "/docs.html",
+    "/reference", "/reference.html",   # reference-corpus shell page (data endpoints under /reference/ are handler-gated)
     "/automindx", "/automindx.html",
     "/shadow-overlord", "/shadow-overlord.html",
     "/openapi.json", "/docs", "/redoc",
     "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/mindx-wordpress-plugin",         # public distribution page for mindx-publish-auth WP plugin
     "/netstat", "/netstat.html",       # Phase 1.2+ — smartphone-class VPS vitals (public diagnostics)
+    "/overseer", "/overseer.html",     # OVERSEER shell — Algorand deploy suites (data gated by OVERSEER JWT)
+    "/inft", "/inft.html",             # iNFT builder shell — client-side mint via MetaMask (on-chain); reached from the public landing BUILDER (archetype prefill). No server-side write; safe public shell.
+    # Mind-of-mindX feedback surfaces — public BY DESIGN (CLAUDE.md): the live
+    # self-diagnostic pages + plain-text snapshot + redacted agentic console.
+    # The strict-gate cutover omitted them and they 401'd publicly until the
+    # 2026-06 system review caught it. Their data endpoints (/insight/*) were
+    # public the whole time; these are just the read-only renderings.
+    "/feedback", "/feedback.html", "/feedback.txt",
+    "/agentic", "/agentic.html",
+    "/activity", "/activity.html",     # Realm door — public shell; identity recognized client-side on connect, redirected per hierarchy
+    "/diagnostics", "/diagnostics.html",  # full diagnostics dashboard (moved off the landing; still public)
+    "/realm/challenge", "/realm/verify",  # OVERLORD-protocol signature gate (public: sign to earn a tier)
+    "/realm/deploy/feedback",          # deploy-feedback record (handler-gated to overlord/overseer)
+    "/machine", "/machine/admin",      # Gödel Machine Index (public) + diagnostics admin page (public data)
+    "/book",                           # listed public so the middleware defers; the handler _tier_gate enforces MEMBER
+    # NOTE: /docs.html, /book, /doc/*, /automindx stay listed public so the MIDDLEWARE
+    # defers to them; the per-handler _tier_gate does the tier enforcement (participant/member),
+    # redirecting to the /activity realm door (NOT /login, which wants a vault session).
     "/insight/narrative/recent",       # DeltaVerse narrative recap stream (public read)
+    "/deltaverse.js",                  # DeltaVerse fabric engine — public asset for 404/landing/realm
+    "/realm",                          # REALM surface — overlord-gated at the handler level
     # Public diagnostics surface — the read-only data the landing page (/) renders.
     # Without these the page loads but every widget hits 401.
     "/diagnostics/live",
@@ -2158,6 +2563,12 @@ _PUBLIC_PREFIXES_STRICT = (
     "/static/", "/error-pages/", "/mindterm/static/",
     "/automindx/",                     # automindx subpages
     "/admin/shadow/",                  # shadow-overlord ECDSA + JWT (gated at handler level)
+    "/overlord/",                      # overlord/overseer login (flag + signature gated at handler level)
+    "/auth/algorand/",                 # Algorand (Pera/Parsec) OVERSEER login — challenge + signature verify
+    "/auth/evm/",                      # EVM (bankon.eth) OVERLORD login — challenge + signature verify
+    "/overseer/",                      # OVERSEER deployment-suite surface — gated at handler level (require_overseer)
+    "/reference/",                     # reference corpus — gated at handler level (_require_reference_access)
+    "/deltaverse/",                    # DeltaVerse fabric reads (recognize/story/bubblerooms public; weave/wish role-aware)
     "/users/challenge",                # auth handshake — challenge issuance
     "/users/register",                 # auth handshake — register-with-signature
     "/users/session/",                 # auth handshake — session/validate
@@ -2175,7 +2586,8 @@ _PUBLIC_PREFIXES_STRICT = (
 )
 
 _PUBLIC_EXACT_LEGACY = frozenset({
-    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/netstat", "/netstat.html", "/insight/narrative/recent", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html", "/mindx-wordpress-plugin",
+    "/reference", "/reference.html",
+    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/netstat", "/netstat.html", "/overseer", "/overseer.html", "/insight/narrative/recent", "/agentic", "/agentic.html", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html", "/mindx-wordpress-plugin",
     "/keeperhub", "/keeperhub.html", "/uniswap", "/uniswap.html", "/bankon-ens", "/bankon-ens.html", "/bankonminter", "/bankonminter.html", "/zerog", "/zerog.html", "/conclave", "/conclave.html", "/agentregistry", "/agentregistry.html",
     "/api/uniswap/quote", "/api/uniswap/check_approval", "/api/uniswap/decisions", "/api/uniswap/skills",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
@@ -2191,10 +2603,14 @@ _PUBLIC_EXACT_LEGACY = frozenset({
     "/governance/status",
 })
 _PUBLIC_PREFIXES_LEGACY = (
+    "/reference/",                     # reference corpus — gated at handler level (_require_reference_access)
     "/doc/", "/docs", "/redoc", "/thesis/", "/mindterm/static/", "/boardroom/", "/dojo/",
     "/dojo/agent/", "/bankon", "/agenticplace/", "/chat/docs",
     "/actions/export", "/diagnostics/export", "/api/rage/embed",
     "/users/challenge", "/users/register", "/error-pages/", "/static/",
+    "/auth/algorand/",                 # Algorand (Pera/Parsec) OVERSEER login — challenge + verify
+    "/auth/evm/",                      # EVM (bankon.eth) OVERLORD login — challenge + verify
+    "/overseer/",                      # OVERSEER deployment-suite surface — gated at handler level
     "/insight/",
     "/marketing/",
     "/p2p/keeperhub/",
@@ -2207,6 +2623,348 @@ _PUBLIC_PREFIXES_LEGACY = (
     "/publish/rage/",
     "/mindx-wordpress-plugin/",
 )
+
+
+async def _require_reference_access(request: Request) -> str:
+    """Handler-level gate for the reference corpus (/reference/* and private
+    docs/ subtrees served via /doc/).
+
+    Tier: logged_in — accepts, in order:
+      1. a valid session token (X-Session-Token header OR ?session_token=
+         query param — the query form lets reference.html emit plain
+         browser-navigable file links),
+      2. an operator API key (Authorization: Bearer, MINDX_SECURITY_API_KEYS),
+      3. a shadow-overlord JWT (Authorization: Bearer, SCOPE_AUTH).
+
+    Lives at the handler so it holds regardless of MINDX_HARD_GATE_ENABLED —
+    /reference/ is a *public prefix* in both gate modes by design (same
+    pattern as /admin/shadow/ and /realm). NOTE: the repo is private pending
+    security audits, so this gate is a real boundary — but /users/register is
+    open, making logged_in a soft tier. Tighten by delegating to
+    security_middleware.require_admin_access if stricter access is needed.
+    The corpus is also excluded from IPFS offload (storage/eligibility.py) —
+    mindX is not replicating across the global substrate at this time.
+    """
+    token = request.headers.get("X-Session-Token") or request.query_params.get("session_token")
+    if token:
+        try:
+            session = get_vault_manager().get_user_session(token)
+            if session:
+                return str(session.get("wallet_address", "session"))
+        except Exception:
+            pass
+    auth_header = request.headers.get("Authorization", "")
+    bearer = auth_header[7:].strip() if auth_header.startswith("Bearer ") else None
+    if bearer:
+        valid_keys = set(os.getenv("MINDX_SECURITY_API_KEYS", "").split(","))
+        valid_keys.discard("")
+        if bearer in valid_keys:
+            return "api_key"
+        # OVERLORD (bankon.eth) — the shadow-overlord JWT; privilege bypasses payment.
+        try:
+            from mindx_backend_service.bankon_vault.shadow_overlord import verify_jwt, SCOPE_AUTH
+            claims = verify_jwt(bearer, required_scope=SCOPE_AUTH)
+            return "overlord:" + str(claims.get("sub", "bankon.eth"))
+        except Exception:
+            pass
+        # OVERSEER (mindx.algo) — the Algorand JWT; privilege bypasses payment.
+        try:
+            from mindx_backend_service.overseer_auth import verify_overseer_jwt
+            oc = verify_overseer_jwt(bearer)
+            return "overseer:" + str(oc.get("sub", "mindx.algo"))
+        except Exception:
+            pass
+    # the `paid` tier — privilege FROM payment (the WISDOM model): a wallet that settled an x402 payment
+    # carries an X-SIWX-SESSION; that read-access IS the entitlement. The same wallet pays as signs in.
+    try:
+        from mindx_backend_service.x402_middleware import _siwx_session_ok
+        if _siwx_session_ok(request):
+            return "paid:" + (request.headers.get("X-SIWX-SESSION", "x402") or "x402")[:24]
+    except Exception:
+        pass
+    raise HTTPException(status_code=401, detail="Reference corpus requires a session token (X-Session-Token or ?session_token=), API key, an OVERSEER/OVERLORD JWT, or a settled x402 payment (X-SIWX-SESSION) — privilege OR payment")
+
+
+async def _reference_access_ok(request: Request) -> bool:
+    """Non-raising twin of _require_reference_access."""
+    try:
+        await _require_reference_access(request)
+        return True
+    except HTTPException:
+        return False
+
+
+async def _tier_gate(request: "Request", min_tier: str, html_from: str):
+    """OVERLORD-protocol tier gate. Resolve the viewer's realm tier from the
+    signature-derived JWT (via _viewer_role: Bearer / X-Overlord-Token / ?t=),
+    rank it on the canonical hierarchy ladder (public < participant < member <
+    ... < overlord), and allow when rank(role) >= rank(min_tier). Otherwise 302
+    a browser GET to the /activity realm door (connect → sign → tier — never a
+    dead 401) and raise 403 for API clients. Fail-open on import error so a gate
+    fault can never hard-lock the docs.
+
+    No cookies — web3 JWT is client-held and presented by header/?t=.
+    """
+    try:
+        from mindx_backend_service.deltaverse.routes import _viewer_role
+        from mindx_backend_service.hierarchy import rank
+    except Exception:
+        return None  # gate unavailable → fail-open (do not lock docs on a fault)
+    viewer = _viewer_role(request)          # EVM overlord-session: participant/member/overlord
+    role = viewer.get("role") or "public"
+    verified = bool(viewer.get("verified"))
+    # OVERSEER recognition — the Algorand (mindx.algo, Pera/PARSEC) identity signs
+    # in via /auth/algorand and carries a DISTINCT overseer JWT that the EVM
+    # overlord-session verifier (_viewer_role) does not read. Recognize it here so
+    # the realm's two sovereign apexes are BOTH honored: OVERLORD (bankon.eth, EVM)
+    # and OVERSEER (mindx.algo, substrate/PARSEC). Ladder: …member<overseer<overlord.
+    if rank(role) < rank("overseer"):
+        _tok = None
+        _auth = request.headers.get("authorization", "")
+        if _auth.lower().startswith("bearer "):
+            _tok = _auth[7:].strip()
+        _tok = (_tok or request.headers.get("x-overseer-token")
+                or request.headers.get("x-overlord-token") or request.query_params.get("t"))
+        if _tok:
+            try:
+                from mindx_backend_service.overseer_auth import verify_overseer_jwt
+                verify_overseer_jwt(_tok)   # asserts scope + mindx.algo signer
+                role, verified = "overseer", True
+            except Exception:
+                pass
+    if verified and rank(role) < rank("participant"):
+        role = "participant"      # any verified wallet is a recognized participant
+    if rank(role) >= rank(min_tier):
+        return None
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept and getattr(request, "method", "GET") == "GET":
+        safe_from = html_from if html_from.startswith("/") and not html_from.startswith("//") else "/"
+        return _DashResponse(content=_access_denied_page(safe_from, min_tier), status_code=403)
+    raise HTTPException(status_code=403, detail=f"realm tier '{min_tier}' required — connect at /activity")
+
+
+def _access_denied_page(from_path: str, min_tier: str) -> str:
+    """THE standard mindX realm gate — image-forward, few words. A doorway portal,
+    a single CONNECT. Sign proves control (no funds access); on a sufficient tier
+    it opens the requested page, else it names the tier. Harmonized across gates."""
+    import json as _json
+    frm = _json.dumps(from_path)
+    tier = _json.dumps(min_tier)
+    return f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mindX — the Realm</title><meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="/gfx/favicon.ico" sizes="any">
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+html,body{{height:100%}}
+body{{font-family:'JetBrains Mono','SF Mono',monospace;color:#e6edf3;background:#04060b;overflow:hidden}}
+.portal{{position:fixed;inset:0;background:url('/gfx/realm-bg.webp') center/cover no-repeat;transform:scale(1.04);filter:saturate(1.05);transition:transform 1.7s cubic-bezier(.66,0,.2,1),filter 1.5s,opacity 1.5s;will-change:transform,filter}}
+.veil{{position:fixed;inset:0;background:radial-gradient(circle at 50% 42%,rgba(4,6,11,.15),rgba(4,6,11,.86) 72%);transition:opacity 1s}}
+/* TARDIS: the small door opens into the vast interior on ACCESS GRANTED */
+.interior{{position:fixed;inset:0;z-index:1;opacity:0;transition:opacity 1.2s ease .35s;pointer-events:none}}
+.interior canvas{{position:absolute;inset:0;width:100%;height:100%}}
+.interior #dvfabric{{opacity:.5}}
+body.tardis-go .portal{{transform:scale(7);filter:saturate(1.7) brightness(1.35);opacity:0}}
+body.tardis-go .veil{{opacity:0}}
+body.tardis-go .stage{{opacity:0;transition:opacity .7s;pointer-events:none}}
+body.tardis-go .interior{{opacity:1}}
+/* falling down the rabbit hole — the interior tumbles as you fall into the spiral */
+@keyframes rabbithole{{0%{{transform:rotate(0) scale(1.08)}}100%{{transform:rotate(11deg) scale(1)}}}}
+body.tardis-go #inside{{animation:rabbithole 3.2s cubic-bezier(.4,0,.2,1) both;transform-origin:50% 46%}}
+.stage{{position:relative;z-index:2;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:24px}}
+.crest{{width:132px;height:132px;filter:drop-shadow(0 0 30px rgba(227,179,65,.45));cursor:pointer;transition:transform .2s,filter .3s}}
+.crest:hover{{transform:scale(1.05);filter:drop-shadow(0 0 44px rgba(227,179,65,.7))}}
+.crest:active{{transform:scale(.98)}}
+.wbtn{{margin:6px 5px 0;padding:9px 16px;border-radius:9px;border:1px solid rgba(88,166,255,.4);background:rgba(88,166,255,.08);color:#c9d1d9;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;cursor:pointer}}
+.wbtn:hover{{border-color:#58a6ff;color:#fff;box-shadow:0 0 18px rgba(88,166,255,.2)}}
+.hd{{font-size:22px;letter-spacing:.34em;text-transform:uppercase;font-weight:700;transition:.5s}}
+.hd.denied{{color:#f85149;text-shadow:0 0 24px rgba(248,81,73,.35)}}
+.hd.ok{{color:#56d364;text-shadow:0 0 26px rgba(86,211,100,.4)}}
+.tier{{font-size:10px;letter-spacing:.42em;text-transform:uppercase;color:#e3b341;opacity:.85}}
+.connect{{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:.36em;text-transform:uppercase;color:#0a0d07;background:linear-gradient(135deg,#f7d778,#e3b341 52%,#b8902c);border:none;border-radius:16px;padding:24px 72px;cursor:pointer;transition:transform .2s,box-shadow .3s;box-shadow:0 12px 34px rgba(0,0,0,.55),0 0 44px rgba(227,179,65,.4),inset 0 2px 0 rgba(255,255,255,.55),inset 0 -3px 8px rgba(120,80,10,.35);animation:cpulse 2.4s ease-in-out infinite}}
+.connect::before{{content:'';position:absolute;top:0;left:-60%;width:38%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.6),transparent);transform:skewX(-18deg);animation:sheen 3.4s ease-in-out infinite}}
+.connect:hover{{transform:translateY(-3px) scale(1.09);box-shadow:0 20px 56px rgba(0,0,0,.6),0 0 96px rgba(227,179,65,.85),inset 0 2px 0 rgba(255,255,255,.7),inset 0 -3px 8px rgba(120,80,10,.35)}}
+.connect:active{{transform:translateY(0) scale(.99)}}
+@keyframes cpulse{{0%,100%{{box-shadow:0 12px 34px rgba(0,0,0,.55),0 0 38px rgba(227,179,65,.32),inset 0 2px 0 rgba(255,255,255,.55),inset 0 -3px 8px rgba(120,80,10,.35)}}50%{{box-shadow:0 12px 34px rgba(0,0,0,.55),0 0 60px rgba(227,179,65,.6),inset 0 2px 0 rgba(255,255,255,.6),inset 0 -3px 8px rgba(120,80,10,.35)}}}}
+@keyframes sheen{{0%{{left:-60%}}55%,100%{{left:130%}}}}
+#msg{{font-size:11px;letter-spacing:.06em;color:#c9d1d9;min-height:15px;opacity:.85}}
+.algo{{font-size:10px;letter-spacing:.16em;color:#c9a0ff;text-decoration:none;opacity:.8}}.algo:hover{{opacity:1;color:#e6edf3}}
+.crown{{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);font-size:30px;color:#e3b341;cursor:grab;user-select:none;-webkit-user-select:none;text-shadow:0 0 16px rgba(227,179,65,.6);z-index:4;touch-action:none;transition:transform .45s cubic-bezier(.34,1.3,.5,1),text-shadow .45s}}
+.crown:hover{{transform:translateX(-50%) scale(10);text-shadow:0 0 80px rgba(227,179,65,.95);z-index:6}}
+.crown.drag{{cursor:grabbing;text-shadow:0 0 28px rgba(227,179,65,.95);transition:none}}
+.toro{{position:fixed;border:2px solid rgba(227,179,65,.6);border-radius:50%;pointer-events:none;z-index:3;transform:translate(-50%,-50%)}}
+a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color:#6b7480;text-decoration:none;letter-spacing:.14em}}a.back:hover{{color:#aeb7c2}}
+</style></head><body>
+<div class="portal"></div><div class="veil"></div>
+<div class="interior"><canvas id="dvfabric"></canvas><canvas id="inside"></canvas></div>
+<div class="stage">
+  <div class="hd" id="hd"></div>
+  <button class="connect" id="c">Connect</button>
+  <img class="crest" id="crest" src="/gfx/mindX.png" alt="mindX — connect" title="connect">
+  <div id="msg"></div>
+  <div id="wallets"></div>
+</div>
+<div class="crown" id="crown" title="drag the crown">&#9819;</div>
+<a class="back" href="/">&larr;</a>
+<script src="/deltaverse.js"></script>
+<script>
+var FROM={frm}, TIER={tier}, RANK={{public:0,participant:1,member:2,overseer:3,overlord:4}};
+// The vast interior — the substrate that fills the frame once the door opens.
+function startInside(){{
+  // DeltaVerse substrate fabric behind (the imported engine).
+  try{{ if(window.DeltaVerse){{ window.__dv=new DeltaVerse({{canvas:'#dvfabric'}}); if(window.__dv.start)window.__dv.start(); }} }}catch(e){{}}
+  // Fall down the rabbit hole: a spiral-tornado corkscrew of mesh from the
+  // initiation point, drawing up a long tunnel toward a distant object — the
+  // THRONE — that grows as you approach. Golden-ratio acceleration (peak at φ⁻¹
+  // of the journey) then deceleration to arrival. The cursor bends the vortex
+  // axis: the participant alters the substrate on the way in.
+  var cv=document.getElementById('inside');if(!cv)return;var c=cv.getContext('2d');
+  var W,H,cx,cy,pts=[],spin=0,mx=-1,my=-1;
+  var PHI=1.6180339887,INVPHI=0.6180339887,DUR=3300,t0=(window.performance&&performance.now?performance.now():Date.now());
+  var CL=['rgba(227,179,65,','rgba(88,166,255,','rgba(86,211,100,','rgba(201,160,255,'];
+  function rs(){{W=cv.width=innerWidth;H=cv.height=innerHeight;cx=W/2;cy=H*0.46;pts=[];var N=Math.min(560,Math.floor(W*H/2500));for(var i=0;i<N;i++)pts.push({{a:Math.random()*6.283,t:Math.random(),s:Math.random()*0.6+0.7,cl:CL[i%4]}});}}
+  addEventListener('resize',rs);rs();
+  function pointer(e){{var p=e.touches&&e.touches[0]?e.touches[0]:e;mx=p.clientX;my=p.clientY;}}
+  addEventListener('mousemove',pointer);addEventListener('touchmove',pointer,{{passive:true}});
+  var maxR=Math.max(W,H)*0.62;
+  function speedAt(j){{ return j<INVPHI ? PHI*(j/INVPHI) : PHI*Math.max(0,(1-j)/(1-INVPHI)); }}
+  function draw(now){{
+    var j=Math.min(1,(now-t0)/DUR), spd=speedAt(j);
+    spin+=0.006+0.030*spd;
+    var tx=(mx>0?mx:cx),ty=(my>0?my:H*0.46);
+    cx+=(tx-cx)*0.05*Math.min(1,spd); cy+=(ty-cy)*0.05*Math.min(1,spd);
+    c.fillStyle='rgba(4,6,11,'+(0.16+0.08*j).toFixed(3)+')';c.fillRect(0,0,W,H);
+    pts.sort(function(p,q){{return q.t-p.t;}});
+    var prev=null;
+    for(var i=0;i<pts.length;i++){{var p=pts[i];
+      p.t-=(0.0016+0.0060*spd)*p.s; if(p.t<=0.02){{p.t+=1;p.a=Math.random()*6.283;}}
+      var ang=p.a+p.t*7.5+spin, r=maxR*Math.pow(p.t,1.5), persp=0.22+p.t*0.78;
+      var x=cx+Math.cos(ang)*r*persp, y=cy+Math.sin(ang)*r*persp*0.62;
+      var size=(0.4+p.t*2.4)*p.s, al=Math.min(1,((1-p.t)*0.2+p.t*0.9));
+      if(prev&&Math.abs(prev.t-p.t)<0.06){{c.beginPath();c.moveTo(prev.x,prev.y);c.lineTo(x,y);c.strokeStyle=p.cl+(al*0.14).toFixed(3)+')';c.lineWidth=0.5;c.stroke();}}
+      c.beginPath();c.arc(x,y,size,0,6.28);c.fillStyle=p.cl+al.toFixed(3)+')';c.fill();
+      prev={{x:x,y:y,t:p.t}};
+    }}
+    var g=Math.pow(j,1.8), R=(8+g*Math.min(W,H)*0.9);
+    var og=c.createRadialGradient(cx,cy,0,cx,cy,R);
+    og.addColorStop(0,'rgba(255,228,150,'+(0.35+0.60*g).toFixed(3)+')');
+    og.addColorStop(0.5,'rgba(227,179,65,'+(0.22*g).toFixed(3)+')');
+    og.addColorStop(1,'transparent');
+    c.fillStyle=og;c.beginPath();c.arc(cx,cy,R,0,6.28);c.fill();
+    if(j>0.55){{var em=Math.min(1,(j-0.55)/0.45), fs=(20+em*Math.min(W,H)*0.16);
+      c.save();c.globalAlpha=em;c.fillStyle='rgba(255,236,180,1)';
+      c.font='700 '+fs.toFixed(0)+'px JetBrains Mono,monospace';c.textAlign='center';c.textBaseline='middle';
+      c.shadowColor='rgba(227,179,65,.85)';c.shadowBlur=fs*0.6;c.fillText('♛',cx,cy);c.restore();}}
+    if(j<1)requestAnimationFrame(draw);
+  }}
+  requestAnimationFrame(draw);
+}}
+// Grant flow shared by every wallet: token stored, TARDIS opens on sufficient tier.
+function granted(v){{
+  var m=document.getElementById('msg'),hd=document.getElementById('hd');
+  if(!v||!v.realm_token){{ m.textContent='not recognized'; return; }}
+  try{{localStorage.setItem('mindx_realm_token',v.realm_token);localStorage.setItem('mindx_participant',v.role);if(v.role==='overlord')localStorage.setItem('mindx_overlord_verified','1');}}catch(e){{}}
+  if((RANK[v.role]||0)>=(RANK[TIER]||99)){{ hd.textContent='Access Granted';hd.classList.remove('denied');hd.classList.add('ok'); m.style.color='#56d364';m.textContent='the door opens…'; startInside(); document.body.classList.add('tardis-go'); setTimeout(function(){{location.href=FROM+(FROM.indexOf('?')>=0?'&':'?')+'t='+encodeURIComponent(v.realm_token);}},3400); }}
+  else {{ m.style.color='#e3b341';m.textContent='recognized as '+v.role+' — '+TIER+' required'; }}
+}}
+async function connectEVM(prov){{
+  var m=document.getElementById('msg');
+  try{{
+    var a=(await prov.request({{method:'eth_requestAccounts'}}))[0]; if(!a)return;
+    m.textContent='sign to enter…';
+    var ch=await fetch('/realm/challenge?address='+encodeURIComponent(a)).then(function(r){{return r.json();}});
+    var sig=await prov.request({{method:'personal_sign',params:[ch.message,a]}});
+    var v=await fetch('/realm/verify',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{address:a,nonce:ch.nonce,signature:sig}})}}).then(function(r){{return r.json();}});
+    granted(v);
+  }}catch(e){{ m.textContent='cancelled'; }}
+}}
+async function connectAlgorand(px){{  // OVERSEER — mindx.algo via PARSEC (Pera-source)
+  var m=document.getElementById('msg');
+  try{{
+    var acct=await px.connect(); var addr=(acct&&(acct.address||acct[0]))||px.address; if(!addr){{m.textContent='no Algorand account';return;}}
+    m.textContent='sign to enter…';
+    var ch=await fetch('/auth/algorand/challenge?address='+encodeURIComponent(addr)).then(function(r){{return r.json();}});
+    var sig=await (px.signChallenge?px.signChallenge(ch.message):px.signBytes(ch.message));
+    var v=await fetch('/auth/algorand/verify',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{address:addr,nonce:ch.nonce,signature:sig}})}}).then(function(r){{return r.json();}});
+    granted({{realm_token:(v.overseer_token||v.jwt||v.token||''),role:(v.role||'overseer')}});
+  }}catch(e){{ m.textContent='cancelled'; }}
+}}
+function detectWallets(){{
+  var out=[],eth=window.ethereum;
+  if(eth){{ (eth.providers&&eth.providers.length?eth.providers:[eth]).forEach(function(p){{
+    out.push({{name:(p.isMetaMask?'MetaMask':p.isCoinbaseWallet?'Coinbase':p.isRabby?'Rabby':p.isPhantom?'Phantom':'EVM Wallet'),kind:'evm',prov:p}}); }}); }}
+  if(window.phantom&&window.phantom.ethereum&&!out.some(function(o){{return o.name==='Phantom';}})) out.push({{name:'Phantom',kind:'evm',prov:window.phantom.ethereum}});
+  if(window.parsec) out.push({{name:'PARSEC',kind:'algorand',prov:window.parsec}});
+  return out;
+}}
+function connectWallet(w){{ document.getElementById('wallets').innerHTML=''; if(w.kind==='algorand') connectAlgorand(w.prov); else connectEVM(w.prov); }}
+document.getElementById('c').addEventListener('click',function(){{
+  var m=document.getElementById('msg'), ws=detectWallets();
+  if(!ws.length){{ m.textContent='no wallet found — opening MetaMask…'; window.open('https://metamask.io/download/','_blank','noopener'); return; }}
+  if(ws.length===1){{ connectWallet(ws[0]); return; }}
+  var box=document.getElementById('wallets'); box.innerHTML=''; m.textContent='choose your wallet';
+  ws.forEach(function(w){{ var b=document.createElement('button'); b.className='wbtn'; b.textContent=w.name; b.onclick=function(){{connectWallet(w);}}; box.appendChild(b); }});
+}});
+// The mindX logo is a CONNECT surface too — press/click it to enter.
+(function(){{var cr=document.getElementById('crest');if(cr)cr.addEventListener('click',function(){{document.getElementById('c').click();}});}})();
+// The door senses you: hovering CONNECT or the logo charges a pulse that grows
+// and, as it grows, subtly morphs/warps the whole doorway (especially the portal).
+(function(){{
+  var portal=document.querySelector('.portal'),veil=document.querySelector('.veil');
+  if(!portal)return;var chg=0,hover=false,t=0;
+  portal.style.transition='transform .2s ease, filter .35s ease';
+  function on(){{hover=true;}} function off(){{hover=false;}}
+  ['c','crest'].forEach(function(id){{var el=document.getElementById(id);if(!el)return;
+    el.addEventListener('mouseenter',on);el.addEventListener('mouseleave',off);
+    el.addEventListener('touchstart',on,{{passive:true}});el.addEventListener('touchend',off);}});
+  (function loop(){{
+    if(document.body.classList.contains('tardis-go')){{ portal.style.transition='';portal.style.transform='';portal.style.filter='';if(veil)veil.style.opacity='';return; }}
+    t+=0.05; chg+=((hover?1:0)-chg)*0.03;                 // pulse grows while hovering, decays on leave
+    if(chg>0.003){{
+      var m=chg*(0.6+0.4*(Math.sin(t)*0.5+0.5));          // very gentle pulse
+      // substrate stays SUBTLE; instead the DOOR grows more prominent as you linger —
+      // the veil lifts and the portal brightens, so the doorway emerges toward you.
+      portal.style.transform='scale('+(1.04+m*0.045).toFixed(3)+')';
+      portal.style.filter='saturate('+(1.05+m*0.40).toFixed(3)+') brightness('+(1+m*0.20).toFixed(3)+')';
+      if(veil)veil.style.opacity=(1-m*0.52).toFixed(3);
+    }} else {{ portal.style.transform='';portal.style.filter='';if(veil)veil.style.opacity=''; }}
+    requestAnimationFrame(loop);
+  }})();
+}})();
+// Optional: a substrate-rendered drag-and-drop crown with toroid magic on pickup.
+(function(){{
+  var cr=document.getElementById('crown');if(!cr)return;var drag=false,ox=0,oy=0,moved=false;
+  function toroid(x,y){{for(var k=0;k<3;k++){{(function(delay){{setTimeout(function(){{
+    var t=document.createElement('div');t.className='toro';t.style.left=x+'px';t.style.top=y+'px';
+    t.style.width=t.style.height='10px';document.body.appendChild(t);var s=10;
+    var iv=setInterval(function(){{s+=9;t.style.width=t.style.height=s+'px';t.style.opacity=String(Math.max(0,0.9-s/220));if(s>210){{clearInterval(iv);t.remove();}}}},16);
+  }},delay);}})(k*90);}}}}
+  function down(e){{drag=true;moved=false;cr.classList.add('drag');var p=e.touches?e.touches[0]:e;var r=cr.getBoundingClientRect();ox=p.clientX-(r.left+r.width/2);oy=p.clientY-(r.top+r.height/2);toroid(p.clientX,p.clientY);if(e.cancelable)e.preventDefault();}}
+  function move(e){{if(!drag)return;moved=true;var p=e.touches?e.touches[0]:e;cr.style.left=(p.clientX-ox)+'px';cr.style.top=(p.clientY-oy)+'px';cr.style.bottom='auto';cr.style.transform='translate(-50%,-50%)';}}
+  function up(){{ var wasDrop=drag&&moved; drag=false;cr.classList.remove('drag');
+    if(wasDrop){{ cr.style.transition='transform .4s ease,opacity .4s ease';cr.style.transform='translate(-50%,-50%) scale(0)';cr.style.opacity='0'; setTimeout(function(){{cr.style.display='none';}},400); document.getElementById('c').click(); }}  // dropped on the portal → open wallet login, crown vanishes
+  }}
+  cr.addEventListener('click',function(){{ if(!moved) document.getElementById('c').click(); }});  // click the crown → CONNECT
+  cr.addEventListener('mousedown',down);cr.addEventListener('touchstart',down,{{passive:false}});
+  addEventListener('mousemove',move);addEventListener('touchmove',move,{{passive:false}});
+  addEventListener('mouseup',up);addEventListener('touchend',up);
+}})();
+</script></body></html>"""
+
+async def _reference_gate(request: Request, html_from: str):
+    """Gate a document-serving route: returns None when access is granted, a
+    302 /login redirect for unauthenticated browser GETs (mirrors the arrival
+    gate's behavior), and re-raises the 401 for API clients."""
+    try:
+        await _require_reference_access(request)
+        return None
+    except HTTPException:
+        accept = request.headers.get("accept", "")
+        if "text/html" in accept and getattr(request, "method", "GET") == "GET":
+            safe_from = html_from if html_from.startswith("/") and not html_from.startswith("//") else "/"
+            # Harmonized: the standard ACCESS DENIED / realm page (doorway + CONNECT).
+            return _DashResponse(content=_access_denied_page(safe_from, "member"), status_code=403)
+        raise
 
 
 def _arrival_gate_mode() -> str:
@@ -2297,11 +3055,12 @@ async def api_access_gate(request: Request, call_next):
     from starlette.responses import RedirectResponse as _Redir, JSONResponse as _GR
     accept = request.headers.get("accept", "")
     if _arrival_gate_mode() == "strict" and "text/html" in accept and request.method == "GET":
-        from urllib.parse import quote as _q
         qs = ("?" + request.url.query) if request.url.query else ""
         # Open-redirect guard: only round-trip a same-origin relative path.
         safe_from = path if path.startswith("/") and not path.startswith("//") else "/"
-        return _Redir(url=f"/login?from={_q(safe_from + qs, safe='/')}", status_code=302)
+        # Harmonized: the standard ACCESS DENIED / realm page (doorway + CONNECT),
+        # not a bare /login redirect. Same page everywhere a gate appears.
+        return _DashResponse(content=_access_denied_page(safe_from + qs, "member"), status_code=403)
 
     # HTML in legacy mode falls back to the gate page (same behavior as before).
     if "text/html" in accept:
@@ -2315,6 +3074,23 @@ async def api_access_gate(request: Request, call_next):
         "from": path,
         "docs": "https://mindx.pythai.net/docs.html",
     })
+
+# Dynamic surfaces must never be browser-cached: the dashboard HTML can update
+# while a separately-cached /insight/* XHR keeps serving a stale verdict (the
+# "stale self-diagnosis" bug, 2026-06). Force no-store on live data + HTML pages;
+# /static/ and images stay cacheable.
+@app.middleware("http")
+async def _no_store_dynamic(request: Request, call_next):
+    resp = await call_next(request)
+    try:
+        p = request.url.path
+        ct = resp.headers.get("content-type", "")
+        if p.startswith(("/insight/", "/diagnostics/")) or ct.startswith("text/html"):
+            resp.headers["Cache-Control"] = "no-store, must-revalidate"
+            resp.headers["Pragma"] = "no-cache"
+    except Exception:
+        pass
+    return resp
 
 # Inbound metrics and optional rate control (both directions: see docs/monitoring_rate_control.md)
 try:
@@ -2423,6 +3199,9 @@ _diag_heartbeat_count = 0
 _diag_last_probe = 0.0
 _diag_cache: dict = {}        # Cached /diagnostics/live response
 _diag_cache_ts: float = 0.0   # When the cache was last populated
+_diag_last_actions: list = []  # Last non-empty recent-actions (survives DB stalls)
+_diag_last_godel: list = []    # Last non-empty Gödel choices (survives read stalls)
+_diag_last_database: dict = {}  # Last connected pgvector health (survives query stalls)
 _DIAG_CACHE_TTL: float = 30.0  # Seconds to serve cached diagnostics (raised from 5s: the per-request gather is heavy on a 2-core box; 30s keeps /diagnostics/live responsive under load while staying fresh enough for a 6s-polling dashboard reading "updated Ns ago")
 _INTERACTIONS_LOG = PROJECT_ROOT / "data" / "logs" / "heartbeat_dialogues.jsonl"
 
@@ -2953,6 +3732,58 @@ async def insight_fitness_trajectory(agent_id: str, window: str = "7d"):
     return {"agent_id": agent_id, "window_days": days, "points": agg.trajectory(agent_id, days)}
 
 
+@app.get("/insight/inference/ledger", tags=["insight"], summary="Inference ledger — tokens + price per model (blockchain-publishable)")
+@_insight_safe
+async def insight_inference_ledger(request: Request, limit: int = 20):
+    """Append-only, hash-linked ledger of every LLM inference — tokens + price PER MODEL, with a
+    deterministic anchor digest (sha256) for periodic on-chain publication. Per the thesis/manifesto:
+    mindX maximizes daily inference at the lowest cost and keeps an immutable record of what each model
+    cost it as it evolves into permanence + blockchain integration."""
+    try:
+        from agents.monitoring.inference_ledger import summary as _ledger_summary, anchor_digest, verify_chain
+        s = _ledger_summary(limit_tail=max(0, min(limit, 200)))
+        s["anchor"] = anchor_digest()
+        s["chain"] = verify_chain()
+    except Exception as e:
+        s = {"entries": 0, "by_model": {}, "totals": {}, "tail": [], "error": str(e)}
+    return _maybe_h_text(request, s, route_path="/insight/inference/ledger")
+
+
+@app.get("/insight/inference/appetite", tags=["insight"], summary="Inference appetite — daily budget, connections, tokens, per-model health")
+@_insight_safe
+async def insight_inference_appetite(request: Request):
+    """Public display of mindX's inference APPETITE (operator directive): the
+    daily call ceiling (sum of free-tier caps, target max-1), how much is
+    consumed today, the conversational floor (3/hr=72/day per thread), live
+    per-provider connections + tokens/min, and per-MODEL interaction health
+    (live/dead/probing slugs, the dead-roster pruner). This is the honest mirror
+    of how hungry mindX actually is vs. how much capacity it has — utilization is
+    typically a rounding error, which is the point: the limiter was never the
+    bottleneck, dead models were."""
+    out: Dict[str, Any] = {}
+    try:
+        from llm.inference_budget import daily_budget, snapshot as _budget_snapshot
+        out["daily_budget"] = daily_budget()
+        out["providers"] = _budget_snapshot()  # per-provider connections (total_req), tokens_min, backoff
+    except Exception as e:
+        out["daily_budget"] = {}
+        out["providers"] = {}
+        out["budget_error"] = str(e)
+    try:
+        from llm.model_health import snapshot as _mh_snapshot
+        out["model_health"] = _mh_snapshot()
+    except Exception as e:
+        out["model_health"] = {}
+        out["model_health_error"] = str(e)
+    try:
+        from llm.token_appetite import snapshot as _ta_snapshot
+        out["lifetime_tokens"] = _ta_snapshot()  # seeded 347M, monotonic, incl. CPU
+    except Exception as e:
+        out["lifetime_tokens"] = {}
+        out["lifetime_error"] = str(e)
+    return _maybe_h_text(request, out, route_path="/insight/inference/appetite")
+
+
 @app.get("/insight/improvement/summary", tags=["insight"])
 @_insight_safe
 async def insight_improvement_summary(request: Request, window: str = "24h"):
@@ -2964,6 +3795,20 @@ async def insight_improvement_summary(request: Request, window: str = "24h"):
     from mindx_backend_service.insight_aggregator import InsightAggregator
     agg = InsightAggregator.get_instance()
     return _maybe_h_text(request, agg.improvement_summary(), route_path="/insight/improvement/summary")
+
+
+@app.get("/insight/hierarchy", tags=["insight"], summary="The mindX OVERLORD hierarchy ladder + recognize")
+@_insight_safe
+async def insight_hierarchy(request: Request, evm: Optional[str] = None, algo: Optional[str] = None):
+    """The canonical OVERLORD hierarchy — ONE ladder across both sovereignty chains: the EVM OVERLORD
+    (bankon.eth) and the Algorand OVERSEER (mindx.algo). Each tier names how it is earned and the mindX
+    surface it gates. Pass ?evm=<addr> and/or ?algo=<addr> to recognize a tier. Recognition IS the
+    protection boundary — DeltaVerse, inspired by mindX, now protects it."""
+    from mindx_backend_service import hierarchy as _h
+    out = _h.summary()
+    if evm or algo:
+        out["recognized"] = _h.recognize(evm_address=evm, algo_address=algo)
+    return _maybe_h_text(request, out, route_path="/insight/hierarchy")
 
 
 @app.get("/insight/godel/breakdown", tags=["insight"])
@@ -3210,24 +4055,39 @@ async def insight_memory_recent(request: Request, limit: int = 24):
         for raw in reversed(lines):
             if len(events) >= limit:
                 break
-            if b'"kind":"memory.write"' not in raw:
+            # memory.write = a log became a memory; memory.embed = a doc became
+            # a vector in the semantic index. Both are "mindX remembering".
+            if b'"kind":"memory.write"' not in raw and b'"kind":"memory.embed"' not in raw:
                 continue
             try:
                 obj = json.loads(raw.decode("utf-8", errors="replace"))
             except Exception:
                 continue
-            if obj.get("kind") != "memory.write":
+            kind = obj.get("kind")
+            if kind not in ("memory.write", "memory.embed"):
                 continue
             payload = obj.get("payload") or {}
-            events.append({
-                "ts": obj.get("ts"),
-                "actor": obj.get("actor"),
-                "source_log": obj.get("source_log"),
-                "memory_type": payload.get("memory_type") or "memory",
-                "importance": payload.get("importance"),
-                "memory_id": payload.get("memory_id") or obj.get("source_ref"),
-                "tags": (payload.get("tags") or [])[:6],
-            })
+            if kind == "memory.embed":
+                doc = payload.get("doc_name") or obj.get("source_ref") or "doc"
+                events.append({
+                    "ts": obj.get("ts"),
+                    "actor": obj.get("actor"),
+                    "source_log": doc,
+                    "memory_type": "embedding",
+                    "importance": f"{payload.get('chunks', '?')} chunks",
+                    "memory_id": doc,
+                    "tags": ["pgvector", "semantic-index"],
+                })
+            else:
+                events.append({
+                    "ts": obj.get("ts"),
+                    "actor": obj.get("actor"),
+                    "source_log": obj.get("source_log"),
+                    "memory_type": payload.get("memory_type") or "memory",
+                    "importance": payload.get("importance"),
+                    "memory_id": payload.get("memory_id") or obj.get("source_ref"),
+                    "tags": (payload.get("tags") or [])[:6],
+                })
     except Exception as e:
         return _maybe_h_text(request, {"events": [], "count": 0, "error": str(e)}, route_path="/insight/memory/recent")
     return _maybe_h_text(
@@ -3256,6 +4116,18 @@ async def insight_improvement_timeline(limit: int = 50):
     # Newest-first, limit-capped. No timestamps in file → index IS the order.
     data = list(reversed(data))[:limit]
     return {"campaigns": data, "count": len(data)}
+
+
+@app.get("/insight/sentinel/status", tags=["insight"])
+@_insight_safe
+async def insight_sentinel_status(request: Request):
+    """Self-improvement SENTINEL target — a safe external module the autonomous
+    loop exercises end-to-end (effector → apply → judge) without touching
+    production. Reports the sentinel's health and, by comparing its content hash
+    against a recorded baseline, whether the loop has actually *changed* it —
+    concrete proof the improvement effector works on a safe target."""
+    from agents.sentinel.sentinel import status as _sentinel_status
+    return _maybe_h_text(request, _sentinel_status(), route_path="/insight/sentinel/status")
 
 
 @app.get("/insight/dialogue/recent", tags=["insight"])
@@ -3988,7 +4860,9 @@ async def insight_bdi_recent(
                 row["success"] = pd.get("success") if "success" in pd else a.get("success")
                 result = pd.get("result") if "result" in pd else a.get("result")
                 if isinstance(result, str):
-                    row["result"] = result[:280]
+                    # 1000 chars — enough to see WHY an action failed, not just that
+                    # it did (the old 280 cut most tracebacks mid-sentence).
+                    row["result"] = result[:1000]
                 else:
                     row["result"] = result
             elif pn == "bdi_goal_set":
@@ -4006,6 +4880,99 @@ async def insight_bdi_recent(
         )
     except Exception as e:
         return {"agent_id": agent_id, "events": [], "count": 0, "error": str(e)}
+
+
+@app.get("/insight/cognition/diagnostic", tags=["insight"], summary="Cognitive pipeline diagnostic: Mastermind → AGInt → BDI, cycle-by-cycle")
+@_insight_safe
+async def insight_cognition_diagnostic(request: Request, limit: int = 8):
+    """Reconstruct the autonomous cognitive pipeline from the runtime log so feedback.html shows
+    WHERE the loop stalls across all three layers, not just pass/fail:
+
+      - MASTERMIND: strategic campaigns (directive, blueprint step, final status)
+      - AGInt:      P-O-D-A cognitive cycles (decision/action) — or DORMANT if the autonomous path bypasses it
+      - BDI:        per-campaign cycles (n/total + status) + the plan signal (0-action plans, ANALYZE_FAILURE)
+    """
+    import re
+    log = PROJECT_ROOT / "data" / "logs" / "mindx_runtime.log"
+    empty = {"mastermind": {"campaigns": [], "active": False}, "agint": {"active": False, "cognitive_cycles": 0, "recent": []}, "count": 0}
+    if not log.exists():
+        return {**empty, "note": "no runtime log"}
+    try:
+        with open(log, "rb") as f:
+            f.seek(0, 2); size = f.tell(); f.seek(max(0, size - 2_000_000))
+            lines = f.read().decode("utf-8", errors="replace").splitlines()
+    except Exception as e:
+        return {**empty, "error": str(e)}
+
+    ts_re = re.compile(r"^\[([\d :-]+)\]")
+    campaigns: dict[str, dict] = {}
+    bdi_to_campaign: dict[str, str] = {}
+    cur = None
+    agint_cycles: list[dict] = []
+    agint_cur = None
+
+    for ln in lines:
+        m = ts_re.match(ln); ts = m.group(1) if m else None
+        mc = re.search(r"Starting evolution campaign \(Run ID: (mastermind_run_[a-f0-9]+)\)\. Directive: '(.+?)'", ln)
+        if mc:
+            rid = mc.group(1)
+            mb = re.search(r"backlog_idx: (\d+)", mc.group(2))
+            cur = campaigns.setdefault(rid, {"run_id": rid, "directive": mc.group(2)[:220],
+                "backlog_idx": int(mb.group(1)) if mb else None, "started": ts, "blueprint": False,
+                "cycles": [], "final_status": None, "message": None, "zero_action_plans": 0, "analyze_failure": 0})
+            continue
+        if "Running SystemAnalyzerTool to generate a blueprint" in ln and cur is not None:
+            cur["blueprint"] = True; continue
+        mcyc = re.search(r"BDI \([^)]+\): Cycle (\d+)/(\d+) \| Status: (\w+) \(Run ID: ([a-f0-9]+)\)", ln)
+        if mcyc:
+            n, total, st, brid = int(mcyc.group(1)), int(mcyc.group(2)), mcyc.group(3), mcyc.group(4)
+            if cur is not None:
+                bdi_to_campaign.setdefault(brid, cur["run_id"])
+            tgt = campaigns.get(bdi_to_campaign.get(brid)) or cur
+            if tgt is not None:
+                tgt["bdi_run_id"] = brid; tgt["cycles"].append({"n": n, "total": total, "status": st})
+            continue
+        mp = re.search(r"Set plan ID '\w+' with (\d+) actions", ln)
+        if mp and cur is not None:
+            if int(mp.group(1)) == 0: cur["zero_action_plans"] += 1
+            continue
+        if "ANALYZE_FAILURE" in ln and cur is not None:
+            cur["analyze_failure"] += 1; continue
+        mf = re.search(r"Evolution campaign \(Run ID: (mastermind_run_[a-f0-9]+)\) finished\. BDI Message: (.+?)\. Overall: (\w+)", ln)
+        if mf:
+            r = campaigns.get(mf.group(1))
+            if r is not None:
+                r["message"] = mf.group(2)[:160]; r["final_status"] = mf.group(3); r["finished"] = ts
+            continue
+        # AGInt P-O-D-A cognitive cycles
+        mac = re.search(r"COGNITIVE CYCLE (\d+) ===", ln)
+        if mac:
+            agint_cur = {"cycle": int(mac.group(1)), "decision": None, "action_type": None, "success": None, "ts": ts}
+            agint_cycles.append(agint_cur); continue
+        md = re.search(r"Decision made: (\w+)", ln)
+        if md and agint_cur is not None:
+            agint_cur["decision"] = md.group(1); continue
+        ma = re.search(r"Action completed - Type: (\w+), Success: (\w+)", ln)
+        if ma and agint_cur is not None:
+            agint_cur["action_type"] = ma.group(1); agint_cur["success"] = (ma.group(2) == "True"); continue
+
+    camp = list(campaigns.values())[-max(1, min(limit, 40)):][::-1]
+    stalled = sum(1 for c in camp if c.get("final_status") == "MAX_CYCLES_REACHED")
+    result = {
+        "mastermind": {
+            "campaigns": camp, "active": bool(camp), "stalled_max_cycles": stalled,
+            "note": (f"{stalled}/{len(camp)} recent campaigns ended MAX_CYCLES_REACHED — BDI never reaches a "
+                     "terminal status (empty / ANALYZE_FAILURE plans)") if stalled else None,
+        },
+        "agint": {
+            "active": len(agint_cycles) > 0, "cognitive_cycles": len(agint_cycles),
+            "recent": agint_cycles[-12:][::-1],
+            "note": None if agint_cycles else ("AGInt P-O-D-A core is DORMANT in the autonomous path — "
+                     "Mastermind drives BDI directly (0 cognitive cycles in this log window)"),
+        },
+        "count": len(camp),
+    }
+    return _maybe_h_text(request, result, route_path="/insight/cognition/diagnostic")
 
 
 @app.get("/insight/godel/recent", tags=["insight"])
@@ -4044,6 +5011,379 @@ async def insight_godel_recent(request: Request, limit: int = 50):
         return _maybe_h_text(request, {"events": events, "count": len(events)}, route_path="/insight/godel/recent")
     except Exception as e:
         return {"events": [], "count": 0, "error": str(e)}
+
+
+async def _ascend_cpu_telemetry(driver_pid) -> Dict[str, Any]:
+    """Per-core CPU telemetry for the training light: usage%, frequency,
+    cumulative clock cycles (from /proc/stat jiffies × per-core freq),
+    temperature (per core when the host exposes sensors — a virtualized VPS
+    does not), plus the training process tree's own CPU cycles. All best-effort.
+    """
+    import psutil as _ps
+    CLK = os.sysconf("SC_CLK_TCK") if hasattr(os, "sysconf") else 100
+    # per-core usage % (short sample) + per-core frequency
+    usage = _ps.cpu_percent(interval=0.2, percpu=True)
+    try:
+        freqs = _ps.cpu_freq(percpu=True) or []
+    except Exception:
+        freqs = []
+    agg_freq = None
+    try:
+        af = _ps.cpu_freq()
+        agg_freq = af.current if af else None
+    except Exception:
+        pass
+    # per-core temperatures (coretemp) if the host exposes them
+    core_temps = {}
+    temps_available = False
+    try:
+        sens = _ps.sensors_temperatures()
+        for chip in ("coretemp", "k10temp", "cpu_thermal", "acpitz"):
+            if chip in sens:
+                temps_available = True
+                for i, s in enumerate(sens[chip]):
+                    core_temps[i] = round(s.current, 1) if s.current is not None else None
+                break
+    except Exception:
+        pass
+    # cumulative per-core cycles from /proc/stat jiffies
+    core_jiffies = {}
+    try:
+        with open("/proc/stat", "r") as f:
+            for line in f:
+                if line.startswith("cpu") and line[3:4].isdigit():
+                    parts = line.split()
+                    idx = int(parts[0][3:])
+                    busy = sum(int(x) for x in parts[1:8])  # user..steal, exclude idle/iowait? keep all busy
+                    core_jiffies[idx] = busy
+    except Exception:
+        pass
+    cores = []
+    for i in range(len(usage)):
+        fmhz = round(freqs[i].current) if i < len(freqs) and freqs[i] else (round(agg_freq) if agg_freq else None)
+        cyc = None
+        if i in core_jiffies and fmhz:
+            cpu_seconds = core_jiffies[i] / CLK
+            cyc = int(cpu_seconds * fmhz * 1_000_000)  # freq MHz → Hz
+        cores.append({
+            "core": i,
+            "usage_pct": round(usage[i], 1),
+            "freq_mhz": fmhz,
+            "temp_c": core_temps.get(i),
+            "cycles_cumulative": cyc,
+        })
+    # training process tree CPU cycles + RAM (the work the ascent consumed)
+    train_cpu_seconds = None
+    train_cycles = None
+    train_ram_mb = None
+    if driver_pid:
+        try:
+            proc = _ps.Process(int(driver_pid))
+            procs = [proc] + proc.children(recursive=True)
+            tot = 0.0
+            rss = 0
+            for p in procs:
+                try:
+                    ct = p.cpu_times()
+                    tot += ct.user + ct.system
+                    rss += p.memory_info().rss
+                except Exception:
+                    continue
+            train_cpu_seconds = round(tot, 2)
+            train_ram_mb = round(rss / (1024 ** 2), 1)
+            if agg_freq:
+                train_cycles = int(tot * agg_freq * 1_000_000)
+        except Exception:
+            pass
+    # system RAM (the other half of the measured CPU+RAM combination)
+    ram = {}
+    try:
+        vm = _ps.virtual_memory()
+        ram = {"used_gb": round(vm.used / (1024 ** 3), 2),
+               "total_gb": round(vm.total / (1024 ** 3), 2),
+               "percent": vm.percent}
+    except Exception:
+        pass
+    return {
+        "cores": cores,
+        "n_cores": len(cores),
+        "temps_available": temps_available,
+        "temps_note": None if temps_available else "no CPU temp sensors (virtualized host)",
+        "train_cpu_seconds": train_cpu_seconds,
+        "train_cycles_est": train_cycles,
+        "train_ram_mb": train_ram_mb,
+        "ram": ram,
+        "clk_tck": CLK,
+    }
+
+
+@app.get("/insight/godel/ascend", tags=["insight"])
+@_insight_safe
+async def insight_godel_ascend(request: Request, limit: int = 20):
+    """mindXtrain RIGHT-apex: recent knowledge->wisdom->weights ascents +
+    current bridge capability (version, level, armed/dormant, autonomous-armed).
+
+    The ascent log (data/logs/ascend_log.jsonl) records each generation's
+    stage, dcoach recall delta, and the promoted Ollama model. The capability
+    block shows whether the bridge is recognized, armed, and CPU-train-active.
+    """
+    from utils.config import PROJECT_ROOT as _PR
+    cap: Dict[str, Any] = {}
+    try:
+        from mindx.godel.mindxtrain import bridge as _mxt_bridge
+        cap = _mxt_bridge.discover().as_dict()
+    except Exception as e:
+        cap = {"error": f"bridge discover failed: {e}"}
+    # the single CPU+RAM combination + regimen training is measured against
+    regimen_settings: Dict[str, Any] = {}
+    try:
+        from mindx.godel.mindxtrain.settings import load_settings
+        regimen_settings = load_settings()
+    except Exception:
+        pass
+    # Live training indicator: status file (running/elapsed) + a tail of the
+    # streamed train log, so the page can show a "TRAINING" light + timer.
+    training: Dict[str, Any] = {"state": "idle"}
+    try:
+        from mindx.godel.mindxtrain.status import read_status
+        st = read_status()
+        if st:
+            training = st
+            lp = st.get("log_path")
+            if lp and Path(lp).exists():
+                try:
+                    with open(lp, "rb") as _lf:
+                        _lf.seek(0, 2)
+                        _sz = _lf.tell()
+                        _lf.seek(max(0, _sz - 8 * 1024))
+                        _raw = _lf.read().decode("utf-8", errors="replace")
+                    # carriage-return progress bars → keep last segment per line
+                    _lines = [ln.split("\r")[-1] for ln in _raw.splitlines() if ln.strip()]
+                    training["log_tail"] = "\n".join(_lines[-14:])
+                except Exception:
+                    pass
+            # Live per-core CPU telemetry + chronos 18dp clock — only while
+            # actually training (the readings cost a ~0.2s sample).
+            if st.get("state") == "running":
+                try:
+                    training["cpu"] = await _ascend_cpu_telemetry(st.get("driver_pid") or st.get("pid"))
+                except Exception as _ce:
+                    training["cpu"] = {"error": str(_ce)}
+                try:
+                    from mindx.godel.mindxtrain.status import chronos_now as _cn, elapsed_18dp as _e18
+                    now18, consensus, conf = await _cn()
+                    training["chronos"] = {
+                        "now_unix_18dp": now18,
+                        "started_unix_18dp": st.get("chronos_started"),
+                        "elapsed_18dp": _e18(st.get("chronos_started"), now18),
+                        "consensus": consensus,
+                        "confidence_ms": conf,
+                        "promised_by": "chronos.agent",
+                    }
+                except Exception as _che:
+                    training["chronos"] = {"error": str(_che)}
+    except Exception:
+        pass
+    log_path = _PR / "data" / "logs" / "ascend_log.jsonl"
+    events: list = []
+    if log_path.exists():
+        try:
+            with open(log_path, "rb") as f:
+                f.seek(0, 2)
+                size = f.tell()
+                start = max(0, size - 256 * 1024)
+                f.seek(start)
+                chunk = f.read()
+            lines = [ln for ln in chunk.split(b"\n") if ln.strip()]
+            if start > 0 and lines:
+                lines = lines[1:]
+            for ln in reversed(lines[-max(1, min(limit, 100)):]):
+                try:
+                    events.append(json.loads(ln.decode("utf-8", errors="replace")))
+                except Exception:
+                    continue
+        except Exception:
+            pass
+    return _maybe_h_text(request, {"capability": cap, "settings": regimen_settings,
+                                   "training": training, "events": events,
+                                   "count": len(events)},
+                         route_path="/insight/godel/ascend")
+
+
+@app.get("/insight/godel/machine", tags=["insight"])
+@_insight_safe
+async def insight_godel_machine(request: Request):
+    """The Gödel Machine Index (GMI) — mindX's honest self-audit.
+
+    An eight-predicate scorecard (G1–G8) of whether mindX is or is not a Gödel
+    machine, per docs/GODEL_EVAL_BLUEPRINT.md. Reports what is actually measured
+    (rationale coherence) versus what a Gödel machine requires (a machine-checked
+    proof of utility increase). Today reads NOT_YET_A_GODEL_MACHINE, coverage 0%.
+    Read-only; computed from data/logs/godel_choices.jsonl.
+    """
+    try:
+        from mindx.godel.eval import compute_gmi
+        gmi = compute_gmi()
+    except Exception as e:
+        gmi = {"verdict": "UNKNOWN", "error": str(e),
+               "honest_summary": "GMI computation unavailable."}
+    return _maybe_h_text(request, gmi, route_path="/insight/godel/machine")
+
+
+@app.get("/insight/system/live", tags=["insight"], include_in_schema=False)
+async def insight_system_live(request: Request):
+    """Clean-house lightweight system diagnostics — psutil per-core CPU + RAM + disk +
+    the governor's live limit state. No Dash/Plotly/React: this JSON feeds the
+    vanilla-canvas panel on /machine/admin. Read-only, ~0.3s per call."""
+    try:
+        from agents.blueprint_agent import BlueprintAgent
+        b = BlueprintAgent()
+        payload = {"status": "success", "per_core": b.per_core(), "resources": b.resources(),
+                   "plant": b.plant(), "inference": b.inference_correlation()}
+    except Exception as e:
+        payload = {"status": "error", "error": str(e)}
+    return _maybe_h_text(request, payload, route_path="/insight/system/live")
+
+
+@app.get("/insight/self/diagnostic", tags=["insight"])
+@_insight_safe
+async def insight_self_diagnostic(request: Request):
+    """The honest answer to "what is mindX actually improving?"
+
+    One aggregator separating REAL changes (milestones, publications,
+    adoptions, recorded autonomous code diffs) from PROCESS churn (campaign
+    terminal-status truth, backlog health, loop pathology), plus the live
+    agent-to-agent interaction matrix and a rule-based verdict.
+
+    Born from the 2026-06 system review (docs/SYSTEM_REVIEW_2026_06.md). Feeds
+    the landing-page self-diagnostic section and feedback.html interaction
+    panel. Cached 60s in mindx_backend_service/self_diagnostic.py; all free
+    text sanitized at build time. `?h=true` for plain text.
+    """
+    from mindx_backend_service.self_diagnostic import get_cached
+    data = await get_cached()
+    return _maybe_h_text(request, data, route_path="/insight/self/diagnostic")
+
+
+async def require_overlord_or_overseer(request: Request) -> str:
+    """gitmind access via the OVERLORD hierarchy: a shadow-OVERLORD admin JWT OR
+    an OVERSEER (mindx.algo) JWT both unlock privileged THOT/iNFT detail. Either
+    sovereign tier suffices; raises 401 only if neither is presented."""
+    try:
+        return await require_admin_access(request)   # OVERLORD admin
+    except Exception:
+        pass
+    return await require_overseer(request)           # OVERSEER (raises if also absent)
+
+
+@app.get("/insight/gitmind", tags=["insight"])
+@_insight_safe
+async def insight_gitmind(request: Request):
+    """gitmind: self-contained git state monitor + multi-source backup/rollback.
+
+    Reports current git state (HEAD/branch/dirty/commit count), recent repo
+    backups (git bundles replicated to variable sources — local filesystem,
+    IPFS via Lighthouse, Arweave), and the rollback ledger separating ordinary
+    rollbacks from self-initiated ones. See docs/GITMIND.md. `?h=true` for text.
+    """
+    try:
+        from mindx.gitmind import get_gitmind
+        data = await asyncio.to_thread(get_gitmind().report)   # public: redacted
+    except Exception as e:
+        data = {"error": f"gitmind unavailable: {e}"}
+    return _maybe_h_text(request, data, route_path="/insight/gitmind")
+
+
+@app.get("/gitmind/anchors", tags=["gitmind"], summary="Full gitmind THOT/iNFT anchor detail (OVERSEER-gated)")
+async def gitmind_anchors(request: Request, _addr: str = Depends(require_overlord_or_overseer)):
+    """OVERLORD-hierarchy gated: the full THOT/iNFT anchor records (dataset ids,
+    raw source refs) plus the access-control mapping. THOT (transferable
+    hyper-optimized tensor backups) and iNFT (directory/code backups) anchor the
+    backup CIDs on-chain; this privileged view exposes the internals the public
+    /insight/gitmind redacts. Requires an OVERSEER JWT (mindx.algo sign-in)."""
+    try:
+        from mindx.gitmind import get_gitmind
+        data = await asyncio.to_thread(lambda: get_gitmind().report(privileged=True))
+        data["overseer"] = _addr
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"gitmind unavailable: {e}")
+    return _maybe_h_text(request, data, route_path="/gitmind/anchors")
+
+
+@app.get("/insight/war_council", tags=["insight"])
+@_insight_safe
+async def insight_war_council(request: Request):
+    """War Council: the live-message → decision → blueprint bridge. 13 prime-weighted
+    seats voting under an accelerating prime-ratio majority that guarantees a decisive
+    outcome (no deadlock). Shows the council configuration + recent verdicts. The
+    second room beside the Boardroom — see docs/WAR_COUNCIL.md. `?h=true` for text."""
+    try:
+        from mindx.war_council_bridge import wire   # wire vote_fn → boardroom soldiers
+        wc = wire()
+        data = {"config": wc.config(), "recent": wc.recent(),
+                "vote_source": "boardroom (in-process soldiers)" if wc.vote_fn else "unwired",
+                "blueprint_wired": bool(wc.blueprint_fn)}
+    except Exception as e:
+        data = {"error": f"war_council unavailable: {e}"}
+    return _maybe_h_text(request, data, route_path="/insight/war_council")
+
+
+class WarCouncilProposal(BaseModel):
+    """Body for POST /war_council/decide — a live proposal to put to the council."""
+    title: str = Field(..., min_length=1)
+    context: Optional[str] = None
+    source: Optional[str] = "live"
+    stakes: int = Field(default=0, ge=0, le=2)  # 0 simple → 2 max prime majority
+
+
+@app.post("/war_council/decide", tags=["war_council"], summary="Convene the War Council on a live proposal (boardroom soldiers vote)")
+async def war_council_decide(req: WarCouncilProposal, _addr: str = Depends(require_overlord_or_overseer)):
+    """OVERLORD/OVERSEER-gated. Wires the War Council's vote source to the live
+    Boardroom soldiers, convenes them on the proposal, reaches a guaranteed
+    prime-accelerating-majority verdict, and (when a blueprint_fn is wired) fires
+    a blueprint run on approval. Spends boardroom inference — gated by design."""
+    try:
+        from mindx.war_council_bridge import wire
+        wc = wire()
+        result = await wc.decide(
+            {"id": f"wc_{int(time.time())}", "title": req.title,
+             "context": req.context, "source": req.source}, stakes=req.stakes)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"war_council decide failed: {e}")
+
+
+@app.get("/insight/milestones/recent", tags=["insight"])
+@_insight_safe
+async def insight_milestones_recent(request: Request, limit: int = 25):
+    """mindX's chronicle of its own evolution — milestones AuthorAgent
+    recognized from the public git history (github.awareness).
+
+    Each entry: short_sha, date, subject, files_changed, insertions, deletions,
+    worthy, score, labels, url (public GitHub commit link). Newest first.
+    Source: data/milestones/milestone_log.jsonl.
+    """
+    log_path = PROJECT_ROOT / "data" / "milestones" / "milestone_log.jsonl"
+    if not log_path.exists():
+        return _maybe_h_text(request, {"milestones": [], "count": 0, "worthy_count": 0},
+                             route_path="/insight/milestones/recent")
+    try:
+        lines = [ln for ln in log_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        rows = []
+        for ln in lines[-max(1, min(limit, 200)):]:
+            try:
+                rows.append(json.loads(ln))
+            except Exception:
+                continue
+        rows.reverse()  # newest first
+        worthy = sum(1 for r in rows if r.get("worthy"))
+        return _maybe_h_text(
+            request,
+            {"milestones": rows, "count": len(rows), "worthy_count": worthy},
+            route_path="/insight/milestones/recent",
+        )
+    except Exception as e:
+        return {"milestones": [], "count": 0, "worthy_count": 0, "error": str(e)}
 
 
 @app.get("/insight/model_selector/recent", tags=["insight"])
@@ -4219,6 +5559,409 @@ async def insight_eval_summary(request: Request, window: int = 200):
             "by_metric": by_metric,
         },
         route_path="/insight/eval/summary",
+    )
+
+
+def _read_self_eval_state() -> Optional[Dict[str, Any]]:
+    """The persisted self-eval verdict (data/system_state/self_eval_feedback.json) — carries
+    self_improvement / sentinel version. Used by /diagnostics/live so the dashboard shows the
+    ground truth even before the loop's first post-restart assess()."""
+    try:
+        from utils.config import PROJECT_ROOT as _PR
+        p = _PR / "data" / "system_state" / "self_eval_feedback.json"
+        if p.exists():
+            return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return None
+
+
+@app.get("/insight/autonomous/feedback", tags=["insight"])
+@_insight_safe
+async def insight_autonomous_feedback(request: Request):
+    """Objective self-eval feedback — the core evolution loop's verdict on its
+    own performance (campaign success rate + alignment), plus the last
+    corrective campaign it escalated to SEA.
+
+    Reads the persisted state file (data/system_state/self_eval_feedback.json)
+    so it surfaces even between restarts, and enriches with the live alignment
+    mean. This is the loop *responding to its own objective eval* — the edge
+    that was missing when 0/25 campaigns just sat on a dashboard.
+    """
+    from utils.config import PROJECT_ROOT as _PR
+    state_path = _PR / "data" / "system_state" / "self_eval_feedback.json"
+    verdict: Dict[str, Any] = {}
+    try:
+        if state_path.exists():
+            verdict = json.loads(state_path.read_text(encoding="utf-8"))
+    except Exception:
+        verdict = {}
+    # live alignment mean from the objective eval events
+    try:
+        evs = _read_alignment_events(limit=100) or []
+        scores = []
+        for e in evs:
+            try:
+                scores.append(float((e.get("payload", {}) or {}).get("score")))
+            except (TypeError, ValueError):
+                continue
+        verdict["alignment_mean_live"] = (sum(scores) / len(scores)) if scores else None
+        verdict["alignment_samples"] = len(scores)
+    except Exception:
+        pass
+    if not verdict:
+        verdict = {"verdict": "warming_up", "recommendation": "no self-eval recorded yet", "sample": "0/0"}
+    return _maybe_h_text(request, verdict, route_path="/insight/autonomous/feedback")
+
+
+@app.get("/insight/eval/health", tags=["insight"])
+@_insight_safe
+async def insight_eval_health(request: Request):
+    """Gödel-eval gate health: gate state, recent attempts, hit rate, mean score.
+
+    Surfaces the in-process `_EvalHealth` counter from agents/memory_agent.py
+    plus a 30-day rollup from data/logs/godel_choices.jsonl. Designed for
+    /agentic.html and `curl /insight/eval/health?h=true` ops checks.
+    """
+    import time as _time
+    snapshot: Dict[str, Any] = {}
+    try:
+        from agents.memory_agent import _eval_health, _eval_godel_gate_open
+        snapshot = _eval_health.snapshot()
+        snapshot["gate_open"] = _eval_godel_gate_open()
+    except Exception as e:
+        snapshot = {"gate_open": None, "error": f"eval_health unavailable: {e}"}
+
+    # On-disk rollup: scan the godel_choices.jsonl tail for eval_score rows.
+    rollup = {"scanned": 0, "scored": 0, "mean_score_disk": None}
+    try:
+        from utils.config import PROJECT_ROOT as _PR
+        gpath = _PR / "data" / "logs" / "godel_choices.jsonl"
+        if gpath.exists():
+            block = 256 * 1024
+            with open(gpath, "rb") as f:
+                f.seek(0, 2)
+                size = f.tell()
+                data = b""
+                pos = size
+                while pos > 0 and data.count(b"\n") < 400:
+                    read = min(block, pos)
+                    pos -= read
+                    f.seek(pos)
+                    data = f.read(read) + data
+            scored: list[float] = []
+            scanned = 0
+            for ln in data.split(b"\n"):
+                if not ln.strip():
+                    continue
+                scanned += 1
+                try:
+                    row = json.loads(ln.decode("utf-8"))
+                except Exception:
+                    continue
+                s = row.get("eval_score")
+                if isinstance(s, (int, float)):
+                    scored.append(float(s))
+            rollup["scanned"] = scanned
+            rollup["scored"] = len(scored)
+            rollup["mean_score_disk"] = (sum(scored) / len(scored)) if scored else None
+    except Exception as e:
+        rollup["error"] = str(e)
+
+    return _maybe_h_text(
+        request,
+        {"checked_at": _time.time(), "in_process": snapshot, "on_disk": rollup},
+        route_path="/insight/eval/health",
+    )
+
+
+# ── Publication audit endpoints (AuthorAgent + PublicationOrchestrator) ──
+#
+# Surfaces (a) the orchestrator's persistent ledger at
+# data/governance/published_triggers.json, (b) the publication.* event tail
+# from the catalogue, (c) a draft inventory at docs/publications/*.md vs
+# docs/publications/pdf/*.pdf cross-referenced against the ledger.
+
+def _read_publication_ledger() -> Dict[str, Any]:
+    """Read data/governance/published_triggers.json. Missing → empty."""
+    try:
+        path = PROJECT_ROOT / "data" / "governance" / "published_triggers.json"
+        if not path.exists():
+            return {"version": 1, "last_published_at": 0.0, "published": [], "ledger_exists": False}
+        body = json.loads(path.read_text(encoding="utf-8"))
+        body["ledger_exists"] = True
+        return body
+    except Exception as e:
+        return {"version": 1, "last_published_at": 0.0, "published": [], "ledger_exists": False, "error": str(e)}
+
+
+def _read_publication_events(limit: int = 50) -> List[Dict[str, Any]]:
+    """Tail catalogue_events.jsonl, filter kind='publication.*'."""
+    try:
+        from agents.catalogue.log import CatalogueEventLog
+        log = CatalogueEventLog.default()
+        path = log.path
+        if not path.exists():
+            return []
+        block = 64 * 1024
+        needed = max(1, min(limit, 500))
+        with open(path, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            data = b""
+            pos = size
+            scan_limit = needed * 30  # publication events are sparse
+            while pos > 0 and data.count(b"\n") <= scan_limit:
+                read = min(block, pos)
+                pos -= read
+                f.seek(pos)
+                data = f.read(read) + data
+        events: List[Dict[str, Any]] = []
+        for ln in data.split(b"\n"):
+            if not ln.strip():
+                continue
+            try:
+                ev = json.loads(ln.decode("utf-8"))
+            except Exception:
+                continue
+            kind = ev.get("kind", "")
+            if not kind.startswith("publication."):
+                continue
+            events.append(ev)
+        events = events[-needed:]
+        events.reverse()
+        return events
+    except Exception:
+        return []
+
+
+@app.get("/insight/publications/recent", tags=["insight"])
+@_insight_safe
+async def insight_publications_recent(request: Request, limit: int = 50):
+    """Last N publication.{attempted,published,coalesced} events from the catalogue."""
+    events = _read_publication_events(limit=limit)
+    return _maybe_h_text(
+        request,
+        {"events": events, "count": len(events)},
+        route_path="/insight/publications/recent",
+    )
+
+
+@app.get("/insight/publications/summary", tags=["insight"])
+@_insight_safe
+async def insight_publications_summary(request: Request):
+    """Counts + last-publish snapshot from the orchestrator ledger.
+
+    Includes ledger existence flag so /agentic.html can flag the "never
+    published" state cleanly.
+    """
+    ledger = _read_publication_ledger()
+    entries = ledger.get("published") or []
+    by_kind: Dict[str, int] = {}
+    for e in entries:
+        k = (e or {}).get("kind") or "unknown"
+        by_kind[k] = by_kind.get(k, 0) + 1
+    published_ct = sum(1 for e in entries if (e or {}).get("kind") != "coalesced" and (e or {}).get("published_at"))
+    coalesced_ct = by_kind.get("coalesced", 0)
+    last_published = None
+    last_entry = None
+    for e in reversed(entries):
+        if (e or {}).get("kind") != "coalesced" and (e or {}).get("published_at"):
+            last_published = e.get("published_at")
+            last_entry = e
+            break
+    return _maybe_h_text(
+        request,
+        {
+            "ledger_exists": ledger.get("ledger_exists", False),
+            "ledger_path": "data/governance/published_triggers.json",
+            "version": ledger.get("version", 1),
+            "total_entries": len(entries),
+            "published_count": published_ct,
+            "coalesced_count": coalesced_ct,
+            "by_kind": by_kind,
+            "last_published_at": last_published,
+            "last_entry": last_entry,
+        },
+        route_path="/insight/publications/summary",
+    )
+
+
+@app.get("/insight/publications/audit", tags=["insight"])
+@_insight_safe
+async def insight_publications_audit(request: Request):
+    """Cross-reference docs/publications/*.md + docs/publications/pdf/*.pdf
+    against the orchestrator ledger.
+
+    Reports drafts that exist on disk but have never been published via the
+    orchestrator. The `/admin/publish-to-rage` route can still publish anything
+    in docs/ on demand — this audit only sees orchestrator-driven publishes.
+    """
+    pubs_dir = PROJECT_ROOT / "docs" / "publications"
+    pdf_dir = pubs_dir / "pdf"
+    markdown_drafts: List[Dict[str, Any]] = []
+    pdf_drafts: List[Dict[str, Any]] = []
+    try:
+        if pubs_dir.is_dir():
+            for md in sorted(pubs_dir.glob("*.md")):
+                try:
+                    st = md.stat()
+                    markdown_drafts.append({
+                        "name": md.name,
+                        "size_bytes": st.st_size,
+                        "mtime": st.st_mtime,
+                    })
+                except OSError:
+                    continue
+        if pdf_dir.is_dir():
+            for pdf in sorted(pdf_dir.glob("*.pdf")):
+                try:
+                    st = pdf.stat()
+                    pdf_drafts.append({
+                        "name": pdf.name,
+                        "size_bytes": st.st_size,
+                        "mtime": st.st_mtime,
+                    })
+                except OSError:
+                    continue
+    except Exception:
+        pass
+
+    ledger = _read_publication_ledger()
+    published_entries = [e for e in (ledger.get("published") or [])
+                         if (e or {}).get("kind") != "coalesced"]
+    # Map title → ledger entry for quick lookup.
+    by_title: Dict[str, Dict[str, Any]] = {}
+    for e in published_entries:
+        t = (e or {}).get("title")
+        if t:
+            by_title[t.lower()] = e
+
+    return _maybe_h_text(
+        request,
+        {
+            "publications_dir": str(pubs_dir.relative_to(PROJECT_ROOT)),
+            "ledger_exists": ledger.get("ledger_exists", False),
+            "markdown_drafts": markdown_drafts,
+            "pdf_drafts": pdf_drafts,
+            "published_via_orchestrator": published_entries,
+            "draft_count": len(markdown_drafts) + len(pdf_drafts),
+            "published_count": len(published_entries),
+        },
+        route_path="/insight/publications/audit",
+    )
+
+
+# ── Logs → Memories ──────────────────────────────────────────────────────
+#
+# mindX principle: every log is a memory. `save_timestamped_memory`,
+# `log_process`, `log_godel_choice` all emit a `memory.write` catalogue event
+# whose `source_log` field names the originating log. This endpoint tails that
+# stream so the landing page can show logs becoming memories in real time.
+
+def _read_memory_write_events(limit: int = 40) -> List[Dict[str, Any]]:
+    """Tail catalogue_events.jsonl for kind='memory.write'.
+
+    Returns metadata ONLY — memory `content` and `context` are stripped: the
+    raw payload can carry sensitive data and the landing page only needs the
+    log→memory provenance (which log, which agent, type, importance).
+    """
+    try:
+        from agents.catalogue.log import CatalogueEventLog
+        log = CatalogueEventLog.default()
+        path = log.path
+        if not path.exists():
+            return []
+        block = 64 * 1024
+        needed = max(1, min(limit, 200))
+        with open(path, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            data = b""
+            pos = size
+            # memory.write is dense while the backend runs, but a tail can be
+            # dominated by other kinds (publication.*, alignment.score bursts).
+            # Scan generously so the feed stays populated either way.
+            scan_limit = needed * 40
+            while pos > 0 and data.count(b"\n") <= scan_limit:
+                read = min(block, pos)
+                pos -= read
+                f.seek(pos)
+                data = f.read(read) + data
+        events: List[Dict[str, Any]] = []
+        for ln in data.split(b"\n"):
+            if not ln.strip():
+                continue
+            try:
+                ev = json.loads(ln.decode("utf-8"))
+            except Exception:
+                continue
+            if ev.get("kind") != "memory.write":
+                continue
+            p = ev.get("payload") or {}
+            events.append({
+                "ts": ev.get("ts"),
+                "actor": ev.get("actor"),
+                "source_log": ev.get("source_log"),
+                "memory_type": p.get("memory_type"),
+                "importance": p.get("importance"),
+                "memory_id": p.get("memory_id"),
+                "tags": p.get("tags") or [],
+            })
+        events = events[-needed:]
+        events.reverse()
+        return events
+    except Exception:
+        return []
+
+
+@app.get("/insight/memory/recent", tags=["insight"])
+@_insight_safe
+async def insight_memory_recent(request: Request, limit: int = 40):
+    """Recent `memory.write` events — logs becoming memories.
+
+    Metadata only: which log (`source_log`), which agent, memory type +
+    importance, memory_id, tags. Raw memory `content`/`context` is never
+    returned — the landing page shows provenance, not payload.
+    """
+    events = _read_memory_write_events(limit=limit)
+    return _maybe_h_text(
+        request,
+        {"events": events, "count": len(events)},
+        route_path="/insight/memory/recent",
+    )
+
+
+@app.get("/insight/agentic/activity", tags=["insight"])
+@_insight_safe
+async def insight_agentic_activity(request: Request, limit: int = 30):
+    """High-level, redacted activity feed for /agentic.html.
+
+    Unlike /activity/recent (which returns raw `content` plus the free-form
+    `detail` dict), this endpoint returns only agent / tier / type /
+    relative-time / a single sanitized headline. API keys, ETH private keys,
+    JWTs and absolute home paths are redacted via `text_render.sanitize_text`;
+    the `detail` dict is dropped entirely. This is the surface /agentic.html
+    consumes so the public console can never leak raw memory content or
+    credentials.
+    """
+    from mindx_backend_service.activity_feed import ActivityFeed
+    from mindx_backend_service import text_render
+    feed = ActivityFeed.get_instance()
+    raw = feed.recent(limit=max(1, min(limit, 100)), room=None)
+    events: List[Dict[str, Any]] = []
+    for e in raw:
+        events.append({
+            "timestamp": e.get("timestamp"),
+            "agent": text_render.sanitize_text(e.get("agent", "?"), 32),
+            "tier_label": e.get("tier_label", "UN"),
+            "type": text_render.sanitize_text(e.get("type", ""), 32),
+            "headline": text_render.sanitize_text(e.get("content", ""), 140),
+        })
+    return _maybe_h_text(
+        request,
+        {"events": events, "count": len(events)},
+        route_path="/insight/agentic/activity",
     )
 
 
@@ -5199,6 +6942,91 @@ def _maybe_h_text(request: Request, data, *, route_path: str = ""):
         return data
     from starlette.responses import PlainTextResponse
     return PlainTextResponse(rendered, media_type="text/plain; charset=utf-8")
+
+
+# ── Knowledge Catalogue (Phase 1 read-model) endpoints ──
+# CQRS projection over data/logs/catalogue_events.jsonl; never the source of
+# truth. Public (read-only) via the /insight/ prefix. docs/KNOWLEDGE_CATALOGUE.md.
+
+@app.get("/insight/catalogue/recent", tags=["insight"],
+         summary="Recent catalogue entries (read-model tail)")
+@_insight_safe
+async def insight_catalogue_recent(request: Request, limit: int = 50,
+                                   kind: Optional[str] = None):
+    from agents import memory_pgvector
+    entries = await memory_pgvector.catalogue_recent(limit=limit, kind=kind)
+    return _maybe_h_text(request, {"entries": entries, "count": len(entries),
+                                   "kind_filter": kind or "all", "source": "catalogue_entries"},
+                         route_path="/insight/catalogue/recent")
+
+
+@app.get("/insight/catalogue/search", tags=["insight"],
+         summary="Hybrid search over the catalogue (dense + BM25, RRF-fused)")
+@_insight_safe
+async def insight_catalogue_search(request: Request, q: str, k: int = 10,
+                                   kind: Optional[str] = None):
+    from agents import memory_pgvector
+    kinds = [kind] if kind else None
+    res = await memory_pgvector.catalogue_hybrid_search(q, kinds=kinds, top_k=min(k, 50))
+    return _maybe_h_text(request, {"query": q, "results": res.get("results", []),
+                                   "count": len(res.get("results", [])),
+                                   "legs": res.get("legs"), "rerank": res.get("rerank", "deferred")},
+                         route_path="/insight/catalogue/search")
+
+
+@app.get("/insight/catalogue/entry", tags=["insight"],
+         summary="Full catalogue entry by URN (with links + source events)")
+@_insight_safe
+async def insight_catalogue_entry(request: Request, urn: str):
+    from agents import memory_pgvector
+    entry = await memory_pgvector.catalogue_entry_by_urn(urn)
+    if not entry:
+        return _maybe_h_text(request, {"found": False, "urn": urn},
+                             route_path="/insight/catalogue/entry")
+    entry["found"] = True
+    return _maybe_h_text(request, entry, route_path="/insight/catalogue/entry")
+
+
+@app.get("/insight/catalogue/stats", tags=["insight"],
+         summary="Catalogue read-model stats (counts by kind + projector watermark)")
+@_insight_safe
+async def insight_catalogue_stats(request: Request):
+    from agents import memory_pgvector
+    stats = await memory_pgvector.catalogue_stats()
+    return _maybe_h_text(request, stats, route_path="/insight/catalogue/stats")
+
+
+@app.get("/insight/catalogue/lineage", tags=["insight"],
+         summary="Provenance lineage for a catalogue entry (ancestors/descendants)")
+@_insight_safe
+async def insight_catalogue_lineage(request: Request, urn: str,
+                                    dir: str = "both", depth: int = 6):
+    """Traverse the catalogue lineage graph from a URN.
+    dir ∈ {ancestors, descendants, both}; depth capped at 20."""
+    from agents import memory_pgvector
+    if dir not in ("ancestors", "descendants", "both"):
+        dir = "both"
+    data = await memory_pgvector.catalogue_lineage(urn, direction=dir, depth=depth)
+    return _maybe_h_text(request, data, route_path="/insight/catalogue/lineage")
+
+
+@app.get("/insight/catalogue/kinds", tags=["insight"],
+         summary="Catalogue entry/event kind registry + mapping")
+@_insight_safe
+async def insight_catalogue_kinds(request: Request):
+    from agents.catalogue.model import ENTRY_KINDS, EVENTKIND_TO_ENTRYKIND
+    from agents.catalogue.events import EVENT_KINDS
+    from agents import memory_pgvector
+    # "emitted" = the distinct EventKinds the projector has actually observed in
+    # the stream (accumulated in catalogue_state) — the drift-free truth, not the
+    # full mapping. Empty until the first projection.
+    wm = await memory_pgvector.get_catalogue_watermark("entries")
+    emitted = sorted(set(wm.get("observed_kinds") or []) & set(EVENT_KINDS))
+    data = {"entry_kinds": list(ENTRY_KINDS), "event_kinds": list(EVENT_KINDS),
+            "mapping": dict(EVENTKIND_TO_ENTRYKIND),
+            "emitted_event_kinds": emitted,
+            "active_event_kinds": emitted}  # back-compat alias
+    return _maybe_h_text(request, data, route_path="/insight/catalogue/kinds")
 
 
 # ── Storage / IPFS offload endpoints ──
@@ -6509,15 +8337,99 @@ async def thesis_summary():
     return {"summary": "\n".join(lines), "claims": {k: v["verdict"] for k, v in evidence.get("claims", {}).items()}}
 
 
-@app.get("/diagnostics/live", tags=["diagnostics"])
-async def diagnostics_live_endpoint():
-    global _diag_last_probe, _diag_cache, _diag_cache_ts
+def _diag_read_sync():
+    """All synchronous diagnostics file I/O (beliefs, Gödel JSONL, agent registry,
+    vault, runtime log, workspace count) gathered in ONE function so the caller can
+    run it in a worker thread via asyncio.to_thread — keeping the FastAPI event loop
+    free to serve while disk reads + JSON parsing happen off-loop. This is what stops
+    the diagnostics refresh from blocking serving under CPU load (the 'flapping')."""
+    out = {"beliefs_count": 0, "beliefs_sample": [], "godel": [], "agents": [],
+           "vault": {}, "logs": [], "workspaces": 0}
+    # beliefs
+    try:
+        bp = PROJECT_ROOT / "data" / "memory" / "beliefs.json"
+        if bp.exists():
+            bd = json.loads(bp.read_text())
+            out["beliefs_count"] = len(bd)
+            for k, v in list(bd.items())[:8]:
+                val = v.get("value", "")
+                if isinstance(val, str) and len(val) > 50: val = val[:50] + "..."
+                out["beliefs_sample"].append({"key": k, "value": val})
+    except Exception as e: logger.debug(f"Diagnostics: beliefs read failed: {e}")
+    # workspaces
+    try:
+        wd = PROJECT_ROOT / "data" / "memory" / "agent_workspaces"
+        out["workspaces"] = sum(1 for d_ in wd.iterdir() if d_.is_dir()) if wd.exists() else 0
+    except Exception: pass
+    # godel
+    try:
+        gp = PROJECT_ROOT / "data" / "logs" / "godel_choices.jsonl"
+        if gp.exists():
+            lines = [l for l in gp.read_text().strip().split("\n") if l.strip()]
+            for l in lines[-10:]:
+                try:
+                    g = json.loads(l)
+                    out["godel"].append({"timestamp": g.get("timestamp_utc", g.get("timestamp","")), "agent": g.get("source_agent","?"), "type": g.get("choice_type",""), "chosen": str(g.get("chosen_option", g.get("chosen","")))[:100], "rationale": str(g.get("rationale",""))[:80], "outcome": str(g.get("outcome",""))[:40]})
+                except Exception: pass
+            out["godel"].reverse()
+    except Exception as e: logger.debug(f"Diagnostics: godel choices read failed: {e}")
+    # agent registry + tiers
+    try:
+        rp = PROJECT_ROOT / "data" / "identity" / "production_registry.json"
+        amp = PROJECT_ROOT / "daio" / "agents" / "agent_map.json"
+        agent_tiers = {}
+        if amp.exists():
+            for aid, ad in json.loads(amp.read_text()).get("agents", {}).items():
+                agent_tiers[aid] = ad.get("verification_tier", 0)
+        if rp.exists():
+            for a in json.loads(rp.read_text()).get("agents", []):
+                eid = a["entity_id"]
+                out["agents"].append({"entity_id": eid, "address": a["address"], "role": a.get("role",""), "verification_tier": agent_tiers.get(eid, 1)})
+    except Exception as e: logger.debug(f"Diagnostics: agent registry read failed: {e}")
+    # vault
+    try:
+        from mindx_backend_service.bankon_vault.vault import BankonVault
+        vi = BankonVault().info(); vi.pop("vault_dir", None); out["vault"] = vi
+    except Exception as e: logger.debug(f"Diagnostics: vault info failed: {e}")
+    # logs (tail of runtime log, redacted)
+    try:
+        lp = PROJECT_ROOT / "data" / "logs" / "mindx_runtime.log"
+        if lp.exists():
+            for l in lp.read_text().strip().split("\n")[-20:]:
+                if "API_KEY" in l or "private_key" in l.lower() or "WALLET_PK" in l: continue
+                out["logs"].append(l[:250])
+            out["logs"].reverse()
+    except Exception as e: logger.debug(f"Diagnostics: log read failed: {e}")
+    return out
+
+
+def _diag_stm_fallback_sync():
+    """Filesystem STM count — only used when pgvector is down. rglob over the STM
+    tree (tens of GB) MUST run in a worker thread, never on the event loop."""
+    stm = 0; stm_by_agent = {}
+    try:
+        stm_path = PROJECT_ROOT / "data" / "memory" / "stm"
+        if stm_path.exists():
+            from collections import defaultdict as _ddict
+            _counts = _ddict(int)
+            for f in stm_path.rglob("*.memory.json"):
+                parts = f.relative_to(stm_path).parts
+                if parts:
+                    _counts[parts[0]] += 1
+                    stm += 1
+            stm_by_agent = dict(sorted(_counts.items(), key=lambda x: -x[1]))
+    except Exception:
+        pass
+    return stm, stm_by_agent
+
+
+async def _diag_compute():
+    """Heavy diagnostics gather — run from the endpoint (cold cache only) or a
+    background refresher, so the endpoint never blocks on it under CPU load.
+    All synchronous file I/O is offloaded to a worker thread (_diag_read_sync) so the
+    event loop stays free to serve cached responses even mid-refresh."""
+    global _diag_last_probe, _diag_cache, _diag_cache_ts, _diag_last_godel, _diag_last_database
     now = time.time()
-
-    # Serve cached response if fresh (prevents worker exhaustion from 6s polling)
-    if _diag_cache and (now - _diag_cache_ts) < _DIAG_CACHE_TTL:
-        return _diag_cache
-
     up_s = int(now - _diag_start)
     d, r = divmod(up_s, 86400); h, r = divmod(r, 3600); m, _ = divmod(r, 60)
     uptime = f"{d}d {h}h {m}m" if d else f"{h}h {m}m"
@@ -6557,18 +8469,21 @@ async def diagnostics_live_endpoint():
         asyncio.create_task(_bg_probe())
         asyncio.create_task(_heartbeat_query_local_model())
 
-    # beliefs
-    bp = PROJECT_ROOT / "data" / "memory" / "beliefs.json"
-    bc, bs = 0, []
-    try:
-        if bp.exists():
-            bd = json.loads(bp.read_text())
-            bc = len(bd)
-            for k, v in list(bd.items())[:8]:
-                val = v.get("value", "")
-                if isinstance(val, str) and len(val) > 50: val = val[:50] + "..."
-                bs.append({"key": k, "value": val})
-    except Exception as e: logger.debug(f"Diagnostics: beliefs read failed: {e}")
+    # ── All synchronous file I/O offloaded to a worker thread (never blocks the
+    #    event loop, which is what kept serving responsive mid-refresh) ──
+    _sync = await asyncio.to_thread(_diag_read_sync)
+    bc, bs = _sync["beliefs_count"], _sync["beliefs_sample"]
+    wsp = _sync["workspaces"]
+    godel = _sync["godel"]
+    agents = _sync["agents"]
+    vault = _sync["vault"]
+    logs = _sync["logs"]
+    # Gödel last-good: a degraded read (e.g. right after restart) must not zero the
+    # audit-trail panel; keep the previous non-empty list until a fresh one lands.
+    if godel:
+        _diag_last_godel = godel
+    elif _diag_last_godel:
+        godel = _diag_last_godel
     # stm count — try pgvector first, fall back to filesystem
     stm = 0
     stm_by_agent = {}
@@ -6580,52 +8495,17 @@ async def diagnostics_live_endpoint():
         db_health = await _safe_await(_mpg.health_check(), default={})
     except Exception:
         pass
-    # Filesystem fallback if DB returned nothing
+    # Retain last-good: a slow health query returns {} and would blank the Memory &
+    # Knowledge + Storage panels. Keep the previous connected health until a fresh
+    # connected one lands (only overwrite when we actually got a connected reading).
+    if db_health.get("status") == "connected":
+        _diag_last_database = db_health
+    elif _diag_last_database:
+        db_health = _diag_last_database
+    # Filesystem fallback if DB returned nothing — rglob over the (huge) STM tree
+    # runs in a worker thread so it can never block the event loop.
     if stm == 0:
-        try:
-            stm_path = PROJECT_ROOT / "data" / "memory" / "stm"
-            if stm_path.exists():
-                from collections import defaultdict as _ddict
-                _counts = _ddict(int)
-                for f in stm_path.rglob("*.memory.json"):
-                    parts = f.relative_to(stm_path).parts
-                    if parts:
-                        _counts[parts[0]] += 1
-                        stm += 1
-                stm_by_agent = dict(sorted(_counts.items(), key=lambda x: -x[1]))
-        except Exception:
-            pass
-    wsp = sum(1 for d_ in (PROJECT_ROOT / "data" / "memory" / "agent_workspaces").iterdir() if d_.is_dir()) if (PROJECT_ROOT / "data" / "memory" / "agent_workspaces").exists() else 0
-    # godel
-    gp = PROJECT_ROOT / "data" / "logs" / "godel_choices.jsonl"
-    godel = []
-    try:
-        if gp.exists():
-            lines = [l for l in gp.read_text().strip().split("\n") if l.strip()]
-            for l in lines[-10:]:
-                try:
-                    g = json.loads(l)
-                    godel.append({"timestamp": g.get("timestamp_utc", g.get("timestamp","")), "agent": g.get("source_agent","?"), "type": g.get("choice_type",""), "chosen": str(g.get("chosen_option", g.get("chosen","")))[:100], "rationale": str(g.get("rationale",""))[:80], "outcome": str(g.get("outcome",""))[:40]})
-                except Exception: pass
-            godel.reverse()
-    except Exception as e: logger.debug(f"Diagnostics: godel choices read failed: {e}")
-    # registry
-    rp = PROJECT_ROOT / "data" / "identity" / "production_registry.json"
-    amp = PROJECT_ROOT / "daio" / "agents" / "agent_map.json"
-    agents = []
-    agent_tiers = {}
-    try:
-        if amp.exists():
-            am = json.loads(amp.read_text())
-            for aid, ad in am.get("agents", {}).items():
-                agent_tiers[aid] = ad.get("verification_tier", 0)
-    except Exception as e: logger.debug(f"Diagnostics: agent map read failed: {e}")
-    try:
-        if rp.exists():
-            for a in json.loads(rp.read_text()).get("agents", []):
-                eid = a["entity_id"]
-                agents.append({"entity_id": eid, "address": a["address"], "role": a.get("role",""), "verification_tier": agent_tiers.get(eid, 1)})
-    except Exception as e: logger.debug(f"Diagnostics: agent registry read failed: {e}")
+        stm, stm_by_agent = await asyncio.to_thread(_diag_stm_fallback_sync)
     # inference (use cached summary — probe runs async above)
     inf = {"total": 0, "available": 0, "sources": {}}
     try:
@@ -6634,23 +8514,7 @@ async def diagnostics_live_endpoint():
         s = disc.status_summary()
         inf = {"total": s.get("total_sources",0), "available": s.get("available",0), "local_inference": s.get("local_inference",False), "cloud_inference": s.get("cloud_inference",False), "sources": s.get("sources",{})}
     except Exception as e: logger.debug(f"Diagnostics: inference status failed: {e}")
-    # vault
-    vault = {}
-    try:
-        from mindx_backend_service.bankon_vault.vault import BankonVault
-        v = BankonVault(); vault = v.info(); vault.pop("vault_dir", None)
-    except Exception as e: logger.debug(f"Diagnostics: vault info failed: {e}")
-    # logs
-    lp = PROJECT_ROOT / "data" / "logs" / "mindx_runtime.log"
-    logs = []
-    try:
-        if lp.exists():
-            all_lines = lp.read_text().strip().split("\n")
-            for l in all_lines[-20:]:
-                if "API_KEY" in l or "private_key" in l.lower() or "WALLET_PK" in l: continue
-                logs.append(l[:250])
-            logs.reverse()
-    except Exception as e: logger.debug(f"Diagnostics: log read failed: {e}")
+    # (vault + recent logs now come from _diag_read_sync, off the event loop)
     # Load dojo and boardroom data
     dojo_data = []
     try:
@@ -6680,6 +8544,14 @@ async def diagnostics_live_endpoint():
         actions_data = await _safe_await(_mpg2.get_recent_actions(limit=10), default=[])
     except Exception:
         pass
+    # Retain last-good: a transient pgvector stall under CPU load returns [] and
+    # would zero the "Recent Actions" panel. Keep the previous non-empty result
+    # until a fresh one lands, so the panel stays populated through serving stalls.
+    global _diag_last_actions
+    if actions_data:
+        _diag_last_actions = actions_data
+    elif _diag_last_actions:
+        actions_data = _diag_last_actions
 
     # RAGE embed stats
     rage_stats = {"docs": 0, "memories": 0}
@@ -6724,14 +8596,28 @@ async def diagnostics_live_endpoint():
         mx = await _safe_await(MindXAgent.get_instance(), default=None)
         if mx:
             autonomous_data = {
-                "loop_running": getattr(mx, '_autonomous_running', False),
+                # loop_running tracks the real loop flag (self.autonomous_mode);
+                # the old _autonomous_running attr was never set True, so the
+                # tab always showed "stopped" even while cycles ran.
+                "loop_running": getattr(mx, 'autonomous_mode', False),
                 "last_cycle": getattr(mx, '_last_cycle_time', None),
+                "cycle_count": getattr(mx, '_cycle_count', 0),
+                "skip_reason": getattr(mx, '_last_skip_reason', None),
                 "stuck_cycles": getattr(mx, '_stuck_cycle_count', 0) if hasattr(mx, '_stuck_cycle_count') else (getattr(mx, 'stuck_loop_detector', None) and getattr(mx.stuck_loop_detector, 'no_progress_count', 0)) or 0,
                 "circuit_breaker_open": getattr(mx, '_circuit_breaker_open', False) if hasattr(mx, '_circuit_breaker_open') else (getattr(mx, 'stuck_loop_detector', None) and getattr(mx.stuck_loop_detector, 'circuit_open', False)) or False,
                 "restart_pending": getattr(mx, '_restart_pending', False),
+                # Objective self-eval feedback — verdict from the core evolution loop. Prefer the live
+                # attribute, but fall back to the PERSISTED state (which carries self_improvement /
+                # sentinel version) so the dashboard shows the ground truth even right after a restart,
+                # before the loop has run its first assess() cycle.
+                "self_eval": getattr(mx, '_self_eval', None) or _read_self_eval_state(),
             }
     except Exception:
         pass
+    # Always surface the persisted self-eval (self_improvement / sentinel version) — the ground truth
+    # must not vanish while the meta-agent is still initializing after a restart.
+    if not autonomous_data.get("self_eval"):
+        autonomous_data["self_eval"] = _read_self_eval_state()
     author_data = {}
     def _wp_last_authorized_by():
         try:
@@ -6807,8 +8693,40 @@ async def diagnostics_live_endpoint():
     # Cache response for subsequent polls
     _diag_cache = response
     _diag_cache_ts = time.time()
-
     return response
+
+
+_diag_refreshing = False
+
+
+async def _diag_bg_refresh():
+    global _diag_refreshing
+    try:
+        await _diag_compute()
+    except Exception:
+        pass
+    finally:
+        _diag_refreshing = False
+
+
+@app.get("/diagnostics/live", tags=["diagnostics"])
+async def diagnostics_live_endpoint():
+    """Always serve the cached snapshot; refresh it in the BACKGROUND when stale,
+    so the page never blocks on the heavy gather under CPU saturation. The
+    dashboard's freshness badge shows how old the data is. Only the very first
+    (cold-cache) call computes inline."""
+    global _diag_refreshing
+    now = time.time()
+    # Kick a background recompute whenever the cache is cold OR stale — but never
+    # await it (the gather can take 90s on a CPU-saturated 2-core box). The
+    # endpoint returns instantly: the cache if we have one, else a tiny warming
+    # placeholder. The next poll (6s later) gets the freshly computed snapshot.
+    if (not _diag_cache or (now - _diag_cache_ts) >= _DIAG_CACHE_TTL) and not _diag_refreshing:
+        _diag_refreshing = True
+        asyncio.create_task(_diag_bg_refresh())
+    if _diag_cache:
+        return _diag_cache
+    return {"warming_up": True, "uptime_seconds": int(now - _diag_start)}
 
 # Include bankon ("I do not understand") router
 from mindx_backend_service.bankon import bankon_router
@@ -6836,6 +8754,29 @@ try:
     logger.info("Shadow-overlord admin tier mounted at /admin/shadow/*, /admin/cabinet/*, /vault/sign/*")
 except Exception as _shadow_import_err:
     logger.warning(f"Shadow-overlord routes not loaded: {_shadow_import_err}")
+
+# Overlord/overseer model (@openagents/overlord mirror) — additive, gated by
+# MINDX_OVERLORD_ENABLED. public/member/overseer/overlord from signature +
+# holdings + chronos tenure. Destructive ops stay on the shadow gate above.
+try:
+    from mindx_backend_service.overlord import overlord_router
+    app.include_router(overlord_router)
+    logger.info("Overlord model mounted at /overlord/* (enabled=%s)",
+                os.environ.get("MINDX_OVERLORD_ENABLED", "0"))
+except Exception as _overlord_import_err:
+    logger.warning(f"Overlord routes not loaded: {_overlord_import_err}")
+
+# DeltaVerse REALM — the identity-aware participant fabric. Additive, gated by
+# MINDX_DELTAVERSE_ENABLED. /deltaverse/* (recognize, story, weave, bubblerooms,
+# wish) + the overlord-controlled /realm surface. The Cypherian Weaver weaves
+# participant interaction into the changing story. Never alters existing gates.
+try:
+    from mindx_backend_service.deltaverse import deltaverse_router
+    app.include_router(deltaverse_router)
+    logger.info("DeltaVerse REALM mounted at /deltaverse/* + /realm (enabled=%s)",
+                os.environ.get("MINDX_DELTAVERSE_ENABLED", "0"))
+except Exception as _deltaverse_import_err:
+    logger.warning(f"DeltaVerse routes not loaded: {_deltaverse_import_err}")
 
 # Public, wallet-authorized publish to rage.pythai.net (WordPress).
 # /publish/rage/challenge → /publish/rage/authorize — see agents/wordpress_agent/publish_auth.py.
@@ -6999,6 +8940,15 @@ async def startup_event():
             logger.info(f"Memory offload schema init: {'ok' if ok else 'skipped (pg unavailable)'}")
         except Exception as schema_e:
             logger.warning(f"init_offload_schema failed: {schema_e}")
+
+        # Knowledge Catalogue Phase 1 read-model schema (idempotent).
+        # docs/KNOWLEDGE_CATALOGUE.md — catalogue_entries + catalogue_state.
+        try:
+            from agents import memory_pgvector
+            ok = await memory_pgvector.init_catalogue_schema()
+            logger.info(f"Catalogue schema init: {'ok' if ok else 'skipped (pg unavailable)'}")
+        except Exception as schema_e:
+            logger.warning(f"init_catalogue_schema failed: {schema_e}")
 
         # Run startup_agent.initialize_system() as a background task so it can
         # coordinate the full startup sequence and notify mindXagent (Ollama models, terminal log, etc.)
@@ -7187,6 +9137,25 @@ async def startup_event():
                                 stored = await _mpge.embed_and_store_doc(f.stem, text)
                                 if stored:
                                     logger.info(f"Auto-embedded new doc: {f.stem} ({stored} chunks)")
+                        # Reference corpus (gated subtrees): keep embeddings
+                        # current so new research drops become retrievable by
+                        # mindX without an operator run. doc_name = relative
+                        # path so public surfaces can filter on prefix.
+                        # (scripts/ingest_reference_docs.py additionally
+                        # writes the memory records + handles PDFs.)
+                        try:
+                            from utils.reference_corpus import iter_reference_docs as _iter_ref
+                            for _rel, _rf in _iter_ref(_PR / "docs"):
+                                if not _rel.endswith(".md"):
+                                    continue
+                                _dn = _rel[:-3]
+                                if _dn in existing:
+                                    continue
+                                stored = await _mpge.embed_and_store_doc(_dn, _rf.read_text(encoding="utf-8", errors="replace"))
+                                if stored:
+                                    logger.info(f"Auto-embedded reference doc: {_dn} ({stored} chunks)")
+                        except Exception as _ref_e:
+                            logger.debug(f"reference-corpus auto-embed skipped: {_ref_e}")
                         # Embed memories without embeddings (batch of 20)
                         rows = await pool.fetch("SELECT memory_id, content FROM memories WHERE embedding IS NULL LIMIT 20")
                         for row in rows:
@@ -7258,6 +9227,35 @@ async def startup_event():
             except Exception as ml_err:
                 logger.warning(f"MastermindAgent autonomous loop failed to start: {ml_err}")
 
+        # Knowledge Catalogue projector — folds the catalogue event stream into
+        # the Postgres read-model incrementally (cheap: resumes from a byte-offset
+        # watermark each tick). Also fills embeddings deferred by --no-embed
+        # backfills, under the ResourceGovernor gate. Disable with
+        # MINDX_CATALOGUE_PROJECT_INTERVAL_S=0.
+        async def _periodic_catalogue_projector():
+            interval = int(os.getenv("MINDX_CATALOGUE_PROJECT_INTERVAL_S", "300"))
+            if interval <= 0:
+                logger.info("Catalogue projector loop disabled (interval<=0)")
+                return
+            from agents.catalogue.projector import CatalogueProjector
+            proj = CatalogueProjector()
+            await asyncio.sleep(45)  # let boot settle before first tick
+            while True:
+                try:
+                    run = await proj.run(max_events=2000, embed=True)
+                    if run.entries_upserted or run.embeds_done:
+                        logger.info(
+                            "catalogue projector: +%d entries, %d embedded, %d deferred (offset=%d)",
+                            run.entries_upserted, run.embeds_done, run.embeds_deferred,
+                            run.final_offset)
+                    # Top up embeddings for older rows left NULL by a --no-embed backfill.
+                    swept = await proj.embed_sweep(limit=120)
+                    if swept:
+                        logger.info("catalogue projector: embed sweep +%d", swept)
+                except Exception:
+                    logger.warning("catalogue projector loop error", exc_info=True)
+                await asyncio.sleep(interval)
+
         asyncio.create_task(_auto_start_autonomous())
         asyncio.create_task(_periodic_memory_promotion())
         asyncio.create_task(_periodic_dream_cycle())
@@ -7265,6 +9263,7 @@ async def startup_event():
         asyncio.create_task(_periodic_author())
         asyncio.create_task(_periodic_embedding())
         asyncio.create_task(_periodic_health_audit())
+        asyncio.create_task(_periodic_catalogue_projector())
         asyncio.create_task(_start_mastermind_loop())
 
         # Milestone recognizer — coordinator subscriber that classifies
@@ -7325,10 +9324,24 @@ async def startup_event():
             app.state.background_tasks.append(
                 asyncio.create_task(_pub_orchestrator.watch_dreams())
             )
+            # github.awareness milestone watcher (carson branch) — anchored on
+            # background_tasks like the others to prevent silent GC.
+            app.state.background_tasks.append(
+                asyncio.create_task(_pub_orchestrator.watch_github())
+            )
+            # Daily "mindX as a protocol" essay cadence — orthogonal to the
+            # milestone triggers (exempt from MIN_GAP, advance_clock=False, so
+            # it never deters a milestone publish). Self-disables when
+            # MINDX_PROTOCOL_SERIES_ENABLED=0. Frequency/duration/status are
+            # owned by AuthorAgent's settable schedule (x402-gateable service).
+            app.state.background_tasks.append(
+                asyncio.create_task(_pub_orchestrator.watch_protocol_series())
+            )
             app.state.publication_orchestrator = _pub_orchestrator
+
             logger.info(
                 "PublicationOrchestrator started "
-                "(watching SEA campaign history + full-moon dreams)"
+                "(watching SEA campaign history + full-moon dreams + github.awareness)"
             )
             logger.info(
                 "PublicationOrchestrator state: "
@@ -8237,6 +10250,124 @@ async def generate_challenge(payload: ChallengeRequestPayload):
         "challenge_message": challenge
     }
 
+# ── OVERSEER: Algorand (Pera/Parsec) sign-in → deployment suites ──────────────────────
+@app.get("/auth/algorand/challenge", summary="Issue an Algorand OVERSEER-LOGIN challenge", tags=["auth"])
+async def algorand_overseer_challenge():
+    """Public: mint a single-use challenge for the operator to sign with the mindx.algo wallet."""
+    from mindx_backend_service import overseer_auth
+    return {"status": "success", **overseer_auth.issue_challenge()}
+
+
+@app.post("/auth/algorand/verify", summary="Verify an Algorand OVERSEER signature → OVERSEER JWT", tags=["auth"])
+async def algorand_overseer_verify(request: Request):
+    """Public: verify a Pera/Parsec signature over the stored challenge; if the signing address is the
+    configured mindx.algo / OVERSEER address, return a short-lived scope-bound OVERSEER JWT."""
+    from mindx_backend_service import overseer_auth
+    body = await request.json()
+    nonce = str(body.get("nonce") or "")
+    signature = str(body.get("signature") or "")
+    address = str(body.get("address") or "")
+    wallet = str(body.get("wallet") or "pera")
+    if not (nonce and signature and address):
+        raise HTTPException(status_code=400, detail="nonce, signature, and address are required")
+    result = overseer_auth.consume_overseer_login(nonce, signature, address, wallet)
+    return {"status": "success", "role": "overseer", **result}
+
+
+@app.get("/auth/evm/challenge", summary="Issue an EVM OVERLORD-LOGIN challenge", tags=["auth"])
+async def evm_overlord_challenge():
+    """Public: mint a single-use challenge for the operator to sign with the bankon.eth (EVM) wallet."""
+    from mindx_backend_service import overlord_auth
+    return {"status": "success", **overlord_auth.issue_challenge()}
+
+
+@app.post("/auth/evm/verify", summary="Verify an EVM OVERLORD signature → OVERLORD (admin) JWT", tags=["auth"])
+async def evm_overlord_verify(request: Request):
+    """Public: verify an EIP-191 signature over the stored challenge; if the recovered signer is bankon.eth
+    (the OVERLORD / shadow-overlord), return the scope-bound OVERLORD admin JWT — the EVM mirror of the
+    Algorand OVERSEER flow. bankon.eth is the EVM admin for mindX's contracts and deployment."""
+    from mindx_backend_service import overlord_auth
+    body = await request.json()
+    nonce = str(body.get("nonce") or "")
+    signature = str(body.get("signature") or "")
+    address = str(body.get("address") or "")
+    if not (nonce and signature):
+        raise HTTPException(status_code=400, detail="nonce and signature are required")
+    result = overlord_auth.consume_overlord_login(nonce, signature, address, wallet="evm")
+    return {"status": "success", **result}
+
+
+@app.get("/overseer/algorand/suites", summary="List Algorand deployment suites (OVERSEER)", tags=["overseer"])
+async def overseer_algorand_suites(overseer: str = Depends(require_overseer)):
+    """OVERSEER-gated: deployable compiled artifacts (arc56) + the TealScript source suites."""
+    from mindx_backend_service import algorand_suites as _as
+    artifacts = _as.discover_artifacts()
+    return {"status": "success", "overseer": overseer,
+            "network": os.environ.get("MINDX_ALGORAND_NETWORK", "testnet"),
+            "algod": os.environ.get("MINDX_ALGOD_URL",
+                                    "https://testnet-api.algonode.cloud" if os.environ.get("MINDX_ALGORAND_NETWORK", "testnet") != "mainnet"
+                                    else "https://mainnet-api.algonode.cloud"),
+            "deployable": [a for a in artifacts if a["deployable"]],
+            "source_suites": _as.list_source_suites(),
+            "count": len(artifacts)}
+
+
+@app.get("/overseer/algorand/artifact/{name}", summary="Compiled program for a deployable suite (OVERSEER)", tags=["overseer"])
+async def overseer_algorand_artifact(name: str, overseer: str = Depends(require_overseer)):
+    """OVERSEER-gated: the compiled approval/clear programs (base64) + state schema for one artifact.
+    The browser builds the ApplicationCreate txn from this; the wallet signs it (the key stays sovereign)."""
+    from mindx_backend_service import algorand_suites as _as
+    art = _as.load_artifact(name)
+    if not art:
+        raise HTTPException(status_code=404, detail=f"no deployable artifact named {name!r}")
+    return {"status": "success", "overseer": overseer,
+            "network": os.environ.get("MINDX_ALGORAND_NETWORK", "testnet"), **art}
+
+
+@app.post("/overseer/algorand/record", summary="Record a completed Algorand deploy (OVERSEER)", tags=["overseer"])
+async def overseer_algorand_record(request: Request, overseer: str = Depends(require_overseer)):
+    """OVERSEER-gated: after the wallet submits the signed deploy to algod, the browser reports the
+    resulting app id + txid here so the deploy is logged to the catalogue stream (audit trail)."""
+    body = await request.json()
+    rec = {"suite": str(body.get("suite") or ""), "app_id": body.get("app_id"),
+           "txid": str(body.get("txid") or ""), "network": str(body.get("network") or "")}
+    try:
+        from agents.catalogue.events import emit_catalogue_event
+        await emit_catalogue_event(kind="admin.algorand_deployed", actor=f"overseer:{overseer}",
+                                   payload=rec, source_log="overseer_algorand_record")
+    except Exception:
+        pass
+    return {"status": "recorded", "overseer": overseer, **rec}
+
+
+@app.post("/overseer/algorand/deploy", summary="Deploy an Algorand suite (OVERSEER; dry-run default)", tags=["overseer"])
+async def overseer_algorand_deploy(request: Request, overseer: str = Depends(require_overseer)):
+    """OVERSEER-gated dry-run: returns the real compiled deploy PLAN for a deployable artifact (no chain
+    write). Actual execution is CLIENT-SIGNED — the browser builds the ApplicationCreate txn from
+    /overseer/algorand/artifact/{name}, the wallet signs it, and submits to algod (the key stays sovereign)."""
+    from mindx_backend_service import algorand_suites as _as
+    body = await request.json()
+    suite = str(body.get("suite") or "").strip()
+    network = os.environ.get("MINDX_ALGORAND_NETWORK", "testnet")
+    art = _as.load_artifact(suite)
+    if not art:
+        raise HTTPException(status_code=404, detail=f"no deployable artifact named {suite!r}")
+    try:
+        from agents.catalogue.events import emit_catalogue_event
+        await emit_catalogue_event(kind="admin.algorand_deploy_planned", actor=f"overseer:{overseer}",
+                                   payload={"suite": suite, "network": network}, source_log="overseer_algorand_deploy")
+    except Exception:
+        pass
+    plan = {"suite": art["name"], "network": network,
+            "approval_bytes": len(__import__("base64").b64decode(art["approval_b64"])),
+            "global_schema": {"ints": art["global_ints"], "bytes": art["global_bytes"]},
+            "local_schema": {"ints": art["local_ints"], "bytes": art["local_bytes"]},
+            "steps": ["fetch compiled artifact", "browser builds ApplicationCreate txn",
+                      "wallet (Parsec/Pera) signs", "submit to algod", "record app id"]}
+    return {"status": "dry_run", "overseer": overseer, "plan": plan,
+            "note": "No on-chain state changed. Execute from the OVERSEER page — the wallet signs and submits."}
+
+
 @app.get("/users/session/validate", summary="Validate session token (vault-backed)")
 async def validate_session(
     request: Request,
@@ -8468,15 +10599,17 @@ async def action_efficiency():
 @app.get("/diagnostics/export", tags=["diagnostics"], summary="Full diagnostics snapshot as JSON download")
 async def diagnostics_export():
     from starlette.responses import Response
-    data = await diagnostics_live_endpoint()
+    data = _diag_cache or await _diag_compute()
     return Response(json.dumps(data, indent=2, default=str), media_type="application/json", headers={"Content-Disposition": "attachment; filename=mindx_diagnostics.json"})
 
 # RAGE Embed — pgvector-backed semantic search (branded as RAGE)
 @app.get("/api/rage/embed", tags=["rage-embed"], summary="RAGE embed: semantic search over docs via pgvector")
-async def rage_embed_search(query: str, top_k: int = 5):
+async def rage_embed_search(query: str, request: Request, top_k: int = 5):
     try:
         from agents import memory_pgvector as _mpx
-        docs = await _mpx.semantic_search_docs(query, top_k=top_k)
+        from utils.reference_corpus import PRIVATE_DOC_PREFIXES as _ref_prefixes
+        _exclude = None if await _reference_access_ok(request) else list(_ref_prefixes)
+        docs = await _mpx.semantic_search_docs(query, top_k=top_k, exclude_doc_prefixes=_exclude)
         mems = await _mpx.semantic_search_memories(query, top_k=top_k)
         return {"query": query, "docs": docs, "memories": mems}
     except Exception as e:
@@ -8493,14 +10626,17 @@ async def rage_embed_stats():
         return {"error": str(e)}
 
 @app.post("/chat/docs", tags=["chat"], summary="Ask a question about mindX documentation (RAG)")
-async def chat_with_docs(question: str):
-    """Semantic search over embedded docs, then answer with local model."""
+async def chat_with_docs(question: str, request: Request):
+    """Semantic search over embedded docs, then answer with local model.
+    Gated reference-corpus docs are excluded for unauthenticated callers."""
     try:
         from agents import memory_pgvector as _mpg
+        from utils.reference_corpus import PRIVATE_DOC_PREFIXES as _ref_prefixes
         import aiohttp as _cha
 
-        # 1. Retrieve relevant doc chunks
-        chunks = await _mpg.semantic_search_docs(question, top_k=5)
+        # 1. Retrieve relevant doc chunks (private corpus only with a session)
+        _exclude = None if await _reference_access_ok(request) else list(_ref_prefixes)
+        chunks = await _mpg.semantic_search_docs(question, top_k=5, exclude_doc_prefixes=_exclude)
         if not chunks:
             return {"answer": "No relevant documentation found. Docs may not be embedded yet.", "sources": []}
 
@@ -8655,6 +10791,47 @@ async def vllm_health():
     except Exception as e:
         return {"healthy": False, "error": str(e)}
 
+@app.post("/permaweb/upload", tags=["x402"],
+          summary="Permanent Arweave storage (x402 fulfillment desk: pay USDC → Turbo upload)",
+          dependencies=[Depends(x402_required("/permaweb/upload"))])
+async def permaweb_upload(request: Request):
+    """x402-gated Arweave fulfillment desk (reference §4).
+
+    The x402 dependency settles the USDC payment (any EVM/AVM rail); this then
+    performs the permanent ANS-104 upload via the Turbo desk and returns the
+    Arweave id + gateway url. The raw request body is the payload to store.
+    """
+    try:
+        from tools.arweave_turbo import ArweaveTurboDesk, ArweaveTurboError
+    except Exception as e:
+        raise HTTPException(status_code=503, detail={"code": "permaweb_unavailable", "reason": str(e)})
+    data = await request.body()
+    if not data:
+        raise HTTPException(status_code=400, detail="empty body; POST the bytes to store")
+    content_type = request.headers.get("content-type", "application/octet-stream")
+    app_name = request.headers.get("x-app-name", "THOT")
+    try:
+        desk = ArweaveTurboDesk()
+        result = desk.upload(data, app_name=app_name, content_type=content_type)
+    except ArweaveTurboError as e:
+        raise HTTPException(status_code=503, detail={"code": "permaweb_desk_error", "reason": str(e)})
+    except Exception as e:
+        raise HTTPException(status_code=502, detail={"code": "permaweb_upload_failed", "reason": str(e)})
+    # Mirror the fulfillment into the unified settlement ledger (rail=arweave).
+    try:
+        from mindx_backend_service.x402_middleware import _append_settlement
+        import time as _t
+        _append_settlement({
+            "rail": "arweave", "network": "arweave:permaweb", "scheme": "fulfillment",
+            "tx_hash": result.get("arweaveId"), "amount_microusd": 0,
+            "payer": result.get("owner", ""), "payTo": "", "endpoint": "/permaweb/upload",
+            "replay_key": f"arweave:permaweb:{result.get('arweaveId')}",
+            "verified_at": _t.time(), "facilitator": "ardrive-turbo",
+        })
+    except Exception:
+        pass
+    return {"ok": True, **result}
+
 @app.post("/governance/execute", tags=["governance"], summary="Full DAIO governance chain: Boardroom → CEO → Mastermind")
 async def governance_execute_endpoint(directive: str, importance: str = "standard"):
     """Execute a directive through the full DAIO governance chain."""
@@ -8746,6 +10923,65 @@ async def dojo_update(agent_id: str, delta: int, event_type: str = "manual", rea
         return dojo.update_reputation(agent_id, delta, event_type, reason)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class DojoDecidePayload(BaseModel):
+    """A settlement request for the Dojo consensus-arbitration service. Supply
+    pre-normalized `ballots` and/or any of the typed source inputs (boardroom
+    session, war-council seat votes, mindXtrain imprint verdict, DAIO groups) —
+    the Dojo normalizes, resolves them under `consensus_model`, and records one
+    verifiable decision."""
+    subject: str
+    ballots: list = Field(default_factory=list)
+    consensus_model: str = "supermajority"
+    stakes: int = 0
+    council: str = "dojo"
+    boardroom: Optional[dict] = None      # a BoardroomSession dict
+    warcouncil: Optional[list] = None     # [{seat,vote,role?}]
+    mindxtrain: Optional[dict] = None      # imprint verdict {accepted,delta,...}
+    daio: Optional[dict] = None            # {group:{voter:bool}}
+    record: bool = True
+
+
+@app.post("/dojo/decide", tags=["governance"], summary="Dojo consensus arbitration — settle a decision")
+async def dojo_decide(payload: DojoDecidePayload):
+    """The Dojo as a service to boardroom / warcouncil / mindXtrain: resolve
+    (possibly disagreeing) verdicts into one recorded decision."""
+    try:
+        from daio.governance import dojo_arbiter as A
+        ballots = list(payload.ballots or [])
+        if payload.boardroom:
+            ballots += A.from_boardroom(payload.boardroom)
+        if payload.warcouncil:
+            ballots += A.from_warcouncil(payload.warcouncil)
+        if payload.mindxtrain:
+            ballots += A.from_mindxtrain(payload.mindxtrain)
+        if payload.daio:
+            ballots += A.from_daio(payload.daio)
+        if not ballots:
+            raise HTTPException(status_code=400, detail="no ballots supplied")
+        return await A.decide(subject=payload.subject, ballots=ballots, stakes=payload.stakes,
+                              consensus_model=payload.consensus_model, council=payload.council,
+                              record=payload.record)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/insight/dojo/decisions", tags=["insight"], summary="Recent Dojo consensus decisions")
+@_insight_safe
+async def insight_dojo_decisions(request: Request, limit: int = 20, council: Optional[str] = None):
+    """Tail of the Dojo decision ledger (`data/governance/dojo_decisions.jsonl`).
+    Plain-text with `?h=true`."""
+    from daio.governance import dojo_arbiter as A
+    arb = await A.DojoArbiter.get_instance()
+    decisions = arb.recent(min(limit, 200), council=council)
+    models = sorted(A.CONSENSUS_MODELS.keys())
+    return _maybe_h_text(request, {"count": len(decisions), "consensus_models": models,
+                                   "decisions": decisions}, route_path="/insight/dojo/decisions")
 
 @app.post("/inference/multi-stream", tags=["inference"], summary="Multi-stream parallel inference query")
 async def multi_stream_query(prompt: str, strategy: str = "fastest_wins", level: int = 2):
@@ -10518,6 +12754,103 @@ async def health_check():
         "version": "1.0.0"
     }
 
+
+# ---- chronos.agent: promised time + transaction anchors --------------------
+# Three read-only endpoints surface the runtime declared in
+# agents/Chronos.agent + agents/chronos.oracle. Imported lazily so the
+# heavy agents/__init__.py star-import only fires when first queried.
+
+
+def _load_chronos_module():
+    """Bypass agents/__init__.py and load chronos_agent.py directly.
+
+    Same importlib trick the tests use — avoids forcing every mindX
+    consumer of /health to drag aiofiles + the full agent zoo into
+    memory just to expose the time oracle.
+    """
+    import importlib.util as _u
+    import sys as _sys
+    from pathlib import Path as _Path
+    _name = "_chronos_agent_loaded"
+    if _name in _sys.modules:
+        return _sys.modules[_name]
+    spec = _u.spec_from_file_location(
+        _name,
+        _Path(__file__).parent.parent / "agents" / "chronos_agent.py",
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("chronos_agent.py not loadable")
+    mod = _u.module_from_spec(spec)
+    _sys.modules[_name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+async def _get_chronos():
+    """Singleton ChronosAgent — db at data/memory/chronos_anchors.db."""
+    return await _load_chronos_module().ChronosAgent.get_instance()
+
+
+@app.get("/v1/oracle/time", summary="Promised time + confidence interval", tags=["oracle"])
+async def oracle_time():
+    """The headline: chronos.agent's promised time.
+
+    Returns a `PromisedTime` dict with `unix_18dp`, `utc`,
+    `consensus` (correlated|degraded|drifted|offline), `confidence_ms`,
+    the underlying time.oracle `sources` block, and `anchor_count_24h`.
+
+    mindXtrain Coach and other consumers stamp their artefacts with this
+    instead of raw `time.time()` so the timestamps are *promised* —
+    accompanied by a confidence interval the network can verify.
+    """
+    try:
+        chronos = await _get_chronos()
+        pt = await chronos.now()
+        return pt.as_dict()
+    except Exception as exc:
+        # Honest failure mode — return a degraded PromisedTime rather
+        # than 500. Consumers should already handle `consensus: offline`.
+        return {
+            "unix_18dp": str(time.time()),
+            "utc": "",
+            "consensus": "offline",
+            "confidence_ms": 999_999.0,
+            "sources": {"error": str(exc)},
+            "anchor_count_24h": 0,
+            "promised_by": "chronos.agent",
+        }
+
+
+@app.get("/v1/oracle/anchors", summary="Recent transaction time anchors", tags=["oracle"])
+async def oracle_anchors(limit: int = 100):
+    """Last `limit` transaction anchors — strongest drift evidence.
+
+    Each anchor: `(chain, tx_hash, block_number, block_timestamp,
+    local_observed_ns, drift_ms)`. Coach renders these as the anchor-
+    density bar over a rolling 24h window.
+    """
+    if limit < 1 or limit > 1000:
+        raise HTTPException(status_code=400, detail="limit must be in [1, 1000]")
+    try:
+        chronos = await _get_chronos()
+        anchors = await chronos.recent_anchors(limit=limit)
+        return {"anchors": [a.as_dict() for a in anchors], "n": len(anchors)}
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"chronos unavailable: {exc}")
+
+
+@app.get("/v1/oracle/drift", summary="Drift history over the last N hours", tags=["oracle"])
+async def oracle_drift(hours: int = 24):
+    """Drift bucketed by hour — feeds the Coach UI's sparkline."""
+    if hours < 1 or hours > 168:
+        raise HTTPException(status_code=400, detail="hours must be in [1, 168]")
+    try:
+        chronos = await _get_chronos()
+        hist = await chronos.drift_history(hours=hours)
+        return hist.as_dict()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"chronos unavailable: {exc}")
+
 @app.post("/admin/publish-book", summary="Publish a new edition of The Book of mindX", tags=["admin"])
 async def trigger_book_publish():
     """Force AuthorAgent to compile and publish a new book edition immediately."""
@@ -10528,6 +12861,21 @@ async def trigger_book_publish():
         return {"status": "published", "edition": result["edition"], "bytes": result["bytes"], "path": result["path"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Book publish failed: {str(e)}")
+
+
+@app.post("/admin/regenerate-readme", tags=["admin"],
+          summary="Regenerate README.md from canonical docs (AuthorAgent)")
+async def regenerate_readme(dry_run: bool = True, _wallet: str = Depends(require_admin_access)):
+    """Have AuthorAgent surmise the repo README from the canonical docs, in mindX's
+    own first-person voice. `dry_run=true` (default) returns the rendered README
+    without writing; `dry_run=false` writes README.md. Admin-gated."""
+    try:
+        from agents.author_agent import AuthorAgent
+        aa = await AuthorAgent.get_instance()
+        res = aa.generate_readme(write=not dry_run)
+        return {"status": "preview" if dry_run else "written", **res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"README regeneration failed: {str(e)}")
 
 
 class PublishToRageRequest(BaseModel):
@@ -10577,6 +12925,154 @@ async def publish_to_rage(req: PublishToRageRequest, _wallet: str = Depends(requ
     if result is None:
         raise HTTPException(status_code=502, detail="wordpress-agent unreachable or rejected the post; see logs")
     return {"status": "ok", "wordpress": result}
+
+
+# ── Publishing-frequency-as-a-service (x402-gateable) ───────────────
+# AuthorAgent owns a settable schedule for the daily "mindX as a protocol"
+# series. GET is public-readable diagnostics; POST is the setter — admin
+# today, and the seam the x402 paywall gates so a paying agent can buy a
+# publishing cadence (frequency + duration + status). Setting the schedule
+# never touches the milestone/SEA/dream triggers; the series is orthogonal.
+
+class PublishingFrequencyRequest(BaseModel):
+    """Body for POST /admin/publishing/schedule. All fields optional —
+    only provided ones change."""
+    interval_days: Optional[int] = Field(default=None, ge=1, description="Cadence: 1=daily, 7=weekly, …")
+    max_publications: Optional[int] = Field(default=None, ge=0, description="Hard cap on essays in this run (0/None = open)")
+    days: Optional[int] = Field(default=None, ge=1, description="Convenience: cap = ceil(days / interval_days)")
+    start_date: Optional[str] = Field(default=None, description="ISO YYYY-MM-DD anchor for the run")
+    hour_utc: Optional[int] = Field(default=None, ge=0, le=23, description="Earliest UTC hour to publish each due day")
+    status: Optional[str] = Field(default=None, description="'draft' or 'publish'")
+    enabled: Optional[bool] = Field(default=None, description="Master on/off for the series cadence")
+    style: Optional[str] = Field(default=None, description="Register: public | essay | phd | global (spans the spectrum)")
+    length: Optional[str] = Field(default=None, description="Length setting: preset (brief~800 | standard~1500 | feature~2400 | deep~3200 | pillar~3800) OR a custom word count ('2500'). Calibrated to contemporary article sizing.")
+    graphics: Optional[str] = Field(default=None, description="artist.agent mode: choose | create | both | none")
+    self_referential: Optional[str] = Field(default=None, description="Self-linking intensity to docs.html/rage.pythai.net: tasteful | balanced | promotional | blatant (max-SEO + self-glorification)")
+    ideology: Optional[str] = Field(default=None, description="Value-frame lens (exploration): cypherpunk | solarpunk | accelerationist | humanist | libertarian | cooperative | none")
+    narrative: Optional[str] = Field(default=None, description="Telling voice (exploration): first_person | newspaperman | noir | mythic | academic | manifesto")
+
+
+@app.get("/insight/publications/schedule", summary="Read the protocol-series publishing schedule", tags=["insight"])
+async def get_publishing_schedule():
+    """Public diagnostics: the current frequency-as-a-service schedule for
+    the daily 'mindX as a protocol' series, plus today's publish plan."""
+    try:
+        from agents.author_agent import AuthorAgent
+        author = await AuthorAgent.get_instance()
+        sched = author.get_publishing_schedule()
+        plan = author.protocol_publish_plan()
+        return {"status": "ok", "schedule": sched.get("protocol_series"), "today": plan}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"get_publishing_schedule failed: {e}")
+
+
+@app.post("/admin/publishing/schedule", summary="Set protocol-series publishing frequency (x402-gateable)", tags=["admin"])
+async def set_publishing_schedule(
+    req: PublishingFrequencyRequest,
+    request: Request,
+    _wallet: str = Depends(require_admin_access),
+):
+    """Set how often / for how long mindX publishes the protocol series.
+
+    This is the x402 frequency-as-a-service seam: today it is admin-gated;
+    when the x402 paywall finalizes, the same setter is reachable by a paying
+    agent and ``updated_by`` records the payer (e.g. ``x402:0x…``). The
+    x402 payment header, when present, is captured for attribution.
+    """
+    # Capture an x402 payer for attribution if the middleware annotated the
+    # request (forward-compatible; absent today → plain operator).
+    payer = (
+        request.headers.get("X-Payment-Payer")
+        or request.headers.get("X-402-Payer")
+        or getattr(request.state, "x402_payer", None)
+    )
+    updated_by = f"x402:{payer}" if payer else f"operator:{_wallet[:10]}"
+    try:
+        from agents.author_agent import AuthorAgent
+        author = await AuthorAgent.get_instance()
+        sched = author.set_publishing_frequency(
+            interval_days=req.interval_days,
+            max_publications=req.max_publications,
+            days=req.days,
+            start_date=req.start_date,
+            hour_utc=req.hour_utc,
+            status=req.status,
+            enabled=req.enabled,
+            style=req.style,
+            length=req.length,
+            graphics=req.graphics,
+            self_referential=req.self_referential,
+            ideology=req.ideology,
+            narrative=req.narrative,
+            updated_by=updated_by,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"set_publishing_frequency failed: {e}")
+    return {"status": "ok", "schedule": sched.get("protocol_series"),
+            "today": author.protocol_publish_plan()}
+
+
+# ── Speech from the throne (verifiable chain of command) ───────────
+# The board issues a statement that is published with a signed chain of custody
+# (throne → endorsing soldiers → author → editor → artist → wordpress). Anyone
+# can re-verify the chain by recovering each link's signer — no trust required.
+
+class ThroneSpeechRequest(BaseModel):
+    """Body for POST /admin/throne/speak."""
+    statement: str = Field(..., description="The board's statement (plain text; blank lines split paragraphs)")
+    title: str = Field(default="A Speech from the Throne", description="Headline")
+    dek: Optional[str] = Field(default=None, description="Optional sub-headline / excerpt")
+    endorsers: Optional[List[str]] = Field(default=None, description="Soldier agent_ids that co-sign (e.g. ciso_security, cro_risk)")
+    status: str = Field(default="publish", description="'draft' or 'publish'")
+    slug: Optional[str] = Field(default=None, description="Optional WordPress slug")
+    illustrate: bool = Field(default=True, description="Have artist.agent render original art")
+
+
+class ProvenanceVerifyRequest(BaseModel):
+    """Body for POST /verify/provenance — a serialized provenance chain dict, or
+    the full HTML of a published post to extract the embedded chain from."""
+    chain: Optional[Dict[str, Any]] = Field(default=None, description="The provenance chain JSON")
+    html: Optional[str] = Field(default=None, description="Published post HTML (chain auto-extracted)")
+
+
+@app.post("/admin/throne/speak", summary="Issue a board speech from the throne (signed chain of command)", tags=["admin"])
+async def throne_speak(req: ThroneSpeechRequest, request: Request,
+                       _wallet: str = Depends(require_admin_access)):
+    """Compose + publish a board statement with an end-to-end verifiable chain of
+    custody. Each seat (CEO, endorsing soldiers, author, editor, artist,
+    wordpress) signs its own link with its wallet."""
+    try:
+        from agents.author_agent import AuthorAgent
+        author = await AuthorAgent.get_instance()
+        result = await author.publish_speech_from_throne(
+            req.statement, title=req.title, dek=req.dek, endorsers=req.endorsers,
+            status=req.status, slug=req.slug, illustrate=req.illustrate)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"throne_speak failed: {e}")
+    if result is None:
+        raise HTTPException(status_code=502, detail="publish failed (wordpress.agent down?)")
+    return {"status": "ok", "published": result}
+
+
+@app.post("/verify/provenance", summary="Verify a speech-from-the-throne chain of command", tags=["insight"])
+async def verify_provenance(req: ProvenanceVerifyRequest):
+    """Public: re-verify a provenance chain by recovering every link's signer and
+    confirming the hash linkage + registered identities. Pass either the chain
+    JSON or the published post HTML."""
+    try:
+        from agents import provenance_chain as pc
+        chain = req.chain
+        if chain is None and req.html:
+            chain = pc.extract_chain_from_html(req.html)
+        if not isinstance(chain, dict) or not chain.get("links"):
+            raise HTTPException(status_code=400, detail="no chain found (provide 'chain' or 'html')")
+        return {"status": "ok", "report": pc.verify_chain(chain)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"verify_provenance failed: {e}")
 
 
 # ── Bug-crushed milestone trigger ──────────────────────────────────

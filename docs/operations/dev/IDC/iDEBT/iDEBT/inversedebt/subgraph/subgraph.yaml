@@ -1,0 +1,86 @@
+# DELTAVERSE Debt Inheritance Protocol — Subgraph Manifest
+#
+# This file tells The Graph indexer which contracts to watch, which
+# events to handle, and which mapping functions to invoke for each.
+# The address and startBlock fields must be updated with real values
+# after mainnet deployment.
+
+specVersion: 1.0.0
+description: DELTAVERSE Debt Inheritance Protocol indexer — tracks sGDSI mints/burns, thesis positions, oracle snapshots, and LP staking
+repository: https://github.com/deltav-deltaverse/subgraph
+schema:
+  file: ./schema.graphql
+
+dataSources:
+  # ═══════════════════════════════════════════════════════════
+  # DebtInheritanceProtocol — the capstone orchestrator
+  # ═══════════════════════════════════════════════════════════
+  - kind: ethereum
+    name: DebtInheritanceProtocol
+    network: mainnet
+    source:
+      address: "0x0000000000000000000000000000000000000000"  # UPDATE AFTER DEPLOYMENT
+      abi: DebtInheritanceProtocol
+      startBlock: 0  # UPDATE AFTER DEPLOYMENT
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      file: ./src/mappings/protocol.ts
+      entities:
+        - Protocol
+        - User
+        - SgdsiMint
+        - SgdsiBurn
+        - ThesisPosition
+        - FeeRouting
+        - HourlyStat
+      abis:
+        - name: DebtInheritanceProtocol
+          file: ./abis/DebtInheritanceProtocol.json
+      eventHandlers:
+        - event: SGdsiMinted(indexed address,uint256,uint256,uint256,uint256)
+          handler: handleSgdsiMinted
+        - event: SGdsiBurned(indexed address,uint256,uint256,uint256,uint256)
+          handler: handleSgdsiBurned
+        - event: ThesisExpressed(indexed address,address,uint256,uint256,uint256,bool,uint256)
+          handler: handleThesisExpressed
+        - event: ThesisClosed(indexed address,uint256,uint256,int256,uint256)
+          handler: handleThesisClosed
+        - event: FeesRoutedToOracleLPs(uint256)
+          handler: handleFeesRouted
+
+  # ═══════════════════════════════════════════════════════════
+  # DeltaVerseDebtOracle — composite debt stress index
+  # ═══════════════════════════════════════════════════════════
+  - kind: ethereum
+    name: DeltaVerseDebtOracle
+    network: mainnet
+    source:
+      address: "0x0000000000000000000000000000000000000000"  # UPDATE AFTER DEPLOYMENT
+      abi: DeltaVerseDebtOracle
+      startBlock: 0  # UPDATE AFTER DEPLOYMENT
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      file: ./src/mappings/oracle.ts
+      entities:
+        - Protocol
+        - OracleSnapshot
+        - SubIndexUpdate
+        - LpStaker
+      abis:
+        - name: DeltaVerseDebtOracle
+          file: ./abis/DeltaVerseDebtOracle.json
+      eventHandlers:
+        - event: CompositeUpdated(indexed uint256,uint256,uint256,uint256,uint256)
+          handler: handleCompositeUpdated
+        - event: SubIndexUpdated(indexed uint8,uint256,uint256,uint8,uint256)
+          handler: handleSubIndexUpdated
+        - event: Staked(indexed address,uint256)
+          handler: handleStaked
+        - event: Unstaked(indexed address,uint256)
+          handler: handleUnstaked
+        - event: RewardsClaimed(indexed address,uint256)
+          handler: handleRewardsClaimed

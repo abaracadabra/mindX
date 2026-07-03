@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mindX — the Realm</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://mindx.pythai.net/">
+<link rel="icon" href="/gfx/favicon.ico" sizes="any">
+<style>
+:root{--bg:#050810;--panel:rgba(10,12,18,.96);--border:#30363d;--text:#e6edf3;--text2:#c9d1d9;--text3:#7d8590;--gold:#e3b341;--green:#56d364;--blue:#79c0ff;--violet:#bc8cff;--mono:'JetBrains Mono','SF Mono','Fira Code',monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text2);font-family:var(--mono);min-height:100vh;line-height:1.5}
+canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0;transition:opacity 1.6s ease}
+canvas#bg.on{opacity:.6}
+.wrap{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:40px 20px}
+.gate{display:none}
+/* Outer door — tells very little. */
+#door-view{min-height:88vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;text-align:center}
+#door-view .mark{width:60px;height:60px;opacity:.9}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:8px;border:1px solid rgba(227,179,65,.5);background:rgba(227,179,65,.07);color:var(--gold);font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;text-decoration:none}
+.btn:hover{background:rgba(227,179,65,.16);color:#fff}
+.btn.ghost{border-color:var(--border);color:var(--text3);background:transparent}
+.btn.realm{font-size:14px;letter-spacing:.28em;padding:16px 34px;border-radius:10px;box-shadow:0 0 0 1px rgba(227,179,65,.15),0 8px 30px rgba(0,0,0,.5)}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.brand img{width:34px;height:34px}
+.brand h1{font-size:20px;color:var(--text);letter-spacing:.5px;font-weight:700}
+.brand h1 b{color:var(--gold)}
+.sub{font-size:11px;color:var(--text3);letter-spacing:.06em;margin-bottom:26px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin-bottom:16px}
+.card h2{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+.act-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(48,54,61,.5);font-size:12px}
+.act-row:last-child{border-bottom:none}
+.act-tier{flex:0 0 auto;font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;border:1px solid var(--border);color:var(--text3)}
+.act-agent{flex:0 0 130px;color:var(--blue);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.act-head{flex:1 1 auto;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.act-time{flex:0 0 auto;color:var(--text3);font-size:10px}
+.tiers{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.tier{display:flex;gap:10px;font-size:11px;padding:6px 10px;border:1px solid var(--border);border-radius:6px}
+.tier b{color:var(--gold);flex:0 0 90px}.tier span{color:var(--text3)}
+.muted{font-size:10.5px;color:var(--text3);line-height:1.7}
+.pill{font-size:9px;color:var(--gold);border:1px solid rgba(227,179,65,.4);border-radius:999px;padding:2px 9px}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="wrap">
+
+  <!-- OUTER DOOR: tell very little. One way through. -->
+  <div id="door-view">
+    <img class="mark" src="/gfx/mindX.png" alt="mindX">
+    <button class="btn realm" id="connect-btn">ENTER THE REALM</button>
+  </div>
+
+  <!-- OVERLORD-recognized view -->
+  <div id="overlord-view" class="gate">
+    <div class="brand"><img src="/gfx/mindX.png" alt="mindX"><h1>mind<b>X</b> · Activity</h1></div>
+    <div class="sub" id="ovl-sub">OVERLORD session · both menus unlocked</div>
+    <div class="card">
+      <h2>♛ OVERLORD recognized <span class="pill" id="ovl-addr"></span></h2>
+      <div class="muted">Full mindX activity + the BUILDER and OVERLORD panels are unlocked (bottom corners). Mint + deploy authority is yours; the public participant does not have it yet.</div>
+    </div>
+    <div class="card">
+      <h2>Live activity</h2>
+      <div id="act-feed"><div class="muted">loading activity…</div></div>
+    </div>
+    <div class="card">
+      <h2>Deploy sequence &amp; feedback</h2>
+      <div id="deploy-order"><div class="muted">loading sequence…</div></div>
+      <div id="deploy-feedback" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h2>Hierarchy</h2>
+      <div id="hierarchy"><div class="muted">loading…</div></div>
+    </div>
+  </div>
+
+  <!-- Recognized-participant view (after a non-OVERLORD connects) -->
+  <div id="participant-view" class="gate">
+    <div class="brand"><img src="/gfx/mindX.png" alt="mindX"><h1>mind<b>X</b></h1></div>
+    <div class="sub">recognized participant · corporate</div>
+    <div class="card">
+      <h2>Recognized participant</h2>
+      <div class="muted">Welcome. You entered as a <b style="color:var(--text2)">participant</b>; on connecting you are now a <b style="color:var(--violet)">recognized participant</b>. The next step is yours.</div>
+      <div class="tiers">
+        <div class="tier"><b>participant</b><span>the outer door — anyone may enter the realm</span></div>
+        <div class="tier"><b>recognized</b><span>connected — the realm knows you</span></div>
+        <div class="tier"><b>member</b><span>privilege from token — hold the token, gain member access</span></div>
+      </div>
+      <div style="margin-top:16px"><button class="btn realm" id="member-btn" style="font-size:12px;letter-spacing:.12em;padding:12px 24px">Become a Member</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var OVERLORD='0x10f7ee226b16bea7f365dc1edef159fc1957d169'; // bankon.eth
+// Courtesy whitelist — wallet public keys granted MEMBER access as a courtesy,
+// without holding the token. Operator fills with lowercased addresses.
+var COURTESY_WHITELIST=[];
+function isCourtesy(a){return !!a && COURTESY_WHITELIST.indexOf(a.toLowerCase())>=0;}
+function short(a){return a?a.slice(0,6)+'…'+a.slice(-4):'';}
+function connectedAddr(){try{var e=window.ethereum;return (e&&(e.selectedAddress||(e._state&&e._state.accounts&&e._state.accounts[0])))||null;}catch(x){return null;}}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function show(id){['door-view','overlord-view','participant-view'].forEach(function(v){var el=document.getElementById(v);if(el)el.style.display=(v===id)?(v==='door-view'?'flex':'block'):'none';});}
+
+var _substrateOn=false;
+function startSubstrate(){ // deferred: only after a wallet is logged in
+  if(_substrateOn)return; _substrateOn=true;
+  var cv=document.getElementById('bg');cv.classList.add('on');
+  var c=cv.getContext('2d'),W,H,st=[];
+  function rs(){W=cv.width=innerWidth;H=cv.height=innerHeight;st=[];var n=Math.min(140,Math.floor(W*H/8000));for(var i=0;i<n;i++)st.push({x:Math.random()*W,y:Math.random()*H,z:Math.random()*2+.4,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,cl:['rgba(227,179,65,','rgba(121,192,255,','rgba(86,211,100,'][i%3]});}
+  addEventListener('resize',rs);rs();
+  function d(){c.fillStyle='rgba(5,8,16,.1)';c.fillRect(0,0,W,H);for(var i=0;i<st.length;i++){var s=st[i];for(var j=i+1;j<Math.min(st.length,i+8);j++){var dx=s.x-st[j].x,dy=s.y-st[j].y,q=dx*dx+dy*dy;if(q<6000){c.beginPath();c.moveTo(s.x,s.y);c.lineTo(st[j].x,st[j].y);c.strokeStyle='rgba(121,192,255,'+(1-q/6000)*.05+')';c.lineWidth=.4;c.stroke();}}s.x+=s.vx;s.y+=s.vy;if(s.x<0)s.x=W;if(s.x>W)s.x=0;if(s.y<0)s.y=H;if(s.y>H)s.y=0;c.beginPath();c.arc(s.x,s.y,s.z,0,6.28);c.fillStyle=s.cl+'.5)';c.fill();}requestAnimationFrame(d);}requestAnimationFrame(d);
+}
+
+function renderOverlord(addr){
+  show('overlord-view');startSubstrate();
+  document.getElementById('ovl-addr').textContent=short(addr);
+  ['/static/archetypes.js','/static/builder_button.js','/static/overlord_button.js'].forEach(function(src){var s=document.createElement('script');s.src=src;s.async=true;document.body.appendChild(s);});
+  try{localStorage.setItem('mindx_participant','overlord');}catch(e){}
+  fetch('/insight/agentic/activity',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+    var feed=document.getElementById('act-feed');var items=(d&&(d.activity||d.events||d.items))||[];
+    if(!items.length){feed.innerHTML='<div class="muted">no recent activity.</div>';return;}
+    feed.innerHTML=items.slice(0,30).map(function(e){return '<div class="act-row"><span class="act-tier">'+esc(e.tier||e.agent_tier||'—')+'</span><span class="act-agent">'+esc(e.agent||e.agent_id||'?')+'</span><span class="act-head">'+esc(e.headline||e.type||e.kind||'')+'</span><span class="act-time">'+esc(e.time||e.ts||'')+'</span></div>';}).join('');
+  }).catch(function(){document.getElementById('act-feed').innerHTML='<div class="muted">activity feed unavailable.</div>';});
+  // Deploy order + hierarchy, surfaced to the OVERLORD from login
+  fetch('/static/overlord_deployments.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+    if(!d)return;
+    var doEl=document.getElementById('deploy-order');
+    var steps=(d.deploy_order&&d.deploy_order.steps)||[];
+    doEl.innerHTML=steps.length?('<div class="tiers">'+steps.map(function(s){return '<div class="tier"><span>'+esc(s)+'</span></div>';}).join('')+'<div class="muted" style="margin-top:8px">'+esc((d.deploy_order&&d.deploy_order.note)||'')+'</div>'):'<div class="muted">no sequence.</div>';
+    // live deploy FEEDBACK — what the OVERLORD/OVERSEER actually signed on-chain
+    fetch('/insight/deploy/feedback?limit=20',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(fd){
+      var fe=document.getElementById('deploy-feedback');if(!fe)return;
+      var items=(fd&&fd.feedback)||[];
+      if(!items.length){fe.innerHTML='<div class="muted">no on-chain deploys recorded yet — the sequence above is the plan.</div>';return;}
+      fe.innerHTML='<div class="muted" style="margin-bottom:6px">confirmed on-chain:</div><div class="tiers">'+items.map(function(e){
+        var tx=e.explorer?('<a class="link" href="'+e.explorer+'" target="_blank">'+esc((e.tx_hash||'').slice(0,12))+'…</a>'):esc((e.tx_hash||'').slice(0,12));
+        var ref=e.asa_id?('ASA '+e.asa_id):esc((e.address||'').slice(0,10));
+        return '<div class="tier"><b>'+esc(e.status||'')+'</b><span>'+esc(e.contract||'')+' @ '+esc(e.chain||'')+' &middot; '+ref+' &middot; '+tx+'</span></div>';
+      }).join('')+'</div>';
+    }).catch(function(){});
+    var h=d.hierarchy||{},os=h.OVERSEER||{},ov=h.OVERLORD||{};
+    document.getElementById('hierarchy').innerHTML=
+      '<div class="tiers">'+
+      '<div class="tier"><b>OVERLORD</b><span>'+esc(ov.id||'bankon.eth')+' — '+esc(ov.role||'')+'. '+esc(ov.renounce_note||'')+'</span></div>'+
+      '<div class="tier"><b>OVERSEER</b><span>'+esc(os.id||'mindx.algo')+' — '+esc(os.role||'')+'. '+esc(os.proxy_note||'')+'</span></div>'+
+      '<div class="tier"><b>asymmetry</b><span>'+esc(d.deletion_asymmetry||'')+'</span></div>'+
+      '</div>';
+  }).catch(function(){});
+}
+function renderParticipant(courtesy){
+  show('participant-view');startSubstrate();
+  try{localStorage.setItem('mindx_participant',courtesy?'member':'recognized');}catch(e){}
+  if(courtesy){
+    var h=document.querySelector('#participant-view .card h2');if(h)h.textContent='Member (courtesy)';
+    var b=document.getElementById('member-btn');if(b){b.textContent='Member access granted';b.disabled=true;b.style.opacity=.6;b.style.cursor='default';}
+  }
+}
+function qparam(k){try{return new URLSearchParams(location.search).get(k);}catch(e){return null;}}
+
+// OVERLORD protocol: challenge → EIP-191 sign → /realm/verify → tier-bearing JWT.
+// The JWT is client-held (no cookies) and, when the visitor arrived via a gated
+// page (?from=), we bounce them back with ?t=<jwt> so the tier gate serves them.
+async function signInRealm(){
+  if(!window.ethereum){location.href='/activity';return;}
+  var accts=await window.ethereum.request({method:'eth_requestAccounts'});
+  var addr=(accts&&accts[0])||connectedAddr();
+  if(!addr){show('door-view');return;}
+  try{
+    var ch=await fetch('/realm/challenge?address='+encodeURIComponent(addr)).then(function(r){return r.json();});
+    var sig=await window.ethereum.request({method:'personal_sign',params:[ch.message,addr]});
+    var v=await fetch('/realm/verify',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({address:addr,nonce:ch.nonce,signature:sig})}).then(function(r){return r.json();});
+    if(!v||v.status!=='success'||!v.realm_token){renderParticipant(false);return;}
+    try{
+      localStorage.setItem('mindx_realm_token',v.realm_token);
+      localStorage.setItem('mindx_participant',v.role);
+      if(v.role==='overlord')localStorage.setItem('mindx_overlord_verified','1');
+      else localStorage.removeItem('mindx_overlord_verified');
+    }catch(e){}
+    // Arrived from a gated page → return with the token so the tier gate admits us.
+    var from=qparam('from');
+    if(from&&from.charAt(0)==='/'&&from.charAt(1)!=='/'){
+      location.href=from+(from.indexOf('?')>=0?'&':'?')+'t='+encodeURIComponent(v.realm_token);
+      return;
+    }
+    if(v.role==='overlord')renderOverlord(addr);
+    else renderParticipant(v.role==='member');
+  }catch(e){ renderParticipant(false); }
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  show('door-view'); // outer door only — no substrate, no detail, until connected
+  var btn=document.getElementById('connect-btn');
+  if(btn)btn.addEventListener('click',function(){ signInRealm(); });
+  var mb=document.getElementById('member-btn');
+  if(mb)mb.addEventListener('click',function(){ signInRealm(); }); // sign proves the tier (member via token/courtesy)
+  if(window.ethereum&&window.ethereum.on)window.ethereum.on('accountsChanged',function(){
+    try{localStorage.removeItem('mindx_realm_token');localStorage.removeItem('mindx_overlord_verified');}catch(e){}
+    show('door-view');
+  });
+});
+</script>
+</body>
+</html>

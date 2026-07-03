@@ -1,20 +1,49 @@
 """
-mindx.catalogue — Phase 0 instrumentation.
+mindx.catalogue — knowledge catalogue.
 
-A single canonical append-only event stream that mirrors writes from the
-disparate existing logs (process_trace.jsonl, godel_choices.jsonl,
-boardroom_sessions.jsonl, STM tree). The original logs remain authoritative;
-this module is purely additive, so the catalogue can be deleted and rebuilt
-from the source logs without losing memory.
+Phase 0 (instrumentation): a single canonical append-only event stream
+(``events.py`` + ``log.py``) that mirrors writes from the disparate existing
+logs into ``data/logs/catalogue_events.jsonl``. The original logs remain
+authoritative; this is purely additive and rebuildable.
 
-This is Phase 0: typed sink + emit helper. No projectors. The Phase 1+ design
-contract (Dataplex six-resource model, hybrid retrieval, federation) lives in
-docs/KNOWLEDGE_CATALOGUE.md.
+Phase 1 (read-model): a CQRS projection of that stream into a queryable,
+semantically-searchable read-model in Postgres (``model.py`` + ``projector.py``
++ ``memory_pgvector.catalogue_*``). Never the source of truth — drop the
+read-model and replay the log to rebuild.
 
-Plan: /home/hacker/.claude/plans/purring-humming-stonebraker.md
+The Phase 2+ design contract (Dataplex six-resource model in dedicated graph /
+vector / search stores, lineage, federation) lives in docs/KNOWLEDGE_CATALOGUE.md.
 """
 
 from .events import CatalogueEvent, EVENT_KINDS, emit_catalogue_event
 from .log import CatalogueEventLog
+from .model import (
+    ENTRY_KINDS,
+    EVENTKIND_TO_ENTRYKIND,
+    Entry,
+    EntryDraft,
+    EntryLink,
+    derive_entry,
+    mint_urn,
+)
 
-__all__ = ["CatalogueEvent", "EVENT_KINDS", "emit_catalogue_event", "CatalogueEventLog"]
+__all__ = [
+    "CatalogueEvent",
+    "EVENT_KINDS",
+    "emit_catalogue_event",
+    "CatalogueEventLog",
+    "ENTRY_KINDS",
+    "EVENTKIND_TO_ENTRYKIND",
+    "Entry",
+    "EntryDraft",
+    "EntryLink",
+    "derive_entry",
+    "mint_urn",
+]
+
+
+def get_projector(name: str = "entries", version: str = "v1"):
+    """Lazy accessor for CatalogueProjector (avoids importing memory_pgvector /
+    asyncpg at package import time — keeps Phase-0 emit paths dependency-light)."""
+    from .projector import CatalogueProjector
+    return CatalogueProjector(name=name, version=version)

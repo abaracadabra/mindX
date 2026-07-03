@@ -16,6 +16,7 @@ Sandbox Configuration:
 This ensures integration with the update request system and pattern learning
 from simple_coder.py operations.
 """
+import ast
 import asyncio
 import json
 import shlex
@@ -29,6 +30,7 @@ from typing import Dict, Any, Optional, List, Callable, Awaitable, TypeAlias, Tu
 
 from agents.core.bdi_agent import BaseTool
 from agents.memory_agent import MemoryAgent
+from agents.simple_coder_tools import Sandbox, SandboxPolicy, SandboxViolation
 from utils.config import Config, PROJECT_ROOT
 from utils.logging_config import get_logger
 from llm.llm_interface import LLMHandlerInterface
@@ -75,6 +77,12 @@ class SimpleCoderAgent(BaseTool):
         self.current_working_directory: Path = self.sandbox_working_dir
         self.active_venv_bin_path: Optional[Path] = None
 
+        # The boundary. All filesystem + subprocess containment is delegated to
+        # simplecoder.tools.Sandbox (one thing, done well, exhaustively tested in
+        # tests/test_simple_coder_sandbox.py). The agent above it only routes.
+        self._sandbox: Sandbox = Sandbox(self.sandbox_root, policy=self._build_sandbox_policy())
+        self.logger.info(f"{self.log_prefix} Sandbox boundary: {self._sandbox.info()}")
+
         # Enhanced capabilities
         self.coding_history: List[Dict[str, Any]] = []
         self.project_context: Dict[str, Any] = {}
@@ -109,6 +117,7 @@ class SimpleCoderAgent(BaseTool):
             "analyze_project": self._analyze_project,
             "suggest_improvements": self._suggest_improvements,
             "create_documentation": self._create_documentation,
+            "audit_package": self._audit_package,
             
             # Learning and adaptation
             "learn_from_execution": self._learn_from_execution,
@@ -188,37 +197,34 @@ class SimpleCoderAgent(BaseTool):
         
         return sandbox_abs_path / "working"  # Return working directory as the sandbox root
 
+    def _build_sandbox_policy(self) -> SandboxPolicy:
+        """Map this agent's JSON config onto the sandbox policy (one source of
+        truth for limits). Unset keys fall back to the hardened defaults."""
+        cd = self.config_data
+        base = SandboxPolicy()
+        max_file_mb = cd.get("max_file_size_mb", base.max_file_bytes // (1024 * 1024))
+        from dataclasses import replace
+        return replace(
+            base,
+            allowed_commands=frozenset(cd.get("allowed_shell_commands", base.allowed_commands)),
+            command_timeout=int(cd.get("command_timeout_seconds", base.command_timeout)),
+            max_file_bytes=int(max_file_mb) * 1024 * 1024,
+            allow_inline_code=bool(cd.get("allow_inline_code", base.allow_inline_code)),
+            use_os_isolation=bool(cd.get("use_os_isolation", base.use_os_isolation)),
+        )
+
     def _resolve_and_check_path(self, path_str: str) -> Optional[Path]:
-        """
-        Resolves a path relative to the CWD and ensures it's within the sandbox.
-        
-        The sandbox structure is:
-        - simple_coder_sandbox/ (root)
-        -   working/ (default working directory)
-        -   completed/
-        -   projects/
-        -   temp/
-        -   tests/
-        
-        All operations are restricted to the sandbox root to prevent path traversal.
+        """Resolve ``path_str`` against the CWD and prove it stays in the sandbox.
+
+        Delegates to simplecoder.tools.Sandbox (lexical + realpath containment,
+        symlink-escape rejection). Returns the resolved ``Path`` or ``None`` when
+        the path crosses the boundary — preserving the prior return contract so
+        all existing callers are unchanged.
         """
         try:
-            # Handle absolute paths within the sandbox by stripping the root
-            if Path(path_str).is_absolute():
-                # This is a potential security risk if not handled carefully
-                # We will treat it as relative to the sandbox root
-                path_str = str(Path(path_str).relative_to('/'))
-                
-            resolved_path = (self.current_working_directory / path_str).resolve()
-            
-            # Check that the resolved path is within the sandbox root (not just working dir)
-            # This allows access to all subdirectories within the sandbox
-            if not resolved_path.is_relative_to(self.sandbox_root):
-                self.logger.error(f"Path Traversal DENIED. Attempt to access '{path_str}' which resolves outside the sandbox root '{self.sandbox_root}'.")
-                return None
-            return resolved_path
-        except Exception:
-            self.logger.error(f"Path validation failed for '{path_str}'.", exc_info=True)
+            return self._sandbox.resolve(path_str, cwd=self.current_working_directory)
+        except SandboxViolation as e:
+            self.logger.error(f"{self.log_prefix} Path denied: {e}")
             return None
 
     async def _list_directory(self, path: str = ".", detail: bool = False) -> Dict[str, Any]:
@@ -281,41 +287,52 @@ class SimpleCoderAgent(BaseTool):
         return {"status": "SUCCESS", "message": "Venv deactivated."}
 
     async def _run_shell_command(self, command: str) -> Dict[str, Any]:
+        """Run an allowlisted command through the sandbox boundary.
+
+        The boundary enforces: binary allowlist, argument-path containment
+        (so an allowlisted ``cat``/``rm`` cannot touch files outside the
+        sandbox), escape-flag denial, a scrubbed env (no host secrets), POSIX
+        resource limits, process-group kill on timeout, and bounded output —
+        plus kernel-level isolation when bwrap/nsjail is usable.
+        """
+        extra_env = None
+        if self.active_venv_bin_path:
+            base_path = self._sandbox.scrubbed_env().get("PATH", "")
+            extra_env = {"PATH": f"{self.active_venv_bin_path}{os.pathsep}{base_path}"}
+        self.logger.info(f"{self.log_prefix} Executing in '{self.current_working_directory}': {command!r}")
         try:
-            command_parts = shlex.split(command)
-            command_name = command_parts[0]
-        except (ValueError, IndexError): return {"status": "ERROR", "message": "Invalid command string."}
-        if command_name not in self.config_data.get("allowed_shell_commands", []):
-            return {"status": "ERROR", "message": f"Command '{command_name}' is not in the allowlist."}
-        env = os.environ.copy()
-        if self.active_venv_bin_path: env["PATH"] = f"{self.active_venv_bin_path}{os.pathsep}{env.get('PATH', '')}"
-        
-        self.logger.info(f"Executing in '{self.current_working_directory}': {command_parts}")
-        try:
-            process = await asyncio.wait_for(asyncio.create_subprocess_exec(*command_parts, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=self.current_working_directory, env=env), timeout=self.command_timeout)
-            stdout, stderr = await process.communicate()
-            result = {"status": "SUCCESS" if process.returncode == 0 else "FAILURE", "return_code": process.returncode, "stdout": stdout.decode('utf-8', 'ignore').strip(), "stderr": stderr.decode('utf-8', 'ignore').strip()}
-            if result["status"] == "FAILURE": self.logger.warning(f"Shell command failed. Stderr: {result['stderr']}")
-            return result
-        except FileNotFoundError: return {"status": "ERROR", "message": f"Shell command not found: '{command_name}'."}
-        except Exception as e: return {"status": "ERROR", "message": f"An exception occurred: {str(e)}"}
+            result = await self._sandbox.run(
+                command, cwd=self.current_working_directory, extra_env=extra_env
+            )
+        except SandboxViolation as e:
+            self.logger.warning(f"{self.log_prefix} Command denied: {e}")
+            return {"status": "ERROR", "message": str(e)}
+        if result.get("status") == "FAILURE":
+            self.logger.warning(f"{self.log_prefix} Shell command failed. Stderr: {result.get('stderr','')[:500]}")
+        return result
 
     async def _read_file(self, path: str) -> Dict[str, Any]:
-        file_path = self._resolve_and_check_path(path)
-        if not file_path or not file_path.is_file(): return {"status": "ERROR", "message": f"Path is not a file: {path}"}
+        """Read a file through the boundary (containment + size-limit enforced)."""
         try:
-            content = await asyncio.to_thread(file_path.read_text, encoding='utf-8')
+            content = await asyncio.to_thread(
+                self._sandbox.read_text, path, cwd=self.current_working_directory
+            )
             return {"status": "SUCCESS", "content": content}
+        except SandboxViolation as e:
+            return {"status": "ERROR", "message": str(e)}
         except Exception as e:
             return {"status": "ERROR", "message": f"Error reading file: {e}"}
 
     async def _write_file(self, path: str, content: str) -> Dict[str, Any]:
-        file_path = self._resolve_and_check_path(path)
-        if not file_path: return {"status": "ERROR", "message": f"Invalid or insecure path: {path}"}
+        """Write a file through the boundary (containment + size-limit enforced)."""
         try:
-            await asyncio.to_thread(file_path.parent.mkdir, parents=True, exist_ok=True)
-            await asyncio.to_thread(file_path.write_text, content, encoding='utf-8')
-            return {"status": "SUCCESS", "message": f"File written successfully to {path}."}
+            p = await asyncio.to_thread(
+                self._sandbox.write_text, path, content, cwd=self.current_working_directory
+            )
+            rel = p.relative_to(self.sandbox_root)
+            return {"status": "SUCCESS", "message": f"File written successfully to {rel}."}
+        except SandboxViolation as e:
+            return {"status": "ERROR", "message": str(e)}
         except Exception as e:
             return {"status": "ERROR", "message": f"Error writing file: {e}"}
 
@@ -328,6 +345,134 @@ class SimpleCoderAgent(BaseTool):
             return {"status": "SUCCESS", "message": "File deleted successfully."}
         except Exception as e:
             return {"status": "ERROR", "message": f"Error deleting file: {e}"}
+
+    # ── package audit (inspect → extract → static risk scan) ─────────────────
+    # Risk taxonomy: a static, no-exec read of every extracted *.py via ``ast``,
+    # plus a text read of declarative members (.agent / .container / manifests).
+    # This is the evidence SEA weighs in evaluate_external_package_adoption().
+    _RISK_IMPORTS: Dict[str, str] = {
+        "subprocess": "process_exec", "socket": "network", "urllib": "network",
+        "requests": "network", "http": "network", "ftplib": "network",
+        "ctypes": "native_code", "pickle": "deserialization", "marshal": "deserialization",
+    }
+    _RISK_CALLS: Dict[str, str] = {
+        "eval": "dynamic_exec", "exec": "dynamic_exec", "compile": "dynamic_exec",
+        "__import__": "dynamic_import",
+    }
+
+    def _scan_python_source(self, name: str, source: str) -> Tuple[List[str], List[Dict[str, Any]]]:
+        """AST static scan of one module. Returns (imports, risk_findings)."""
+        imports: List[str] = []
+        findings: List[Dict[str, Any]] = []
+        try:
+            tree = ast.parse(source, filename=name)
+        except SyntaxError as exc:
+            findings.append({"severity": "high", "file": name, "kind": "syntax_error", "detail": str(exc)})
+            return imports, findings
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    top = alias.name.split(".")[0]
+                    imports.append(alias.name)
+                    if top in self._RISK_IMPORTS:
+                        findings.append({"severity": "medium", "file": name,
+                                         "kind": self._RISK_IMPORTS[top], "detail": f"import {alias.name}"})
+            elif isinstance(node, ast.ImportFrom):
+                top = (node.module or "").split(".")[0]
+                imports.append(node.module or "")
+                if top in self._RISK_IMPORTS:
+                    findings.append({"severity": "medium", "file": name,
+                                     "kind": self._RISK_IMPORTS[top], "detail": f"from {node.module} import ..."})
+            elif isinstance(node, ast.Call):
+                fn = node.func
+                fname = fn.id if isinstance(fn, ast.Name) else (fn.attr if isinstance(fn, ast.Attribute) else None)
+                if fname in self._RISK_CALLS:
+                    findings.append({"severity": "high", "file": name,
+                                     "kind": self._RISK_CALLS[fname], "detail": f"{fname}() call"})
+                if isinstance(fn, ast.Attribute) and fn.attr == "system" and isinstance(fn.value, ast.Name) and fn.value.id == "os":
+                    findings.append({"severity": "high", "file": name,
+                                     "kind": "process_exec", "detail": "os.system() call"})
+        return sorted(set(i for i in imports if i)), findings
+
+    async def _audit_package(self, archive: str = "projects/LLMFIT.zip",
+                             extract_to: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+        """Safely inspect → extract → statically audit a sandboxed package.
+
+        Produces the ``audit_summary`` that SEA consumes to decide adopt/reject.
+        Never executes any extracted code; the .py scan is ast-only.
+        """
+        sb = self._sandbox
+        stem = Path(archive).stem
+        dest = extract_to or f"projects/{stem}_extracted"
+
+        inspect = sb.inspect_zip(archive)
+        if inspect.get("status") != "SUCCESS":
+            return {"status": "ERROR", "stage": "inspect", "message": "archive not a valid zip",
+                    "inspect": inspect}
+        blocking = [i for i in inspect.get("potential_issues", [])
+                    if i != "none" and i.split(":")[0] in
+                    ("path_traversal", "too_many_members", "decompressed_too_large", "suspicious_ratio", "corrupt_member")]
+        if blocking:
+            return {"status": "ERROR", "stage": "inspect", "message": "archive rejected by safety checks",
+                    "blocking_issues": blocking, "inspect": inspect}
+
+        extract = await sb.extract_zip(archive, dest)
+        if extract.get("status") != "SUCCESS":
+            return {"status": "ERROR", "stage": "extract", "message": "extraction failed", "extract": extract}
+
+        files: List[Dict[str, Any]] = []
+        all_imports: List[str] = []
+        risk_findings: List[Dict[str, Any]] = []
+        licenses: set = set()
+        dependency_hints: set = set()
+        boundary_notes: List[str] = []
+
+        for member in extract.get("extracted_names", []):
+            rel = f"{dest}/{member}"
+            try:
+                text = sb.read_text(rel)
+            except SandboxViolation as exc:
+                files.append({"name": member, "error": str(exc)})
+                continue
+            entry: Dict[str, Any] = {"name": member, "bytes": len(text.encode("utf-8", "replace"))}
+            if member.endswith(".py"):
+                imps, finds = self._scan_python_source(member, text)
+                entry["imports"] = imps
+                entry["risk_findings"] = finds
+                all_imports.extend(imps)
+                risk_findings.extend(finds)
+            # license + dependency + boundary signals from any text member
+            for line in text.splitlines():
+                low = line.lower()
+                if "spdx-license-identifier" in low or "\"license\"" in low or "license:" in low:
+                    licenses.add(line.strip().lstrip("#").strip())
+                if any(tok in low for tok in ("pip install", "uv tool install", "requirements", "image=", '"repo"')):
+                    dependency_hints.add(line.strip().lstrip("#").strip())
+                if any(tok in low for tok in ("never vendored", "invoked, never", "fail-open", "fail_open", "loopback", "127.0.0.1")):
+                    boundary_notes.append(line.strip().lstrip("#").strip())
+            files.append(entry)
+
+        sev_counts = {"high": 0, "medium": 0, "low": 0}
+        for f in risk_findings:
+            sev_counts[f.get("severity", "low")] = sev_counts.get(f.get("severity", "low"), 0) + 1
+        aggregate = "high" if sev_counts["high"] else ("medium" if sev_counts["medium"] else "low")
+
+        audit_summary = {
+            "package_name": stem.lower(),
+            "archive": archive,
+            "extract_path": dest,
+            "member_count": inspect.get("member_count"),
+            "files": files,
+            "imports": sorted(set(all_imports)),
+            "risk_findings": risk_findings,
+            "severity_counts": sev_counts,
+            "aggregate_risk": aggregate,
+            "declared_license": sorted(licenses) or ["undeclared"],
+            "declared_dependencies": sorted(dependency_hints) or ["none_detected"],
+            "external_boundary_notes": sorted(set(boundary_notes)),
+            "inspect": inspect,
+        }
+        return {"status": "SUCCESS", "audit_summary": audit_summary}
 
     async def execute(self, operation: str = None, **kwargs) -> Dict[str, Any]:
         """Enhanced execute method with intelligent routing."""

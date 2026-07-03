@@ -1,0 +1,8 @@
+# Inference facet for a blockchain agent — NO model pinning.
+# The logical name is resolved at call time by the self-aware selector, which
+# cascades to local Ollama on failure (see blueprint_agent._resolve_active_handler).
+model_facet: blockchain.<name>
+task_class: general          # general | reasoning | code_generation | simple_chat
+logical_model: auto          # 'auto' => selector decides; never hard-pin a provider
+pinned: false
+note: resolved by the self-aware selector; cascades to local Ollama

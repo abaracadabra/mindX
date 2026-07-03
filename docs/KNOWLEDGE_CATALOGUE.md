@@ -1,8 +1,23 @@
 # mindX Knowledge Catalogue — Subsystem Specification
 
-> **Status (2026-04-26):** Phase 0 instrumentation is implemented (`agents/catalogue/`, mirror calls in `memory_agent.py`, `machine_dreaming.py`, `daio/governance/boardroom.py`). Phases 1+ below are the **design contract** — not yet built.
+> **Status (2026-04-26):** Phase 0 instrumentation is implemented (`agents/catalogue/`, mirror calls in `memory_agent.py`, `machine_dreaming.py`, `daio/governance/boardroom.py`).
 >
-> See [`agents/catalogue/__init__.py`](../agents/catalogue/__init__.py) for the live Phase 0 implementation, and the implementation plan at `~/.claude/plans/purring-humming-stonebraker.md`.
+> **Status (2026-06-04): Phase 1 (read-model) implemented.** The catalogue event stream is now folded into a queryable, semantically-searchable Postgres read-model — built pragmatically on the **existing** pgvector + Ollama embedding pipeline, with **zero new container services** (the named graph/vector/search stores below are deferred — see *Phase-1 deferrals*). What shipped:
+>
+> - **Core model** — [`agents/catalogue/model.py`](../agents/catalogue/model.py): `Entry`/`EntryLink` Pydantic, `mint_urn()` (the idempotency key), `EVENTKIND_TO_ENTRYKIND` (all 38 EventKinds mapped), and per-kind extractors (bespoke for the 14 active kinds, `derive_generic` fallback for the dormant 24).
+> - **Projector** — [`agents/catalogue/projector.py`](../agents/catalogue/projector.py): `CatalogueProjector` folds events → `catalogue_entries`. Idempotent (URN upsert merges `source_event_ids`, keeps newest `ts`), watermark-resumable (byte-offset in `catalogue_state`), embedding-decoupled (rows written `embedding=NULL` first; embedded via `generate_embedding(interactive=False)` under the ResourceGovernor gate), advisory-locked against backfill/live-loop races.
+> - **Schema** — [`memory_pgvector.init_catalogue_schema()`](../agents/memory_pgvector.py): one flat `catalogue_entries` (URN PK + JSONB `payload` aspects + inline JSONB `links` + `VECTOR(1024)` + `TSVECTOR`) + `catalogue_state`. The six-resource model is honored *conceptually* — aspects-as-JSONB, EntryLinks inline — not as separate stores.
+> - **Hybrid search** — `catalogue_hybrid_search()`: pgvector cosine + tsvector `ts_rank_cd`, RRF-fused (k=60), graceful degradation (embeddings down → FTS-only). Cross-encoder rerank deferred (flagged `"rerank":"deferred"`).
+> - **Query API** (auto-public via the `/insight/` prefix, `?h=true` plain-text): `GET /insight/catalogue/{recent,search,entry,stats,kinds}`.
+> - **Backfill** — [`scripts/catalogue_backfill.py`](../scripts/catalogue_backfill.py): one-shot replay (`--include-archives`), structure-first (`--no-embed`) then incremental embed (live loop or `--embed-only`).
+> - **Live wiring** — `_periodic_catalogue_projector()` in `main_service.py` (5-min incremental + embed sweep; `MINDX_CATALOGUE_PROJECT_INTERVAL_S=0` disables) + boot `init_catalogue_schema()`.
+> - **Tests** — `tests/test_catalogue_projector.py` (URN stability, mapping totality, extractor coverage, dry-run idempotency; DB tests pg-gated).
+>
+> Phase 1 collapses the design's `proj_entries + proj_search + proj_vector` into one Postgres-backed projector. The non-violation contract holds: every entry carries `source_event_ids` back into the log; drop the read-model tables and replay to rebuild.
+>
+> **Phase-1 deferrals → see the [Phase 2+ Roadmap](#phase-2-roadmap-deferred) below** for the full, trigger-gated plan. In brief: **Tier A** (VPS-feasible next steps, additive projectors on the existing stack) — lineage projector, skill-registry + `skill.invoke/result` activation, cross-encoder rerank, policy/TTL projector; **Tier B** (gated on scale or a second node) — dedicated graph DB (Kuzu/AGE), Qdrant + Meilisearch, NATS JetStream substrate, federation (leaf-nodes/pycrdt/IPFS), `openbdk_bridge`. Each carries an explicit graduation trigger.
+>
+> See [`agents/catalogue/__init__.py`](../agents/catalogue/__init__.py) for the package, and the Phase-1 plan at `~/.claude/plans/cozy-wibbling-taco.md` (original Phase-0 plan: `~/.claude/plans/purring-humming-stonebraker.md`).
 
 ---
 
@@ -276,13 +291,47 @@ The catalogue can be added to a running mindX system without disruption because 
 
 **Phase 0 — instrumentation only.** Deploy `mindx.catalogue.log` and `mindx.catalogue.core` as libraries inside the existing mindX runtime. Existing memory writes and tool calls begin emitting `CatalogueEvent` records to JetStream. No projectors yet; the catalogue is dark. This is purely additive — if the catalogue module crashes, mindX keeps running. **(In mindX as of 2026-04-26: the file-based equivalent is implemented at `agents/catalogue/`, writing to `data/logs/catalogue_events.jsonl`. NATS JetStream is deferred — the JSONL substrate is sufficient at current event volume.)**
 
-**Phase 1 — backfill from history.** Run a one-shot replay job that reads the historical log from offset zero, synthesises `CatalogueEvent` records for each memory and tool call, and publishes them to JetStream with their original timestamps preserved in a `replay` facet. Stand up `proj_entries`, `proj_search`, and `proj_vector` to consume the stream. The catalogue now reflects historical state without touching memory.
+**Phase 1 — backfill from history.** Run a one-shot replay job that reads the historical log from offset zero, synthesises `CatalogueEvent` records for each memory and tool call, and publishes them to JetStream with their original timestamps preserved in a `replay` facet. Stand up `proj_entries`, `proj_search`, and `proj_vector` to consume the stream. The catalogue now reflects historical state without touching memory. **(✅ Shipped 2026-06-04 — see the Phase-1 status banner at the top. Built pragmatically: `proj_entries + proj_search + proj_vector` are collapsed into one Postgres-backed projector with pgvector + tsvector; no separate stores. Backfill is `scripts/catalogue_backfill.py`.)**
 
 **Phase 2 — graph + lineage + skills.** Add `proj_graph`, `proj_lineage`, and `proj_skills`. Begin emitting OpenLineage RunEvents from the agent runtime (every skill invocation = one Run). The skill registry MCP server comes online. Agents start calling `mindx.catalogue.search.search(...)` for skill discovery; the legacy hardcoded skill list is kept as a fallback for two release cycles.
 
 **Phase 3 — federation and policy.** Stand up `mindx.catalogue.federation` with NATS leaf-node peering across mindX, AgenticPlace, and BANKON nodes. Activate `mindx.catalogue.policy` with TTL/retention rules — note these only act on projections, never on the log. Optionally enable `mindx.catalogue.openbdk_bridge` for periodic IPLD snapshot anchoring; this remains opt-in per epoch.
 
 At every phase the rollback is trivial: stop the projectors, drop the read-model databases, the log is untouched and mindX continues operating on its memory substrate. **This non-disruptive adoptability is the direct payoff of the CQRS/projection architecture** — it would be impossible if the catalogue were canonical state.
+
+## Phase 2+ Roadmap (deferred)
+
+Phase 1 shipped on a single 2-core/8GB VPS by collapsing the read side onto the infrastructure mindX already runs (Postgres + pgvector + Ollama). The remaining design-contract components are deferred — not abandoned. They split cleanly into two tiers by **what gates them**, and each carries an explicit graduation trigger so this is a roadmap, not a wishlist. Nothing here changes the axiom: every addition is another projector/consumer of the same log; the log stays the source of truth.
+
+### Tier A — Read-side enrichment (VPS-feasible now; additive projectors on the existing stack)
+
+These need no new container services. They are the natural next increments because each reuses the Phase-1 substrate (`catalogue_entries`, the projector loop, pgvector, the `/insight/catalogue/*` surface) and each is independently shippable + rollback-trivial.
+
+1. **Lineage projector (`proj_lineage`).** *Adds:* a queryable execution-lineage DAG — "why does the agent know X?", "which run produced this memory?", "what did belief B descend from?". Phase 1 already captures `derivedFrom / producedBy / wasInformedBy / scored` as inline `EntryLink`s; this phase folds `parent_event_id` chains + run START/COMPLETE/FAIL into a traversable graph and exposes `GET /insight/catalogue/lineage?urn=…`. *Reuses:* a recursive CTE over the `links` JSONB, or a dedicated `catalogue_edges(src_urn, type, dst_urn, t_valid_from, t_valid_to)` table (bi-temporal, invalidate-never-delete). *Trigger:* now — the link data already exists, only the traversal API is missing. *Effort:* small.
+
+2. **Skill/tool registry + `skill.invoke`/`skill.result` activation (`proj_skills`).** *Adds:* the "agents discover their own skills" payoff — project `skill` entries with MCP-compatible descriptors (`name`, `description`, `inputSchema`, `annotations`) + rolling `success_by_task_pattern` stats, and let agents query the catalogue instead of receiving the whole tool list in-prompt (Anthropic Tool-Search pattern). *Reuses:* the dormant `skill.invoke`/`skill.result`/`tool.result` EventKinds (currently mapped → `tool_invocation` but never emitted — wire the emit sites), pgvector embeddings over `name+description`, and the existing search. *Trigger:* when tool/skill count or routing churn makes a hardcoded list painful. *Effort:* medium (emit-site wiring is the bulk).
+
+3. **Cross-encoder rerank leg.** *Adds:* a final precision pass over the RRF-fused candidates with `bge-reranker-v2-m3`; today `catalogue_hybrid_search` returns `"rerank":"deferred"`. *Reuses:* the existing two-leg fusion; the reranker runs CPU-bound, so gate it behind the ResourceGovernor and make it opt-in per query (`?rerank=true`) so the default path stays fast. *Trigger:* when retrieval precision (not recall) becomes the bottleneck. *Effort:* small–medium.
+
+4. **Policy / TTL projector (`proj_policy`).** *Adds:* retention, eviction, summarize, and freeze policies acting **only on the read-model, never the log** (GDPR-style erasure lives in side tables per the design). *Reuses:* the dream-cycle tick as the heartbeat; policies are themselves catalogue entries (recursive metadata). *Trigger:* when `catalogue_entries` growth (currently ~77k rows, unbounded) warrants summarization/eviction of cold low-value entries. *Effort:* medium.
+
+### Tier B — Dedicated infrastructure & distribution (gated on scale or a second node)
+
+These require infrastructure beyond a single small VPS, or a second live node. They are deferred until a concrete trigger fires — pgvector + tsvector + JSONL comfortably serve the current scale, and standing up these services earlier is cost without payoff.
+
+5. **Dedicated graph DB (Apache AGE / Kuzu).** *Replaces:* recursive-CTE-over-JSONB link traversal, when lineage paths get deep or community detection (Leiden/GraphRAG) is wanted. AGE is a Postgres extension (could live on the same box); Kuzu is embedded. *Trigger:* edge count > ~1M or multi-hop lineage queries exceed ~100 ms.
+
+6. **Dedicated vector store (Qdrant) + search engine (Meilisearch).** *Replaces:* pgvector seq-scan cosine and tsvector BM25, when row count outgrows them or BM25 needs typo-tolerance/facets/synonyms. Both need their own containers + RAM. *Trigger:* `catalogue_entries` > ~1M rows **or** search p95 > ~150 ms **or** a need for ANN at scale (then add `ivfflat`/`hnsw` to pgvector first as the cheaper intermediate step).
+
+7. **NATS JetStream event substrate.** *Replaces:* the append-only JSONL + byte-offset watermark, when there are multiple writer processes/nodes or projectors must scale horizontally with durable consumer checkpointing. *Trigger:* the first multi-process writer or the start of federation (whichever comes first).
+
+8. **Federation (`mindx.catalogue.federation`).** *Adds:* cross-instance sync across the AgenticPlace ↔ mindX ↔ BANKON triangle — NATS leaf-node mirrors (transport) + `pycrdt` (shared aspect-type/glossary/tag CRDTs) + Kubo/IPFS (content-addressed snapshots). *Depends on:* #7. *Trigger:* a second live catalogue node exists.
+
+9. **`openbdk_bridge`.** *Adds:* opt-in, per-epoch anchoring of the catalogue's IPLD snapshot root on whatever chain openBDK maps — `anchor_snapshot(epoch) → tx_hash`, `verify_anchor`. Deliberately thin; knows nothing of catalogue internals. *Depends on:* #8's snapshots. *Trigger:* a requirement for cryptographically verifiable, externally-anchored catalogue state.
+
+### Sequencing
+
+Tier A is the recommended next work, in listed order (lineage → skills → rerank → policy): highest value per unit effort, all on the current box, each independently reversible. Tier B is demand-driven — graduate an item only when its trigger fires, and prefer the cheapest intermediate (pgvector ANN index before Qdrant; AGE-on-Postgres before a separate graph service) before adding a service. The whole roadmap preserves the Phase-1 contract: additive projectors, log-as-source-of-truth, drop-the-read-model-and-replay rollback.
 
 ## Conclusion
 

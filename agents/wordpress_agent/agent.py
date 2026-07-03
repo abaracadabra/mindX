@@ -193,8 +193,10 @@ class WordpressAgent:
         slug: str | None = None,
         author: int | None = None,
         meta: dict[str, Any] | None = None,
+        post_id: int | None = None,
     ) -> PublishResult:
-        """Publish a finished article.
+        """Publish a finished article, or update an existing one when ``post_id``
+        is given (WordPress REST treats POST /posts/{id} as an in-place update).
 
         Scheduling is handled by WordPress itself: pass ``status="future"`` with
         a future ``date`` and WordPress's cron will publish at that time. No
@@ -229,7 +231,8 @@ class WordpressAgent:
         if meta:
             payload["meta"] = meta
 
-        response = await self._request_with_retry("POST", "/posts", json=payload)
+        endpoint = f"/posts/{int(post_id)}" if post_id is not None else "/posts"
+        response = await self._request_with_retry("POST", endpoint, json=payload)
         if response.status_code >= 400:
             raise PublishError(
                 f"Publish failed with status {response.status_code}: {response.text}"
@@ -317,3 +320,171 @@ class WordpressAgent:
             "user": self.settings.user,
             "wp_user_id": response.json().get("id") if ok else None,
         }
+
+    async def get_post(self, post_id: int) -> dict[str, Any]:
+        """Read a single post back from the target — the publish-confirmation path.
+
+        AuthorAgent publishes, then calls this to confirm the post landed with
+        the expected status/link straight from WordPress (authoritative source,
+        not the publish return value).
+        """
+        headers = await self._auth_headers()
+        resp = await self._client.get(
+            f"/posts/{post_id}",
+            params={"_fields": "id,status,link,slug,title,date_gmt,modified_gmt,excerpt"},
+            headers=headers,
+        )
+        if resp.status_code >= 400:
+            raise WordpressAgentError(
+                f"get_post({post_id}) failed: {resp.status_code} {resp.text[:200]}"
+            )
+        return resp.json()
+
+    async def list_all_posts(
+        self,
+        *,
+        statuses: tuple[str, ...] = ("publish",),
+        per_page: int = 100,
+        max_pages: int = 50,
+    ) -> list[dict[str, Any]]:
+        """Paginate the WP REST API and return every post in ``statuses``.
+
+        Non-public statuses (draft/pending/private/future) require auth — the
+        per-request auth header is always attached. Pagination follows the
+        ``X-WP-TotalPages`` header; stops at ``max_pages`` as a runaway guard.
+        """
+        headers = await self._auth_headers()
+        out: list[dict[str, Any]] = []
+        page = 1
+        while page <= max_pages:
+            resp = await self._client.get(
+                "/posts",
+                params={
+                    "status": ",".join(statuses),
+                    "per_page": per_page,
+                    "page": page,
+                    "orderby": "date",
+                    "order": "desc",
+                    "_fields": "id,status,link,slug,title,date_gmt,modified_gmt,excerpt",
+                },
+                headers=headers,
+            )
+            # WP returns 400 with code rest_post_invalid_page_number once you
+            # page past the end — a clean stop signal.
+            if resp.status_code == 400 and "invalid_page" in resp.text:
+                break
+            if resp.status_code >= 400:
+                raise WordpressAgentError(
+                    f"list_all_posts failed (page {page}): {resp.status_code} {resp.text[:200]}"
+                )
+            batch = resp.json()
+            if not batch:
+                break
+            out.extend(batch)
+            total_pages = int(resp.headers.get("X-WP-TotalPages", "1") or "1")
+            if page >= total_pages:
+                break
+            page += 1
+        return out
+
+    async def build_catalogue(
+        self,
+        *,
+        statuses: tuple[str, ...] | None = None,
+    ) -> dict[str, Any]:
+        """Complete index catalogue of all publishings on the target.
+
+        Returns the serialized :class:`Catalogue` (host, counts-by-status,
+        newest-first post records). Drives the wordpress.tool ``/catalogue``
+        endpoint and the llms.txt renderer.
+        """
+        from .catalogue import ALL_INDEXED_STATUSES, Catalogue, PostRecord, host_from_base_url
+
+        use = statuses or ALL_INDEXED_STATUSES
+        raw = await self.list_all_posts(statuses=use)
+        cat = Catalogue(
+            host=host_from_base_url(self.settings.base_url_str),
+            generated_gmt=datetime.now(tz=timezone.utc).isoformat(),
+            posts=[PostRecord.from_wp(d) for d in raw],
+        )
+        return cat.to_dict()
+
+    async def fetch_llms_txt(self) -> dict[str, Any]:
+        """Fetch the live ``/llms.txt`` ingestion map from the target host.
+
+        Read-only interaction — the canonical file is served by the host's
+        plugin, not pushed by this agent. Returns ``{url, status_code, text}``.
+        """
+        host = self.settings.base_url_str
+        url = f"{host}/llms.txt"
+        # Plain client (no /wp-json base) for the site-root file.
+        async with httpx.AsyncClient(
+            timeout=self.settings.timeout,
+            headers={"User-Agent": self.settings.user_agent},
+            follow_redirects=True,
+        ) as client:
+            resp = await client.get(url)
+            return {
+                "url": url,
+                "status_code": resp.status_code,
+                "text": resp.text if resp.status_code < 400 else "",
+            }
+
+    async def llms_txt_report(self) -> dict[str, Any]:
+        """Build the catalogue, render a candidate llms.txt, fetch the live one,
+        and diff them — the wordpress.tool's full llms.txt interaction.
+        """
+        from .catalogue import Catalogue, PostRecord, diff_llms_txt, render_catalogue_llms_txt, host_from_base_url
+
+        cat_dict = await self.build_catalogue()
+        cat = Catalogue(
+            host=cat_dict["host"],
+            generated_gmt=cat_dict["generated_gmt"],
+            posts=[PostRecord(**{k: p[k] for k in (
+                "id", "status", "slug", "title", "link", "date_gmt", "modified_gmt", "excerpt"
+            )}) for p in cat_dict["posts"]],
+        )
+        rendered = render_catalogue_llms_txt(cat)
+        live = await self.fetch_llms_txt()
+        return {
+            "host": cat.host,
+            "catalogue": cat_dict,
+            "llms_txt_rendered": rendered,
+            "llms_txt_live": live,
+            "diff": diff_llms_txt(live.get("text", ""), rendered),
+        }
+
+    # ── soundcloud.tool — audio embeds (pure, no network) ─────────────────────
+    # SoundCloud's "Embed → WordPress" flow as a function, so AuthorAgent and the
+    # music4robots2dance2 plugin mint consistent players for any track/playlist.
+    # See agents/wordpress_agent/soundcloud.py + the SoundCloud WP help article:
+    # https://help.soundcloud.com/hc/en-us/articles/115003448667
+    @staticmethod
+    def soundcloud_playlist_embed(playlist_id: int | str, **kwargs: Any) -> str:
+        """Render a SoundCloud playlist/set ``<iframe>`` + attribution HTML."""
+        from . import soundcloud as sc
+        return sc.playlist_embed(playlist_id, **kwargs)
+
+    @staticmethod
+    def soundcloud_track_embed(track_id: int | str, **kwargs: Any) -> str:
+        """Render a single-track SoundCloud ``<iframe>`` + attribution HTML."""
+        from . import soundcloud as sc
+        return sc.track_embed(track_id, **kwargs)
+
+    @staticmethod
+    def soundcloud_embed_from_url(permalink: str, **kwargs: Any) -> str:
+        """Render an embed for any public SoundCloud permalink (track or set)."""
+        from . import soundcloud as sc
+        return sc.embed_from_url(permalink, **kwargs)
+
+    @staticmethod
+    def soundcloud_album_embed(key: str, **kwargs: Any) -> str:
+        """Embed a known album by key (``takit`` / ``music4robots2dance2``)."""
+        from . import soundcloud as sc
+        return sc.album_embed(key, **kwargs)
+
+    @staticmethod
+    def soundcloud_readme_md(key: str, *, artwork_url: str = "") -> str:
+        """GitHub-safe Markdown badge/thumbnail for a known album (no iframe)."""
+        from . import soundcloud as sc
+        return sc.readme_album_md(key, artwork_url=artwork_url)

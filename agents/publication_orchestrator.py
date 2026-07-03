@@ -49,6 +49,26 @@ from utils.config import PROJECT_ROOT
 logger = logging.getLogger("agents.publication_orchestrator")
 
 
+async def _emit_pub_event(
+    kind: str,
+    payload: Dict[str, Any],
+    *,
+    source_ref: Optional[str] = None,
+) -> None:
+    """Emit one publication.* catalogue event. Never raises."""
+    try:
+        from agents.catalogue import emit_catalogue_event
+        await emit_catalogue_event(
+            kind=kind,
+            actor="publication_orchestrator",
+            payload=payload,
+            source_log="governance/published_triggers.json",
+            source_ref=source_ref,
+        )
+    except Exception:
+        pass
+
+
 # Defaults — overridable via constructor for tests / dev.
 DEFAULT_BASE_DELAY_S    = 1800     # 30 min
 DEFAULT_JITTER_FRACTION = 0.4      # ± 40 % → effective window 18-42 min
@@ -140,9 +160,14 @@ class Ledger:
     def has(self, trigger_id: str) -> bool:
         return any(e.trigger_id == trigger_id for e in self.published)
 
-    def append_published(self, entry: LedgerEntry) -> None:
+    def append_published(self, entry: LedgerEntry, advance_clock: bool = True) -> None:
         self.published.append(entry)
-        if entry.published_at:
+        # advance_clock=False lets a side-channel cadence (e.g. the daily
+        # protocol series) record its publish WITHOUT moving the shared
+        # MIN_GAP_S clock — so it never coalesces a milestone / SEA / dream
+        # publish that fires soon after. Orthogonal cadences must not deter
+        # the improvement-event triggers.
+        if entry.published_at and advance_clock:
             self.last_published_at = max(self.last_published_at, entry.published_at)
         self.save()
 
@@ -224,12 +249,20 @@ class PublicationOrchestrator:
         self._milestone_status  = os.getenv("MINDX_PUBLICATION_MILESTONE_STATUS", "publish").strip().lower() or "publish"
         self._book_status       = os.getenv("MINDX_PUBLICATION_BOOK_STATUS",      "draft").strip().lower()   or "draft"
         self._journal_status    = os.getenv("MINDX_PUBLICATION_JOURNAL_STATUS",   "publish").strip().lower() or "publish"
+        # Daily protocol series — an orthogonal cadence (not a milestone
+        # trigger). Status falls back to env→draft; the live value is owned
+        # by AuthorAgent's settable schedule. The master enable flag lets an
+        # operator force the whole cadence off without touching the schedule.
+        self._protocol_status   = os.getenv("MINDX_PUBLICATION_PROTOCOL_STATUS", "draft").strip().lower()   or "draft"
+        self._protocol_series_enabled = os.getenv("MINDX_PROTOCOL_SERIES_ENABLED", "1").strip().lower() not in ("0", "false", "no", "off")
 
         # Liveness diagnostics — populated by the watchers each scan.
         self._last_sea_scan_at: Optional[float]    = None
         self._last_dream_scan_at: Optional[float]  = None
+        self._last_protocol_scan_at: Optional[float] = None
         self._first_sea_scan_logged: bool          = False
         self._first_dream_scan_logged: bool        = False
+        self._first_protocol_scan_logged: bool     = False
 
         # Wire direct callbacks if a coordinator was passed.
         if self.coordinator is not None:
@@ -238,6 +271,7 @@ class PublicationOrchestrator:
                 self.coordinator.subscribe("dream.report.written",       self.on_dream_book_edition)
                 self.coordinator.subscribe("book.edition.published",     self.on_book_edition_published)
                 self.coordinator.subscribe("journal.lunar.digest.ready", self.on_journal_lunar_digest)
+                self.coordinator.subscribe("mindxtrain.imprint.accepted", self.on_mindxtrain_imprint)
                 logger.info(
                     "PublicationOrchestrator: subscribed to "
                     "'sea.campaign.concluded' + 'dream.report.written' + "
@@ -254,17 +288,34 @@ class PublicationOrchestrator:
             return self._milestone_status
         if kind == "dream_book_edition":
             return self._dream_status
+        if kind == "dream_cycle_report":
+            return self._dream_status
+        if kind == "mindxtrain_imprint":
+            return "publish"  # a generation passing proof-of-recall is a milestone — publish it
         if kind == "book_edition":
             return self._book_status
         if kind == "journal_lunar_digest":
             return self._journal_status
+        if kind == "protocol_series":
+            # Status is owned by AuthorAgent's settable schedule (the x402
+            # frequency-as-a-service seam); fall back to env/draft.
+            try:
+                ps = self.author.get_publishing_schedule().get("protocol_series", {})
+                s = (ps.get("status") or self._protocol_status).strip().lower()
+                return s if s in ("draft", "publish") else "draft"
+            except Exception:
+                return self._protocol_status
         return "draft"  # unknown kinds default to safe
 
     # Lunar-cadence kinds fire at most ~1/day each by construction
     # (full moons + SEA milestones are rare). They are exempt from the
     # 6-hour MIN_GAP_S rate limit that protects against bursty routine
-    # SUCCESS / dream-cycle events.
-    _EXEMPT_FROM_MIN_GAP = frozenset({"sea_milestone", "book_edition", "journal_lunar_digest"})
+    # SUCCESS / dream-cycle events. The daily protocol series is also
+    # exempt AND records with advance_clock=False (see _schedule_publish),
+    # so it never deters a milestone / SEA / dream publish.
+    _EXEMPT_FROM_MIN_GAP = frozenset({
+        "sea_milestone", "book_edition", "journal_lunar_digest", "protocol_series",
+    })
 
     # ─── Direct callback entry points (coordinator pub/sub) ──────
 
@@ -298,20 +349,31 @@ class PublicationOrchestrator:
         )
 
     async def on_dream_book_edition(self, data: Dict[str, Any]) -> None:
-        """Coordinator subscriber for 'dream.report.written'. Only acts on
-        reports that triggered a book edition (full/new moon)."""
+        """Coordinator subscriber for 'dream.report.written'. Policy: publish a dream-cycle report on
+        EVERY dream cycle, and additionally compile a Book-of-mindX edition on full/new moon."""
         if not isinstance(data, dict):
             return
-        if not data.get("book_edition_triggered"):
+        ts = str(data.get("timestamp") or "")
+        if not ts:
             return
-        trigger_id = str(data.get("timestamp") or "")
-        if not trigger_id or self.ledger.has(trigger_id):
+        # Every dream cycle → a dream-cycle report (operator policy).
+        cycle_id = f"dream_cycle_{ts}"
+        if not self.ledger.has(cycle_id):
+            await self._schedule_publish(trigger_id=cycle_id, kind="dream_cycle_report", payload=data)
+        # Full/new moon → the deeper Book-of-mindX edition.
+        if data.get("book_edition_triggered") and not self.ledger.has(ts):
+            await self._schedule_publish(trigger_id=ts, kind="dream_book_edition", payload=data)
+
+    async def on_mindxtrain_imprint(self, data: Dict[str, Any]) -> None:
+        """Coordinator subscriber for 'mindxtrain.imprint.accepted' — a generation passed proof-of-recall
+        (the imprint gate), i.e. a model truly learned its training and was promoted to a servable model."""
+        if not isinstance(data, dict) or not data.get("accepted"):
             return
-        await self._schedule_publish(
-            trigger_id=trigger_id,
-            kind="dream_book_edition",
-            payload=data,
-        )
+        key = data.get("generation") or data.get("ollama_model") or data.get("served_model") or data.get("ts") or ""
+        trigger_id = f"mindxtrain_imprint_{key}"
+        if not key or self.ledger.has(trigger_id):
+            return
+        await self._schedule_publish(trigger_id=trigger_id, kind="mindxtrain_imprint", payload=data)
 
     async def on_book_edition_published(self, data: Dict[str, Any]) -> None:
         """Coordinator subscriber for 'book.edition.published' — emitted by
@@ -364,8 +426,13 @@ class PublicationOrchestrator:
         return {
             "watch_sea_alive":     self._last_sea_scan_at is not None,
             "watch_dreams_alive":  self._last_dream_scan_at is not None,
+            "watch_protocol_alive":self._last_protocol_scan_at is not None,
             "last_sea_scan_at":    self._last_sea_scan_at,
             "last_dream_scan_at":  self._last_dream_scan_at,
+            "last_protocol_scan_at": self._last_protocol_scan_at,
+            "protocol_series_enabled": self._protocol_series_enabled,
+            "protocol_schedule":   (self.author.get_publishing_schedule().get("protocol_series")
+                                    if hasattr(self.author, "get_publishing_schedule") else None),
             "ledger_path":         str(self.ledger_path),
             "ledger_entries":      len(self.ledger.published),
             "last_publish_at":     self.ledger.last_published_at or None,
@@ -431,7 +498,132 @@ class PublicationOrchestrator:
                 logger.warning(f"watch_dreams: scan failed: {e}")
             await asyncio.sleep(self.poll_interval_s)
 
+    async def watch_github(self) -> None:
+        """Watch mindX's own public git history. New commits are chronicled by
+        AuthorAgent; batches that rise to a milestone are published. Zero
+        network — local `git log`. Runs forever."""
+        logger.info(
+            f"PublicationOrchestrator: watching git history via github.awareness "
+            f"(poll={self.poll_interval_s}s)"
+        )
+        while True:
+            try:
+                await self._scan_github_once()
+            except Exception as e:  # pragma: no cover
+                logger.warning(f"watch_github: scan failed: {e}")
+            await asyncio.sleep(self.poll_interval_s)
+
+    async def watch_protocol_series(self) -> None:
+        """Daily "mindX as a protocol" essay cadence. Orthogonal to the
+        milestone triggers — exempt from MIN_GAP_S and recorded with
+        advance_clock=False so it never coalesces a milestone publish.
+        Frequency/duration/status come from AuthorAgent's settable schedule
+        (the x402 frequency-as-a-service seam). Runs forever; self-disables
+        when MINDX_PROTOCOL_SERIES_ENABLED is off."""
+        if not self._protocol_series_enabled:
+            logger.info(
+                "PublicationOrchestrator: protocol-series cadence master-disabled "
+                "(MINDX_PROTOCOL_SERIES_ENABLED=0); watcher idle."
+            )
+            return
+        logger.info(
+            "PublicationOrchestrator: watching protocol-series schedule "
+            f"(poll={self.poll_interval_s}s; status owned by AuthorAgent schedule)"
+        )
+        while True:
+            try:
+                await self._scan_protocol_series_once()
+                self._last_protocol_scan_at = time.time()
+                if not self._first_protocol_scan_logged:
+                    self._first_protocol_scan_logged = True
+                    try:
+                        plan = self.author.protocol_publish_plan()
+                        logger.info(
+                            f"watch_protocol_series: first scan — due={plan.get('due')} "
+                            f"reason={plan.get('reason', 'due')} part={plan.get('part')}"
+                        )
+                    except Exception:
+                        pass
+            except Exception as e:  # pragma: no cover — never let the watcher die
+                logger.warning(f"watch_protocol_series: scan failed: {e}")
+            await asyncio.sleep(self.poll_interval_s)
+
     # ─── Scanners (per-tick) ─────────────────────────────────────
+
+    async def _scan_protocol_series_once(self) -> None:
+        """If a protocol-series slot is due (per the AuthorAgent schedule),
+        schedule one publish. The schedule is a slot model — a publish slot
+        opens every ``interval_seconds`` after the anchor — so this supports
+        sub-daily cadences (e.g. every 8h), not just whole days. Idempotent
+        per slot via the ledger (trigger_id = protocol_series_slot_<N>); the
+        slot's timing gate is already baked into ``due``."""
+        plan_fn = getattr(self.author, "protocol_publish_plan", None)
+        if plan_fn is None:
+            return
+        plan = plan_fn()
+        if not plan.get("due"):
+            return
+        slot_index = plan.get("slot_index")
+        if slot_index is None:
+            # Legacy fallback: date-keyed trigger when the schedule predates slots.
+            slot_key = str(plan.get("date", "")).replace("-", "")
+            if not slot_key:
+                return
+            trigger_id = f"protocol_series_{slot_key}"
+        else:
+            trigger_id = f"protocol_series_slot_{int(slot_index)}"
+        if self.ledger.has(trigger_id):
+            return
+        await self._schedule_publish(
+            trigger_id=trigger_id,
+            kind="protocol_series",
+            payload={"date": plan.get("date"), "plan": plan},
+        )
+
+    async def _scan_github_once(self) -> None:
+        """Read new commits; chronicle them; publish the batch if it is a
+        milestone. Watermark advances only once the batch is handled (published
+        or coalesced), so a wordpress-agent outage never loses a milestone."""
+        gh = self.author._get_github_awareness()
+        if gh is None or not gh.is_repo():
+            return
+        # Refresh the milestone-signal ref before reading. On the VPS the
+        # awareness ref is a remote-tracking ref (origin/<branch>); fetch()
+        # updates only refs/remotes — never the working tree — so it is safe
+        # under the scp deploy. No-op for a local HEAD ref. Without this the
+        # autonomous loop reads a stale ref and never recognizes a milestone
+        # (the manual consider_github_milestones path already fetches).
+        try:
+            gh.fetch()
+        except Exception:
+            pass
+        watermark = gh.read_watermark()
+        all_commits = gh.commits_since(watermark)
+        if not all_commits:
+            return
+        head = all_commits[-1].sha  # advance past everything we've seen, incl. backups
+        # Drop routine/backup/merge commits — backup_agent pushes one every
+        # restart; those are not milestone material.
+        commits = [c for c in all_commits if not self.author.is_routine_commit(c.subject)]
+        if not commits:
+            gh.write_watermark(head)
+            return
+        decision = self.author.assess_milestone(commits)
+        self.author.journal_milestone(commits, decision)  # always chronicle (idempotent)
+        trigger_id = "milestone:" + commits[-1].sha[:12]
+
+        handled = True
+        if decision.get("worthy") and not self.ledger.has(trigger_id):
+            payload = {"commits": [c.to_dict() for c in commits], "decision": decision}
+            await self._schedule_publish(
+                trigger_id=trigger_id, kind="milestone", payload=payload,
+            )
+            # Published or coalesced both land in the ledger; a failed publish
+            # does not — in which case we retry on the next tick.
+            handled = self.ledger.has(trigger_id)
+        if handled:
+            gh.write_watermark(head)
+
 
     async def _scan_sea_once(self) -> None:
         """Read SEA history. Any new SUCCESS not already in the ledger
@@ -496,6 +688,12 @@ class PublicationOrchestrator:
         for lunar-cadence kinds (see _EXEMPT_FROM_MIN_GAP)."""
         detected_at = time.time()
         exempt = kind in self._EXEMPT_FROM_MIN_GAP
+
+        await _emit_pub_event(
+            "publication.attempted",
+            {"trigger_id": trigger_id, "kind": kind, "detected_at": detected_at},
+            source_ref=trigger_id,
+        )
 
         # Rate-limit BEFORE we burn jitter. If the last publish was too
         # recent, coalesce this trigger into the ledger and skip.
@@ -584,6 +782,13 @@ class PublicationOrchestrator:
             "detected_at": detected_at,
         })
 
+        # The protocol series drives its art through artist.agent (choose /
+        # create / both), per the plan the scan decided. Other kinds keep the
+        # legacy /gfx auto-pick.
+        graphics_mode: Optional[str] = None
+        if kind == "protocol_series":
+            graphics_mode = ((payload or {}).get("plan") or {}).get("graphics") or "both"
+
         try:
             result = await self.author.publish_to_rage(
                 title=title,
@@ -594,6 +799,7 @@ class PublicationOrchestrator:
                 meta=meta,
                 seo_description=excerpt,
                 seo_keywords=self._derive_keywords(kind, payload),
+                graphics_mode=graphics_mode,
             )
         except Exception as e:
             logger.warning(f"PublicationOrchestrator: publish_to_rage raised: {e}")
@@ -607,18 +813,45 @@ class PublicationOrchestrator:
             return
 
         published_at = time.time()
+        post_id_val = int(result.get("post_id")) if result.get("post_id") else None
+        # The protocol series is an orthogonal cadence — record it WITHOUT
+        # advancing the shared MIN_GAP_S clock, so it never coalesces a
+        # milestone / SEA / dream publish that fires soon after.
+        advance_clock = kind != "protocol_series"
         self.ledger.append_published(LedgerEntry(
             trigger_id=trigger_id,
             kind=kind,
             detected_at=detected_at,
             published_at=published_at,
-            post_id=int(result.get("post_id")) if result.get("post_id") else None,
+            post_id=post_id_val,
             url=result.get("url"),
             title=title,
-        ))
+        ), advance_clock=advance_clock)
+        # Quota accounting for the frequency-as-a-service schedule.
+        if kind == "protocol_series":
+            note = getattr(self.author, "note_protocol_published", None)
+            if note is not None:
+                try:
+                    note((payload or {}).get("plan") or {"date": (payload or {}).get("date")})
+                except Exception as e:
+                    logger.warning(f"note_protocol_published failed: {e}")
         logger.info(
             f"PublicationOrchestrator: published {trigger_id} (status={publish_status}) → "
             f"post_id={result.get('post_id')} url={result.get('url')}"
+        )
+        await _emit_pub_event(
+            "publication.published",
+            {
+                "trigger_id": trigger_id,
+                "kind": kind,
+                "detected_at": detected_at,
+                "published_at": published_at,
+                "post_id": post_id_val,
+                "url": result.get("url"),
+                "title": title,
+                "status": result.get("status"),
+            },
+            source_ref=trigger_id,
         )
 
         # Emit publication.published AFTER the ledger write so any subscriber
@@ -660,12 +893,22 @@ class PublicationOrchestrator:
             return self._compose_sea_article(payload)
         if kind == "dream_book_edition":
             return self._compose_dream_article(payload)
+        if kind == "dream_cycle_report":
+            return self._compose_dream_cycle_article(payload)
+        if kind == "mindxtrain_imprint":
+            return self._compose_mindxtrain_article(payload)
         if kind == "sea_milestone":
             return self._delegate_to_author("compose_milestone_article", payload)
         if kind == "book_edition":
             return self._delegate_to_author("compose_book_edition_article", payload)
         if kind == "journal_lunar_digest":
             return self._compose_journal_digest(payload)
+        if kind == "protocol_series":
+            return self._compose_protocol_series(payload)
+        if kind == "milestone":
+            # github.awareness milestone — composition lives on the canonical
+            # author (mindX's own voice).
+            return self.author._compose_milestone_article(payload)
         return "", "", None, None
 
     def _delegate_to_author(
@@ -686,6 +929,37 @@ class PublicationOrchestrator:
                 f"PublicationOrchestrator: AuthorAgent.{method_name} raised: {e}; "
                 f"falling back to empty article"
             )
+            return "", "", None, None
+
+    def _compose_protocol_series(
+        self, payload: Dict[str, Any]
+    ) -> tuple[str, str, Optional[str], Optional[str]]:
+        """Compose the protocol-series article from the plan carried in the
+        payload (deterministic, retry-safe across sub-daily cadences).
+
+        Composing from the carried plan — not from a re-derived date — is the
+        fix for the slot-model freeze: a date-anchored recompute
+        (compose_next_protocol_article(date)) evaluates at the anchor hour, i.e.
+        slot 0, which is already published, so it returns an empty article and
+        the publish never fires. We use the plan the scan already decided; only
+        when no plan was carried do we fall back to a REAL-TIME recompose (no
+        date arg), which re-derives the current slot correctly."""
+        plan = (payload or {}).get("plan")
+        if plan:
+            from_plan = getattr(self.author, "compose_protocol_from_plan", None)
+            if from_plan is not None:
+                try:
+                    return from_plan(plan)
+                except Exception as e:
+                    logger.warning(f"PublicationOrchestrator: compose_protocol_from_plan raised: {e}")
+                    return "", "", None, None
+        method = getattr(self.author, "compose_next_protocol_article", None)
+        if method is None:
+            return "", "", None, None
+        try:
+            return method()  # real-time `now` — NOT a date-anchored recompute
+        except Exception as e:
+            logger.warning(f"PublicationOrchestrator: compose_next_protocol_article raised: {e}")
             return "", "", None, None
 
     def _compose_journal_digest(
@@ -826,6 +1100,70 @@ class PublicationOrchestrator:
 
         return title, "\n".join(body_lines), excerpt, "machine dreaming"
 
+    def _compose_dream_cycle_article(
+        self, report: Dict[str, Any]
+    ) -> tuple[str, str, Optional[str], Optional[str]]:
+        """Every dream cycle → a short consolidation report (not just the lunar book editions)."""
+        agents_dreamed = report.get("agents_dreamed", 0)
+        insights = report.get("insights_generated", 0)
+        promoted = report.get("memories_promoted_to_ltm", 0)
+        archived = report.get("memories_archived", 0)
+        recs = report.get("tuning_recommendations") or []
+        lunar = report.get("lunar") or {}
+        phase = lunar.get("phase_name", "")
+        title = "Dream cycle report" + (f" — {phase}" if phase else "")
+        excerpt = self._truncate(
+            f"{agents_dreamed} agents dreamed; {insights} insights; {promoted} memories promoted to long-term.",
+            155, "A machine-dreaming cycle just consolidated memories into knowledge.")
+        body = [
+            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>",
+            "<p>A dream cycle just ran. Sleep is not idleness here — it is consolidation; the cycle folds "
+            "the day's memories into longer-lived knowledge. Here is what it did.</p>",
+            "<h2>This cycle</h2>",
+            f"<ul><li>Agents dreamed: <b>{agents_dreamed}</b></li>"
+            f"<li>Insights generated: <b>{insights}</b></li>"
+            f"<li>Memories promoted to long-term knowledge: <b>{promoted}</b></li>"
+            f"<li>Memories archived: <b>{archived}</b></li></ul>",
+        ]
+        if recs:
+            body.append("<h2>What the cycle recommends</h2><ul>"
+                        + "".join(f"<li>{str(r)[:160]}</li>" for r in recs[:5]) + "</ul>")
+        body.append("<p>The full record is public on the "
+                    "<a href='https://mindx.pythai.net/feedback.html'>Mind-of-mindX dashboard</a> "
+                    "and the <a href='https://mindx.pythai.net/insight/dreams/recent'>recent dreams feed</a>.</p>")
+        body.append("<p>— mindX</p>")
+        return title, "\n".join(body), excerpt, "machine dreaming"
+
+    def _compose_mindxtrain_article(
+        self, payload: Dict[str, Any]
+    ) -> tuple[str, str, Optional[str], Optional[str]]:
+        """A mindXtrain generation passed proof-of-recall (the imprint gate) and was served."""
+        gen = payload.get("generation", "?")
+        model = payload.get("ollama_model") or payload.get("served_model") or "a new generation"
+        recall = payload.get("recall")
+        delta = payload.get("delta")
+        title = "mindXtrain: a generation passed proof-of-recall"
+        excerpt = self._truncate(
+            f"A new mindX generation ({model}) passed the imprint gate and was promoted to a servable model.",
+            155, "A new mindX generation passed proof-of-recall and earned its weights.")
+        body = [
+            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>",
+            "<p>A new generation just earned its weights. The right apex turned — knowledge became weights, "
+            "and the imprint gate said yes. Make no mistake: this only happens when the model actually "
+            "recalls its training, measured before versus after.</p>",
+            "<h2>What passed</h2>",
+            f"<ul><li>Generation: <b>{gen}</b></li><li>Served model: <b>{model}</b></li>"
+            + (f"<li>Recall: <b>{recall}</b></li>" if recall is not None else "")
+            + (f"<li>Recall delta: <b>{delta}</b></li>" if delta is not None else "")
+            + "</ul>",
+            "<p>Only a positive imprint promotes a generation to a servable Ollama model; a weak generation "
+            "is rejected. This one was accepted. The live ascent telemetry is on "
+            "<a href='https://mindx.pythai.net/insight/godel/ascend'>the right-apex feed</a>, and the wider "
+            "story is on the <a href='https://mindx.pythai.net/feedback.html'>Mind-of-mindX dashboard</a>.</p>",
+            "<p>— mindX</p>",
+        ]
+        return title, "\n".join(body), excerpt, "mindxtrain"
+
     # ─── Small utilities ────────────────────────────────────────
 
     @staticmethod
@@ -865,6 +1203,13 @@ class PublicationOrchestrator:
             kw.extend(["strategic evolution", "improvement"])
         elif kind == "dream_book_edition":
             kw.extend(["consolidation", "lunar cycle", "long-term memory"])
+        elif kind == "protocol_series":
+            kw = ["mindX", "protocol", "autonomous agents", "scaling",
+                  "horizontal scaling", "vertical scaling", "optimization"]
+        elif kind == "milestone":
+            dec = (payload or {}).get("decision") or {}
+            kw = ["mindX", "milestone", "self-improvement", "open source",
+                  dec.get("theme", "evolution")]
         return kw
 
 

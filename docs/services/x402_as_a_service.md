@@ -6,6 +6,37 @@ Companion specs:
 
 - [`mindx_as_a_service.md`](mindx_as_a_service.md) — the broader service offering
 - [`bankon_identity_as_a_service.md`](bankon_identity_as_a_service.md) — agent identity layer
+- Reference: [`operations/dev/x402 Multi-Rail Integration Reference …`](../operations/dev/) — EVM · Algorand (Parsec) · Arweave
+
+---
+
+## 0. v2 update (2026-06-17) — what changed since this doc's v1 body
+
+mindX now speaks **x402 v2 with v1 fallback**. The v1 sections below still describe
+the wire format faithfully (and v1 `X-PAYMENT` is still accepted); these are the v2
+deltas, implemented in [`mindx_backend_service/x402_protocol.py`](../../mindx_backend_service/x402_protocol.py)
+(the shared version/CAIP-2 codec) and consumed by the middleware + the client rails:
+
+- **Headers.** The 402 challenge now also sets the base64 **`PAYMENT-REQUIRED`** response
+  header; payment is accepted from **`PAYMENT-SIGNATURE`** (v2) *or* **`X-PAYMENT`** (v1);
+  success echoes **`PAYMENT-RESPONSE`** + `X-PAYMENT-RESPONSE`.
+- **CAIP-2 networks.** Rails advertise CAIP-2 ids — `eip155:8453` (Base), `eip155:4217`
+  (Tempo), `algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=` (Algorand mainnet),
+  `algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=` (testnet). `rail_for(network)`
+  dispatches `evm | avm | arweave`.
+- **Algorand = real Parsec scheme.** The AVM rail builds the GoPlausible atomic
+  `paymentGroup` + `paymentIndex` with **fee abstraction** (unsigned facilitator `pay`
+  at index 0, client-signed `axfer` at index 1; client needs no ALGO), facilitator
+  `facilitator.goplausible.xyz`. See [`tools/x402_avm_client.py`](../../tools/x402_avm_client.py).
+- **Third rail: Arweave/Turbo.** New `POST /permaweb/upload` is x402-gated (pay USDC →
+  permanent ANS-104 upload via the Turbo fulfillment desk). See
+  [`tools/arweave_turbo.py`](../../tools/arweave_turbo.py).
+- **Permanent replay guard + unified ledger.** The 60s in-memory cache is replaced by a
+  persistent seen-nonce/txid ledger at `data/governance/x402_settlement_ledger.json`
+  (a replayed authorization → **409 forever**). That same file is the unified cross-rail
+  settlement audit journal.
+- **SIWx sessions (CAIP-122).** An `X-SIWX-SESSION` token lets a wallet that paid once
+  skip re-payment within its window — the right primitive for mindX's autonomous repeat calls.
 
 ---
 

@@ -1,0 +1,81 @@
+# MindX Minimal Dependencies — Essential Only
+# ">=" floors track what is currently installed in production (.mindx_env on
+# the VPS). Floors are bumped to current installed versions so vulnerability
+# scanners stop flagging old advisories that no longer apply.
+# Audit: 2026-05-04. For exact reproducible builds run `pip freeze`.
+
+# ── Core async + HTTP ──
+aiohttp>=3.13.3        # CVE GHSA-fcr2-rgch-4cwq + zip-bomb fixes
+aiofiles>=25.1.0
+httpx>=0.28.1
+
+# ── Web framework ──
+fastapi>=0.135.0
+uvicorn>=0.42.0
+starlette>=0.49.1      # CVE GHSA-2c2j-9gv5-cj73 (Range header DoS)
+python-multipart>=0.0.22  # CVE GHSA-59g5-xgcq-4qw3 (arbitrary file write)
+
+# ── Data validation ──
+pydantic>=2.12.0
+pydantic-settings>=2.6.0    # agents/wordpress_agent/ env-driven config (WP_* vars)
+
+# ── LLM provider SDKs ──
+openai>=2.0.0
+anthropic>=0.88.0
+google-generativeai>=0.8.6
+mistralai>=2.2.0
+# ollama>=0.3.0        # OPTIONAL: official ollama python client (mindX has its own handler)
+
+# ── Configuration ──
+python-dotenv>=1.2.0
+pyyaml>=6.0.3
+
+# ── HTTP / utils ──
+requests>=2.33.1
+colorama>=0.4.6
+tqdm>=4.67.0           # transitive via openai/anthropic; explicit for stability
+
+# ── Numeric / vector ──
+numpy>=2.2.0           # rage/indexing.py, embedding math, transitive via pgvector
+
+# ── System monitoring (BDI perceive(), /system/resources, /insight/system) ──
+psutil>=7.2.0
+
+# ── Cryptography / wallets / vault ──
+cryptography>=46.0.5   # CVE GHSA-79v4-65xg-pq4g (SECT subgroup attack)
+eth-account>=0.13.0    # Ethereum wallet derivation, signing
+pycryptodome>=3.23.0   # BANKON Vault AES-256-GCM + HKDF-SHA512
+py-algorand-sdk>=2.11.0 # Algorand AVM signing for tools/x402_avm_client.py (x402-AVM rail)
+
+# ── File processing ──
+pathspec>=0.11.0
+
+# ── pgvector memory tier ──
+psycopg2-binary>=2.9.11
+pgvector>=0.4.0
+asyncpg>=0.31.0
+SQLAlchemy>=2.0.0
+# sentence-transformers>=2.2.0  # OPTIONAL: requires torch (~1GB). Code is try/except guarded.
+#                                 # Install manually: pip install sentence-transformers
+
+# ── Testing ──
+pytest>=9.0.0
+pytest-asyncio>=0.23.0  # required for tests/lab/* async test suites
+pytest-httpx>=0.30.0    # mocks the WordPress REST API in tests/test_wordpress_agent.py
+
+# ── OPTIONAL / sub-component-only (NOT installed by default) ──
+# These are imported only by submodules that are dormant in the main backend.
+# Install on demand if you activate the corresponding component.
+#
+# aioredis>=2.0.0       # mindx_backend_service/performance_optimizer.py (DORMANT — not loaded by main_service)
+# paramiko>=3.4.0       # csshd7/ ssh wallet server (separate venv)
+# web3>=6.0.0           # csshd7/ ethpm tooling (mindX core uses raw_tx.py — no web3)
+# faiss-cpu>=1.7.4      # rage/deeprage/ alternate retriever
+# langchain>=0.2.0      # rage/deeprage/ langchain integration
+# huggingface-hub>=0.20 # rage/deeprage/ model hub
+# torch>=2.0.0          # only via sentence-transformers
+# transformers>=4.35.0  # only via sentence-transformers
+# streamlit>=1.30.0     # offline notebooks / experiments
+# qrcode>=7.4.0         # avatar / QR code generation
+# markdown2>=2.4.0      # markdown rendering (optional surface)
+# frontmatter>=1.1.0    # yaml frontmatter parsing for agent .md cards

@@ -380,9 +380,16 @@ class SelfImprovementAgent:
 
         implemented, new_code_or_err, diff = await self.implement_improvement(effective_target_path, actual_imp_desc, orig_content_for_impl)
         cycle_res["diff_patch"] = diff
-        if not implemented: cycle_res.update({"error_message": new_code_or_err, "implementation_status": "FAILED_IMPLEMENTATION"}); 
-        if self._get_file_content(effective_target_path) != orig_content_for_impl: self._save_file_content(effective_target_path, orig_content_for_impl)
-        self._record_improvement_attempt(cycle_res); return cycle_res
+        if not implemented:
+            # Revert the working file ONLY on a failed implementation, then bail.
+            # This was a collapsed one-liner whose body lost its indentation, so
+            # the revert+record+return ran UNCONDITIONALLY — reverting every
+            # change and returning PENDING, leaving the entire evaluate→promote
+            # path below as dead code. That is why SIA never landed an edit.
+            cycle_res.update({"error_message": new_code_or_err, "implementation_status": "FAILED_IMPLEMENTATION"})
+            if self._get_file_content(effective_target_path) != orig_content_for_impl:
+                self._save_file_content(effective_target_path, orig_content_for_impl)
+            self._record_improvement_attempt(cycle_res); return cycle_res
         cycle_res["new_content"] = new_code_or_err; cycle_res["implementation_status"] = "SUCCESS_IMPLEMENTED"
 
         eval_data = await self.evaluate_improvement(effective_target_path, orig_content_for_impl, cycle_res["new_content"], actual_imp_desc, is_self_attempt)
@@ -395,6 +402,36 @@ class SelfImprovementAgent:
             else: cycle_res["error_message"] += " CRITICAL: Fail revert working file."
             self._record_improvement_attempt(cycle_res); return cycle_res
         cycle_res["implementation_status"] = "SUCCESS_EVALUATED"
+
+        # External targets persist the evaluated change in place (it is NOT
+        # reverted above). Record it so the improvement ledger reflects a real
+        # on-disk change rather than an ephemeral evaluation. (Self attempts
+        # land via the promotion step below instead.)
+        if not is_self_attempt:
+            cycle_res["persisted"] = True
+            cycle_res["persisted_path"] = str(effective_target_path)
+
+        # Gödel kernel (Phase 2): emit a proof certificate that this accepted
+        # change met its acceptance criteria, and let the trusted checker verify
+        # it. Best-effort — a kernel hiccup must never block a real improvement.
+        try:
+            from mindx.godel.kernel import prover as _gk_prover
+            _cert = _gk_prover.build_acceptance_certificate(
+                target=str(target_file_path_conceptual),
+                critique_score=str(eval_data.get("llm_self_critique_score", 0.0)),
+                threshold=str(self.critique_threshold),
+                syntax_ok=bool(eval_data.get("passed_syntax_check") is True),
+                selftests_ok=(bool(eval_data.get("passed_self_tests") is True)
+                              if is_self_attempt else None),
+            )
+            _verdict = _gk_prover.record_proof_gated_change(_cert)
+            cycle_res["proof_certificate"] = {
+                "cert_id": _cert.cert_id, "valid": _verdict.get("valid"),
+                "recorded": _verdict.get("recorded"), "label": _cert.label}
+            logger.info(f"SIA: proof certificate {_cert.cert_id} "
+                        f"valid={_verdict.get('valid')} recorded={_verdict.get('recorded')}")
+        except Exception as _gk_e:  # pragma: no cover - defensive
+            logger.debug(f"SIA: proof certificate emission skipped: {_gk_e}")
 
         if is_self_attempt:
             logger.info(f"SIA: Self-improve candidate {effective_target_path.name} passed. Promoting.")

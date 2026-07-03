@@ -29,6 +29,21 @@ from agents.publication_orchestrator import (
 )
 
 
+# ─── Test isolation ──────────────────────────────────────────────
+#
+# Since 2026-05-19 PublicationOrchestrator emits publication.* catalogue
+# events. Without this fixture every orchestrator test would append fake
+# publication events to the real data/logs/catalogue_events.jsonl — which
+# then surface on /agentic.html and /insight/publications/*. Disable the
+# emitter for the duration of each test.
+
+
+@pytest.fixture(autouse=True)
+def _no_catalogue_pollution(monkeypatch):
+    import agents.catalogue.events as cat_events
+    monkeypatch.setattr(cat_events, "_emit_disabled", True)
+
+
 # ─── A no-op AuthorAgent stand-in for the orchestrator ───────────
 
 
@@ -573,7 +588,8 @@ def test_get_health_reports_orchestrator_state(tmp_path):
     assert h["milestone_status_default"] == "publish"
     assert h["book_status_default"]      == "draft"
     assert h["journal_status_default"]   == "publish"
-    assert set(h["exempt_from_min_gap"]) == {"sea_milestone", "book_edition", "journal_lunar_digest"}
+    assert set(h["exempt_from_min_gap"]) == {
+        "sea_milestone", "book_edition", "journal_lunar_digest", "protocol_series"}
     assert h["last_publish_at"]    is None
 
 

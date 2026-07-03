@@ -15,6 +15,44 @@ from utils.config import Config, PROJECT_ROOT
 from utils.logging_config import get_logger
 logger = get_logger(__name__)
 
+
+# --- Campaign hygiene (pure helpers, unit-testable) --------------------------
+_DIRECTIVE_DECORATION_RE = re.compile(r"\s*\[target: .*$", re.DOTALL)
+
+
+def suggestion_fingerprint(text: str) -> str:
+    """Canonical identity of a directive/suggestion for dedup + cooldown.
+
+    Directives are decorated as "{suggestion} [target: …, priority: …,
+    backlog_idx: N]" — the rotating backlog_idx landed inside the old
+    directive[:120] fingerprint while candidates were fingerprinted on the
+    bare suggestion, so the 24h dedup window NEVER matched and the same
+    directive was re-selected every cycle (100 identical campaigns/7d, 0 ok,
+    observed on prod 2026-06-11). Strip the decoration before fingerprinting
+    so both sides hash the same text.
+    """
+    base = _DIRECTIVE_DECORATION_RE.sub("", text or "")
+    return base.strip().lower()[:120]
+
+
+def campaign_status_from_bdi(final_bdi_message: str) -> str:
+    """Map a BDI run's final message to a terminal campaign status.
+
+    Every record is terminal — the perpetual-"running" ledger rows came from
+    BDI reporting RUNNING at max-cycles exhaustion (fixed in bdi_agent.run)
+    combined with the catch-all FAILURE_OR_INCOMPLETE label here.
+    """
+    msg = final_bdi_message or ""
+    if "COMPLETED_GOAL_ACHIEVED" in msg:
+        return "SUCCESS"
+    if "MAX_CYCLES_REACHED" in msg:
+        return "MAX_CYCLES_REACHED"
+    if "TIMED_OUT" in msg:
+        return "TIMED_OUT"
+    if "FAILED" in msg:
+        return "FAILED"
+    return "FAILURE_OR_INCOMPLETE"
+
 from agents.core.belief_system import BeliefSystem, BeliefSource
 from llm.llm_interface import LLMHandlerInterface
 from llm.llm_factory import create_llm_handler
@@ -90,7 +128,7 @@ class MastermindAgent:
         # The agent's data directory is now managed by MemoryAgent
         self.data_dir: Path = self.memory_agent.get_agent_data_directory(self.agent_id)
 
-        self.tools_registry_file_path: Path = PROJECT_ROOT / self.config.get(f"mastermind_agent.{self.agent_id}.tools_registry_path", "data/config/official_tools_registry.json")
+        self.tools_registry_file_path: Path = PROJECT_ROOT / self.config.get(f"mastermind_agent.{self.agent_id}.tools_registry_path", "data/config/augmentic_tools_registry.json")
         self.tools_registry: Dict[str, Any] = self._load_tools_registry()
 
         self.llm_handler: Optional[LLMHandlerInterface] = None
@@ -200,7 +238,10 @@ class MastermindAgent:
             config_override=self.config
         )
         await self.strategic_evolution_agent._async_init()
-        
+        # Back-wire SEA into the BDI so EXECUTE_STRATEGIC_EVOLUTION_CAMPAIGN (the real-source effector) is
+        # actually reachable — the BDI is constructed above before SEA exists, so without this it stays None.
+        self.bdi_agent.strategic_evolution_agent = self.strategic_evolution_agent
+
         # Initialize lifecycle management agents
         await self._initialize_lifecycle_agents()
 
@@ -319,12 +360,34 @@ class MastermindAgent:
                   f"Assessment: {assessment_text}\n\n"
                   f"Respond ONLY with a JSON object containing a 'recommendations' list.")
         try:
-            response_str = await self.llm_handler.generate_text(
-                prompt, model=getattr(self.llm_handler, "model_name_for_api", None), json_mode=True
-            )
-            if not response_str:
-                return False, "LLM returned empty response during strategy proposal"
-            strategy = json.loads(response_str)
+            from utils.json_extract import extract_json
+            # Free-tier/CPU-throttled models often wrap JSON in prose, fences, or
+            # <think> blocks, or return whitespace — json.loads then raised
+            # "Expecting value: line 1 column 1 (char 0)" and failed every
+            # campaign here. Tolerant-parse with one retry, then degrade to an
+            # empty-but-valid strategy so the campaign continues instead of
+            # dying at the strategy step.
+            strategy = None
+            last_raw = ""
+            for attempt in range(2):
+                last_raw = await self.llm_handler.generate_text(
+                    prompt, model=getattr(self.llm_handler, "model_name_for_api", None), json_mode=True
+                )
+                strategy = extract_json(last_raw)
+                if isinstance(strategy, dict):
+                    break
+            if not isinstance(strategy, dict):
+                self.logger.warning(
+                    "PROPOSE_TOOL_STRATEGY: model returned no parseable JSON after retry "
+                    f"(model={getattr(self.llm_handler, 'model_name_for_api', '?')}, "
+                    f"raw_head={str(last_raw)[:120]!r}); degrading to empty recommendations."
+                )
+                await self.memory_agent.log_process(
+                    process_name="mastermind_strategy_proposal_degraded",
+                    data={"reason": "unparseable_json", "raw_head": str(last_raw)[:200]},
+                    metadata={"agent_id": self.agent_id},
+                )
+                strategy = {"recommendations": [], "_degraded": True}
             await self.belief_system.add_belief("strategy.tool_proposal.latest", strategy)
             
             # Log successful strategy proposal
@@ -608,16 +671,18 @@ class MastermindAgent:
         
         # --- Step 3: Execute the BDI agent to implement the plan ---
         final_bdi_message = await self.bdi_agent.run(max_cycles=max_mastermind_bdi_cycles)
-        
-        is_success = "COMPLETED_GOAL_ACHIEVED" in final_bdi_message
-        overall_status = "SUCCESS" if is_success else "FAILURE_OR_INCOMPLETE"
-        
+
+        overall_status = campaign_status_from_bdi(final_bdi_message)
+
         logger.info(f"{self.log_prefix} Evolution campaign (Run ID: {run_id}) finished. BDI Message: {final_bdi_message}. Overall: {overall_status}")
-        
+
         campaign_outcome = {"overall_campaign_status": overall_status, "final_bdi_message": final_bdi_message}
-        self.strategic_campaigns_history.append({**campaign_outcome, "run_id": run_id, "directive": top_level_directive})
+        # ts at the append site itself — fire-and-forget callers (coordinator
+        # auto-execute) never reach the autonomous loop's ts patch, leaving the
+        # record invisible to the 24h dedup window.
+        self.strategic_campaigns_history.append({**campaign_outcome, "run_id": run_id, "directive": top_level_directive, "ts": time.time()})
         self._save_json_file("mastermind_campaigns_history.json", self.strategic_campaigns_history)
-        
+
         return campaign_outcome
 
     async def manage_agent_deployment(self, top_level_directive: str, max_mastermind_bdi_cycles: int = 25) -> Dict[str, Any]:
@@ -638,15 +703,14 @@ class MastermindAgent:
         )
 
         final_bdi_message = await self.bdi_agent.run(max_cycles=max_mastermind_bdi_cycles)
-        
-        is_success = "COMPLETED_GOAL_ACHIEVED" in final_bdi_message
-        overall_status = "SUCCESS" if is_success else "FAILURE_OR_INCOMPLETE"
-        
+
+        overall_status = campaign_status_from_bdi(final_bdi_message)
+
         logger.info(f"{self.log_prefix} Deployment campaign (Run ID: {run_id}) finished. BDI Message: {final_bdi_message}. Overall: {overall_status}")
-        
+
         campaign_outcome = {"overall_campaign_status": overall_status, "final_bdi_message": final_bdi_message}
         # Maybe save to a different history file? For now, use the same one.
-        self.strategic_campaigns_history.append({**campaign_outcome, "run_id": run_id, "directive": top_level_directive, "type": "deployment"})
+        self.strategic_campaigns_history.append({**campaign_outcome, "run_id": run_id, "directive": top_level_directive, "type": "deployment", "ts": time.time()})
         self._save_json_file("mastermind_campaigns_history.json", self.strategic_campaigns_history)
         
         return campaign_outcome
@@ -931,17 +995,22 @@ class MastermindAgent:
             try:
                 backlog = getattr(self.coordinator_agent, 'improvement_backlog', []) if self.coordinator_agent else []
                 # Default-pending semantics — most items have no status field.
+                # cooldown_until guards against re-selection even if status resets.
+                now_ts = time.time()
                 eligible = [
                     (idx, item) for idx, item in enumerate(backlog)
                     if item.get("status") in (None, "PENDING", "pending")
                     and (item.get("suggestion") or item.get("description"))
+                    and float(item.get("cooldown_until") or 0) <= now_ts
                 ]
-                # Dedup against last-24h campaign history.
-                now_ts = time.time()
+                # Dedup against last-24h campaign history. Fingerprints strip the
+                # "[target: …, backlog_idx: N]" decoration — the rotating idx made
+                # the old directive[:120] hash never match the bare-suggestion
+                # hash, so the same directive looped forever.
                 recent_directives: set[str] = set()
                 for c in self.strategic_campaigns_history[-200:]:
                     if (now_ts - float(c.get("ts", now_ts))) < 86400:
-                        d = (c.get("directive") or "")[:120].lower()
+                        d = suggestion_fingerprint(c.get("directive") or "")
                         if d:
                             recent_directives.add(d)
 
@@ -956,11 +1025,28 @@ class MastermindAgent:
                     suggestion = (item.get("suggestion") or item.get("description") or "").strip()
                     if not suggestion:
                         continue
-                    fingerprint = suggestion[:120].lower()
-                    if fingerprint in recent_directives:
+                    if suggestion_fingerprint(suggestion) in recent_directives:
                         continue
                     chosen = (idx, item)
                     break
+
+                # Dynamic CPU gate — the loop "shares the processor". If the box is
+                # over the autonomous ceiling (~92%), back off in a bounded loop; if
+                # still saturated, defer this campaign rather than pile heavy
+                # inference onto a busy CPU and starve web-serving. Treating it as
+                # "no campaign this cycle" avoids burning the item's 24h dedup slot.
+                if chosen:
+                    try:
+                        from agents.resource_governor import ResourceGovernor
+                        _gov = await ResourceGovernor.get_instance()
+                        if not await _gov.throttle_for_cpu(label="mastermind", max_wait=180):
+                            logger.info(
+                                f"{self.log_prefix} CPU over ceiling after backoff — "
+                                f"deferring strategic campaign this cycle (shares processor)"
+                            )
+                            chosen = None
+                    except Exception:
+                        pass  # fail-open: governor unavailable → proceed
 
                 if not chosen:
                     logger.debug(
@@ -1016,9 +1102,17 @@ class MastermindAgent:
                     except Exception as gerr:
                         logger.debug(f"{self.log_prefix} godel log failed (non-fatal): {gerr}")
 
-                    # Stamp the item as attempted (in-memory; coordinator persists on its cadence).
+                    # Stamp the item as attempted AND persist now — the old
+                    # in-memory-only stamp was lost on restart and never wrote
+                    # through, so the selector saw the item fresh forever.
                     item["status"] = "attempted"
                     item["attempted_at"] = now_ts
+                    item["cooldown_until"] = now_ts + 86400
+                    try:
+                        if self.coordinator_agent and hasattr(self.coordinator_agent, "_save_backlog"):
+                            await asyncio.to_thread(self.coordinator_agent._save_backlog)
+                    except Exception as perr:
+                        logger.debug(f"{self.log_prefix} backlog persist failed (non-fatal): {perr}")
 
                     try:
                         result = await asyncio.wait_for(

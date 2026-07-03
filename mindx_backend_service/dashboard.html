@@ -53,17 +53,57 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 .hdr-mid .sep{color:rgba(110,118,129,.25);font-size:9px;margin:0 2px}
 .hdr-right{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px}
 .hdr-sub{font-size:12px;color:var(--text2);font-family:var(--mono);white-space:nowrap}
+.hdr-pill{font-size:10.5px;font-family:var(--mono);padding:2px 8px;border-radius:999px;border:1px solid var(--border,rgba(120,140,200,.2));color:var(--text2);white-space:nowrap;cursor:help;background:rgba(20,24,36,.5)}
+.hdr-pill b{font-weight:700}
 .live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse-dot 2s ease-in-out infinite}
 .live-dot.off{background:var(--amber);box-shadow:0 0 10px var(--amber)}
 @keyframes pulse-dot{0%,100%{opacity:.4;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
 .live-badge{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:4px;background:rgba(86,211,100,.12);color:var(--green);border:1px solid rgba(86,211,100,.25);letter-spacing:.5px;font-weight:600}
 .live-badge.off{background:rgba(227,179,65,.1);color:var(--amber);border-color:rgba(227,179,65,.2)}
+/* draggable / dockable top navbar */
+.hdr-grip{cursor:grab;color:var(--text3);font-size:15px;line-height:1;margin-right:10px;user-select:none;flex-shrink:0;letter-spacing:-1px}
+.hdr-grip:active{cursor:grabbing}
+.hdr-caret{cursor:pointer;color:var(--text3);font-size:12px;margin-left:8px;flex-shrink:0;transition:transform .2s;display:inline-block;user-select:none}
+.hdr-caret:hover{color:var(--blue)}
+.hdr.nav-collapsed .hdr-caret{transform:rotate(-90deg)}
+.hdr.dragging{position:fixed!important;z-index:120;width:auto;box-shadow:0 10px 48px rgba(0,0,0,.6);opacity:.96;border-radius:8px}
+.hdr.docked{position:fixed;z-index:60}
+.hdr.dock-bottom{bottom:0;left:0;right:0;top:auto;border-bottom:none;border-top:1px solid rgba(121,192,255,.1);box-shadow:0 -2px 12px rgba(0,0,0,.4)}
+.hdr.dock-left,.hdr.dock-right{top:0;bottom:0;width:150px;min-height:100vh;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:10px;padding:14px 12px;overflow-y:auto;border-bottom:none}
+.hdr.dock-left{left:0;right:auto;border-right:1px solid rgba(121,192,255,.1)}
+.hdr.dock-right{right:0;left:auto;border-left:1px solid rgba(121,192,255,.1)}
+.hdr.dock-left .hdr-mid,.hdr.dock-right .hdr-mid{flex-direction:column;align-items:flex-start;gap:6px;flex:none;width:100%}
+.hdr.dock-left .hdr-right,.hdr.dock-right .hdr-right{flex-direction:column;align-items:flex-start;gap:6px;margin-left:0;margin-top:10px}
+.hdr.dock-left .sep,.hdr.dock-right .sep{display:none}
+.hdr.nav-collapsed .hdr-mid,.hdr.nav-collapsed .hdr-right{display:none}
+.hdr.nav-collapsed.dock-left,.hdr.nav-collapsed.dock-right{width:auto;min-height:0;bottom:auto}
+body.navdock-bottom .wrap{padding-bottom:52px}
+body.navdock-left .wrap{padding-left:150px}
+body.navdock-right .wrap{padding-right:150px}
+body.navdock-collapsed .wrap{padding:0!important}
 
 /* ── Main layout ── */
 .wrap{position:relative;z-index:1;display:flex;min-height:100vh}
 .content{flex:1;overflow-y:auto;scroll-behavior:smooth}
 .sidebar{width:280px;flex-shrink:0;position:sticky;top:48px;height:calc(100vh - 48px);display:flex;flex-direction:column;border-left:1px solid var(--border);background:rgba(4,6,9,.6);backdrop-filter:blur(12px)}
 @media(max-width:1024px){.sidebar{display:none}}
+/* draggable / floatable sidebar */
+.sidebar-bar{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);cursor:grab;user-select:none;font-family:var(--mono);font-size:11px;letter-spacing:.5px;color:var(--text2);background:rgba(8,12,18,.7);flex-shrink:0}
+.sidebar-bar:active{cursor:grabbing}
+.sb-grip{color:var(--text3);font-size:13px;line-height:1;letter-spacing:-1px}
+.sb-title{flex:1;text-transform:uppercase}
+.sb-btn{cursor:pointer;color:var(--text3);padding:0 5px;font-size:12px}.sb-btn:hover{color:var(--blue)}
+.sidebar.floating{position:fixed;z-index:300;width:340px;height:72vh;top:auto;border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 48px rgba(0,0,0,.55);overflow:hidden}
+.sidebar.collapsed{height:auto!important;max-height:none;align-self:flex-start}
+/* collapsed & docked: leave the flex flow so the content reflows full-width and only
+   the bar remains, pinned top-right as a small tab (no empty panel frame left behind) */
+.sidebar.collapsed:not(.floating){position:fixed;top:48px;right:0;left:auto;width:auto;min-width:190px;z-index:300;border:1px solid var(--border);border-right:none;border-top-left-radius:8px;border-bottom-left-radius:8px;overflow:hidden}
+.sidebar.collapsed .tabs,.sidebar.collapsed .panel-tools,.sidebar.collapsed .conv,.sidebar.collapsed .sidebar-ft{display:none}
+.sidebar.collapsed .sidebar-bar{border-bottom:none}
+.sidebar.collapsed .sb-caret{transform:rotate(-90deg)}
+.sb-caret{transition:transform .2s;display:inline-block}
+.sidebar.maximized{position:fixed;top:48px;left:1.5vw;right:1.5vw;bottom:1.5vh;width:auto;height:auto;max-height:none;z-index:400;border:1px solid var(--border);border-radius:8px;box-shadow:0 14px 64px rgba(0,0,0,.6)}
+.sidebar.maximized .conv{flex:1 1 auto}
 
 /* ── Layers ── */
 .layer{padding:32px 32px 40px;max-width:960px;margin:0 auto;opacity:0;transform:translateY(12px);transition:opacity .6s ease-out,transform .6s ease-out}
@@ -128,6 +168,7 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 .section-hdr.open .arrow{transform:rotate(90deg)}
 .section-body{overflow:hidden;max-height:0;transition:max-height .4s ease-out;padding:0}
 .section-body.open{max-height:5000px;padding-bottom:12px}
+.sec-skel{padding:10px 4px;color:var(--text3);font-size:12px;font-family:var(--mono);opacity:.7}
 .deep-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:2px}
 @media(max-width:700px){.deep-grid{grid-template-columns:1fr}}
 .deep-grid.w1{grid-template-columns:1fr}
@@ -170,6 +211,7 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 .tabs{display:flex;gap:1px;flex-shrink:0}
 .tab{flex:1;padding:6px;text-align:center;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);background:rgba(10,14,20,.9);cursor:pointer;transition:color .15s;font-family:var(--mono)}
 .tab:hover{color:var(--text)}.tab.active{color:var(--blue);box-shadow:inset 0 -2px 0 var(--blue)}
+.tab{cursor:grab}.tab:active{cursor:grabbing}.tab.dragging{opacity:.4}.tab.drop-tgt{box-shadow:inset 2px 0 0 var(--violet)}
 .panel-tools{display:flex;gap:2px;padding:3px 6px;background:rgba(5,8,12,.6);border-bottom:1px solid rgba(26,31,46,.3)}
 .panel-tools button{flex:1;padding:3px;font-size:8px;border:1px solid rgba(48,54,61,.3);border-radius:2px;background:rgba(22,27,34,.5);color:var(--text3);cursor:pointer;font-family:var(--mono);transition:all .15s}
 .panel-tools button:hover{border-color:var(--blue);color:var(--blue)}
@@ -374,6 +416,7 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
 
 <!-- Header -->
 <div class="hdr">
+  <span class="hdr-grip" id="hdr-grip" title="drag to dock to any edge &#183; double-click to collapse">&#x283F;</span>
   <span class="hdr-brand">mind<b>X</b></span>
   <div class="hdr-mid">
     <a href="/feedback.html" class="hl" style="color:var(--green);font-weight:700" title="Live operator console — agent dialogue, BDI activity, dream cycles, cognitive ascent, system pulse">feedback ▸</a>
@@ -393,11 +436,14 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
     <a href="/automindx" style="color:var(--violet)">origin</a>
   </div>
   <div class="hdr-right">
+    <span class="hdr-pill" id="hdr-agint" style="display:none" title="AGInt P-O-D-A cognitive core"></span>
+    <span class="hdr-pill" id="hdr-hierarchy" style="display:none" title="OVERLORD hierarchy"></span>
     <span class="hdr-sub" id="hdr-sub">connecting...</span>
     <span class="live-badge" id="live-badge">...</span>
     <span class="live-dot" id="live-dot"></span>
     <span class="fresh" id="fresh-diag" style="margin-left:6px"></span>
   </div>
+  <span class="hdr-caret" id="hdr-caret" title="collapse / expand navbar">&#x25BE;</span>
 </div>
 
 <div class="wrap">
@@ -406,7 +452,9 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
   <!-- LAYER 0: Hero — What is mindX? -->
   <div class="hero layer" id="L0">
     <h1 class="hero-title">mind<span class="m">X</span></h1>
-    <p class="hero-sub">A <em>Darwin-Godel Machine</em> — self-improving autonomous intelligence with sovereign agents, cryptographic identity, and constitutional governance. Live on commodity hardware.</p>
+    <p class="hero-sub"><em>Building a Darwin-Gödel Machine</em> — self-improving autonomous intelligence with sovereign agents, cryptographic identity, and constitutional governance. Live on commodity hardware.</p>
+    <div id="gmi-headline" style="font-family:var(--mono);font-size:12px;color:var(--text2);margin:-12px auto 6px;max-width:600px"><span id="gmi-verdict">Gödel Machine Index: checking…</span></div>
+    <div id="milestone-line" style="font-family:var(--mono);font-size:11px;color:var(--text3);margin:0 auto 24px;max-width:600px"></div>
     <div class="hero-stats" id="hero-stats">
       <div class="hs"><div class="hs-val" id="hs-up">--</div><div class="hs-lbl">operational</div></div>
       <div class="hs"><div class="hs-val" id="hs-session">0:00</div><div class="hs-lbl">session</div></div>
@@ -444,6 +492,36 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
 
   <div class="layer-sep"></div>
 
+  <!-- LAYER 1b: Self-Diagnostic — live self-diagnosis, mindX reporting on its own pathology.
+       One fetch of /insight/self/diagnostic (60s server cache): real changes with substance,
+       the agent-to-agent interaction flow, and process-health truth (incl. repaired loop bugs). -->
+  <div class="layer" id="L1b">
+    <div class="section-hdr open" id="hdr-selfdiag" onclick="toggleSec(this)">
+      <span>Self-Diagnostic <span class="insight-sub">live self-diagnosis — mindX reporting on its own pathology</span></span>
+      <span class="arrow">&#x25B8;</span>
+    </div>
+    <div class="section-body open" id="sec-selfdiag">
+      <div id="selfdiag-verdict" style="font-family:var(--mono);font-size:12px;line-height:1.6;color:var(--text2);padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:6px;margin-bottom:12px">loading self-diagnostic&hellip;</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
+        <div>
+          <div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">What actually changed</div>
+          <div id="selfdiag-changes" style="font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--text2)">--</div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Self-interaction (who talks to whom)</div>
+          <div id="selfdiag-flow" style="line-height:2">--</div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Process health (truth, not theater)</div>
+          <div id="selfdiag-health" style="font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--text2)">--</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:10.5px;color:var(--text3)">full detail: <a href="/insight/self/diagnostic?h=true" style="color:var(--text3)">/insight/self/diagnostic?h=true</a> &middot; <a href="/feedback.html" style="color:var(--text3)">feedback.html</a></div>
+    </div>
+  </div>
+
+  <div class="layer-sep"></div>
+
   <!-- LAYER 2: System at a Glance -->
   <div class="layer" id="L2">
     <div class="section-hdr" style="cursor:default;border:none;padding-bottom:8px"><span>System</span></div>
@@ -472,9 +550,8 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
     <div class="section-hdr open" onclick="toggleSec(this)" id="hdr-ledger" style="display:none"><span>Self-Improvement Ledger <span class="insight-sub">mastermind campaigns &middot; hover pill for directive</span></span><span style="display:flex;align-items:center;gap:8px"><span class="fresh" id="fresh-ledger"></span><span class="arrow">&#x25B8;</span></span></div>
     <div class="section-body open" id="sec-ledger"><div class="ledger-row" id="ledger-row"></div></div>
 
-    <!-- Per-Agent Fitness Leaderboard -->
-    <div class="section-hdr open" onclick="toggleSec(this)" id="hdr-fitness" style="display:none"><span>Per-Agent Fitness &middot; Darwinian Leaderboard <span class="insight-sub">weighted rollup of 7 axes &middot; 0&ndash;100 scale &middot; /insight/fitness</span></span><span style="display:flex;align-items:center;gap:8px"><span class="fresh" id="fresh-fitness"></span><span class="arrow">&#x25B8;</span></span></div>
-    <div class="section-body open" id="sec-fitness"></div>
+    <!-- Per-Agent Fitness / Darwinian Leaderboard removed 2026-06 — per-agent usage
+         was low-signal noise on the public dashboard (the /insight/fitness endpoint stays). -->
 
     <!-- Selection Events -->
     <div class="section-hdr open" onclick="toggleSec(this)" id="hdr-selection" style="display:none"><span>Selection Events <span class="insight-sub" id="sel-mode">mode: shadow</span></span><span style="display:flex;align-items:center;gap:8px"><span class="fresh" id="fresh-selection"></span><span class="arrow">&#x25B8;</span></span></div>
@@ -482,43 +559,47 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
 
     <!-- Agents & Reputation -->
     <div class="section-hdr" onclick="toggleSec(this)"><div class="circuit"></div><span>Agents & Reputation <span style="color:var(--text3);font-weight:400" id="agents-count"></span></span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-agents"></div>
+    <div class="section-body" id="sec-agents"><div class="sec-skel">loading mindX's sovereign agents&hellip;</div></div>
 
     <!-- Inference Sources -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>Inference Sources <span style="color:var(--text3);font-weight:400" id="inf-count"></span></span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-inference"></div>
+    <div class="section-body" id="sec-inference"><div class="sec-skel">loading inference providers&hellip;</div></div>
 
     <!-- Memory & Knowledge -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>Memory & Knowledge <span style="color:var(--text3);font-weight:400" id="mem-count"></span></span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-memory"></div>
+    <div class="section-body" id="sec-memory"><div class="sec-skel">loading memory &amp; knowledge stores&hellip;</div></div>
 
     <!-- Machine Dreaming — memories consolidated into long-term knowledge -->
-    <div class="section-hdr" onclick="toggleSec(this)" id="hdr-dreams" style="display:none"><span>Machine Dreaming <span class="insight-sub">lunar consolidation &middot; memories &rarr; long-term knowledge</span></span><span style="display:flex;align-items:center;gap:8px"><span class="fresh" id="fresh-dreams"></span><span class="arrow">&#x25B8;</span></span></div>
+    <div class="section-hdr" onclick="toggleSec(this)" id="hdr-dreams"><span>Machine Dreaming <span class="insight-sub">lunar consolidation &middot; memories &rarr; long-term knowledge</span></span><span style="display:flex;align-items:center;gap:8px"><span class="fresh" id="fresh-dreams"></span><span class="arrow">&#x25B8;</span></span></div>
+    <div class="section-body" id="sec-dreams"><div class="sec-skel">loading dream cycles&hellip;</div></div>
+
+    <!-- Machine Dreaming — memories consolidated into long-term knowledge -->
+    <div class="section-hdr" onclick="toggleSec(this)" id="hdr-dreams" style="display:none"><span>Machine Dreaming <span class="insight-sub">lunar consolidation &middot; memories &rarr; long-term knowledge</span></span><span class="arrow">&#x25B8;</span></div>
     <div class="section-body" id="sec-dreams" style="display:none"></div>
 
     <!-- Godel Audit Trail -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>G&#246;del Audit Trail <span style="color:var(--text3);font-weight:400" id="godel-count"></span></span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-godel"></div>
+    <div class="section-body" id="sec-godel"><div class="sec-skel">loading G&#246;del decision trail&hellip;</div></div>
 
     <!-- Autonomous Systems -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>Autonomous Systems</span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-auto"></div>
+    <div class="section-body" id="sec-auto"><div class="sec-skel">loading autonomous loops &amp; governor&hellip;</div></div>
 
     <!-- Recent Actions -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>Recent Actions <span style="color:var(--text3);font-weight:400" id="actions-count"></span></span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-actions"></div>
+    <div class="section-body" id="sec-actions"><div class="sec-skel">loading recent actions&hellip;</div></div>
 
     <!-- Boardroom Sessions -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>Boardroom Sessions</span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-boardroom"></div>
+    <div class="section-body" id="sec-boardroom"><div class="sec-skel">loading boardroom sessions&hellip;</div></div>
 
     <!-- Endpoints & API -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>Endpoints & API</span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-endpoints"></div>
+    <div class="section-body" id="sec-endpoints"><div class="sec-skel">loading API surface&hellip;</div></div>
 
     <!-- Logs → Memories — every log mindX writes is also a memory -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>Logs &rarr; Memories <span class="insight-sub">every log is a memory</span></span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-logs"></div>
+    <div class="section-body" id="sec-logs"><div class="sec-skel">loading memory stream&hellip;</div></div>
 
   </div>
 
@@ -533,20 +614,20 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
 
 <!-- Sidebar: Activity Panel -->
 <div class="sidebar" id="sidebar">
-  <div class="tabs">
-    <div class="tab active" onclick="T(0)" id="t0">dialogue</div>
-    <div class="tab" onclick="T(1)" id="t1">actions</div>
-    <div class="tab" onclick="T(2)" id="t2">agents</div>
-    <div class="tab" onclick="T(3)" id="t3">dojo</div>
-    <div class="tab" onclick="T(4)" id="t4">feed</div>
+  <div class="sidebar-bar" id="sidebar-bar" title="drag to move &#183; double-click to collapse">
+    <span class="sb-grip">&#x283F;</span><span class="sb-title">mind<b>X</b> activity</span>
+    <span class="sb-btn sb-caret" id="sb-collapse" title="collapse / expand">&#x25BE;</span>
+    <span class="sb-btn" id="sb-dock" title="dock to right" style="display:none">&#x21E5;</span>
+    <span class="sb-btn" id="sb-maximize" title="maximize" style="margin-left:auto">&#x2922;</span>
   </div>
+  <div class="tabs" id="tabstrip" title="drag tabs to reorder"></div>
   <div class="panel-tools">
     <button onclick="copyPanelContent()">COPY</button>
     <button onclick="exportPanelMd()">EXPORT</button>
     <button onclick="popoutPanel()" class="primary">EXPAND</button>
   </div>
   <div class="conv" id="pnl"><div style="padding:8px;color:var(--text3);font-size:11px">Loading agent activity...</div></div>
-  <div class="sidebar-ft">mindx.pythai.net <span id="ts"></span> &#183; <a href="/docs.html">docs</a> &#183; <a href="/book">book</a></div>
+  <div class="sidebar-ft"><a href="https://agenticplace.pythai.net" target="_blank" rel="noopener">agenticplace.pythai.net</a> &#183; <a href="https://mastermind.pythai.net" target="_blank" rel="noopener">mastermind.pythai.net</a> &#183; <a href="https://bankon.pythai.net" target="_blank" rel="noopener">bankon.pythai.net</a><br><span style="color:var(--text3)">&copy; BANKON all rights preserved</span><span id="ts" style="display:none"></span></div>
 </div>
 
 </div><!-- /wrap -->
@@ -657,6 +738,32 @@ function drawBg(t){
     const e=edges[i];e.l-=.015;if(e.l<=0){edges.splice(i,1);continue}
     cx.beginPath();cx.moveTo(nodes[e.a].x,nodes[e.a].y);cx.lineTo(nodes[e.b].x,nodes[e.b].y);
     cx.globalAlpha=e.l*.2;cx.strokeStyle='#58a6ff';cx.lineWidth=e.l;cx.stroke();cx.globalAlpha=1;
+  }
+
+  // ── Self-organizing neural mesh — substrate intelligence from the dynamic ──
+  // Agent-nodes that are near AND active "wire together" (Hebbian): synapse
+  // intensity = proximity × combined activity, a travelling signal rides active
+  // synapses, and connected active nodes keep each other warm. n.act is pulsed
+  // by live system events (see "pulse the substrate"), so the mesh visibly
+  // computes harder when mindX is active — intelligence emergent from the dynamic.
+  for(let i=0;i<nodes.length;i++){
+    for(let j=i+1;j<nodes.length;j++){
+      const a=nodes[i],b=nodes[j];
+      const dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d>=160)continue;
+      const prox=(160-d)/160,life=Math.max(a.act,b.act),alpha=prox*(.03+life*.22);
+      if(alpha<=.012)continue;
+      const col=a.tier>=b.tier?a.c:b.c;
+      cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);
+      cx.globalAlpha=alpha;cx.strokeStyle=col;cx.lineWidth=.4+life*1.1;cx.stroke();cx.globalAlpha=1;
+      if(life>.35){                          // travelling signal along the active synapse
+        const pp=(t*.0012+i*.13)%1,sx=a.x+dx*pp,sy=a.y+dy*pp;
+        cx.beginPath();cx.arc(sx,sy,1.1+life,0,6.28);
+        cx.globalAlpha=life*.5;cx.fillStyle=col;cx.fill();cx.globalAlpha=1;
+      }
+      const warm=life*prox*.35;             // Hebbian reinforcement
+      if(a.act<warm)a.act=warm;if(b.act<warm)b.act=warm;
+    }
   }
 
   // ── Geometric formation — wide orbits around convergence, ambient float when idle ──
@@ -814,15 +921,193 @@ document.getElementById('content').addEventListener('scroll',function(){
 },{passive:true});
 
 // ── Section toggle ──
+// Loader-backed sections (filled by their own fetch, not render(d)).
+var _SEC_LOADERS={'sec-dreams':'loadDreams','sec-logs':'loadMemoryStream','sec-ledger':'loadLedger','sec-selection':'loadSelection'};
+// Populate a section the instant its heading is expanded, from the last good data —
+// so clicking a heading always reveals content instead of a blank box.
+function _refreshSec(bodyId){
+  try{
+    if(typeof LD!=='undefined' && LD) render(LD);  // fills every render(d) section
+    var fn=_SEC_LOADERS[bodyId];
+    if(fn && typeof window[fn]==='function') window[fn]();
+  }catch(e){}
+}
 function toggleSec(hdr){
   hdr.classList.toggle('open');
   const body=hdr.nextElementSibling;
   body.classList.toggle('open');
+  if(body.classList.contains('open')) _refreshSec(body.id);
 }
+
+// ── Floatable / collapsible sidebar ──
+// Drag the top bar to move the whole sidebar anywhere; double-click it (or the
+// caret) to accordion-collapse to just the bar. Position + state persist.
+(function(){
+  var sb=document.getElementById('sidebar'), bar=document.getElementById('sidebar-bar');
+  var dock=document.getElementById('sb-dock'), caret=document.getElementById('sb-collapse');
+  if(!sb||!bar) return;
+  function save(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+  function updDock(){ if(dock) dock.style.display=sb.classList.contains('floating')?'':'none'; }
+  function startFloat(){
+    if(!sb.classList.contains('floating')){
+      var r=sb.getBoundingClientRect();
+      sb.classList.add('floating');
+      sb.style.left=r.left+'px'; sb.style.top=Math.max(0,r.top)+'px';
+      updDock();
+    }
+  }
+  function clampMove(e){
+    var dx=e.clientX-_sx, dy=e.clientY-_sy;
+    if(!_moved && (Math.abs(dx)+Math.abs(dy))>4){ _moved=true; startFloat(); }
+    if(_moved){
+      var w=sb.offsetWidth, h=40;
+      var nl=Math.max(0,Math.min(window.innerWidth-Math.min(w,80), _ox+dx));
+      var nt=Math.max(0,Math.min(window.innerHeight-h, _oy+dy));
+      sb.style.left=nl+'px'; sb.style.top=nt+'px';
+    }
+  }
+  var _drag=false,_moved=false,_sx,_sy,_ox,_oy;
+  function down(cx,cy,e){
+    if(e&&e.target&&e.target.closest('.sb-btn')) return;
+    _drag=true; _moved=false; var r=sb.getBoundingClientRect();
+    _sx=cx; _sy=cy; _ox=r.left; _oy=r.top;
+  }
+  bar.addEventListener('mousedown',function(e){ down(e.clientX,e.clientY,e); e.preventDefault(); });
+  document.addEventListener('mousemove',function(e){ if(_drag) clampMove(e); });
+  document.addEventListener('mouseup',function(){ if(_drag&&_moved) save('mindx_sidebar_pos',JSON.stringify({l:sb.style.left,t:sb.style.top})); _drag=false; });
+  // touch (desktop-tablet)
+  bar.addEventListener('touchstart',function(e){ var t=e.touches[0]; down(t.clientX,t.clientY,e); },{passive:true});
+  document.addEventListener('touchmove',function(e){ if(_drag){ clampMove(e.touches[0]); } },{passive:true});
+  document.addEventListener('touchend',function(){ if(_drag&&_moved) save('mindx_sidebar_pos',JSON.stringify({l:sb.style.left,t:sb.style.top})); _drag=false; });
+  // accordion: double-click the bar, or click the caret
+  function toggleCollapse(){ sb.classList.toggle('collapsed'); save('mindx_sidebar_collapsed',sb.classList.contains('collapsed')?'1':'0'); }
+  bar.addEventListener('dblclick',function(e){ if(e.target&&e.target.closest('.sb-btn'))return; toggleCollapse(); });
+  if(caret) caret.addEventListener('click',function(e){ e.stopPropagation(); toggleCollapse(); });
+  // maximize: fill the viewport from the top bar; toggles from current state.
+  var maxBtn=document.getElementById('sb-maximize');
+  function setMaxIcon(on){ if(maxBtn){ maxBtn.innerHTML=on?'&#x2921;':'&#x2922;'; maxBtn.title=on?'restore':'maximize'; } }
+  function toggleMaximize(){
+    var on=!sb.classList.contains('maximized');
+    if(on){ sb.classList.remove('collapsed','floating'); sb.style.left=''; sb.style.top=''; }
+    sb.classList.toggle('maximized', on);
+    save('mindx_sidebar_maximized', on?'1':'0');
+    setMaxIcon(on);
+  }
+  if(maxBtn) maxBtn.addEventListener('click',function(e){ e.stopPropagation(); toggleMaximize(); });
+  // dock back to the right
+  if(dock) dock.addEventListener('click',function(e){ e.stopPropagation(); sb.classList.remove('floating'); sb.style.left=''; sb.style.top=''; try{localStorage.removeItem('mindx_sidebar_pos')}catch(_){} updDock(); });
+  // restore saved state
+  try{
+    var pos=JSON.parse(localStorage.getItem('mindx_sidebar_pos')||'null');
+    if(pos&&pos.l){ sb.classList.add('floating'); sb.style.left=pos.l; sb.style.top=pos.t; updDock(); }
+    if(localStorage.getItem('mindx_sidebar_collapsed')==='1') sb.classList.add('collapsed');
+    if(localStorage.getItem('mindx_sidebar_maximized')==='1'){ sb.classList.add('maximized'); setMaxIcon(true); }
+  }catch(e){}
+})();
+
+// ── Dockable / collapsible top navbar ──
+// Drag the grip to float the navbar; release near an edge to snap-dock it (top,
+// bottom, left, right). Double-click the grip (or click the caret) to collapse.
+// Dock side + collapsed state persist; content reflows so the bar never covers it.
+(function(){
+  var hdr=document.querySelector('.hdr'); if(!hdr) return;
+  var grip=document.getElementById('hdr-grip'), caret=document.getElementById('hdr-caret');
+  function save(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+  function clearPos(){hdr.style.left=hdr.style.top=hdr.style.right=hdr.style.bottom=hdr.style.width='';}
+  function applyDock(side){
+    hdr.classList.remove('docked','dock-bottom','dock-left','dock-right','dragging');
+    document.body.classList.remove('navdock-bottom','navdock-left','navdock-right');
+    clearPos();
+    if(side && side!=='top'){ hdr.classList.add('docked','dock-'+side); document.body.classList.add('navdock-'+side); }
+    save('mindx_nav_side', side||'top');
+  }
+  var _d=false,_m=false,_sx,_sy,_ox,_oy;
+  function down(cx,cy){ _d=true;_m=false; var r=hdr.getBoundingClientRect(); _sx=cx;_sy=cy;_ox=r.left;_oy=r.top; }
+  function move(cx,cy){
+    if(!_d) return;
+    var dx=cx-_sx, dy=cy-_sy;
+    if(!_m && (Math.abs(dx)+Math.abs(dy))>5){ _m=true;
+      document.body.classList.remove('navdock-bottom','navdock-left','navdock-right');
+      hdr.classList.remove('dock-bottom','dock-left','dock-right');
+      hdr.classList.add('docked','dragging');
+      hdr.style.width=Math.min(hdr.offsetWidth, Math.round(window.innerWidth*0.6))+'px';
+    }
+    if(_m){
+      hdr.style.left=Math.max(0,Math.min(window.innerWidth-60,_ox+dx))+'px';
+      hdr.style.top=Math.max(0,Math.min(window.innerHeight-30,_oy+dy))+'px';
+      hdr.style.right='auto'; hdr.style.bottom='auto';
+    }
+  }
+  function up(cx,cy){
+    if(!_d) return; _d=false;
+    if(_m){
+      var dd={top:cy, bottom:window.innerHeight-cy, left:cx, right:window.innerWidth-cx};
+      var best='top', bv=dd.top; for(var k in dd){ if(dd[k]<bv){bv=dd[k];best=k;} }
+      applyDock(best);
+    }
+  }
+  grip.addEventListener('mousedown',function(e){ down(e.clientX,e.clientY); e.preventDefault(); });
+  document.addEventListener('mousemove',function(e){ move(e.clientX,e.clientY); });
+  document.addEventListener('mouseup',function(e){ up(e.clientX,e.clientY); });
+  grip.addEventListener('touchstart',function(e){ var t=e.touches[0]; down(t.clientX,t.clientY); },{passive:true});
+  document.addEventListener('touchmove',function(e){ if(_d){ var t=e.touches[0]; move(t.clientX,t.clientY); } },{passive:true});
+  document.addEventListener('touchend',function(e){ var t=(e.changedTouches&&e.changedTouches[0])||{clientX:_ox,clientY:_oy}; up(t.clientX,t.clientY); });
+  function toggleNav(){ var c=hdr.classList.toggle('nav-collapsed'); document.body.classList.toggle('navdock-collapsed',c); save('mindx_nav_collapsed', c?'1':'0'); }
+  grip.addEventListener('dblclick',function(){ toggleNav(); });
+  if(caret) caret.addEventListener('click',function(e){ e.stopPropagation(); toggleNav(); });
+  try{
+    var side=localStorage.getItem('mindx_nav_side'); if(side && side!=='top') applyDock(side);
+    if(localStorage.getItem('mindx_nav_collapsed')==='1'){ hdr.classList.add('nav-collapsed'); document.body.classList.add('navdock-collapsed'); }
+  }catch(e){}
+})();
 
 // ── Helpers ──
 let cpuH=[],curT=0,seenTs=new Set(),pendingNew=[];
-const _TABS=['dialogue','actions','agents','dojo','feed'];
+// ── RHS panel data cache ──────────────────────────────────────────────
+// The right-hand panel reads from one cache. `live` is the 6s /diagnostics/live
+// payload (carries actions/interactions/agents/godel/thesis/autonomous/inference/
+// model_perf/recent_logs); `cog`/`dreams`/`ascend`/`mem` are slower side-fetches
+// for the data /diagnostics/live does not carry. Every panel degrades to a
+// Freshness chip ("no data"/"STALE") instead of a blank when its source is empty.
+var RHS={live:null,cog:null,dreams:null,ascend:null,mem:null};
+// Activity-feed tabs. Dojo removed — reputation/standings now live on the
+// mastermind.pythai.net war council, governed by the dojo there. Order is
+// user-draggable and persisted to localStorage.
+var _TAB_DEFAULT=['live','improve','mind','dreams','agents','infer'];
+var _TABS=_TAB_DEFAULT.slice();
+try{
+  var _saved=JSON.parse(localStorage.getItem('mindx_taborder_v2')||'null');
+  if(Array.isArray(_saved)&&_saved.length===_TAB_DEFAULT.length&&_saved.every(function(t){return _TAB_DEFAULT.indexOf(t)>=0})){_TABS=_saved;}
+}catch(_e){}
+var _feedCount=0,_dragI=null;
+function _tabLabel(name){return name==='live'&&_feedCount?'live ('+_feedCount+')':name;}
+function _buildTabs(){
+  var c=document.getElementById('tabstrip');if(!c)return;
+  c.innerHTML='';
+  _TABS.forEach(function(name,i){
+    var t=document.createElement('div');
+    t.className='tab'+(i===curT?' active':'');
+    t.id='t'+i; t.setAttribute('data-name',name); t.textContent=_tabLabel(name); t.draggable=true;
+    t.onclick=function(){T(i)};
+    t.ondragstart=function(e){_dragI=i;t.classList.add('dragging');if(e.dataTransfer){e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',String(i))}catch(_){}}};
+    t.ondragend=function(){t.classList.remove('dragging');var a=document.querySelectorAll('.tab');for(var k=0;k<a.length;k++)a[k].classList.remove('drop-tgt');};
+    t.ondragover=function(e){e.preventDefault();if(e.dataTransfer)e.dataTransfer.dropEffect='move';t.classList.add('drop-tgt');};
+    t.ondragleave=function(){t.classList.remove('drop-tgt');};
+    t.ondrop=function(e){e.preventDefault();t.classList.remove('drop-tgt');_reorderTabs(_dragI,i);};
+    c.appendChild(t);
+  });
+}
+function _reorderTabs(from,to){
+  if(from==null||from===to||from<0||to<0)return;
+  var curName=_TABS[curT];
+  var moved=_TABS.splice(from,1)[0];
+  _TABS.splice(to,0,moved);
+  curT=Math.max(0,_TABS.indexOf(curName));
+  try{localStorage.setItem('mindx_taborder_v2',JSON.stringify(_TABS));}catch(_e){}
+  _buildTabs();if(LD)rpnl(LD);
+}
+function _updateFeedTabLabel(){var t=document.querySelector('.tab[data-name="live"]');if(t)t.textContent=_tabLabel('live');}
+_buildTabs();
 
 // ── Fmt: shared, safe humanization (global; used by render() + insight IIFE) ──
 window.Fmt=(function(){
@@ -932,7 +1217,7 @@ function bar(p,cls){return`<div class="gc-bar"><div class="gc-bar-fill ${cls||'g
 function sa(a){return a?a.slice(0,6)+'..'+a.slice(-4):'?'}
 function rk(t){const m={4:['SOV','rk-s'],3:['BF','rk-b'],2:['VER','rk-v'],1:['PRV','rk-p'],0:['UN','rk-u']};const[l,c]=m[t]||m[0];return`<span class="rk ${c}">${l}</span>`}
 
-function T(n){curT=n;document.querySelectorAll('.tab').forEach((t,i)=>{if(i<5)t.className='tab'+(i===n?' active':'')});if(LD)rpnl(LD);if(_popOpen){document.getElementById('popup-tab-name').textContent=_TABS[n]||'data';_renderPopupContent()}}
+function T(n){curT=n;_buildTabs();if(LD)rpnl(LD);if(_popOpen){document.getElementById('popup-tab-name').textContent=_TABS[n]||'data';_renderPopupContent()}}
 
 // ── Toast ──
 function showToast(m){
@@ -974,6 +1259,9 @@ cycleQuote();setInterval(cycleQuote,6000);
 
 // ── MAIN RENDER ──
 function render(d){
+  // Never render the cold-cache placeholder (no godel_choices/actions/agents) over
+  // good panels — that's what left Gödel + Recent Actions stuck at 0 under stalls.
+  if(!d || d.warming_up){ if(window.Freshness)Freshness.mark('diag','stale'); return; }
   const s=d.system||{},inf=d.inference||{},v=d.vault||{},th=d.thesis||{},db=d.database||{};
   cpuH.push(s.cpu_percent||0);if(cpuH.length>50)cpuH.shift();
 
@@ -1072,7 +1360,7 @@ function render(d){
   gH+=`<div class="gc" onclick="this.classList.toggle('open')" data-tip="CPU utilization with 50-sample history &middot; <a href='/doc/enhanced_monitoring_system'>docs</a>"><div class="gc-lbl">CPU ${spk(cpuH)}</div><div class="gc-val">${s.cpu_percent||0}%</div>${bar(Math.max(s.cpu_percent||0,s.cpu_avg||0),s.cpu_percent>85?'r':s.cpu_percent>65?'y':'g')}<div class="gc-detail">avg: ${s.cpu_avg||0}% | load: ${ld[0]} ${ld[1]} ${ld[2]} | samples: ${cpuH.length}/50<br><a href="/doc/enhanced_monitoring_system" class="link" style="font-size:9px">monitoring docs</a></div></div>`;
   gH+=`<div class="gc" onclick="this.classList.toggle('open')" data-tip="RAM: ${s.memory_used_gb}GB / ${s.memory_total_gb}GB &middot; <a href='/doc/pgvectorscale_memory_integration'>docs</a>"><div class="gc-lbl">Memory</div><div class="gc-val">${s.memory_used_gb||0}<span class="gc-sub">/${s.memory_total_gb||0}G</span></div>${bar(s.memory_percent||0,s.memory_percent>85?'r':s.memory_percent>65?'y':'g')}<div class="gc-detail">process: ${d.process_memory_mb||'?'}MB | free: ${((s.memory_total_gb||0)-(s.memory_used_gb||0)).toFixed(2)}GB<br><a href="/doc/pgvectorscale_memory_integration" class="link" style="font-size:9px">pgvector docs</a></div></div>`;
   gH+=`<div class="gc" onclick="this.classList.toggle('open')" data-tip="${inf.available} of ${inf.total} providers available &middot; <a href='/inference/status'>full status</a>"><div class="gc-lbl">Inference</div><div class="gc-val">${inf.available||0}<span class="gc-sub">/${inf.total||0}</span></div>${bar(inf.total?(inf.available/inf.total)*100:0)}<div class="gc-detail">${Object.entries(inf.sources||{}).map(([n,src])=>`<span class="dot ${src.status==='available'?'dot-g':'dot-r'}"></span>${n}: ${src.status}`).join('<br>')}<br><a href="/inference/status" class="link" style="font-size:9px">full inference status</a></div></div>`;
-  gH+=`<div class="gc" onclick="this.classList.toggle('open')" data-tip="Disk: ${s.disk_used_gb}GB / ${s.disk_total_gb}GB"><div class="gc-lbl">Storage</div><div class="gc-val">${s.disk_used_gb||0}<span class="gc-sub">/${s.disk_total_gb||0}G</span></div>${bar(s.disk_percent||0,s.disk_percent>85?'r':s.disk_percent>65?'y':'g')}<div class="gc-detail">${db.status==='connected'?'pgvector: '+db.db_size+' ('+db.memories+' mem, '+db.beliefs+' bel)':'pgvector: '+(db.status||'unknown')}<br><a href="/doc/pgvectorscale_memory_integration" class="link" style="font-size:9px">pgvector docs</a></div></div>`;
+  gH+=`<div class="gc" onclick="this.classList.toggle('open')" data-tip="Disk: ${s.disk_used_gb}GB / ${s.disk_total_gb}GB"><div class="gc-lbl">Storage</div><div class="gc-val">${s.disk_used_gb||0}<span class="gc-sub">/${s.disk_total_gb||0}G</span></div>${bar(s.disk_percent||0,s.disk_percent>85?'r':s.disk_percent>65?'y':'g')}<div class="gc-detail">${db.status==='connected'?'pgvector: '+db.db_size+' ('+(db.memories||0).toLocaleString()+' mem, '+(db.beliefs||0).toLocaleString()+' bel)':'pgvector: '+((d.memory?.stm_records||0).toLocaleString())+' memories'}<br><a href="/doc/pgvectorscale_memory_integration" class="link" style="font-size:9px">pgvector docs</a></div></div>`;
   // Second row
   gH+=`<div class="gc" data-tip="BDI belief system &middot; <a href='/doc/belief_system'>docs</a>"><div class="gc-lbl"><a href="/doc/belief_system" class="link" style="color:var(--blue)">Beliefs</a></div><div class="gc-val">${d.beliefs?.count||0}</div><div class="gc-sub">BDI identity map</div></div>`;
   gH+=`<div class="gc" data-tip="BANKON vault &middot; ${v.cipher||'AES-256-GCM'} &middot; <a href='/doc/DAIO'>DAIO docs</a>"><div class="gc-lbl"><a href="/doc/DAIO" class="link" style="color:var(--blue)">Vault</a></div><div class="gc-val">${v.entries||0}</div><div class="gc-sub">${v.cipher||'AES-256-GCM'}</div></div>`;
@@ -1165,8 +1453,8 @@ function render(d){
       const bo=(b.backoff_s>0)?` <span style="color:var(--red)">&middot; backoff ${Fmt.dur(b.backoff_s)}</span>`:'';
       const t429=(b.total_429>0)?` <span style="color:var(--amber)">&middot; ${b.total_429} throttled</span>`:'';
       const wins=(b.windows||[]).map(w=>w.used+'/'+w.limit+'@'+_win(w.span_s)).join(', ');
-      infH+=`<div class="dr" style="align-items:center" title="${esc(k)} &middot; ${b.total_req||0} reqs total &middot; ${b.tokens_min||0} tok/min &middot; safety ${Math.round((b.safety||0.9)*100)}% &middot; windows: ${wins}">`
-        +`<span style="font-family:var(--mono);font-size:10px;min-width:96px">${esc(k)}</span>`
+      infH+=`<div class="dr" style="align-items:center" title="${Fmt.esc(k)} &middot; ${b.total_req||0} reqs total &middot; ${b.tokens_min||0} tok/min &middot; safety ${Math.round((b.safety||0.9)*100)}% &middot; windows: ${wins}">`
+        +`<span style="font-family:var(--mono);font-size:10px;min-width:96px">${Fmt.esc(k)}</span>`
         +`<span style="flex:1">${bar(hrPct,col)}</span>`
         +`<span style="font-family:var(--mono);font-size:10px;color:var(--text2);min-width:120px;text-align:right">${hrPct}% &middot; ${Fmt.safe(b.binding_used)}/${Fmt.safe(b.binding_limit)}${bw}${t429}${bo}</span>`
         +`</div>`;
@@ -1202,25 +1490,32 @@ function render(d){
     }
     infH+=`</div>`;
   });
+  if(!allSources.length && !_bk.length) infH+='<div class="insight-empty">no inference sources discovered yet — probing providers</div>';
   document.getElementById('sec-inference').innerHTML=infH;
 
   // Memory & Knowledge
   const re=d.rage_embed||{};
   const stmAgents=Object.entries(d.memory?.stm_by_agent||{}).sort((a,b)=>b[1]-a[1]);
-  document.getElementById('mem-count').textContent=db.status==='connected'?`(${(db.memories||0).toLocaleString()} memories)`:'';
+  const _conn=db.status==='connected';
+  // Headline counts always come from the best available source so the panel is never
+  // blank: live pgvector health when connected, else the memory + rage_embed counts.
+  const memTotal=(_conn?db.memories:0)||d.memory?.stm_records||0;
+  const memEmb=(_conn?db.mem_embeddings:0)||re.memories||0;
+  const docChunks=(_conn?db.doc_embeddings:0)||re.docs||0;
+  document.getElementById('mem-count').textContent=memTotal?`(${memTotal.toLocaleString()} memories)`:'';
   let memH='<div style="font-size:11px;color:var(--text2);padding:4px 0;margin-bottom:8px"><a href="/doc/pgvectorscale_memory_integration" class="link">pgvector docs</a> &#183; <a href="/doc/mindx_memory_architecture_scalable" class="link">memory architecture</a> &#183; <a href="/api/rage/embed" class="link">RAGE search</a> &#183; <a href="/doc/EMBEDDING_SYSTEM" class="link">embedding system</a></div>';
   memH+='<div class="deep-grid">';
-  if(db.status==='connected'){
-    memH+=`<div style="background:var(--surface);padding:12px 14px">`;
-    memH+=`<div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">pgvector database</div>`;
-    memH+=`<div class="dr"><span class="dr-key">memories</span><span class="dr-val" style="font-size:18px;color:var(--green)">${(db.memories||0).toLocaleString()}</span></div>`;
-    memH+=`<div class="dr"><span class="dr-key">embeddings</span><span class="dr-val" style="color:var(--violet)">${(db.mem_embeddings||0).toLocaleString()}</span></div>`;
-    memH+=`<div class="dr"><span class="dr-key">doc chunks</span><span class="dr-val">${db.doc_embeddings||0}</span></div>`;
+  memH+=`<div style="background:var(--surface);padding:12px 14px">`;
+  memH+=`<div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">pgvector database${_conn?'':' <span style="color:var(--text3);font-size:9px">(cached — live stats warming)</span>'}</div>`;
+  memH+=`<div class="dr"><span class="dr-key">memories</span><span class="dr-val" style="font-size:18px;color:var(--green)">${memTotal.toLocaleString()}</span></div>`;
+  memH+=`<div class="dr"><span class="dr-key">embeddings</span><span class="dr-val" style="color:var(--violet)">${memEmb.toLocaleString()}</span></div>`;
+  memH+=`<div class="dr"><span class="dr-key">doc chunks</span><span class="dr-val">${docChunks.toLocaleString()}</span></div>`;
+  if(_conn){
     memH+=`<div class="dr"><span class="dr-key">actions tracked</span><span class="dr-val">${db.actions||0}</span></div>`;
     memH+=`<div class="dr"><span class="dr-key"><a href="/godel/choices" class="dlink">G&#246;del choices</a></span><span class="dr-val" style="color:var(--amber)">${db.godel_choices||0}</span></div>`;
-    memH+=`<div class="dr"><span class="dr-key">database size</span><span class="dr-val">${db.db_size||'?'}</span></div>`;
-    memH+=`</div>`;
   }
+  memH+=`<div class="dr"><span class="dr-key">database size</span><span class="dr-val">${db.db_size||'—'}</span></div>`;
+  memH+=`</div>`;
   // RAGE + STM breakdown
   memH+=`<div style="background:var(--surface);padding:12px 14px">`;
   memH+=`<div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">semantic retrieval</div>`;
@@ -1272,7 +1567,21 @@ function render(d){
   const au=d.autonomous||{},auth=d.author||{},gv=d.governor||{};
   let auH='<div style="font-size:11px;color:var(--text2);padding:4px 0;margin-bottom:8px"><a href="/doc/AUTONOMOUS" class="link">autonomous docs</a> &#183; <a href="/doc/THESIS" class="link">thesis</a> &#183; <a href="/doc/AUTHOR_AGENT" class="link">author agent</a> &#183; <a href="/doc/BOOK_OF_MINDX" class="link">book</a> &#183; <a href="/doc/enhanced_monitoring_system" class="link">monitoring</a></div>';
   auH+='<div style="background:var(--surface);padding:12px 14px">';
-  auH+=`<div class="dr"><span class="dr-key"><span class="dot ${au.loop_running?'dot-g':'dot-r'}"></span><a href="/doc/THESIS" class="dlink">improvement loop</a></span><span class="dr-val">${au.loop_running?'active':'stopped'}${au.last_cycle?' &#183; '+Fmt.timeAgo(au.last_cycle):''}</span></div>`;
+  auH+=`<div class="dr"><span class="dr-key"><span class="dot ${au.loop_running?'dot-g':'dot-r'}"></span><a href="/doc/THESIS" class="dlink">improvement loop</a></span><span class="dr-val">${au.loop_running?'active':'stopped'}${au.cycle_count?' &#183; cycle '+au.cycle_count:''}${au.last_cycle?' &#183; '+Fmt.timeAgo(au.last_cycle):''}</span></div>`;
+  if(au.skip_reason)auH+=`<div class="dr"><span class="dr-key" style="padding-left:14px;color:var(--amber)">&#8627; last cycle skipped</span><span class="dr-val" style="color:var(--amber)">${Fmt.esc(au.skip_reason)}</span></div>`;
+  // Objective self-eval feedback — the loop's verdict on its own success rate.
+  const se=au.self_eval||{};
+  if(se.verdict){
+    const vc={improving:'var(--green)',stalled:'var(--amber)',failing:'var(--red)',resource_bound:'var(--amber)',training_stalled:'var(--amber)',warming_up:'var(--text3)'}[se.verdict]||'var(--text3)';
+    auH+=`<div class="dr"><span class="dr-key"><span class="dot" style="background:${vc}"></span>self-eval (objective)</span><span class="dr-val" style="color:${vc}">${Fmt.esc(se.verdict)}${se.sample?' &#183; '+Fmt.esc(se.sample)+' campaigns':''}${se.alignment_mean!=null?' &#183; align '+Number(se.alignment_mean).toFixed(2):''}</span></div>`;
+    if(se.recommendation)auH+=`<div class="dr"><span class="dr-key" style="padding-left:14px;color:var(--text3);font-size:10px">&#8627; ${Fmt.esc(se.recommendation)}</span><span class="dr-val"></span></div>`;
+    // GROUND TRUTH: real effector applies (sentinel version) — the augmentic headline the campaign rate hides.
+    const si=se.self_improvement||{};
+    if(si.applies>0)auH+=`<div class="dr"><span class="dr-key" style="padding-left:14px;color:var(--green);font-size:10px">&#8627; <b>self-improvements applied</b> (the machine edited its own code)</span><span class="dr-val" style="color:var(--green);font-size:10px"><b>${si.applies}</b> &#183; sentinel v${si.version} &#183; ${si.healthy?'verified healthy':'unhealthy'}</span></div>`;
+    const te=se.training_eval||{};
+    if(te.total)auH+=`<div class="dr"><span class="dr-key" style="padding-left:14px;color:var(--violet);font-size:10px">&#8627; training eval (imprints)</span><span class="dr-val" style="color:${te.accepted>0?'var(--green)':'var(--amber)'};font-size:10px">${te.accepted}/${te.total} took${te.last_delta!=null?' &#183; Δ'+te.last_delta:''}${te.last_model?' &#183; '+Fmt.esc(te.last_model):''}</span></div>`;
+    if(se.last_escalation&&se.last_escalation.failure_mode)auH+=`<div class="dr"><span class="dr-key" style="padding-left:14px;color:var(--blue);font-size:10px">&#8627; escalated to SEA</span><span class="dr-val" style="color:var(--blue);font-size:10px">${Fmt.esc(se.last_escalation.status||'')} &#183; ${Fmt.esc(se.last_escalation.failure_mode)}</span></div>`;
+  }
   auH+=`<div class="dr"><span class="dr-key"><span class="dot ${auth.periodic_active?'dot-g':'dot-x'}"></span><a href="/doc/AUTHOR_AGENT" class="dlink">author agent</a></span><span class="dr-val">${auth.last_chapter||'no chapters yet'}${auth.lunar_day?' &#183; day '+auth.lunar_day:''}</span></div>`;
   auH+=`<div class="dr"><span class="dr-key"><span class="dot ${au.restart_pending?'dot-y':'dot-x'}"></span>restart signal</span><span class="dr-val">${au.restart_pending?'PENDING':'none'}</span></div>`;
   const dreamActions=(d.actions||[]).filter(a=>a.agent_id==='machine_dreaming');
@@ -1282,6 +1591,10 @@ function render(d){
   if(gv.mode){
     const gc=gv.mode==='greedy'?'var(--red)':gv.mode==='generous'?'var(--green)':'var(--blue)';
     auH+=`<div class="dr"><span class="dr-key">governor</span><span class="dr-val" style="color:${gc}">${gv.mode} ${gv.auto_adjust?'(auto)':''}</span></div>`;
+  }
+  if(gv.cpu){
+    const cpu=gv.cpu, over=cpu.current>cpu.ceiling, cc=over?'var(--red)':cpu.current>cpu.ceiling*0.8?'var(--amber)':'var(--green)';
+    auH+=`<div class="dr"><span class="dr-key">CPU (live)</span><span class="dr-val" style="color:${cc}">${cpu.current}% / ${cpu.ceiling}% ceiling${cpu.throttling?' &#183; <span style="color:var(--amber)">THROTTLING'+(cpu.throttle_label?' ('+cpu.throttle_label+')':'')+'</span>':''}</span></div>`;
   }
   if(gv.profile){
     auH+=`<div class="dr"><span class="dr-key">RAM budget</span><span class="dr-val">${gv.profile.max_ram_pct}%</span></div>`;
@@ -1351,7 +1664,9 @@ function render(d){
   // /insight/memory/recent — the catalogue memory.write stream). Machine
   // Dreaming by loadDreams(). Neither reads from /diagnostics/live.
 
-  // Render sidebar panel
+  // Render sidebar panel (RHS). 'rlive' freshness tracks the /diagnostics/live
+  // feed that backs the agents/infer tabs and the improve verdict.
+  if(window.Freshness)Freshness.mark('rlive','ok');
   rpnl(d);
 }
 
@@ -1384,146 +1699,204 @@ function _renderStateCtx(ctx){
   if(!chips.length)return '';
   return `<div style="margin:4px 0 6px 0;font-size:10px"><span style="color:var(--text3);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-right:4px">injected state</span>${chips.join('')}</div>`;
 }
+// ── Right-hand panel: dispatch + per-tab renderers ──────────────────────
+// Reads from the RHS cache (RHS.live = /diagnostics/live, plus the slower
+// side-fetches RHS.cog/dreams/ascend/mem). Each renderer returns an HTML string
+// and prepends a Freshness chip so staleness is always visible — the core fix
+// for "the dashboard is not showing actual events". Unique fresh-* keys avoid
+// duplicate-id collisions with the landing-page sections.
+function _rhsHdr(key,label){
+  return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);background:rgba(5,8,12,.5)"><span>'+label+'</span><span id="fresh-'+key+'">'+(window.Freshness?Freshness.badge(key):'')+'</span></div>';
+}
+function _tierColor(t){t=t||0;return t>=6?'#e6edf3':t>=5?'#79c0ff':t>=4?'#c9a0ff':t>=3?'#3fb950':t>=2?'#58a6ff':t>=1?'#d29922':'#f85149';}
+
 function rpnl(d){
-  const p=document.getElementById('pnl');
-  if(curT===0){
-    const ms=d.interactions||[];
-    if(!ms.length){p.innerHTML='<div class="msg msg-ai"><div class="msg-txt" style="color:var(--text3)">mindX is initializing. Dialogues will appear as agents communicate.</div></div>';return}
-    const recentKeys=new Set(pendingNew.map(pn=>pn.m.timestamp+'_'+(pn.m.prompt||'').slice(0,20)));
-    let h='';ms.forEach(m=>{
-      const ts=m.timestamp||'',td=ts.length>10?ts.slice(5,19).replace('T',' '):ts;
-      const key=ts+'_'+(m.prompt||'').slice(0,20);
-      const cls=recentKeys.has(key)?' msg-new':'';
-      const prompt=(m.prompt||'').replace(/</g,'&lt;');
-      const response=(m.response||'').replace(/</g,'&lt;');
-      const promptShort=prompt.length>120?prompt.slice(0,120)+'...':prompt;
-      const responseShort=response.length>200?response.slice(0,200)+'...':response;
-      const hasMore=prompt.length>120||response.length>200;
-      // Scientific depth: when the entry has state_context (new heartbeat
-      // format), surface the injected facts as a chip-row above the response.
-      // Old entries (qwen3:0.6b platitudes) don't have state_context → no chips.
-      const stateChips=_renderStateCtx(m.state_context);
-      // Model badge: distinguish openrouter vs ollama vs fallback at a glance.
-      const modelLabel=m.model||'?';
-      const isOR=modelLabel.indexOf('openrouter')===0;
-      const isFallback=modelLabel.indexOf('fallback')!==-1;
-      const modelColor=isFallback?'var(--amber)':(isOR?'var(--violet)':'var(--green)');
-      h+=`<div class="msg msg-usr${cls}"><div class="msg-hdr"><span style="color:var(--violet);font-weight:600">${m.agent||'mindX'}</span><span>${td}</span></div><div class="msg-txt">${promptShort}</div></div>`;
-      h+=`<div class="msg msg-ai${cls}"><div class="msg-hdr"><span style="color:${modelColor};font-weight:600;font-family:var(--mono);font-size:10px">${modelLabel}</span><span>${m.latency_ms?m.latency_ms+'ms':''} ${m.tokens_est?'&#183; '+m.tokens_est+' tok':''}</span></div>${stateChips}<div class="msg-txt">${responseShort}</div>`;
-      if(hasMore||m.state_context){
-        let detailsBody=`<div style="padding:6px 0;font-size:12px;line-height:1.6">`;
-        detailsBody+=`<div style="color:var(--violet);font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">${m.agent||'mindX'} PROMPT (rendered with injected state)</div>`;
-        detailsBody+=`<div style="color:var(--text);white-space:pre-wrap;word-break:break-word;padding:6px 8px;background:rgba(22,16,32,.3);border-left:2px solid var(--violet);border-radius:2px;margin-bottom:8px">${prompt}</div>`;
-        if(m.state_context&&typeof m.state_context==='object'){
-          detailsBody+=`<div style="color:var(--blue);font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">STATE CONTEXT (mindX facts injected at heartbeat time)</div>`;
-          detailsBody+=`<pre style="font-size:10px;line-height:1.5;background:rgba(10,18,32,.3);border-left:2px solid var(--blue);border-radius:2px;padding:6px 8px;margin-bottom:8px;white-space:pre-wrap;word-break:break-word">${(JSON.stringify(m.state_context,null,1)||'').replace(/</g,'&lt;')}</pre>`;
-        }
-        detailsBody+=`<div style="color:${modelColor};font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">${modelLabel} RESPONSE</div>`;
-        detailsBody+=`<div style="color:var(--text);white-space:pre-wrap;word-break:break-word;padding:6px 8px;background:rgba(10,32,18,.3);border-left:2px solid ${modelColor};border-radius:2px">${response}</div>`;
-        detailsBody+=`</div>`;
-        h+=`<details style="margin-top:4px"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">full dialogue${m.state_context?' + injected state':''}</summary>${detailsBody}</details>`;
-      }
-      h+=`</div>`;
-    });p.innerHTML=h;p.scrollTop=p.scrollHeight;
-  } else if(curT===1){
-    const acts=d.actions||[];const thesis=d.thesis||{};const godels=d.godel_choices||[];
-    if(!acts.length){p.innerHTML='<div style="padding:12px;color:var(--text3)">No actions yet.</div>';return}
-    let h=`<div style="padding:4px 8px;font-size:10px;color:var(--text2);font-family:var(--mono);border-bottom:1px solid rgba(8,11,16,.3)">${acts.length} actions${thesis.improvement_rate!==undefined?' &#183; '+((thesis.improvement_rate*100).toFixed(1))+'% success':''}</div>`;
-    acts.forEach(a=>{
-      const sc=a.status==='completed'?'var(--green)':a.status==='failed'?'var(--red)':'var(--amber)';
-      const scBg=a.status==='completed'?'rgba(13,51,33,.1)':a.status==='failed'?'rgba(51,13,13,.1)':'rgba(51,43,13,.1)';
-      const ts=(a.created_at||'').slice(5,19).replace('T',' ');
-      const tsShort=(a.created_at||'').slice(11,16);
-      const desc=(a.description||'').replace(/</g,'&lt;');
-      // Parse structured info from description
-      const agentMatch=desc.match(/Agents?:\s*([^.]+)/);
-      const agentList=agentMatch?agentMatch[1].split(',').map(s=>s.trim()):[a.agent_id];
-      const cycleMatch=desc.match(/Cycle\s*(\d+)/);
-      const goalMatch=desc.match(/(?:Cycle\s*\d+[^:]*:\s*)(.+?)(?:\.\s*Agents|$)/);
-      const goal=goalMatch?goalMatch[1]:desc.slice(0,100);
-      // Find related Godel choices by time proximity
-      const actionTime=new Date(a.created_at||0).getTime()/1000;
-      const relatedGodels=godels.filter(g=>{const gt=new Date(g.timestamp||0).getTime()/1000;return Math.abs(gt-actionTime)<300});
-      h+=`<details style="margin:2px 0;background:${scBg};border-left:2px solid ${sc};border-radius:0 3px 3px 0">`;
-      h+=`<summary style="cursor:pointer;padding:6px 10px;font-size:12px;display:flex;justify-content:space-between;align-items:center">`;
-      h+=`<span><span style="color:${sc};font-weight:700;font-size:10px;text-transform:uppercase;font-family:var(--mono);margin-right:6px">${a.status}</span>`;
-      h+=`<span style="color:var(--text)">${cycleMatch?'Cycle '+cycleMatch[1]+' ':''}${a.action_type||''}</span></span>`;
-      h+=`<span style="color:var(--text3);font-size:10px;font-family:var(--mono)">${tsShort}</span></summary>`;
-      h+=`<div style="padding:8px 12px;font-size:12px;border-top:1px solid rgba(8,11,16,.2)">`;
-      // Goal
-      h+=`<div style="color:var(--text);font-weight:600;margin-bottom:6px">${goal}</div>`;
-      // Agent pipeline
-      if(agentList.length>1||agentList[0]!==a.agent_id){
-        h+=`<div style="margin-bottom:6px;padding:4px 0;border-bottom:1px solid rgba(8,11,16,.15);font-size:10px;font-family:var(--mono);color:var(--text3)">PIPELINE: `;
-        agentList.forEach((ag,j)=>{
-          const c=ag.includes('strategic')?'var(--violet)':ag.includes('bdi')?'var(--blue)':ag.includes('mastermind')?'var(--green)':'var(--text2)';
-          h+=`<span style="color:${c};font-weight:600">${ag}</span>`;
-          if(j<agentList.length-1)h+=` <span style="color:var(--text3)">\u2192</span> `;
-        });
-        h+=`</div>`;
-      }
-      // Metrics
-      h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:6px;font-size:11px">`;
-      h+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">source</span> <span style="color:var(--text2)">${a.source||'?'}</span></div>`;
-      h+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">agent</span> <span style="color:var(--violet)">${a.agent_id||'?'}</span></div>`;
-      h+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">type</span> <span style="color:var(--blue)">${a.action_type||'?'}</span></div>`;
-      h+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">time</span> <span style="color:var(--text2)">${ts}</span></div>`;
-      h+=`</div>`;
-      // Full description
-      h+=`<details style="margin:4px 0"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">full description</summary><div style="color:var(--text);padding:6px 8px;white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.6;background:rgba(5,8,16,.3);border-radius:2px;margin-top:4px">${desc}</div></details>`;
-      // Related Godel choices
-      if(relatedGodels.length){
-        h+=`<details style="margin:4px 0"><summary style="cursor:pointer;color:var(--amber);font-size:10px;font-family:var(--mono)">related decisions (${relatedGodels.length})</summary><div style="padding:4px 0">`;
-        relatedGodels.forEach(g=>{
-          const gts=(g.timestamp||'').slice(11,19);
-          const oc=g.outcome==='success'?'var(--green)':g.outcome?'var(--amber)':'var(--text3)';
-          h+=`<div style="padding:3px 0;border-bottom:1px solid rgba(8,11,16,.15);font-size:11px"><span style="color:${oc};font-family:var(--mono)">[${(g.outcome||'?').slice(0,3)}]</span> <span style="color:var(--blue)">${g.agent}</span> <span style="color:var(--text2)">${g.type}</span> <span style="color:var(--text3);font-size:9px">${gts}</span>`;
-          if(g.chosen)h+=`<div style="color:var(--green);padding-left:12px;font-size:11px">\u2192 ${(g.chosen||'')}</div>`;
-          if(g.rationale)h+=`<div style="color:var(--text3);padding-left:12px;font-style:italic;font-size:11px">${g.rationale}</div>`;
-          h+=`</div>`;
-        });
-        h+=`</div></details>`;
-      }
-      // Result
-      if(a.result){
-        h+=`<div style="color:var(--green);margin-top:6px;padding:6px 8px;border-top:1px solid rgba(8,11,16,.15);background:rgba(10,32,18,.2);border-radius:2px;font-size:12px">`;
-        h+=`<span style="color:var(--text3);font-size:10px;font-family:var(--mono)">RESULT</span><br>${(a.result+'').replace(/</g,'&lt;')}</div>`;
-      }
-      h+=`</div></details>`;
-    });
-    p.innerHTML=h;
-  } else if(curT===2){
-    const ai=d.agent_interactions||[];const st=d.dojo||[];
-    let h='';
-    if(ai.length){
-      h+='<div style="font-size:9px;color:var(--text3);padding:6px 0;font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px">INTERACTIONS</div>';
-      ai.slice(0,12).forEach(i=>{h+=`<div style="padding:4px 0;border-bottom:1px solid rgba(8,11,16,.3);font-size:11px"><span style="color:var(--blue);font-weight:600">${i.from}</span> &#8594; ${i.to} <span style="color:var(--violet)">${i.type}</span> <span style="color:var(--text3);font-size:9px">${i.ts}</span></div>`});
-    }
-    if(st.length){
-      h+='<div style="font-size:9px;color:var(--text3);padding:6px 0;font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px">STANDINGS</div>';
-      st.forEach(s=>{h+=`<div style="padding:2px 0;border-bottom:1px solid rgba(8,11,16,.3);font-size:11px">${rk(s.tier)} ${s.agent_id} <span style="float:right;color:var(--text3)">${s.rank} ${s.score}</span></div>`});
-    }
-    p.innerHTML=h||'<div style="padding:12px;color:var(--text3)">No interactions yet.</div>';
-  } else if(curT===3){
-    const st=d.dojo||[];
-    if(!st.length){p.innerHTML='<div style="padding:8px;color:var(--text3)">No standings</div>';return}
-    const grps={};st.forEach(s=>(grps[s.group]=grps[s.group]||[]).push(s));
-    let h='';
-    for(const[group,members]of Object.entries(grps)){
-      h+=`<div style="font-size:9px;color:var(--blue);padding:6px 0;font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px">${group} (${members.length})</div>`;
-      members.forEach(s=>{
-        h+=`<div style="padding:3px 0;border-bottom:1px solid rgba(8,11,16,.3)">${rk(s.tier)} <span style="color:#e6edf3;font-weight:600;font-size:11px">${s.agent_id}</span> <span style="float:right;color:var(--text3);font-size:10px">${s.rank} ${s.score} ${s.bona_fide?'<span style="color:var(--green);font-size:8px">BF</span>':''}</span>${bar(Math.min(100,s.score/100))}</div>`;
-      });
-    }
-    p.innerHTML=h;
-  } else if(curT===4){
-    if(!window._afFeedEvents||!window._afFeedEvents.length){
-      p.innerHTML='<div style="padding:12px;color:var(--text3)">Connecting to activity stream...</div>';
-    } else {
-      window._afRenderToPanel&&window._afRenderToPanel(p);
-    }
+  if(d)RHS.live=d;
+  var p=document.getElementById('pnl'); if(!p)return;
+  var _tab=_TABS[curT]||'live';
+  try{
+    if(_tab==='live')          return rhsLive(p);
+    else if(_tab==='improve')  p.innerHTML=rhsImprove();
+    else if(_tab==='mind')     p.innerHTML=rhsMind();
+    else if(_tab==='dreams')   p.innerHTML=rhsDreams();
+    else if(_tab==='agents')   p.innerHTML=rhsAgents();
+    else if(_tab==='infer')    p.innerHTML=rhsInfer();
+    else                       return rhsLive(p);
+  }catch(err){
+    p.innerHTML='<div style="padding:12px;color:var(--red);font-size:11px">panel render error: '+Fmt.esc((err&&err.message)||String(err))+'</div>';
   }
 }
+
+// ── live: enriched SSE activity feed (kind-classified cards) ──
+function rhsLive(p){
+  var ev=window._afFeedEvents||[];
+  var h=_rhsHdr('rfeed','live activity · /activity/stream');
+  if(!ev.length){ p.innerHTML=h+'<div style="padding:12px;color:var(--text3);font-size:11px">connecting to activity stream…</div>'; return; }
+  h+=ev.slice(0,50).map(window._afRenderCard).join('');
+  p.innerHTML=h;
+}
+
+// ── improve: the honest self-improvement reality ──
+function rhsImprove(){
+  var d=RHS.live||{}, cog=RHS.cog||{}, se=(d.autonomous&&d.autonomous.self_eval)||{};
+  var camps=(cog.mastermind&&cog.mastermind.campaigns)||[];
+  var isOk=function(c){return /SUCC|COMPLETE/i.test(c.final_status||'')};
+  var okC=camps.filter(isOk).length, nC=camps.length, failC=nC-okC;
+  var si=se.self_improvement||{}, te=se.training_eval||{};
+  var logs=(d.recent_logs||[]).join(' ');
+  var inferBroken=/no longer available|\b404\b|throttl|ClientConnector|Expecting value/i.test(logs);
+  var h=_rhsHdr('rcog','self-improvement · real path vs sentinel loop');
+  if(nC>0 && okC===0 && (inferBroken||nC)){
+    h+='<div style="margin:6px;padding:8px;border:1px solid rgba(248,81,73,.4);background:rgba(51,13,13,.25);border-radius:4px;font-size:11px;line-height:1.55">'
+      +'<div style="color:var(--red);font-weight:700;font-family:var(--mono);font-size:10px;letter-spacing:.5px">⚠ CAPABILITY PATH STALLED</div>'
+      +'<div style="color:var(--text2);margin-top:4px">Every Mastermind→BDI campaign dies at <b style="color:var(--amber)">PROPOSE_TOOL_STRATEGY</b> — the tool-strategy LLM returns empty/non-JSON. Primary free model decommissioned (OpenRouter 404); fallback <b>qwen3:0.6b</b> is CPU-throttled. No real code change is landing through this path.</div></div>';
+  }
+  var vc=se.verdict==='improving'?'var(--green)':se.verdict==='failing'?'var(--red)':'var(--amber)';
+  h+='<div style="padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border)">'
+    +'<span style="font-family:var(--mono);color:'+vc+';font-weight:700;text-transform:uppercase">'+Fmt.esc(se.verdict||'—')+'</span>'
+    +' <span style="color:var(--text3)">self-eval</span> <b>'+Fmt.esc(se.sample||'—')+'</b> campaigns'
+    +(se.top_failure?' · top failure <span style="color:var(--red)">'+Fmt.esc(se.top_failure)+'</span>':'')
+    +(se.recommendation?'<div style="color:var(--text3);font-style:italic;margin-top:3px">'+Fmt.esc(Fmt.ellipsis(se.recommendation,200))+'</div>':'')
+    +'</div>';
+  h+='<div style="padding:7px 8px 2px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.5px">real capability path · '+okC+'/'+nC+' ok</div>';
+  if(!nC){ h+='<div style="padding:0 10px 8px;color:var(--text3);font-size:11px">no recent campaigns in window.</div>'; }
+  camps.slice(0,8).forEach(function(c){
+    var ok=isOk(c), col=ok?'var(--green)':'var(--red)';
+    h+='<details style="margin:2px 6px;background:'+(ok?'rgba(13,51,33,.12)':'rgba(51,13,13,.12)')+';border-left:2px solid '+col+';border-radius:0 3px 3px 0">'
+      +'<summary style="cursor:pointer;padding:6px 8px;font-size:11px"><span style="color:'+col+';font-family:var(--mono);font-size:9px;font-weight:700">'+Fmt.esc(c.final_status||'?')+'</span> <span style="color:var(--text)">'+Fmt.esc(Fmt.ellipsis(c.directive,68))+'</span></summary>'
+      +'<div style="padding:4px 10px 8px;font-size:10.5px;color:var(--text2);line-height:1.5">'
+      +(c.message?'<div style="color:var(--amber);font-family:var(--mono);font-size:10px;word-break:break-word">'+Fmt.esc(Fmt.ellipsis(c.message,220))+'</div>':'')
+      +'<div style="color:var(--text3);margin-top:3px">'+Fmt.esc(c.started||'')+(c.finished?' → '+Fmt.esc((c.finished||'').slice(11,19)):'')+'</div>'
+      +'</div></details>';
+  });
+  h+='<div style="padding:9px 8px 2px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.5px">safe sentinel loop · proves act→apply</div>';
+  h+='<div style="padding:4px 10px 10px;font-size:11px;color:var(--text2);line-height:1.6">'
+    +'mindx_meta_agent improvement cycles report success on the meta-goal “Improve improvement success rate” and bump a sentinel version. This proves the act→apply chain works — it is <i>not</i> a real capability change.'
+    +'<div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap">'
+    +'<span style="background:rgba(121,192,255,.08);border:1px solid rgba(121,192,255,.25);border-radius:3px;padding:2px 6px;font-family:var(--mono);font-size:10px">sentinel v<b style="color:var(--blue)">'+(si.version!=null?si.version:'—')+'</b></span>'
+    +'<span style="background:rgba(121,192,255,.08);border:1px solid rgba(121,192,255,.25);border-radius:3px;padding:2px 6px;font-family:var(--mono);font-size:10px"><b style="color:var(--green)">'+(si.applies!=null?si.applies:'—')+'</b> applies</span>'
+    +'<span style="background:rgba(121,192,255,.08);border:1px solid rgba(121,192,255,.25);border-radius:3px;padding:2px 6px;font-family:var(--mono);font-size:10px">imprints <b style="color:var(--violet)">'+(te.accepted!=null?te.accepted:'—')+'/'+(te.total!=null?te.total:'—')+'</b> '+Fmt.esc(te.trend||'')+'</span>'
+    +'</div></div>';
+  return h;
+}
+
+// ── mind: cognitive pipeline + honest latest heartbeat ──
+function rhsMind(){
+  var d=RHS.live||{}, cog=RHS.cog||{};
+  var mm=cog.mastermind||{}, ag=cog.agint||{};
+  var h=_rhsHdr('rcog','cognition · Mastermind → AGInt → BDI');
+  h+='<div style="padding:8px 10px;font-size:11px;line-height:1.7">';
+  h+='<div><span style="color:var(--green);font-weight:600">Mastermind</span> '+(mm.active?'<span style="color:var(--green)">▶ active</span>':'<span style="color:var(--text3)">idle</span>')+((mm.campaigns&&mm.campaigns.length)?' · '+mm.campaigns.length+' campaigns':'')+'</div>';
+  h+='<div style="color:var(--text3);padding-left:10px">↓ drives BDI directly</div>';
+  h+='<div><span style="color:var(--violet);font-weight:600">AGInt (P-O-D-A)</span> '+(ag.active?'<span style="color:var(--green)">▶ '+(ag.cognitive_cycles||0)+' cycles</span>':'<span style="color:var(--amber)">DORMANT</span>')+'</div>';
+  if(ag.note)h+='<div style="color:var(--text3);font-style:italic;font-size:10px;padding-left:10px">'+Fmt.esc(Fmt.ellipsis(ag.note,140))+'</div>';
+  h+='<div style="color:var(--text3);padding-left:10px">↓</div>';
+  h+='<div><span style="color:var(--blue);font-weight:600">BDI</span> <span style="color:var(--text3)">reason → plan → act</span></div>';
+  h+='</div>';
+  var it=(d.interactions||[])[0];
+  h+='<div style="padding:6px 8px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.5px;border-top:1px solid var(--border)">latest heartbeat</div>';
+  if(it){
+    var model=it.model||'?', fb=/fallback/i.test(model), age=Fmt.timeAgo(it.timestamp);
+    h+='<div style="padding:0 10px 10px;font-size:11px">'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">'
+      +'<span style="font-family:var(--mono);font-size:10px;color:'+(fb?'var(--amber)':'var(--green)')+'">'+Fmt.esc(Fmt.ellipsis(model,46))+'</span>'
+      +'<span style="font-family:var(--mono);font-size:10px;color:var(--text3)">'+age+'</span>'
+      +(fb?'<span style="background:rgba(227,179,65,.12);color:var(--amber);border:1px solid rgba(227,179,65,.3);border-radius:3px;padding:1px 5px;font-size:9px;font-family:var(--mono)">FALLBACK</span>':'')
+      +'</div>'
+      +'<div style="color:var(--text2);line-height:1.5;word-break:break-word">'+Fmt.esc(Fmt.ellipsis(it.response||it.prompt||'',280))+'</div></div>';
+  } else { h+='<div style="padding:0 10px 10px;color:var(--text3);font-size:11px">no heartbeat dialogue yet.</div>'; }
+  return h;
+}
+
+// ── dreams: machine.dreaming + mindXtrain + memory.write stream ──
+function rhsDreams(){
+  var dr=RHS.dreams||{}, asc=RHS.ascend||{}, mem=RHS.mem||{};
+  var dreams=dr.dreams||[];
+  var cap=asc.capability||{}, reg=(asc.settings&&asc.settings.regimen)||{}, tr=asc.training||{};
+  var h=_rhsHdr('rdreams','substrate evolution · dreams + training');
+  var last=dreams[0];
+  if(last){
+    var lunar=last.lunar||{};
+    h+='<div style="padding:8px 10px;font-size:11px;line-height:1.6;border-bottom:1px solid var(--border)">'
+      +'<span style="color:var(--violet);font-weight:600">machine.dreaming</span> · '+Fmt.esc(lunar.phase_name||'lunar')
+      +'<div style="margin-top:3px;color:var(--text2)"><b style="color:var(--green)">'+(last.agents_dreamed||0)+'</b> agents · <b style="color:var(--blue)">'+(last.insights_generated||0)+'</b> insights · <b style="color:var(--amber)">'+(last.memories_promoted_to_ltm||0)+'</b> → LTM'
+      +(last.timestamp?' · '+Fmt.timeAgo(last.timestamp):'')+'</div></div>';
+  } else { h+='<div style="padding:8px 10px;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">no dream cycles yet · mindX dreams on the lunar cycle</div>'; }
+  h+='<div style="padding:8px 10px;font-size:11px;line-height:1.6;border-bottom:1px solid var(--border)">'
+    +'<span style="color:var(--blue);font-weight:600">mindXtrain</span> '+(cap.cpu_train_active?'<span style="color:var(--green)">▶ training</span>':'<span style="color:var(--text3)">idle</span>')+' · v'+Fmt.esc(cap.version||'?')+' · '+Fmt.esc(cap.level||'cpu')
+    +(reg.model?'<div style="margin-top:3px;color:var(--text2)">'+Fmt.esc(reg.model)+(reg.served_ollama_tag?' → '+Fmt.esc(reg.served_ollama_tag):'')+(reg.cpu_percent?' · '+reg.cpu_percent+'% / '+reg.wall_hours+'h≈'+reg.effective_hours+'h':'')+'</div>':'')
+    +(tr.recipe?'<div style="color:var(--text3);font-size:10px;margin-top:2px">last: '+Fmt.esc(Fmt.ellipsis(tr.recipe,60))+' · '+Fmt.esc(tr.state||'')+'</div>':'')
+    +'</div>';
+  h+='<div style="padding:6px 8px 2px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.5px">logs → memories</div>';
+  var ms=mem.events||mem.memories||[];
+  if(ms.length){
+    ms.slice(0,14).forEach(function(m){
+      h+='<div style="padding:3px 10px;border-bottom:1px solid rgba(8,11,16,.25);font-size:10.5px;display:flex;justify-content:space-between;gap:6px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="color:var(--violet)">'+Fmt.esc(m.actor||m.agent||'?')+'</span> <span style="color:var(--text3)">'+Fmt.esc(m.memory_type||m.type||'')+'</span></span><span style="color:var(--text3);font-size:9px;flex-shrink:0">'+Fmt.timeAgo(m.ts||m.timestamp)+'</span></div>';
+    });
+  } else { h+='<div style="padding:0 10px 8px;color:var(--text3);font-size:11px">memory stream warming up…</div>'; }
+  return h;
+}
+
+// ── agents: sovereign roster + interactions ──
+function rhsAgents(){
+  var d=RHS.live||{};
+  var ags=d.agents||[], ai=d.agent_interactions||[];
+  var h=_rhsHdr('rlive','agent roster · '+ags.length+' sovereign');
+  ags.forEach(function(a){
+    var c=_tierColor(a.verification_tier);
+    h+='<div style="padding:5px 10px;border-bottom:1px solid rgba(8,11,16,.25);font-size:11px">'
+      +'<span style="color:'+c+';font-weight:600">'+Fmt.esc(a.entity_id||'?')+'</span> <span style="font-family:var(--mono);font-size:9px;color:'+c+'">T'+(a.verification_tier||0)+'</span>'
+      +'<div style="color:var(--text3);font-size:10px">'+Fmt.esc(Fmt.ellipsis(a.role||'',92))+'</div></div>';
+  });
+  if(ai.length){
+    h+='<div style="padding:6px 8px 2px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.5px">recent interactions</div>';
+    ai.slice(0,12).forEach(function(i){ h+='<div style="padding:3px 10px;font-size:10.5px"><span style="color:var(--blue)">'+Fmt.esc(i.from)+'</span> → '+Fmt.esc(i.to)+' <span style="color:var(--violet)">'+Fmt.esc(i.type)+'</span></div>'; });
+  }
+  return h||'<div style="padding:12px;color:var(--text3)">no agents.</div>';
+}
+
+// ── infer: inference reality — why campaigns fail, made visible ──
+function rhsInfer(){
+  var d=RHS.live||{};
+  var inf=d.inference||{}, perf=d.model_perf||[], logs=d.recent_logs||[];
+  var h=_rhsHdr('rlive','inference · '+(inf.available||0)+'/'+(inf.total||0)+' providers');
+  var src=inf.sources||{};
+  Object.keys(src).forEach(function(k){ var s=src[k], ok=s.status==='available';
+    h+='<div style="padding:3px 10px;font-size:10.5px;border-bottom:1px solid rgba(8,11,16,.2)"><span style="color:'+(ok?'var(--green)':'var(--red)')+'">'+(ok?'●':'○')+'</span> <span style="color:var(--text2)">'+Fmt.esc(k)+'</span> <span style="color:var(--text3);font-size:9px">'+Fmt.esc(s.type||'')+(s.score!=null?' · '+s.score:'')+'</span></div>';
+  });
+  if(perf.length){
+    h+='<div style="padding:6px 8px 2px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.5px">recent inferences</div>';
+    perf.slice(0,8).forEach(function(m){ var slow=(m.latency_ms||0)>8000||(m.cpu_at_query||0)>90;
+      h+='<div style="padding:2px 10px;font-size:10px;font-family:var(--mono);color:'+(slow?'var(--amber)':'var(--text2)')+'">'+Fmt.esc(m.model||'?')+' · '+(m.latency_ms||0)+'ms · '+(m.tps||0)+'tps'+(m.cpu_at_query!=null?' · cpu '+m.cpu_at_query+'%':'')+'</div>';
+    });
+  }
+  var warns=logs.filter(function(l){return /WARNING|ERROR|\b404\b|throttl/i.test(l)}).slice(0,6);
+  if(warns.length){
+    h+='<div style="padding:6px 8px 2px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--red);letter-spacing:.5px">why it fails · recent warnings</div>';
+    warns.forEach(function(l){ h+='<div style="padding:3px 10px;font-size:9.5px;color:var(--text3);font-family:var(--mono);line-height:1.4;border-bottom:1px solid rgba(8,11,16,.2);word-break:break-word">'+Fmt.esc(Fmt.ellipsis(l,200))+'</div>'; });
+  }
+  return h;
+}
+
+// ── RHS side-fetches (data /diagnostics/live does not carry) ──
+function _rhsRerenderIf(){ var t=_TABS[curT]; if(LD&&(t==='dreams'))rpnl(LD); }
+function pollRHSExtras(){
+  // cog (campaigns + agint) is populated by _wireAgint's existing 15s fetch.
+  var jobs=[
+    ['/insight/dreams/recent?limit=6','rdreams',function(j){RHS.dreams=j}],
+    ['/insight/godel/ascend','rascend',function(j){RHS.ascend=j}],
+    ['/insight/memory/recent?limit=24','rmem',function(j){RHS.mem=j}]
+  ];
+  jobs.forEach(function(job){
+    fetch(job[0],{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){
+      if(j&&!j.error){ job[2](j); if(window.Freshness)Freshness.mark(job[1],'ok'); }
+      else if(window.Freshness)Freshness.mark(job[1],'empty');
+      _rhsRerenderIf();
+    }).catch(function(){ if(window.Freshness)Freshness.mark(job[1],'error'); });
+  });
+}
+if(window.Freshness){Freshness.cadence('rdreams',20000).cadence('rascend',20000).cadence('rmem',20000).cadence('rcog',15000).cadence('rlive',6000).cadence('rfeed',6000);}
+pollRHSExtras(); setInterval(pollRHSExtras,20000);
 
 // ── Force layers visible immediately ──
 document.querySelectorAll('.layer').forEach(function(l){l.classList.add('vis')});
@@ -1531,6 +1904,36 @@ document.querySelectorAll('.layer').forEach(function(l){l.classList.add('vis')})
 // ── Progressive data loading — 3 second rule ──
 var _firstRender=true;
 var _bootStart=Date.now();
+
+// ── top-right: AGInt P-O-D-A decisions (the soul) + the OVERLORD hierarchy (two chains, one ladder) ──
+function _wireAgint(){
+  fetch('/insight/cognition/diagnostic').then(function(r){return r.json()}).then(function(d){
+    // Feed the RHS cache too (improve + mind tabs read RHS.cog) — one fetch, two uses.
+    if(d&&!d.error){RHS.cog=d; if(window.Freshness)Freshness.mark('rcog','ok'); var _t=_TABS[curT]; if(LD&&(_t==='improve'||_t==='mind'))rpnl(LD);}
+    var a=(d&&d.agint)||{}; var rec=(a.recent||[]).filter(function(x){return x.action_type}).slice(0,6);
+    var el=document.getElementById('hdr-agint'); if(!el)return;
+    if(a.active && rec.length){
+      var L=rec[0]; var col=L.success?'var(--green)':'var(--amber)';
+      el.style.display=''; el.innerHTML='AGInt&#8201;&#9656;&#8201;<b style="color:'+col+'">'+L.action_type+'</b>';
+      el.title='AGInt (P-O-D-A soul) — '+(a.cognitive_cycles||0)+' cognitive cycles · last decisions:\n'
+        + rec.map(function(x){return (x.ts||'').slice(11,19)+'  '+x.action_type+'  '+(x.success?'✓':'✗')}).join('\n');
+    } else if(a.active){ el.style.display=''; el.innerHTML='AGInt&#8201;&#9656;&#8201;<b>active</b>'; el.title='AGInt active · '+(a.cognitive_cycles||0)+' cycles'; }
+  }).catch(function(){});
+}
+function _wireHierarchy(){
+  fetch('/insight/hierarchy').then(function(r){return r.json()}).then(function(d){
+    var el=document.getElementById('hdr-hierarchy'); if(!el||!d)return;
+    var ap=d.apex||{}; var ovl=(ap.overlord||{}), ovs=(ap.overseer||{});
+    el.style.display='';
+    el.innerHTML='&#10689;&#8201;<b style="color:var(--gold)">OVERLORD</b>&#8201;·&#8201;<b style="color:var(--violet)">OVERSEER</b>';
+    el.title='The OVERLORD hierarchy — two sovereignty chains, one ladder:\n'
+      + (d.ladder||[]).map(function(t){return t.tier.toUpperCase().padEnd(12)+'  '+(t.how||'')}).join('\n')
+      + '\n\noverlord = '+(ovl.identity||'bankon.eth')+' ('+(ovl.chain||'evm')+')  '+(ovl.configured?'✓':'—')
+      + '\noverseer = '+(ovs.identity||'mindx.algo')+' ('+(ovs.chain||'algorand')+')  '+(ovs.configured?'✓':'—');
+  }).catch(function(){});
+}
+_wireAgint(); _wireHierarchy();
+setInterval(_wireAgint, 15000); setInterval(_wireHierarchy, 120000);
 
 // Layer 0: Try fast endpoints first (health is instant)
 fetch('/health').then(function(r){return r.json()}).then(function(d){
@@ -1542,6 +1945,29 @@ fetch('/health').then(function(r){return r.json()}).then(function(d){
   document.getElementById('live-badge').textContent='CONNECTING';
   document.getElementById('live-badge').className='live-badge off';
 });
+
+// Honest Gödel Machine Index headline (the self-audit, not the marketing claim)
+fetch('/insight/godel/machine').then(function(r){return r.json()}).then(function(g){
+  var el=document.getElementById('gmi-verdict');if(!el)return;
+  var yes=g.verdict==='GODEL_MACHINE';
+  var cov=(typeof g.proof_coverage==='number')?(g.proof_coverage*100).toFixed(0)+'%':'—';
+  var label=yes?'GÖDEL MACHINE':'NOT YET';
+  var color=yes?'#3fb950':'#d29922';
+  el.innerHTML='Gödel Machine Index: <b style="color:'+color+'">'+label+'</b> · proof coverage '+cov+
+    ' · <a href="/feedback.html#sec-godel-machine" style="color:var(--blue)">self-audit</a>';
+}).catch(function(){});
+
+// Latest milestone mindX recognized from its own public git history
+fetch('/insight/milestones/recent?limit=10').then(function(r){return r.json()}).then(function(d){
+  var el=document.getElementById('milestone-line');if(!el)return;
+  var rows=(d&&d.milestones)||[];
+  var worthy=rows.filter(function(m){return m.worthy});
+  var latest=worthy[0]||rows[0];if(!latest)return;
+  var url=latest.url||'#';
+  el.innerHTML='latest milestone: <a href="'+url+'" target="_blank" rel="noopener" style="color:var(--blue)">'+
+    (latest.short_sha||'')+'</a> '+(latest.subject||'').replace(/[<>&]/g,'')+
+    ' · <a href="/feedback.html#sec-milestones" style="color:var(--blue)">all</a>';
+}).catch(function(){});
 
 // Layer 1: Thesis evidence loads fast (cached, small payload)
 fetch('/thesis/evidence').then(function(r){return r.json()}).then(function(ev){
@@ -1658,13 +2084,22 @@ setInterval(function(){
 // Layer 2: Full diagnostics (slower, loads everything)
 async function rf(){
   try{
-    if(!LD&&_preloadedData){LD=_preloadedData;_preloadedData=null;render(LD);_firstRender=false;Freshness.mark('diag','ok');return}
-    var r=await fetch('/diagnostics/live');
-    if(r.ok){LD=await r.json();render(LD);_firstRender=false;Freshness.mark('diag','ok');}
-    else{Freshness.mark('diag','error');}
+    if(!LD&&_preloadedData){var pd=_preloadedData;_preloadedData=null;if(pd&&!pd.warming_up){LD=pd;render(LD);_firstRender=false;Freshness.mark('diag','ok');return}}
+    // hard timeout so a CPU stall can't hang the poll; on failure/placeholder we
+    // KEEP the last good render and let the freshness badge age to STALE by cadence.
+    var ctl=('AbortController'in window)?new AbortController():null;
+    var to=ctl?setTimeout(function(){try{ctl.abort()}catch(e){}},8000):null;
+    var r=await fetch('/diagnostics/live',ctl?{signal:ctl.signal}:{});
+    if(to)clearTimeout(to);
+    if(r.ok){
+      var j=await r.json();
+      if(j&&!j.warming_up){LD=j;render(LD);_firstRender=false;Freshness.mark('diag','ok');}
+      // warming_up placeholder → keep last good (no re-mark; badge ages naturally)
+    }
+    // non-OK → keep last good; badge ages to STALE
   }catch(e){
-    Freshness.mark('diag','error');
-    if(Date.now()-_bootStart>5000){
+    // timeout/network → keep last good; only show CONNECTING if we never loaded
+    if(!LD && Date.now()-_bootStart>5000){
       document.getElementById('live-badge').textContent='CONNECTING';
       document.getElementById('live-badge').className='live-badge off';
     }
@@ -1730,7 +2165,32 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
   let feedEvents=[];
   window._afFeedEvents=feedEvents;
   function ago(ts){const s=Math.floor(Date.now()/1000-ts);if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m';return Math.floor(s/3600)+'h'}
+  // Classify an event into a kind chip {label,color,icon} so the live feed reads
+  // at a glance instead of as an undifferentiated stream of thinking_steps.
+  function kindOf(e){
+    const r=e.room||'', t=e.type||'', c=(e.content||'');
+    if(r==='boardroom'||t.indexOf('board')===0) return {label:'board',color:'#c9a0ff',icon:'⚖'};
+    if(r==='godel'||t.indexOf('godel')===0)     return {label:'gödel',color:'#e3b341',icon:'◈'};
+    if(r==='dream'||t.indexOf('dream')===0)      return {label:'dream',color:'#d2a8ff',icon:'☾'};
+    if(t.indexOf('alignment')===0)               return {label:'align',color:'#79c0ff',icon:'⊕'};
+    if(r==='memory'||t.indexOf('memory')===0)    return {label:'memory',color:'#58a6ff',icon:'◉'};
+    if(t.indexOf('improvement')===0||/improvement|cycle\s*\d|self-improv/i.test(c)) return {label:'improve',color:'#56d364',icon:'⚙'};
+    if(t.indexOf('publication')===0||t.indexOf('marketing')===0) return {label:'publish',color:'#79c0ff',icon:'✎'};
+    if(t==='thinking_step')                       return {label:'think',color:'#b1bac4',icon:'⋯'};
+    return {label:(r||t||'evt'),color:'#6e7681',icon:'·'};
+  }
+  // Pulse the substrate (kept canvas nodes/edges) on high-signal real events.
+  function pulseSubstrate(kind){
+    try{ if(typeof nodes==='undefined'||!nodes.length)return;
+      if(kind==='improve'||kind==='gödel'||kind==='dream'||kind==='board'){
+        for(var i=0;i<Math.min(5,nodes.length);i++){var n=nodes[(Math.random()*nodes.length)|0];n.act=1;}
+        if(typeof flashE==='function')flashE(0,(3)%nodes.length);
+      }
+    }catch(_){}
+  }
   function renderCard(e){
+    const K=kindOf(e);
+    const kindChip=`<span style="color:${K.color};font-family:var(--mono);font-size:9px;font-weight:700;background:rgba(255,255,255,.03);border:1px solid ${K.color}44;border-radius:3px;padding:0 4px">${K.icon} ${K.label}</span>`;
     const badge=`<span style="color:${TCOL[e.agent_tier]||TCOL[0]};font-weight:700;font-size:9px;font-family:var(--mono)">[${TIER[e.agent_tier]||'UN'}]</span>`;
     let detailHtml='';
     if(e.detail){
@@ -1747,21 +2207,23 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
         detailHtml=`<details style="margin-top:4px"><summary style="cursor:pointer;color:var(--text3);font-size:9px">detail</summary><pre style="font-size:9px;color:var(--text3);max-height:80px;overflow:auto;padding:4px;margin-top:4px;background:rgba(5,8,16,.4);border-radius:3px;white-space:pre-wrap">${JSON.stringify(d,null,2).slice(0,400)}</pre></details>`;
       }
     }
-    return`<div style="padding:8px;border-bottom:1px solid rgba(8,11,16,.3)"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>${badge} <span style="color:#e6edf3;font-size:11px;font-weight:600">${e.agent||'system'}</span></span><span style="color:var(--text3);font-size:9px;font-family:var(--mono)">${ago(e.timestamp)} #${e.room}</span></div><div style="color:var(--text);font-size:11px;line-height:1.5">${(e.content||'').replace(/</g,'&lt;').slice(0,300)}</div>${detailHtml}</div>`;
+    return`<div style="padding:8px;border-bottom:1px solid rgba(8,11,16,.3)"><div style="display:flex;justify-content:space-between;margin-bottom:3px;gap:6px"><span>${kindChip} ${badge} <span style="color:#e6edf3;font-size:11px;font-weight:600">${(e.agent||'system').replace(/</g,'&lt;')}</span></span><span style="color:var(--text3);font-size:9px;font-family:var(--mono);flex-shrink:0">${ago(e.timestamp)} #${e.room}</span></div><div style="color:var(--text);font-size:11px;line-height:1.5">${(e.content||'').replace(/</g,'&lt;').slice(0,300)}</div>${detailHtml}</div>`;
   }
+  window._afRenderCard=renderCard;
   window._afRenderToPanel=function(panel){
     if(!feedEvents.length){panel.innerHTML='<div style="padding:12px;color:var(--text3)">Activity stream loading...</div>';return}
-    panel.innerHTML=feedEvents.slice(0,40).map(renderCard).join('');
+    panel.innerHTML=feedEvents.slice(0,50).map(renderCard).join('');
   };
   function updateBadge(){
-    const tab=document.getElementById('t4');if(tab)tab.textContent='feed ('+feedEvents.length+')';
-    if(curT===4){const p=document.getElementById('pnl');if(p)window._afRenderToPanel(p)}
+    _feedCount=feedEvents.length;_updateFeedTabLabel();
+    if(window.Freshness)Freshness.mark('rfeed',feedEvents.length?'ok':'empty');
+    if((_TABS[curT]||'')==='live'){const p=document.getElementById('pnl');if(p&&typeof rhsLive==='function')rhsLive(p);}
   }
   function connectSSE(){
     const es=new EventSource('/activity/stream');
-    es.addEventListener('activity',function(e){try{const ev=JSON.parse(e.data);feedEvents.unshift(ev);if(feedEvents.length>100)feedEvents.length=100;window._afFeedEvents=feedEvents;updateBadge()}catch(err){}});
+    es.addEventListener('activity',function(e){try{const ev=JSON.parse(e.data);feedEvents.unshift(ev);if(feedEvents.length>100)feedEvents.length=100;window._afFeedEvents=feedEvents;pulseSubstrate(kindOf(ev).label);updateBadge()}catch(err){}});
     es.addEventListener('heartbeat',function(){updateBadge()});
-    es.onerror=function(){setTimeout(()=>{es.close();connectSSE()},5000)};
+    es.onerror=function(){if(window.Freshness)Freshness.mark('rfeed','error');setTimeout(()=>{es.close();connectSSE()},5000)};
   }
   connectSSE();
 })();
@@ -1998,12 +2460,11 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
   }
 
   // ── Progressive hero links — earned through interaction ──
+  // Fewer links: docs.html is the hub (thesis, manifesto, API, evidence all
+  // reachable from there); feedback.html is the live mind. One of each is enough.
   var _heroLinks=[
-    {at:3, href:'/doc/THESIS', text:'thesis', color:'var(--blue)'},
-    {at:7, href:'/doc/MANIFESTO', text:'manifesto', color:'var(--violet)'},
-    {at:9, href:'/docs.html', text:'262+ docs', color:'var(--blue)'},
-    {at:13, href:'/redoc', text:'API reference', color:'var(--green)'},
-    {at:21, href:'/thesis/evidence', text:'live evidence', color:'var(--green)'},
+    {at:3, href:'/docs.html', text:'docs', color:'var(--blue)'},
+    {at:9, href:'/feedback.html', text:'the mind of mindX', color:'var(--violet)'},
   ];
   var _heroLinksRevealed=0;
   var _heroInteractions=0;
@@ -2039,6 +2500,11 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
       _checkHeroLinks();
     }
   },8000);
+
+  // Participant-experience widget (voice oscilloscope + motion tracker + interaction
+  // log) removed 2026-06 — low-signal on a diagnostics page; the interactive
+  // experience is handed off to the voicey + faicey projects. deltaverse.js
+  // Fabric background + quote engine stay.
 })();
 </script>
 
@@ -2235,41 +2701,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
   function heatColor(v){ if(v>=80)return'var(--green)'; if(v>=60)return'#7ee787'; if(v>=45)return'var(--violet)'; if(v>=30)return'var(--amber)'; return'var(--red)'; }
   function barColor(v){ return v>=70?'var(--green)':v>=50?'var(--blue)':v>=30?'var(--amber)':'var(--red)'; }
 
-  function loadFitness(){
-    fetch('/insight/fitness').then(function(r){return r.ok?r.json():null;}).then(function(d){
-      if(!d || d.fallback){ hideSec('sec-fitness','hdr-fitness'); Freshness.mark('fitness','empty'); return; }
-      var agents=(d.agents||[]).slice(0,8);
-      if(!agents.length){ hideSec('sec-fitness','hdr-fitness'); Freshness.mark('fitness','empty'); return; }
-      showSec('sec-fitness','hdr-fitness');
-      Freshness.mark('fitness','ok');
-      var axes=['campaign_success','trace_reliability','latency_score','consensus_alignment','reputation_momentum','learning_velocity','godel_selection_rate'];
-      var rows=agents.map(function(a,i){
-        var bar='<div class="fit-bar-wrap"><div class="fit-bar" style="width:'+a.fitness+'%;background:'+barColor(a.fitness)+'"></div></div>';
-        var dots=axes.map(function(k){
-          var v=(a.axes||{})[k]; if(v==null)v=50;
-          return '<div class="axis-dot" title="'+k+': '+v.toFixed(0)+'" style="background:'+heatColor(v)+'"></div>';
-        }).join('');
-        var td=a.trend_7d||0;
-        var tcls=td>1?'up':td<-1?'dn':'flat';
-        var ts=td>0?'+'+td.toFixed(1):td.toFixed(1);
-        return '<tr>'
-          +'<td class="fit-rank">'+(i+1)+'</td>'
-          +'<td class="fit-agent">'+esc(a.agent_id||'')+'</td>'
-          +'<td class="fit-score">'+a.fitness.toFixed(1)+'</td>'
-          +'<td>'+bar+'</td>'
-          +'<td><div class="axes-heat">'+dots+'</div></td>'
-          +'<td class="fit-trend '+tcls+'">'+ts+'</td>'
-          +'</tr>';
-      }).join('');
-      document.getElementById('sec-fitness').innerHTML='<table class="fit-table">'
-        +'<thead><tr><th></th><th>agent</th><th style="text-align:right">fit</th><th></th><th>axes</th><th>&Delta;7d</th></tr></thead>'
-        +'<tbody>'+rows+'</tbody></table>';
-    }).catch(function(){
-      Freshness.mark('fitness','error'); showSec('sec-fitness','hdr-fitness');
-      var b=document.getElementById('sec-fitness');
-      if(b && !b.querySelector('.fit-table')) b.innerHTML='<div class="panel-banner">fitness feed error &mdash; retrying every 30s</div>';
-    });
-  }
+  // loadFitness() removed 2026-06 — per-agent fitness was low-signal noise; section deleted.
 
   function loadSelection(){
     fetch('/insight/selection/events?limit=5').then(function(r){return r.ok?r.json():null;}).then(function(d){
@@ -2303,21 +2735,43 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
     });
   }
 
+  // fetch JSON with a hard timeout; resolves null on any non-OK / abort / network
+  // error so callers can keep their last-good render through the box's CPU stalls.
+  function _fetchJSONt(url,ms){
+    var ctl=('AbortController' in window)?new AbortController():null;
+    var to=ctl?setTimeout(function(){try{ctl.abort();}catch(e){}},ms||10000):null;
+    return fetch(url,ctl?{signal:ctl.signal}:{}).then(function(r){
+      if(to)clearTimeout(to); return r.ok?r.json():null;
+    }).catch(function(){ if(to)clearTimeout(to); return null; });
+  }
+
   // Logs → Memories — the catalogue memory.write stream. mindX writes no log
-  // that is not also a memory; this shows each log becoming one.
+  // that is not also a memory; this shows each log becoming one. Resilient: a
+  // transient endpoint stall keeps the last-good list (marked stale) instead of
+  // wiping it to an error — so the public can watch memories form uninterrupted.
+  var _memLoaded=false;
   function loadMemoryStream(){
-    fetch('/insight/memory/recent?limit=24').then(function(r){return r.ok?r.json():null;}).then(function(d){
+    _fetchJSONt('/insight/memory/recent?limit=24',10000).then(function(d){
       var box=document.getElementById('sec-logs');
       if(!box) return;
-      var evs=(d && d.events)||[];
-      if(!evs.length){
-        box.innerHTML='<div class="insight-empty">no memory writes in the catalogue yet</div>';
-        Freshness.mark('logs','empty');
+      if(d===null){ // transient failure (timeout / 504) — keep last good; leave the
+        // prior 'ok' mark untouched so the badge ages to STALE naturally by cadence.
+        if(!_memLoaded){ box.innerHTML='<div class="panel-banner">memory stream warming up &mdash; retrying every 30s</div>'; Freshness.mark('logs','error'); }
         return;
       }
+      var evs=d.events||[];
+      if(!evs.length){
+        if(!_memLoaded) box.innerHTML='<div class="insight-empty">no memory writes in the catalogue yet</div>';
+        Freshness.mark('logs', _memLoaded?'ok':'empty'); if(_memLoaded) Freshness.paint('logs');
+        return;
+      }
+      _memLoaded=true;
       Freshness.mark('logs','ok');
       var IMP={1:'CRIT',2:'HIGH',3:'MED',4:'LOW'};
       var IMPC={1:'var(--red)',2:'var(--amber)',3:'var(--blue)',4:'var(--text3)'};
+      var actors={}; evs.forEach(function(e){ if(e.actor) actors[e.actor]=1; });
+      var nActors=Object.keys(actors).length;
+      var newest=evs[0]&&evs[0].ts?Fmt.timeAgo(evs[0].ts):'';
       var rows=evs.map(function(e){
         var src=String(e.source_log||'');
         src=(src.split('/').pop()||src);
@@ -2335,24 +2789,23 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
           +'</div>';
       }).join('');
       box.innerHTML='<div style="font-size:10px;color:var(--text2);padding:4px 0 6px;display:flex;justify-content:space-between;align-items:center">'
-        +'<span>Every log mindX writes is also stored as a memory. '+evs.length+' most recent &mdash; '
+        +'<span><span style="color:var(--green)">'+evs.length+'</span> memories formed across <span style="color:var(--blue)">'+nActors+'</span> agents &middot; newest '+esc(newest)+' &mdash; '
         +'<a href="/insight/memory/recent?h=true" class="link">plain text</a></span>'
         +'<span class="fresh" id="fresh-logs"></span></div>'+rows;
       Freshness.paint('logs');
-    }).catch(function(){
-      Freshness.mark('logs','error');
-      var box=document.getElementById('sec-logs');
-      if(box) box.innerHTML='<div class="panel-banner">memory stream error &mdash; retrying every 30s</div>';
     });
   }
 
   // Machine Dreaming — lunar consolidation of memories into long-term knowledge.
+  // Resilient like the memory stream: a transient stall keeps the last dream cycle
+  // visible (marked stale) rather than hiding the section.
+  var _dreamsLoaded=false;
   function loadDreams(){
-    fetch('/insight/dreams/recent?limit=8').then(function(r){return r.ok?r.json():null;}).then(function(d){
-      if(!d || d.fallback){ hideSec('sec-dreams','hdr-dreams'); Freshness.mark('dreams','empty'); return; }
-      var dreams=(d && d.dreams)||[];
-      if(!dreams.length){ hideSec('sec-dreams','hdr-dreams'); Freshness.mark('dreams','empty'); return; }
-      showSec('sec-dreams','hdr-dreams');
+    _fetchJSONt('/insight/dreams/recent?limit=8',10000).then(function(d){
+      if(d===null){ if(!_dreamsLoaded) Freshness.mark('dreams','empty'); return; } // keep last good (skeleton); badge auto-stales by age
+      if(d.fallback||!((d&&d.dreams)||[]).length){ if(!_dreamsLoaded){var be=document.getElementById('sec-dreams');if(be)be.innerHTML='<div class="insight-empty">no dream cycles yet &middot; mindX dreams on the lunar cycle</div>';} Freshness.mark('dreams','empty'); return; }
+      var dreams=d.dreams;
+      _dreamsLoaded=true;
       Freshness.mark('dreams','ok');
       var last=dreams[0]||{};
       var lunar=last.lunar||{};
@@ -2394,10 +2847,98 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
       document.getElementById('sec-dreams').innerHTML=head+rows+recH
         +'<div style="font-size:10px;padding:6px 0 0"><a href="/insight/dreams/recent?h=true" class="link">plain text</a> &middot; <a href="/feedback.html#sec-dreams" class="link">feedback console</a></div>';
     }).catch(function(){
-      Freshness.mark('dreams','error'); showSec('sec-dreams','hdr-dreams');
+      Freshness.mark('dreams','stale');
       var b=document.getElementById('sec-dreams');
-      if(b && !b.querySelector('.dr')) b.innerHTML='<div class="panel-banner">dream feed error &mdash; retrying every 60s</div>';
+      if(b && !b.querySelector('.dr') && !_dreamsLoaded){ showSec('sec-dreams','hdr-dreams'); b.innerHTML='<div class="panel-banner">dream feed warming up &mdash; retrying every 60s</div>'; }
+      else { Freshness.paint('dreams'); }
     });
+  }
+
+  // Logs → Memories — the catalogue memory.write stream. mindX writes no log
+  // that is not also a memory; this shows each log becoming one.
+  function loadMemoryStream(){
+    fetch('/insight/memory/recent?limit=24').then(function(r){return r.ok?r.json():null;}).then(function(d){
+      var box=document.getElementById('sec-logs');
+      if(!box) return;
+      var evs=(d && d.events)||[];
+      if(!evs.length){
+        box.innerHTML='<div class="insight-empty">no memory writes in the catalogue yet</div>';
+        return;
+      }
+      var IMP={1:'CRIT',2:'HIGH',3:'MED',4:'LOW'};
+      var IMPC={1:'var(--red)',2:'var(--amber)',3:'var(--blue)',4:'var(--text3)'};
+      var rows=evs.map(function(e){
+        var src=String(e.source_log||'');
+        src=(src.split('/').pop()||src);
+        var imp=IMP[e.importance]||String(e.importance||'?');
+        var impc=IMPC[e.importance]||'var(--text3)';
+        var t=e.ts?ago(e.ts):'';
+        return '<div class="dr" style="align-items:baseline">'
+          +'<span style="font-family:var(--mono);font-size:10px">'
+          +'<span style="color:var(--text3)">'+esc(src)+'</span>'
+          +' <span style="color:var(--text3)">&rarr;</span> '
+          +'<span style="color:var(--blue)">'+esc(e.memory_type||'memory')+'</span>'
+          +' <span style="color:var(--text3)">&middot; '+esc(e.actor||'?')+'</span>'
+          +'</span>'
+          +'<span style="color:'+impc+';font-size:9px;font-family:var(--mono)">'+imp+' &middot; '+esc(t)+'</span>'
+          +'</div>';
+      }).join('');
+      box.innerHTML='<div style="font-size:10px;color:var(--text2);padding:4px 0 6px">'
+        +'Every log mindX writes is also stored as a memory. '+evs.length+' most recent &mdash; '
+        +'<a href="/insight/memory/recent?h=true" class="link">plain text</a></div>'+rows;
+    }).catch(function(){
+      var box=document.getElementById('sec-logs');
+      if(box) box.innerHTML='<div class="insight-empty">memory stream unavailable</div>';
+    });
+  }
+
+  // Machine Dreaming — lunar consolidation of memories into long-term knowledge.
+  function loadDreams(){
+    fetch('/insight/dreams/recent?limit=8').then(function(r){return r.ok?r.json():null;}).then(function(d){
+      if(!d || d.fallback){ hideSec('sec-dreams','hdr-dreams'); return; }
+      var dreams=(d && d.dreams)||[];
+      if(!dreams.length){ hideSec('sec-dreams','hdr-dreams'); return; }
+      showSec('sec-dreams','hdr-dreams');
+      var last=dreams[0]||{};
+      var lunar=last.lunar||{};
+      var head='<div style="font-family:var(--mono);font-size:11px;padding:6px 8px;background:rgba(121,192,255,.05);border-radius:4px;margin-bottom:8px;line-height:1.6">'
+        +'<b style="color:var(--violet)">last cycle</b> &middot; '
+        +esc(lunar.phase_name||'lunar')+' &middot; '
+        +'<span style="color:var(--green)">'+(last.agents_dreamed||0)+'</span> agents dreamed &middot; '
+        +'<span style="color:var(--blue)">'+(last.insights_generated||0)+'</span> insights &middot; '
+        +'<span style="color:var(--amber)">'+(last.memories_promoted_to_ltm||0)+'</span> &rarr; long-term memory';
+      if(last.last_dream_age_seconds!=null || d.last_dream_age_seconds!=null){
+        var age=d.last_dream_age_seconds!=null?d.last_dream_age_seconds:last.last_dream_age_seconds;
+        head+=' &middot; '+ago(Math.floor(Date.now()/1000-age));
+      }
+      head+='</div>';
+      var rows=dreams.map(function(dr){
+        var lp=(dr.lunar||{}).phase_name||'';
+        var ts=dr.timestamp?String(dr.timestamp).slice(0,16).replace('T',' '):'';
+        return '<div class="dr">'
+          +'<span style="font-family:var(--mono);font-size:10px">'
+          +'<span style="color:var(--text3)">'+esc(ts)+'</span> '
+          +'<span style="color:var(--violet)">'+esc(lp)+'</span></span>'
+          +'<span style="color:var(--text3);font-size:10px;font-family:var(--mono)">'
+          +(dr.agents_dreamed||0)+' agents &middot; '
+          +(dr.insights_generated||0)+' insights &middot; '
+          +(dr.memories_promoted_to_ltm||0)+' &rarr;ltm</span>'
+          +'</div>';
+      }).join('');
+      var recs=(last.tuning_recommendations||[]).slice(0,4);
+      var recH='';
+      if(recs.length){
+        recH='<div style="font-size:10px;color:var(--text2);padding:8px 0 2px"><b>tuning recommendations</b></div>';
+        recH+=recs.map(function(r){
+          var param=(r&&(r.parameter||r.name))||'(param)';
+          var dir=(r&&(r.recommendation||r.direction||r.change))||'adjust';
+          return '<div style="font-family:var(--mono);font-size:10px;color:var(--text3);padding:1px 0">'
+            +'<span style="color:var(--blue)">'+esc(param)+'</span> &middot; '+esc(String(dir).slice(0,60))+'</div>';
+        }).join('');
+      }
+      document.getElementById('sec-dreams').innerHTML=head+rows+recH
+        +'<div style="font-size:10px;padding:6px 0 0"><a href="/insight/dreams/recent?h=true" class="link">plain text</a> &middot; <a href="/feedback.html#sec-dreams" class="link">feedback console</a></div>';
+    }).catch(function(){ hideSec('sec-dreams','hdr-dreams'); });
   }
 
   // Expose ledger handlers to global scope so inline onclick="..." works.
@@ -2405,17 +2946,175 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
   window.onLedgerPillClick = onLedgerPillClick;
   window.scrollToSelfImprovementCard = scrollToSelfImprovementCard;
 
+  // ── Self-Diagnostic layer — one fetch of /insight/self/diagnostic ──
+  // The honest "what is mindX actually improving?" surface: real changes with
+  // substance, the agent→agent interaction flow, process-health truth.
+  function loadSelfDiag(){
+    fetch('/insight/self/diagnostic',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+      if(!d || d.fallback){ return; }
+      var rel=function(ts){
+        if(!ts) return '';
+        var s=(typeof ts==='number')?ts:(Date.parse(ts)/1000);
+        if(!isFinite(s)) return '';
+        var diff=(Date.now()/1000)-s;
+        if(diff<3600) return Math.max(1,Math.round(diff/60))+'m ago';
+        if(diff<86400) return Math.round(diff/3600)+'h ago';
+        return Math.round(diff/86400)+'d ago';
+      };
+      // Verdict banner + evidence.
+      var v=d.verdict||{};
+      var vh='<b style="color:var(--text)">'+esc(v.line||'')+'</b>';
+      (v.evidence||[]).forEach(function(e){ vh+='<br><span style="color:var(--text3)">&middot; '+esc(e)+'</span>'; });
+      // (verdict element is rendered below, once the real-change channels are known)
+      // What actually changed — merged substance feed, newest first.
+      var rc=d.real_changes||{}; var rows=[];
+      (rc.milestones||[]).forEach(function(m){ rows.push({ts:m.ts,h:'<span style="color:var(--green)">[milestone]</span> '+esc((m.sha||'')+' '+(m.subject||''))}); });
+      (rc.publications||[]).forEach(function(p){ rows.push({ts:p.ts,h:'<span style="color:var(--violet,#bc8cff)">[published]</span> '+esc(p.note||'')}); });
+      (rc.adoptions||[]).forEach(function(a){ rows.push({ts:a.ts,h:'<span style="color:var(--amber)">[adopted]</span> '+esc((a.package||'?')+' &rarr; '+(a.decision||'?'))}); });
+      (rc.code_change_events||[]).forEach(function(c){ rows.push({ts:c.ts,h:'<span style="color:var(--green)">['+esc(c.kind||'change')+']</span> '+esc(c.detail||'')}); });
+      rows.sort(function(a,b){ return (Date.parse(b.ts)||b.ts||0)-(Date.parse(a.ts)||a.ts||0); });
+      var ch=rows.slice(0,8).map(function(r){ return '<div>'+r.h+' <span style="color:var(--text3)">'+rel(r.ts)+'</span></div>'; }).join('');
+      // Real self-improvement channels the code-diff counter can't see: the
+      // sentinel effector (version applies) + dream→mindXtrain MODEL imprints.
+      // LEAD with these so the panel never reads "nothing happened" when v187
+      // sat on disk. (from mindX events: data/system_state/sentinel.json +
+      // data/logs/ascend_log.jsonl)
+      var si=rc.self_improvement||{}, tr=rc.training||{};
+      var siHead='';
+      if(si.applies>0){ siHead+='<div style="color:var(--green)">[self-improve] sentinel v'+esc(si.version)+' &middot; '+si.applies+' improvements applied'+(si.healthy?', verified':'')+'</div>'; }
+      if(tr.total>0){ siHead+='<div style="color:'+(tr.accepted>0?'var(--green)':'var(--amber)')+'">[imprint] '+(tr.accepted||0)+'/'+tr.total+' model trainings took (from its own dreams)'+(tr.last_delta!=null?' &middot; &Delta;'+esc(tr.last_delta):'')+'</div>'; }
+      var sia=rc.sia_diffs||{};
+      ch=siHead+ch;
+      ch+='<div style="margin-top:6px;color:'+(sia.count>0?'var(--green)':'var(--text3)')+'">free-form code diffs: '+(sia.count||0)+(sia.count===0?' (self-improvement runs via the sentinel effector above)':'')+'</div>';
+      document.getElementById('selfdiag-changes').innerHTML=ch||'--';
+      // Verdict accent encodes the truth (structure is information): the left
+      // bar goes green when ANY real-change channel is active (code/model/
+      // memory), amber when only consolidating, red when genuinely idle — so the
+      // color is never a fixed decoration that lies under a working machine.
+      var realCh=(si.applies>0)||(tr.accepted>0)||(sia.count>0);
+      var vbar=realCh?'var(--green)':(((d.consolidation||{}).ltm_promotions>0)?'var(--amber)':'var(--red)');
+      var vEl=document.getElementById('selfdiag-verdict');
+      vEl.style.borderLeftColor=vbar;
+      // Channel strip — the three ways mindX actually changes, as a compact
+      // header above the verdict prose. Encodes the real content structure.
+      var ltm=(d.consolidation||{}).ltm_promotions||0;
+      var chip=function(on,label,val){return '<span style="display:inline-block;padding:1px 7px;margin-right:6px;border-radius:9px;border:1px solid '+(on?'var(--green)':'var(--line)')+';color:'+(on?'var(--green)':'var(--text3)')+';font-size:10px;font-family:var(--mono)">'+label+' '+val+'</span>';};
+      var strip='<div style="margin-bottom:8px">'+chip(si.applies>0,'code',(si.applies||0))+chip(tr.accepted>0,'model',(tr.accepted||0)+'/'+(tr.total||0))+chip(ltm>0,'memory',ltm)+'</div>';
+      vEl.innerHTML=strip+vh;
+      // Interaction flow strip — top edges as weighted chips.
+      var edges=((d.self_interaction||{}).matrix||{}).edges||[];
+      var maxC=edges.length?edges[0].count:1;
+      var fh=edges.slice(0,12).map(function(e){
+        var w=Math.max(.45,Math.min(1,e.count/maxC));
+        return '<span style="display:inline-block;margin:0 6px 6px 0;padding:2px 8px;border:1px solid var(--line);border-radius:10px;font-family:var(--mono);font-size:'+(9.5+w*2.5)+'px;opacity:'+(0.55+w*0.45)+'" title="'+esc(e.type||'')+'">'+esc(e.from||'?')+' &rarr; '+esc(e.to||'?')+' &times;'+e.count+'</span>';
+      }).join('');
+      if(!fh){
+        var hb=(d.self_interaction||{}).heartbeat_sample||[];
+        fh=hb.length?('<div style="font-family:var(--mono);font-size:11px;color:var(--text2);line-height:1.7">'+hb.map(function(h){return '<div title="'+esc(h.model||'')+'">&ldquo;'+esc(h.thought||'')+'&rdquo;</div>';}).join('')+'</div>'):'<span style="color:var(--text3)">interaction matrix unavailable (pgvector offline)</span>';
+      }
+      document.getElementById('selfdiag-flow').innerHTML=fh;
+      // Process-health truth strip.
+      var ph=d.process_health||{}; var c7=ph.campaigns_7d||{}; var bl=ph.backlog||{};
+      var hh='campaigns 7d: <span style="color:'+(c7.succeeded>0?'var(--green)':'var(--red)')+'">'+(c7.succeeded||0)+' ok</span> &middot; '+(c7.failed||0)+' failed &middot; '+(c7.max_cycles_reached||0)+' max-cycle &middot; '+(c7.timed_out||0)+' timed-out &middot; '+(c7.errored||0)+' errored';
+      hh+='<br>backlog: '+(bl.size||0)+' items / '+(bl.unique||0)+' unique'+(bl.dedup_live?' <span style="color:var(--green)">(dedup live)</span>':' <span style="color:var(--amber)">(dup_factor '+(bl.dup_factor||'?')+'&times;)</span>');
+      (ph.top_failure_shapes||[]).slice(0,2).forEach(function(s){ hh+='<br><span style="color:var(--text3)">shape &times;'+s.count+': '+esc(s.shape)+'</span>'; });
+      (ph.looped_directives||[]).slice(0,1).forEach(function(l){ hh+='<br><span style="color:var(--amber)">LOOP &times;'+l.count+': '+esc(l.directive)+'</span><br><span style="color:var(--text3)">diagnosis: '+esc(l.diagnosis)+'</span>'; });
+      hh+='<br>stuck loops: '+((ph.stuck_loops||{}).count||0)+' &middot; eval gate: '+(((ph.eval_gate||{}).gate_open)?'open':'closed');
+      // Inference appetite — the public display of how hungry mindX is vs its
+      // free-tier ceiling. Utilization is a rounding error: the limiter was
+      // never the bottleneck, dead models were.
+      var ap=ph.inference_appetite||{}, bud=ap.budget||{}, mods=ap.models||{}, lt=ap.lifetime||{};
+      if(lt.total!=null){
+        var fmtN=function(n){ n=Number(n)||0; return n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'k':String(n); };
+        hh+='<br>tokens ingested (lifetime): <span style="color:var(--green);font-weight:700">'+fmtN(lt.total)+'</span> <span style="color:var(--text3)">(seed '+fmtN(lt.seed)+' + '+fmtN(lt.ingested_since_seed)+' actual &middot; '+fmtN(lt.cpu_tokens)+' CPU/'+fmtN(lt.cloud_tokens)+' cloud)</span>';
+      }
+      if(bud.ceiling_per_day){
+        hh+='<br>appetite: <span style="color:var(--green)">'+(bud.used_today||0)+'</span>/'+bud.ceiling_per_day+' calls/day ('+(bud.utilization_pct||0)+'%) &middot; floor '+(bud.conversational_floor_per_hour||3)+'/hr=conversation';
+        hh+='<br>models: <span style="color:var(--green)">'+(mods.live||0)+' live</span> &middot; <span style="color:'+((mods.dead||0)>0?'var(--red)':'var(--text3)')+'">'+(mods.dead||0)+' dead</span>'+((mods.probing||0)>0?' &middot; '+mods.probing+' probing':'')+' &middot; '+(mods.total_tokens||0)+' tokens';
+        if((ap.dead_slugs||[]).length){ hh+='<br><span style="color:var(--text3)">retired: '+esc((ap.dead_slugs||[]).slice(0,4).join(', '))+'</span>'; }
+      }
+      document.getElementById('selfdiag-health').innerHTML=hh;
+    }).catch(function(){ /* leave previous render */ });
+  }
+
   // Kick off — SSE reconnects itself; polled sections refresh on cadence.
   Freshness.cadence('ledger',60000).cadence('fitness',30000).cadence('selection',60000)
            .cadence('logs',30000).cadence('dreams',60000).cadence('think',15000);
   connectThinkStream();
   loadLedger();       setInterval(loadLedger,      60000);
-  loadFitness();      setInterval(loadFitness,     30000);
   loadSelection();    setInterval(loadSelection,   60000);
   loadMemoryStream(); setInterval(loadMemoryStream,30000);
   loadDreams();       setInterval(loadDreams,      60000);
+  loadSelfDiag();     setInterval(loadSelfDiag,    60000);
+  // Expose the insight loaders so toggleSec (outside this IIFE) can refresh a
+  // loader-backed section the moment its heading is expanded.
+  window.loadLedger=loadLedger;
+  window.loadSelection=loadSelection; window.loadMemoryStream=loadMemoryStream;
+  window.loadDreams=loadDreams; window.loadSelfDiag=loadSelfDiag;
 })();
 </script>
 
+<!-- mindXtrain live training light — pulses while a Schmidhüber ascent trains -->
+<div id="mxt-train-light" style="display:none;position:fixed;top:54px;left:50%;transform:translateX(-50%);z-index:60;background:rgba(10,14,20,.95);border:1px solid rgba(227,179,65,.4);border-radius:10px;padding:8px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--amber);box-shadow:0 4px 24px rgba(0,0,0,.6);max-width:92vw">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse-dot 1.4s ease-in-out infinite"></span>
+    <span>mindXtrain</span> <b id="mxt-train-label">TRAINING</b>
+    <span style="color:var(--text3)">·</span> <b id="mxt-train-timer" style="color:var(--amber)">0s</b>
+  </div>
+  <div id="mxt-train-chronos" style="font-size:10px;color:var(--text2);margin-top:4px"></div>
+  <div id="mxt-train-cores" style="font-size:9.5px;color:var(--text3);margin-top:3px"></div>
+</div>
+<script>
+(function(){
+  var box=document.getElementById('mxt-train-light');
+  var label=document.getElementById('mxt-train-label');
+  var timer=document.getElementById('mxt-train-timer');
+  var chronosEl=document.getElementById('mxt-train-chronos');
+  var coresEl=document.getElementById('mxt-train-cores');
+  var T=null;
+  function fmt(s){s=Math.max(0,Math.floor(s));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60;return (h?h+'h ':'')+(h||m?m+'m ':'')+x+'s';}
+  function fmtCyc(c){if(c==null)return '—';var u=[[1e15,'Pcyc'],[1e12,'Tcyc'],[1e9,'Gcyc'],[1e6,'Mcyc'],[1e3,'Kcyc']];for(var i=0;i<u.length;i++)if(c>=u[i][0])return (c/u[i][0]).toFixed(2)+' '+u[i][1];return c+' cyc';}
+  function esc(s){var d=document.createElement('span');d.textContent=s;return d.innerHTML;}
+  setInterval(function(){ if(T&&box.style.display!=='none') timer.textContent=fmt(T.base+(Date.now()-T.at)/1000); },1000);
+  function poll(){
+    fetch('/insight/godel/ascend',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+      var tr=(d&&d.training)||{};
+      if(tr.state==='running'){
+        T={base:tr.elapsed_s||0,at:Date.now()};
+        label.textContent='TRAINING gen '+(tr.generation||'?')+(tr.stage?' ('+tr.stage+')':'');
+        timer.textContent=fmt(tr.elapsed_s||0);
+        var ch=tr.chronos||{};
+        chronosEl.innerHTML = ch.elapsed_18dp ? ('⏱ chronos.agent <b style="color:#d2a8ff">'+esc(ch.elapsed_18dp)+'</b> s <span style="color:#6e7681">('+esc(ch.consensus||'?')+')</span>') : '';
+        var cpu=tr.cpu||{};
+        var html='';
+        if(cpu.train_cycles_est!=null) html+='⚙ training <b style="color:#79c0ff">'+fmtCyc(cpu.train_cycles_est)+'</b> ('+cpu.train_cpu_seconds+'s CPU'+(cpu.train_ram_mb!=null?', '+cpu.train_ram_mb+'MB RAM':'')+') · ';
+        if(cpu.cores) html+=cpu.cores.map(function(c){return 'c'+c.core+' '+c.usage_pct+'% '+(c.freq_mhz||'')+'MHz '+fmtCyc(c.cycles_cumulative)+' '+(c.temp_c!=null?c.temp_c+'°C':'temp n/a');}).join(' · ');
+        if(cpu.ram&&cpu.ram.used_gb!=null) html+=' · host RAM '+cpu.ram.used_gb+'/'+cpu.ram.total_gb+'GB';
+        var rg=(d&&d.settings&&d.settings.regimen)||{};
+        if(rg.cpu_percent) html+=' · regimen '+rg.cpu_percent+'%/'+rg.wall_hours+'h≈'+rg.effective_hours+'h';
+        coresEl.innerHTML=html;
+        box.style.display='block';
+      } else { T=null; box.style.display='none'; }
+    }).catch(function(){});
+  }
+  poll(); setInterval(poll,8000);
+})();
+</script>
+<script>window.DOORWAY_FOR='live diagnostics';</script>
+<script src="/static/identity.js"></script>
+<script src="/static/doorway.js"></script>
+
+<!-- signal/noise depth toolbar (shared) -->
+<script src="/static/signal_noise.js"></script>
+
+<!-- BUILDER emergence — archetype → AgenticPlace iNFT avatar (SSOT shared with /inft) -->
+<script src="/static/archetypes.js"></script>
+<script src="/static/builder_button.js"></script>
+
+<!-- OVERLORD panel — live contract deployments handoff; mint OVERLORD-only (bankon.eth) -->
+<script src="/static/overlord_button.js"></script>
+
+<!-- live activity dockable/resizable panel -->
+<script src="/static/dock_panel.js"></script>
 </body>
 </html>

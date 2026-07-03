@@ -758,7 +758,7 @@ class TokenCalculatorTool(BaseTool):
                     "tracking_version": "2.0"
                 }
             }
-            
+
             # Thread-safe log operations with production error handling
             try:
                 with self._main_lock:

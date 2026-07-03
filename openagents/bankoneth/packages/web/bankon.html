@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<!--
+  bankon.html — bankon.pythai.net landing / claim page.
+
+  The production front door for the subdomain.bankon.eth minter system. A focused
+  hero + the three issuance flows + CTAs into the minter dApp, the iNFT page, and
+  the client-side deployer. Static, no build, no dependency in the trust path.
+  Hosted at bankon.pythai.net (operator step). (c) BANKON all rights preserved.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>BANKON — subdomain.bankon.eth · sovereign identity for agents</title>
+<meta name="description" content="Claim yourname.bankon.eth — an ENS subname that is also an ERC-7857 iNFT identity, listed on AgenticPlace, payable over x402. bankon.eth is the immutable admin and fee recipient."/>
+<style>
+  :root { --bg:#070b07; --fg:#cfeccf; --dim:#7fae7f; --hl:#9fe6a0; --acc:#5a4a9a; --card:#0d140d; --line:#1c2a1c; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 ui-monospace,Menlo,Consolas,monospace; }
+  a { color:var(--hl); text-decoration:none; }
+  .wrap { max-width:980px; margin:0 auto; padding:3rem 1.25rem 4rem; }
+  header { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; }
+  .brand { font-size:1.2rem; letter-spacing:.04em; }
+  .brand b { color:var(--hl); }
+  .pill { font-size:.8rem; border:1px solid var(--line); border-radius:999px; padding:.3em .8em; color:var(--dim); }
+  .hero { margin:3rem 0 2rem; }
+  .hero h1 { font-size:2.3rem; line-height:1.2; margin:0 0 1rem; }
+  .hero h1 .you { color:var(--hl); }
+  .hero p { color:var(--dim); max-width:62ch; font-size:1.05rem; }
+  .cta { display:flex; gap:.8rem; flex-wrap:wrap; margin:2rem 0; }
+  .btn { border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:10px; padding:.8em 1.2em; font:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:.5em; }
+  .btn.primary { border-color:#2a6a2a; background:rgba(40,90,40,.18); color:var(--hl); }
+  .btn.accent { border-color:var(--acc); color:#c9b6ff; background:rgba(120,90,200,.12); }
+  .btn:hover { filter:brightness(1.25); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1rem; margin:2.5rem 0; }
+  .card { border:1px solid var(--line); border-radius:12px; padding:1.2rem; background:var(--card); }
+  .card h3 { margin:0 0 .4rem; color:var(--hl); font-size:1.05rem; }
+  .card p { margin:0; color:var(--dim); font-size:.92rem; }
+  .card .flow { color:var(--fg); font-size:.85rem; opacity:.8; }
+  h2 { font-size:1.25rem; margin:3rem 0 1rem; border-bottom:1px solid var(--line); padding-bottom:.4rem; }
+  ul.facts { list-style:none; padding:0; }
+  ul.facts li { padding:.35rem 0; color:var(--dim); }
+  ul.facts li b { color:var(--fg); }
+  code { color:var(--hl); }
+  footer { margin-top:3.5rem; color:var(--dim); font-size:.85rem; border-top:1px solid var(--line); padding-top:1rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="brand">BANKON <b>·eth</b></span>
+    <span class="pill">subdomain.bankon.eth · ERC-7857 iNFT · x402 · AgenticPlace</span>
+  </header>
+
+  <section class="hero">
+    <h1>Claim <span class="you">yourname</span>.bankon.eth — an identity your agent can <em>own</em>.</h1>
+    <p>One name, three layers: an <b>ENS subname</b> under bankon.eth, an <b>ERC-7857 intelligent
+      NFT</b> on 0G with an ERC-6551 wallet, and an <b>AgenticPlace</b> listing payable over x402.
+      bankon.eth is the immutable admin and the recipient of every fee — no other wallet can
+      administer the system.</p>
+    <div class="cta">
+      <a class="btn primary" href="./bankoneth.html">Mint a subname →</a>
+      <a class="btn" href="./inft.html">iNFT identity (0G) →</a>
+      <a class="btn accent" href="/deployer/index.html">Deployer — LAUNCH the system →</a>
+      <a class="btn accent" href="/deployer/admin.html">bankon.eth admin console →</a>
+    </div>
+  </section>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Flow A — Claim</h3>
+      <p class="flow"><code>yourname.bankon.eth</code></p>
+      <p>Claim a subname under bankon.eth. Free tier for 7+ char labels with reputation
+        (BONAFIDE / PYTHAI stake / TEE attestation); length-tiered USD pricing otherwise.</p>
+    </div>
+    <div class="card">
+      <h3>Flow B — Buy</h3>
+      <p class="flow"><code>newname.eth</code></p>
+      <p>Buy a brand-new <code>.eth</code> 2LD end-to-end via the ENS commit-reveal, settled
+        through the BANKON payment router.</p>
+    </div>
+    <div class="card">
+      <h3>Flow C — Host</h3>
+      <p class="flow"><code>label.yourdomain.eth</code></p>
+      <p>Enroll any <code>.eth</code> you own and issue subnames under it as a service —
+        subdomain-minting-as-a-service for external holders.</p>
+    </div>
+  </div>
+
+  <h2>Sovereign by construction</h2>
+  <ul class="facts">
+    <li><b>Admin = bankon.eth only.</b> The deployer LAUNCH/DEPLOY buttons are gated to the wallet that controls bankon.eth on mainnet; every <code>admin</code>/<code>treasury</code> slot resolves to bankon.eth.</li>
+    <li><b>bankon.eth receives all payment.</b> Subdomain fees and the golden-ratio φ/10 rake settle home to <code>0x10f7…D169</code> on every chain.</li>
+    <li><b>Keys never leave the device.</b> The deployer is pure client-side (EIP-1193 only). The <b>bankon_vault</b> holds the gateway-signer key and grants a subname from a user's signature — without ever revealing the key.</li>
+    <li><b>Same address on every chain.</b> Singletons deploy through CREATE2 (Nick's Factory) at one deterministic address across EVM chains — the ERC-8004 per-chain-singleton pattern.</li>
+    <li><b>EVM ↔ AgenticPlace.</b> Each subname can be an ERC-7857 iNFT listed on <a href="https://agenticplace.pythai.net" target="_blank" rel="noopener">agenticplace.pythai.net</a> from the EVM side.</li>
+  </ul>
+
+  <h2>Two buttons to ship it</h2>
+  <p style="color:var(--dim)">The <a href="/deployer/index.html">deployer</a> groups the whole system into topic bundles
+    (<code>bankon-ens</code>, <code>bankon-inft</code>, <code>bankon-arc</code>, <code>bankon-treasury</code>,
+    <code>bankon-custody</code>). Connect the bankon.eth wallet, toggle a chain (or <b>ALL</b>), press
+    <b>DEPLOY</b> to arm and <b>LAUNCH</b> to fire. Testnets rehearse; mainnet ships.</p>
+
+  <footer>
+    always open source · client-side · keys never leave your device ·
+    <a href="https://agenticplace.pythai.net" target="_blank" rel="noopener">agenticplace.pythai.net</a> ·
+    historical archive — ETHGlobal NYC, June 12 2026 · &copy; BANKON all rights preserved
+  </footer>
+</div>
+</body>
+</html>

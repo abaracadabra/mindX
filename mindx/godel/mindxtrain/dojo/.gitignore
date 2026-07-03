@@ -1,0 +1,10 @@
+# model + tokenizer artifacts are never committed (host-synced) — keep only small configs
+outputs/**/*.safetensors
+outputs/**/*.bin
+outputs/**/tokenizer.json
+outputs/**/vocab.json
+outputs/**/merges.txt
+outputs/**/*.model
+**/__pycache__/
+*.pyc
+scripts/.cache/

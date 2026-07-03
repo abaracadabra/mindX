@@ -284,6 +284,213 @@ class StrategicEvolutionAgent:
             return await self.run_audit_driven_campaign(audit_scope="system")
         return await self.run_evolution_campaign(campaign_goal_description=goal_description)
 
+    # ── external-package adoption decision ───────────────────────────────────
+    # mindX treats an externally-supplied package the way it treats any candidate
+    # self-improvement: SimpleCoder audits+extracts it (sandboxed), then SEA renders
+    # a reasoned adopt/reject/defer here. The decision is logged as a Gödel choice
+    # (full self-reference audit trail) and, on ADOPT, the package is staged into
+    # the live tree per ``proposed_targets``.
+    ADOPTION_CRITERIA = (
+        "Adoption criteria (mindX doctrine):\n"
+        "1. SECURITY — no high-severity findings (eval/exec, native code, unsafe deserialization, "
+        "or unexplained network/process exec). Loopback-only network and an invoked-not-vendored "
+        "external binary are acceptable.\n"
+        "2. LICENSE BOUNDARY — license must be compatible (Apache-2.0/MIT/BSD); an external binary "
+        "of a different license is fine ONLY if invoked, never vendored.\n"
+        "3. AGNOSTIC-MODULE FIT — composes as a peer, adds value (here: node-capability gating of "
+        "inference routing), and does not pin a model or hard-couple to one consumer.\n"
+        "4. FAIL-OPEN — absence of the dependency must degrade gracefully, never block boot/routing.\n"
+        "5. DEPENDENCY COST — minimal/zero new pip dependencies preferred."
+    )
+
+    async def evaluate_external_package_adoption(
+        self, package_name: str, audit_summary: Dict[str, Any],
+        proposed_targets: Dict[str, str], campaign_context: Optional[str] = None,
+        stage_on_adopt: bool = True,
+    ) -> Dict[str, Any]:
+        """Decide whether to ADOPT / REJECT / DEFER an audited external package.
+
+        Args:
+            package_name: e.g. "llmfit".
+            audit_summary: the dict produced by SimpleCoderAgent.audit_package.
+            proposed_targets: {extracted_member_name -> live_destination_path}.
+            campaign_context: optional narrative for the decision prompt.
+            stage_on_adopt: when True and decision == ADOPT, copy members into the
+                live tree (see _stage_adopted_package).
+
+        Returns: {decision, rationale, confidence, staged_files, godel_logged, ...}.
+        """
+        if not self._initialized:
+            await self._async_init()
+        cycle_id = f"adopt-{package_name}-{uuid.uuid4().hex[:8]}"
+        options = ["ADOPT", "REJECT", "DEFER"]
+        perception = (
+            f"External package '{package_name}' audited by SimpleCoder: "
+            f"{audit_summary.get('member_count')} members, "
+            f"aggregate_risk={audit_summary.get('aggregate_risk')}, "
+            f"license={audit_summary.get('declared_license')}, "
+            f"deps={audit_summary.get('declared_dependencies')}."
+        )
+
+        decision_obj = await self._reason_adoption(package_name, audit_summary, campaign_context)
+        decision = decision_obj.get("decision", "DEFER")
+        if decision not in options:
+            decision = "DEFER"
+        rationale = decision_obj.get("rationale", "No rationale produced; defaulting to DEFER.")
+        confidence = float(decision_obj.get("confidence", 0.5) or 0.5)
+        validation_plan = decision_obj.get("validation_plan", [])
+
+        # 1) Gödel-choice audit trail (auto-emits godel.choice + alignment.score).
+        godel_logged = False
+        try:
+            await self.memory_agent.log_godel_choice({
+                "source_agent": f"strategic_evolution_agent.{self.agent_id}",
+                "cycle_id": cycle_id,
+                "perception_summary": perception,
+                "options_considered": options,
+                "chosen": decision,
+                "rationale": rationale,
+                "outcome": "pending_staging" if (decision == "ADOPT" and stage_on_adopt) else "decision_only",
+            })
+            godel_logged = True
+        except Exception as e:
+            logger.warning(f"{self.log_prefix} failed to log godel choice for {package_name}: {e}")
+
+        # 2) Persist belief for downstream agents / dashboards.
+        try:
+            await self.belief_system.add_belief(
+                f"sea.adoption.{package_name}",
+                {"decision": decision, "confidence": confidence, "cycle_id": cycle_id,
+                 "rationale": rationale, "aggregate_risk": audit_summary.get("aggregate_risk")},
+                confidence=confidence, source=BeliefSource.INFERENCE,
+                metadata={"kind": "external_package_adoption"},
+            )
+        except Exception as e:
+            logger.warning(f"{self.log_prefix} failed to persist adoption belief: {e}")
+
+        result: Dict[str, Any] = {
+            "package_name": package_name, "decision": decision, "rationale": rationale,
+            "confidence": confidence, "validation_plan": validation_plan,
+            "cycle_id": cycle_id, "godel_logged": godel_logged, "staged_files": [],
+        }
+
+        # 3) ADOPT -> stage into the live tree + record in the improvement backlog.
+        if decision == "ADOPT" and stage_on_adopt:
+            staged = self._stage_adopted_package(audit_summary, proposed_targets)
+            result["staged_files"] = staged
+            self._append_adoption_backlog(package_name, rationale, validation_plan, staged)
+            logger.info(f"{self.log_prefix} ADOPTED {package_name}; staged {len(staged)} file(s).")
+        else:
+            logger.info(f"{self.log_prefix} {decision} {package_name} (no staging).")
+
+        return result
+
+    async def _reason_adoption(self, package_name: str, audit_summary: Dict[str, Any],
+                               campaign_context: Optional[str]) -> Dict[str, Any]:
+        """LLM-reasoned decision. No model pinning — uses the self-aware handler the
+        SEA resolved at init (selector -> registry REASONING -> ollama cascade)."""
+        if not self.llm_handler:
+            self.llm_handler = await self._self_aware_handler(task_class="planning")
+        if not self.llm_handler:
+            return {"decision": "DEFER", "confidence": 0.3,
+                    "rationale": "No reasoning LLM available; deferring rather than guessing.",
+                    "validation_plan": []}
+        prompt = (
+            "You are mindX's Strategic Evolution Agent deciding whether to adopt an external "
+            "package that SimpleCoder has already audited and extracted in its sandbox.\n\n"
+            f"{self.ADOPTION_CRITERIA}\n\n"
+            f"Package: {package_name}\n"
+            f"Context: {campaign_context or 'none provided'}\n\n"
+            f"AUDIT SUMMARY (from SimpleCoder static analysis, no code was executed):\n"
+            f"{json.dumps(audit_summary, indent=2, default=str)[:6000]}\n\n"
+            "Weigh the audit against the criteria. Respond ONLY with JSON: "
+            '{"decision": "ADOPT|REJECT|DEFER", "confidence": 0.0-1.0, '
+            '"rationale": "<2-4 sentences citing specific audit evidence>", '
+            '"validation_plan": ["<post-adoption validation step>", ...]}'
+        )
+        try:
+            model_name = getattr(self.llm_handler, "model_name_for_api", None) or "default-model"
+            raw = await self.llm_handler.generate_text(
+                prompt, model=model_name, max_tokens=1200, temperature=0.1, json_mode=True
+            )
+            data = json.loads(self._strip_json_fence(raw))
+            if isinstance(data, dict) and "decision" in data:
+                return data
+            logger.warning(f"{self.log_prefix} adoption reasoning returned unexpected shape.")
+        except Exception as e:
+            logger.warning(f"{self.log_prefix} adoption reasoning failed: {e}")
+        return {"decision": "DEFER", "confidence": 0.3,
+                "rationale": "LLM reasoning failed or returned malformed output; deferring for human review.",
+                "validation_plan": []}
+
+    @staticmethod
+    def _strip_json_fence(text: str) -> str:
+        t = (text or "").strip()
+        if t.startswith("```"):
+            t = re.sub(r"^```[a-zA-Z]*\n?", "", t)
+            t = re.sub(r"\n?```$", "", t)
+        return t.strip()
+
+    def _stage_adopted_package(self, audit_summary: Dict[str, Any],
+                               proposed_targets: Dict[str, str]) -> List[Dict[str, Any]]:
+        """Copy audited members from the sandbox extract dir to their live destinations.
+        Returns a per-file record. Creates parent dirs + package __init__.py as needed."""
+        import shutil
+        extract_path = audit_summary.get("extract_path", "")
+        sandbox_root = PROJECT_ROOT / "simple_coder_sandbox"
+        # extract_path is sandbox-relative (e.g. "projects/llmfit_extracted").
+        src_dir = sandbox_root / extract_path
+        staged: List[Dict[str, Any]] = []
+        for member, dest_rel in proposed_targets.items():
+            src = src_dir / member
+            dest = PROJECT_ROOT / dest_rel
+            rec = {"member": member, "destination": dest_rel}
+            try:
+                if not src.is_file():
+                    rec["status"] = "missing_source"
+                    staged.append(rec); continue
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                # ensure a python package dir is importable
+                if dest.suffix == ".py":
+                    init_file = dest.parent / "__init__.py"
+                    if not init_file.exists():
+                        init_file.write_text(
+                            '"""Auto-created package init (SEA package staging)."""\n', encoding="utf-8"
+                        )
+                        rec["created_init"] = str(init_file.relative_to(PROJECT_ROOT))
+                shutil.copy2(src, dest)
+                rec["status"] = "staged"
+            except Exception as e:
+                rec["status"] = f"error:{e}"
+            staged.append(rec)
+        return staged
+
+    def _append_adoption_backlog(self, package_name: str, rationale: str,
+                                 validation_plan: List[str], staged: List[Dict[str, Any]]) -> None:
+        """Record the adoption + validation plan in the coordinator improvement backlog."""
+        backlog_file = PROJECT_ROOT / "data" / "improvement_backlog.json"
+        try:
+            backlog = json.loads(backlog_file.read_text(encoding="utf-8")) if backlog_file.exists() else []
+            if not isinstance(backlog, list):
+                backlog = []
+        except Exception:
+            backlog = []
+        backlog.append({
+            "target_component_path": f"external_package.{package_name}",
+            "suggestion": f"Validate adopted package '{package_name}': " + "; ".join(validation_plan or ["run tests"]),
+            "justification": rationale,
+            "priority": 6,
+            "status": "adopted_pending_validation",
+            "source": "sea_adoption_decision",
+            "staged_files": [s for s in staged if s.get("status") == "staged"],
+            "added_at": time.time(),
+        })
+        try:
+            backlog_file.parent.mkdir(parents=True, exist_ok=True)
+            backlog_file.write_text(json.dumps(backlog, indent=2), encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"{self.log_prefix} failed to write adoption backlog entry: {e}")
+
     async def run_evolution_campaign(self, campaign_goal_description: str) -> Dict[str, Any]:
         """Manages a self-improvement campaign for a given high-level goal."""
         if not self._initialized: await self._async_init()
@@ -678,18 +885,33 @@ class StrategicEvolutionAgent:
 
         # Execute actions through coordinator (seeding the improvement backlog)
         coordinator_tasks_created = 0
+        actions_skipped_no_target = 0
         for action_data in bdi_actions:
+            _meta = action_data.get("params", {}).get("_meta", {})
+            # The coordinator's _handle_component_improvement FAILs without a
+            # real target_component. Resolve it (file_path preferred) and skip
+            # actions that have none — counting them as skipped, NOT as failed
+            # tasks, so a campaign with genuinely no actionable target still
+            # concludes NO_OP honestly (vacuous-SUCCESS guard below stays valid).
+            target_component = _meta.get("target_component")
+            if not target_component or target_component in ("general", "system"):
+                actions_skipped_no_target += 1
+                continue
             try:
-                # Convert detailed actions to coordinator interactions
+                # Convert detailed actions to coordinator interactions. Mirror the
+                # working metadata contract from
+                # _sea_action_request_coordinator_for_sia_execution.
                 interaction_result = await self.coordinator_agent.handle_user_input(
-                    content=action_data.get("params", {}).get("_meta", {}).get("description", "Enhanced blueprint action"),
+                    content=_meta.get("description", "Enhanced blueprint action"),
                     user_id=self.agent_id,
                     interaction_type="COMPONENT_IMPROVEMENT",
                     metadata={
                         "source": "sea_enhanced_blueprint",
                         "campaign_id": self._current_campaign_run_id,
-                        "action_details": action_data.get("params", {}).get("_meta", {}),
-                        "priority": action_data.get("params", {}).get("_meta", {}).get("priority", 5)
+                        "target_component": target_component,
+                        "analysis_context": _meta.get("description"),
+                        "action_details": _meta,
+                        "priority": _meta.get("priority", 5)
                     }
                 )
                 if interaction_result.get("status") != "FAILED":
@@ -697,10 +919,29 @@ class StrategicEvolutionAgent:
             except Exception as e:
                 logger.error(f"{self.log_prefix} Failed to create coordinator task for action: {e}")
 
+        if actions_skipped_no_target:
+            logger.info(f"{self.log_prefix} Enhanced blueprint: skipped {actions_skipped_no_target} action(s) with no actionable target_component")
+
         logger.info(f"{self.log_prefix} Enhanced blueprint campaign created {coordinator_tasks_created} coordinator tasks")
-        
+
         campaign_data["coordinator_tasks_created"] = coordinator_tasks_created
-        return self._conclude_campaign("SUCCESS", f"Enhanced blueprint campaign completed. {coordinator_tasks_created} tasks created.", campaign_data)
+        campaign_data["actions_skipped_no_target"] = actions_skipped_no_target
+        # Vacuous-SUCCESS guard (2026-05-19): logging SUCCESS for 0 tasks created
+        # turned `data/sea_campaign_history` into a 54-entry liar's ledger and
+        # would have fired PublicationOrchestrator on every cycle. NO_OP keeps
+        # the run in history (audit evidence) but excludes it from SUCCESS
+        # consumers (publication trigger, /insight/improvement/summary).
+        if coordinator_tasks_created == 0:
+            return self._conclude_campaign(
+                "NO_OP",
+                "Enhanced blueprint campaign produced 0 actionable tasks.",
+                campaign_data,
+            )
+        return self._conclude_campaign(
+            "SUCCESS",
+            f"Enhanced blueprint campaign completed. {coordinator_tasks_created} tasks created.",
+            campaign_data,
+        )
 
     async def run_audit_driven_campaign(self, audit_scope: str = "system", target_components: Optional[List[str]] = None) -> Dict[str, Any]:
         """
@@ -748,9 +989,23 @@ class StrategicEvolutionAgent:
             audit_results = await self._run_comprehensive_audit(audit_scope, target_components)
             
             if not audit_results.get("success", False):
-                return self._conclude_campaign("FAILURE", f"Audit phase failed: {audit_results.get('message', 'Unknown error')}", 
+                return self._conclude_campaign("FAILURE", f"Audit phase failed: {audit_results.get('message', 'Unknown error')}",
                                              {"audit_scope": audit_scope, "audit_results": audit_results})
-            
+
+            # No-actionable-findings short-circuit (2026-05-19): when the audit
+            # ran cleanly but turned up nothing, skip blueprint/improvement
+            # phases entirely. Avoids the duplicate-write pathology where the
+            # downstream campaign returned SUCCESS and the wrong key check at
+            # the PARTIAL_SUCCESS branch made every audit run write twice.
+            findings = audit_results.get("findings") or []
+            suggestions = audit_results.get("improvement_suggestions") or []
+            if not findings and not suggestions:
+                return self._conclude_campaign(
+                    "NO_WORK",
+                    "Audit completed with no actionable findings; nothing to improve this cycle.",
+                    {"audit_scope": audit_scope, "audit_results": audit_results},
+                )
+
             # Step 2: Convert audit findings to strategic blueprint
             logger.info(f"{self.log_prefix} Phase 2: Converting audit findings to strategic blueprint")
             blueprint = await self._generate_audit_driven_blueprint(audit_results, audit_scope)
@@ -765,12 +1020,21 @@ class StrategicEvolutionAgent:
             logger.info(f"{self.log_prefix} Phase 3: Executing improvement actions")
             improvement_results = await self.run_enhanced_blueprint_campaign(f"Audit-driven improvements: {audit_scope}")
             
-            if improvement_results.get("status") != "SUCCESS":
-                return self._conclude_campaign("PARTIAL_SUCCESS", "Improvements partially completed", {
-                    "audit_results": audit_results,
-                    "blueprint": blueprint,
-                    "improvement_results": improvement_results
-                })
+            # Key fix (2026-05-19): _conclude_campaign returns
+            # `overall_campaign_status`, not `status`. The old `.get("status")`
+            # always returned None, so every audit-driven campaign double-wrote
+            # PARTIAL_SUCCESS no matter what the inner campaign returned.
+            inner_status = improvement_results.get("overall_campaign_status")
+            if inner_status not in ("SUCCESS",):
+                return self._conclude_campaign(
+                    "PARTIAL_SUCCESS",
+                    f"Improvements partially completed (inner status: {inner_status or 'unknown'})",
+                    {
+                        "audit_results": audit_results,
+                        "blueprint": blueprint,
+                        "improvement_results": improvement_results,
+                    },
+                )
             
             # Step 4: Validate improvements with re-audit
             logger.info(f"{self.log_prefix} Phase 4: Validating improvements")

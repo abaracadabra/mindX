@@ -66,6 +66,33 @@ class AGInt:
         self.memory_agent = memory_agent or MemoryAgent(config=self.config)
         self.tools: Dict[str, Any] = kwargs.get('tools', {})
 
+        # blueprint.agent — AGInt can DIRECT blueprint / UI / self-audit-analysis
+        # work to it (the agent that works the Gödel-Machine-Index UI + code analysis).
+        try:
+            from agents.blueprint_agent import BlueprintAgent
+            self.blueprint_agent = BlueprintAgent()
+            self.tools.setdefault("blueprint", self.blueprint_agent)
+            logger.info(f"{self.log_prefix} blueprint.agent registered — AGInt can direct to it.")
+        except Exception as e:
+            self.blueprint_agent = None
+            logger.debug(f"{self.log_prefix} blueprint.agent unavailable: {e}")
+
+        # simple_coder.agent — the HANDS (sandboxed edits). Lazy: it initialises a
+        # sandbox on construction, so AGInt builds it on first direct_to_simplecoder.
+        # blueprint.agent analyses; simple_coder acts. AGInt directs both.
+        self.simple_coder = None
+
+        # resource monitoring tools — AGInt (and blueprint.agent) read the substrate's
+        # load (CPU/RAM/disk); the resource_governor already gates on this.
+        try:
+            from agents.monitoring.resource_monitor import get_resource_monitor
+            self.resource_monitor = get_resource_monitor()
+            self.tools.setdefault("resources", self.resource_monitor)
+            logger.info(f"{self.log_prefix} resource monitor registered.")
+        except Exception as e:
+            self.resource_monitor = None
+            logger.debug(f"{self.log_prefix} resource monitor unavailable: {e}")
+
         # Keep a reference to the BeliefSystem so milestone recognition can
         # persist `milestone:*` beliefs (see _on_milestone_candidate_event).
         # The BeliefSystem is a singleton — same instance everywhere.
@@ -234,6 +261,73 @@ class AGInt:
             "classified_total": self._milestones_classified_total,
             "per_category_counts": dict(self._milestones_per_category),
         }
+
+    async def direct_to_blueprint(self, directive: str, *, target: str = "agents/core") -> Dict[str, Any]:
+        """Direct a blueprint/UI/self-audit-analysis directive to blueprint.agent.
+        AGInt routes by intent; blueprint.agent does the work and returns the result."""
+        bp = getattr(self, "blueprint_agent", None)
+        if bp is None:
+            return {"ok": False, "error": "blueprint.agent unavailable"}
+        d = (directive or "").lower()
+        try:
+            if any(k in d for k in ("analyze", "analyse", "audit code", "structure")):
+                res = bp.analyze_path(target)
+            elif any(k in d for k in ("validate", "ui", "frontend", "lint")):
+                res = bp.validate_ui()
+            elif any(k in d for k in ("coverage", "threshold", "math")):
+                res = bp.coverage_math()
+            elif any(k in d for k in ("resource", "cpu", "memory", "ram", "disk", "health", "load")):
+                res = bp.resources()
+            elif any(k in d for k in ("interaction", "substrate", "mapping")):
+                res = bp.interaction_map()
+            elif any(k in d for k in ("predicate", "g1", "g8")):
+                res = bp.predicate_report()
+            elif any(k in d for k in ("verdict", "gmi", "machine", "godel", "gödel", "self-audit")):
+                res = {"summary": bp.summary_text(), "gmi": bp.gmi()}
+            else:
+                res = {"summary": bp.summary_text(), "skills": bp.skills()}
+            logger.info(f"{self.log_prefix} directed to blueprint.agent → {directive[:60]}")
+            return {"ok": True, "agent": bp.AGENT_ID, "directive": directive, "result": res}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    def _get_simple_coder(self):
+        """Lazily build + register simple_coder.agent (the HANDS). Cached."""
+        if self.simple_coder is None:
+            try:
+                from agents.simple_coder_agent import SimpleCoderAgent
+                self.simple_coder = SimpleCoderAgent(memory_agent=self.memory_agent, config=self.config)
+                self.tools.setdefault("simple_coder", self.simple_coder)
+                logger.info(f"{self.log_prefix} simple_coder.agent registered — AGInt can direct to the HANDS.")
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} simple_coder.agent unavailable: {e}")
+        return self.simple_coder
+
+    async def direct_to_simplecoder(self, operation: str, **kwargs) -> Dict[str, Any]:
+        """Direct a coding operation to simple_coder.agent (sandboxed HANDS):
+        analyze_code / generate_code / optimize_code / read_file / write_file / …"""
+        sc = self._get_simple_coder()
+        if sc is None:
+            return {"ok": False, "error": "simple_coder.agent unavailable"}
+        try:
+            res = await sc.execute(operation=operation, **kwargs)
+            logger.info(f"{self.log_prefix} directed to simple_coder.agent → {operation}")
+            return {"ok": True, "agent": sc.agent_id, "operation": operation, "result": res}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    async def analyze_then_act(self, target: str = "agents/core", *, act: bool = False,
+                               operation: str = "analyze_code") -> Dict[str, Any]:
+        """The eyes→hands loop: blueprint.agent analyses ``target``; if ``act`` and a
+        largest/most-complex file is found, simple_coder.agent inspects it. Analysis
+        always runs; the HANDS act only when asked (sandboxed, non-destructive read)."""
+        analysis = await self.direct_to_blueprint(f"analyze {target}", target=target)
+        out = {"analysis": analysis}
+        if act and analysis.get("ok"):
+            largest = ((analysis.get("result") or {}).get("largest") or [])
+            if largest:
+                out["action"] = await self.direct_to_simplecoder(operation, file_path=largest[0]["file"])
+        return out
 
     def start(self, directive: str):
         if self.status == AgentStatus.RUNNING: return
@@ -437,9 +531,57 @@ class AGInt:
         if self.last_action_context and not self.last_action_context.get('success', True):
             perception_data['last_action_failure_context'] = self.last_action_context.get('result', 'Unknown error')
             logger.warning(f"{self.log_prefix} Perceiving with failure context: {perception_data['last_action_failure_context']}")
+        # Core self-awareness: fold live resource + governor state into perception and
+        # into state_summary['awareness'] — the machine feels its own substrate load.
+        try:
+            rm = getattr(self, "resource_monitor", None)
+            if rm is not None:
+                ru = rm.get_resource_usage()
+                gov = ru.get("governor", {}) or {}
+                perception_data["resources"] = {"cpu": ru.get("cpu"), "memory": ru.get("memory"),
+                                                 "disk": ru.get("disk"), "governor": gov}
+                self.state_summary["resources"] = perception_data["resources"]
+                cpu, ceil = ru.get("cpu"), gov.get("cpu_ceiling")
+                if gov.get("throttling_autonomous"):
+                    self.state_summary["awareness"] = (f"CPU {cpu}% over the {ceil}% ceiling — "
+                                                       f"throttling autonomous loops, yielding the processor.")
+                elif cpu is not None:
+                    self.state_summary["awareness"] = (f"CPU {cpu}% · mem {ru.get('memory')}% · "
+                                                       f"disk {ru.get('disk')}% — nominal ({gov.get('headroom_pct')}% CPU headroom).")
+        except Exception as e:
+            logger.debug(f"{self.log_prefix} resource awareness skipped: {e}")
         return perception_data
 
     async def _execute_cognitive_task(self, prompt: str, task_type: TaskType, **kwargs) -> Optional[str]:
+        # ── Cloud fast-path: route AGInt's cognition through the Ollama Cloud tool (gpt-oss:120b-cloud) ──
+        # The model_registry + model_selector path below is brittle (empty capabilities / selection
+        # failures → llm_operational=False → the P-O-D-A loop COOLDOWNs instead of deliberating). The cloud
+        # handler is the SAME free-first-maximal route the effector/analyzer use and it reliably answers.
+        # Flag-gated (MINDX_AGINT_CLOUD=1 default) + fail-soft: on any error, fall through to the registry.
+        import os as _os_agint
+        if _os_agint.getenv("MINDX_AGINT_CLOUD", "1") == "1":
+            try:
+                from llm.llm_factory import create_llm_handler
+                _model = (self.config.get("agint.cloud_model", "gpt-oss:120b-cloud")
+                          if self.config else "gpt-oss:120b-cloud")
+                _h = await create_llm_handler("ollama", _model)
+                _gk = {k: v for k, v in kwargs.items() if k in ("json_mode", "max_tokens", "temperature")}
+                _gk.setdefault("max_tokens", 1024)   # reasoning models return '' at tiny budgets
+                resp = await _h.generate_text(prompt, model=_model, **_gk)
+                if resp and resp.strip():
+                    ok = True
+                    if kwargs.get("json_mode"):
+                        import json as _json_agint
+                        try:
+                            _json_agint.loads(resp)
+                        except Exception:
+                            ok = False   # not valid JSON — let the registry path try
+                    if ok:
+                        self.state_summary["llm_operational"] = True
+                        self.state_summary["llm_status"] = f"Online - Ollama Cloud ({_model})"
+                        return resp
+            except Exception as _e:
+                logger.warning(f"{self.log_prefix} cloud cognition fast-path failed ({_e}); falling back to registry")
         # Enhanced logic to properly detect and use Mistral API
         if not self.model_registry:
             logger.warning(f"{self.log_prefix} No model registry available")

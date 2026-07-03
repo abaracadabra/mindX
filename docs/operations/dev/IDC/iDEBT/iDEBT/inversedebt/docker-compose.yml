@@ -1,0 +1,153 @@
+# DELTAVERSE Keeper Infrastructure — Docker Compose
+#
+# This file orchestrates the off-chain services that make the protocol
+# operational. In production at scale you would migrate to Kubernetes
+# or a managed container platform, but Compose is appropriate for
+# development, staging, and small production deployments.
+#
+# Services defined here:
+#
+#   - keeper-pyth:        Pyth price update keeper (high frequency)
+#   - keeper-subindex:    Sub-index finalizer keeper (low frequency)
+#   - keeper-fees:        Fee routing keeper (hourly)
+#   - keeper-liquidator:  Liquidation keeper (medium frequency)
+#   - prometheus:         Metrics collection
+#   - grafana:            Metrics visualization
+#
+# Each keeper runs in its own container so that a crash or resource
+# exhaustion in one does not affect the others. They share the same
+# Docker image but start with different ENABLE_* flags to activate
+# only their specific bot. This is a deliberate operational pattern:
+# one image, multiple configurations.
+#
+# Usage:
+#   cp .env.example .env
+#   # Edit .env with your RPC URL, private key, and contract addresses
+#   docker compose up -d
+#   docker compose logs -f keeper-pyth
+#
+# To stop everything:
+#   docker compose down
+
+version: '3.9'
+
+services:
+
+  # ═══════════════════════════════════════════════════════════════
+  # KEEPER BOTS
+  # ═══════════════════════════════════════════════════════════════
+
+  keeper-pyth:
+    build:
+      context: ./keepers
+      dockerfile: Dockerfile
+    image: deltaverse/keeper:latest
+    container_name: deltaverse-keeper-pyth
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - ENABLE_PYTH=true
+      - ENABLE_SUB_INDEX=false
+      - ENABLE_FEE_ROUTER=false
+      - ENABLE_LIQUIDATOR=false
+      - PYTH_UPDATE_INTERVAL_MS=60000
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  keeper-subindex:
+    image: deltaverse/keeper:latest
+    container_name: deltaverse-keeper-subindex
+    restart: unless-stopped
+    depends_on:
+      - keeper-pyth
+    env_file:
+      - .env
+    environment:
+      - ENABLE_PYTH=false
+      - ENABLE_SUB_INDEX=true
+      - ENABLE_FEE_ROUTER=false
+      - ENABLE_LIQUIDATOR=false
+      - SUB_INDEX_INTERVAL_MS=14400000
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  keeper-fees:
+    image: deltaverse/keeper:latest
+    container_name: deltaverse-keeper-fees
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - ENABLE_PYTH=false
+      - ENABLE_SUB_INDEX=false
+      - ENABLE_FEE_ROUTER=true
+      - ENABLE_LIQUIDATOR=false
+      - FEE_ROUTER_INTERVAL_MS=3600000
+      - FEE_ROUTE_THRESHOLD=100000000
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  keeper-liquidator:
+    image: deltaverse/keeper:latest
+    container_name: deltaverse-keeper-liquidator
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - ENABLE_PYTH=false
+      - ENABLE_SUB_INDEX=false
+      - ENABLE_FEE_ROUTER=false
+      - ENABLE_LIQUIDATOR=true
+      - LIQUIDATOR_INTERVAL_MS=30000
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "10"
+
+  # ═══════════════════════════════════════════════════════════════
+  # MONITORING STACK (optional but recommended)
+  # ═══════════════════════════════════════════════════════════════
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: deltaverse-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: deltaverse-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana-dashboard.json:/var/lib/grafana/dashboards/deltaverse.json:ro
+    ports:
+      - "3000:3000"
+
+volumes:
+  prometheus-data:
+  grafana-data:

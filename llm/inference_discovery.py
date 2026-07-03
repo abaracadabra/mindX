@@ -381,6 +381,37 @@ class InferenceDiscovery:
 
         return discovered
 
+    async def _node_runnable_set(self) -> Optional[set]:
+        """Fail-open node-capability gate. Returns the lowercased set of models
+        this node can actually run (via the adopted llmfit oracle), or None when
+        the gate is disabled / the oracle is unavailable — in which case ranking
+        is left completely unchanged. Gated behind MINDX_LLMFIT_GATE_ENABLED so a
+        missing llmfit binary is always a no-op.
+        """
+        if os.environ.get("MINDX_LLMFIT_GATE_ENABLED", "").lower() not in ("1", "true", "yes"):
+            return None
+        try:
+            from llm.inference_discovery_llmfit_hook import get_node_runnable_set
+            runnable = await get_node_runnable_set(use_case="general")
+            return runnable or None
+        except Exception as e:  # hook absent (pre-adoption) or oracle down -> no gating
+            logger.debug(f"InferenceDiscovery: llmfit fit-gate inactive ({e})")
+            return None
+
+    @staticmethod
+    def _fit_adjusted_score(src: "InferenceSource", runnable: Optional[set]) -> float:
+        """Composite score multiplied by a fit factor. Fail-open: no runnable set
+        (gate off / oracle down) => unchanged score. A provider that serves at
+        least one node-runnable model keeps its score; one that serves none is
+        heavily deprioritised (still selectable as a last resort)."""
+        base = src.score
+        if not runnable:
+            return base
+        names = {m.lower() for m in (src.models or [])}
+        if not names:
+            return base  # unknown model list -> do not penalise
+        return base if (names & runnable) else base * 0.15
+
     async def get_best_provider(self) -> Optional[Tuple[str, InferenceSource]]:
         """
         Return the best available inference source right now.
@@ -398,8 +429,9 @@ class InferenceDiscovery:
             logger.warning("InferenceDiscovery: NO inference sources available")
             return None
 
-        # Sort by score (highest first)
-        available.sort(key=lambda x: x[1].score, reverse=True)
+        # Sort by score (highest first), optionally gated by node fit (fail-open).
+        runnable = await self._node_runnable_set()
+        available.sort(key=lambda x: self._fit_adjusted_score(x[1], runnable), reverse=True)
         best_name, best_src = available[0]
         logger.info(
             f"InferenceDiscovery: best provider = {best_name} "

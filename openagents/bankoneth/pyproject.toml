@@ -37,9 +37,10 @@ Documentation = "https://github.com/bankon-eth/bankoneth/tree/main/docs"
 [tool.hatch.build]
 include = [
     "integrations/**/*.py",
+    "clients/python/**/*.py",
     "README.md",
     "LICENSE",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["integrations"]
+packages = ["integrations", "clients/python"]

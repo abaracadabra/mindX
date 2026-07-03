@@ -342,9 +342,26 @@ class ResourceMonitor:
             disk_total = format_bytes(disk_usage.total)
         except (OSError, AttributeError):
             disk_used = disk_free = disk_total = "Unknown"
-        
+
+        # Governor state wired into the readings: the monitor now reports whether the
+        # CPU limiter would throttle autonomous loops at the current reading.
+        try:
+            from agents.resource_governor import ResourceGovernor
+            _g = ResourceGovernor()
+            _ceiling = _g.effective_ceiling()      # temp-gated (99 while cool, backs off when hot)
+            _temp = _g._cpu_temp()
+            _over = round(metrics.cpu_percent, 1) > _ceiling
+            _gov = {"cpu_ceiling": _ceiling, "configured_ceiling": _g.autonomous_cpu_ceiling,
+                    "cpu_temp_c": _temp, "max_cpu_temp_c": _g.max_cpu_temp,
+                    "inference_cores": _g.inference_cores, "over_ceiling": _over,
+                    "throttling_autonomous": _over,
+                    "headroom_pct": round(max(0.0, _ceiling - metrics.cpu_percent), 1)}
+        except Exception:
+            _gov = {"cpu_ceiling": None}
+
         return {
             "cpu": round(metrics.cpu_percent, 1),
+            "governor": _gov,
             "memory": round(metrics.memory_percent, 1),
             "disk": round(root_disk_usage, 1),
             "alerts": len(self.active_alerts),

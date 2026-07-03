@@ -216,12 +216,22 @@ Respond ONLY with the JSON array.
                     rollback_required=action_data.get("safety_level") in ["high", "critical"]
                 )
                 
+                # Preserve the blueprint's target_component on the action so the
+                # downstream coordinator metadata can carry it. Without it the
+                # SEA→Coordinator seam FAILs every COMPONENT_IMPROVEMENT
+                # ("Missing 'target_component'") → 0 tasks created → NO_OP.
+                # Prefer an explicit file_path the LLM produced; otherwise fall
+                # back to the todo-level target_component (skip placeholders).
+                params = action_data.get("parameters", {}) or {}
+                if target_component and target_component not in ("general", "system"):
+                    params.setdefault("target_component", target_component)
+
                 # Create action with enhanced details
                 detailed_action = DetailedAction(
                     id=action_data.get("id", f"action_{sequence_id}_{i}"),
                     type=action_data.get("type", "NO_OP"),
                     description=action_data.get("description", ""),
-                    parameters=action_data.get("parameters", {}),
+                    parameters=params,
                     dependencies=[],  # Will be populated later
                     validation=validation,
                     priority=action_data.get("priority", priority),
@@ -388,6 +398,10 @@ Respond ONLY with the JSON array.
             bdi_action["params"]["_meta"] = {
                 "action_id": action.id,
                 "description": action.description,
+                # Resolved improvement target (file_path preferred, else the
+                # blueprint's target_component) — read by SEA to populate the
+                # coordinator's required `target_component` metadata field.
+                "target_component": action.parameters.get("file_path") or action.parameters.get("target_component"),
                 "priority": action.priority,
                 "estimated_cost_usd": action.estimated_cost_usd,
                 "estimated_duration_seconds": action.estimated_duration_seconds,

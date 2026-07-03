@@ -42,9 +42,24 @@
             background:
                 radial-gradient(circle at 30% 20%, rgba(139,92,246,.18) 0%, transparent 45%),
                 radial-gradient(circle at 70% 80%, rgba(86,204,242,.10) 0%, transparent 50%),
+                linear-gradient(rgba(6,3,14,.86), rgba(0,0,0,.93)),
+                url('/gfx/supremedirective.jpeg') center top / cover fixed no-repeat,
                 radial-gradient(circle at center, #1a1030 0%, #000 70%);
             min-height: 100vh;
         }
+        /* ── Access-denied treatment ─────────────────────────────── */
+        .denied { margin: 0 auto 18px; max-width: 660px; text-align: center; }
+        .denied-gfx {
+            width: 104px; height: 104px; object-fit: cover; border-radius: 14px;
+            border: 1px solid rgba(255,80,80,.45); box-shadow: 0 0 30px rgba(255,40,40,.35);
+            margin-bottom: 12px;
+        }
+        .denied-title {
+            font-family: ui-monospace, 'SFMono-Regular', monospace;
+            font-size: 1.9rem; font-weight: 800; letter-spacing: 7px;
+            color: #ff5b5b; text-shadow: 0 0 24px rgba(255,40,40,.55); margin-bottom: 8px;
+        }
+        .denied-sub { color: var(--text); opacity: .88; font-size: .98rem; }
 
         .page { max-width: 1180px; margin: 0 auto; padding: 28px 20px 60px; }
 
@@ -235,6 +250,20 @@
 
     <!-- The wallet sign-in path — preserved verbatim from the prior login.html. -->
     <script>
+        // Origin-aware backend base URL (matches shadow-overlord.html). The prior
+        // hardcoded http://localhost:8000 caused "Failed to fetch" on the HTTPS
+        // production origin (mixed-content / wrong host). Same-origin in prod;
+        // explicit :8000 only on localhost; MINDX_API_URL stays an override.
+        function mindxApiBase() {
+            if (window.MINDX_API_URL) return window.MINDX_API_URL;
+            const here = window.location;
+            if (here.host.endsWith('pythai.net')) return 'https://mindx.pythai.net';
+            if (here.host.includes('localhost') || here.host.startsWith('127.'))
+                return `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`;
+            return here.origin;
+        }
+        window.mindxApiBase = mindxApiBase;
+
         window.connectMetaMask = async function() {
             try {
                 if (typeof window.ethereum === 'undefined') {
@@ -248,7 +277,7 @@
                     alert('Wallet connection library failed to load. Please refresh the page.');
                     return;
                 }
-                const apiBaseUrl = window.MINDX_API_URL || `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`;
+                const apiBaseUrl = mindxApiBase();
                 const createWalletClient = viem.createWalletClient || viem.default?.createWalletClient;
                 const custom = viem.custom || viem.default?.custom;
                 if (!createWalletClient || !custom) throw new Error('viem exports not found.');
@@ -317,6 +346,49 @@
             if (!msg) { el.classList.remove('show'); el.textContent = ''; return; }
             el.textContent = msg; el.classList.add('show');
         }
+
+        // ── Algorand (Pera / Parsec) OVERSEER sign-in ─────────────────────────────────
+        // A signature from the mindx.algo address is recognized as OVERSEER and unlocks the
+        // Algorand deployment suites. Pera + Parsec both produce a raw Ed25519 signature over the
+        // challenge bytes; the backend (overseer_auth.verify_algorand_signature) accepts either the
+        // raw or MX-prefixed convention, so the same flow serves both wallets.
+        window.connectAlgorand = async function() {
+            const apiBaseUrl = mindxApiBase();
+            showError('');
+            try {
+                const ch = await (await fetch(`${apiBaseUrl}/auth/algorand/challenge`)).json();
+                if (!ch || !ch.nonce) throw new Error('could not obtain challenge');
+                let PeraWalletConnect;
+                try {
+                    const mod = await import('https://cdn.jsdelivr.net/npm/@perawallet/connect@1.4.1/+esm');
+                    PeraWalletConnect = mod.PeraWalletConnect || mod.default?.PeraWalletConnect || mod.default;
+                } catch (e) { showError('Algorand wallet library failed to load. Refresh and retry.'); return; }
+                const pera = new PeraWalletConnect();
+                let accounts = [];
+                try { accounts = await pera.connect(); }
+                catch (e) { try { accounts = await pera.reconnectSession(); } catch (_) {} }
+                const address = accounts && accounts[0];
+                if (!address) { showError('No Algorand account connected (Pera / Parsec).'); return; }
+                const msgBytes = new TextEncoder().encode(ch.message);
+                const sigArr = await pera.signData([{ data: msgBytes, message: 'mindX OVERSEER-LOGIN' }], address);
+                const s0 = sigArr[0];
+                const sigBytes = s0 instanceof Uint8Array ? s0 : new Uint8Array(Object.values(s0));
+                let bin = ''; sigBytes.forEach(b => bin += String.fromCharCode(b));
+                const sigB64 = btoa(bin);
+                const vRes = await fetch(`${apiBaseUrl}/auth/algorand/verify`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nonce: ch.nonce, signature: sigB64, address, wallet: 'pera' })
+                });
+                const data = await vRes.json();
+                if (!vRes.ok) { showError('OVERSEER: ' + (data.detail || 'verification failed')); return; }
+                localStorage.setItem('mindx_overseer_jwt', data.jwt);
+                localStorage.setItem('mindx_overseer_address', data.address);
+                showError('');
+                window.location.href = '/overseer';   // reveal the Algorand deployment suites
+            } catch (e) {
+                showError('Algorand sign-in failed: ' + (e.message || e));
+            }
+        };
     </script>
 </head>
 <body>
@@ -326,8 +398,19 @@
         <section class="hero">
             <img src="/gfx/mindX.png" class="brand-mark" alt="mindX" width="124" height="124">
             <div class="wordmark">mindX</div>
+
+            <div class="denied" id="deniedBox" hidden>
+                <img src="/gfx/OVERLORD.png" alt="" class="denied-gfx">
+                <div class="denied-title">ACCESS DENIED</div>
+                <div class="denied-sub" id="deniedSub">Connect your wallet to enter. Your signature proves who you are &mdash;</div>
+            </div>
+
             <p class="tagline" id="tagline">
                 <em>pioneering</em> self-building cognitive architecture
+            </p>
+
+            <p class="connect-msg" id="connectMsg" style="text-align:center;max-width:580px;margin:0 auto 10px;color:var(--text2,#cbd5e1);font-size:.98rem">
+                Connect your wallet to enter. Your signature proves who you are &mdash;
             </p>
 
             <div class="auth-controls">
@@ -336,9 +419,14 @@
                         <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3 4-3 9-3 9 1.34 9 3z"/>
                         <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
                     </svg>
-                    Connect Wallet & Sign-In
+                    CONNECT WALLET
                 </button>
-                <a href="/shadow-overlord" class="btn-ghost">Shadow-Overlord →</a>
+                <button id="algorandConnectBtn" class="btn-primary" onclick="connectAlgorand()" title="mindx.algo OVERSEER sign-in via Pera or Parsec">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="9"/><path d="M8 16l4-9 4 9M9.5 13h5"/>
+                    </svg>
+                    CONNECT &middot; ALGORAND (PERA / PARSEC)
+                </button>
             </div>
 
             <div class="status-bar" id="statusBar">
@@ -368,21 +456,32 @@
             ·
             <a id="apiLink"  href="#" rel="noopener">api</a>
             ·
-            <a href="https://github.com/AgenticPlace/mindX" target="_blank" rel="noopener">github</a>
+            <a href="https://github.com/agenticplace" target="_blank" rel="noopener">github</a>
         </div>
     </div>
 
     <script>
-    // ─── Backend URL (matches the shadow-overlord page) ─────────────────
-    const apiBase = (function() {
-        const here = window.location;
-        if (here.host.endsWith('pythai.net')) return 'https://mindx.pythai.net';
-        if (here.host.includes('localhost') || here.host.startsWith('127.'))
-            return `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`;
-        return here.origin;
-    })();
+    // ─── Backend URL (single origin-aware resolver, defined above) ──────
+    const apiBase = mindxApiBase();
     document.getElementById('docsLink').href = apiBase + '/docs.html';
     document.getElementById('apiLink').href  = apiBase + '/redoc';
+
+    // ─── Access-denied state ────────────────────────────────────────────
+    // Arrived via a gated redirect (/login?from=<path>): show ACCESS DENIED.
+    // Connecting the wallet + signing in is the single path forward — sovereign
+    // (shadow-overlord) sign-in lives only on the /shadow-overlord page.
+    (function(){
+        var from = new URLSearchParams(location.search).get('from');
+        if (!from) return;
+        var box = document.getElementById('deniedBox');
+        var sub = document.getElementById('deniedSub');
+        var tag = document.getElementById('tagline');
+        var clean = from.split('?')[0];
+        if (box) box.hidden = false;
+        if (sub) sub.textContent = 'Connect your wallet to enter ' + clean + '. Your signature proves who you are —';
+        if (tag) tag.style.display = 'none';
+        document.title = 'ACCESS DENIED — mindX';
+    })();
 
     // ─── Cards inventory ────────────────────────────────────────────────
     // Two-tier model (locked 2026-05-13). Shadow-overlord operations are
@@ -393,7 +492,8 @@
         // PUBLIC — visible to everyone
         { id:'automindx',             title:'AUTOMINDx',          sub:'the origin · AGLM',                tier:'public',    gfx:'/gfx/mindX2d.webp',                  href: apiBase + '/automindx' },
         { id:'docs',                  title:'Documentation',      sub:'NAV · BOOK · JOURNAL · TOOLS',     tier:'public',    gfx:'/gfx/doorway1.webp',                 href: apiBase + '/docs.html' },
-        { id:'shadow_overlord_login', title:'Shadow-Overlord',    sub:'sovereign sign-in',                tier:'public',    gfx:'/gfx/shadow_overlord.png',           href: '/shadow-overlord' },
+        { id:'shadow_overlord_login', title:'Shadow-Overlord',    sub:'sovereign sign-in',                tier:'public',    gfx:'/gfx/OVERSEER.png',                  href: '/shadow-overlord' },
+        { id:'inft',                  title:'iNFT',               sub:'ERC-7857 intelligent NFTs',        tier:'public',    gfx:'/gfx/BANKONiNFT.png',                href: apiBase + '/inft' },
 
         // LOGGED-IN — any wallet that completed sign-in
         { id:'dashboard',             title:'Dashboard',          sub:'live diagnostics',                 tier:'logged_in', gfx:'/gfx/doorway2.webp',                 href: '/app' },

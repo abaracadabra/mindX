@@ -355,6 +355,37 @@ AuthorAgent's lunar disk writes still happen — the events are simply not
 emitted, and the file-polling watcher will pick up the dream-cycle book
 edition trigger as a fallback.
 
+### Improvement-event-driven publishing — PublicationOrchestrator
+
+`agents/publication_orchestrator.py` watches `data/sea_campaign_history/*.json`
++ `data/memory/dreams/*_dream_report.json` for actual-improvement signals and
+calls `AuthorAgent.publish_to_rage()` on each new trigger. Persistent ledger at
+`data/governance/published_triggers.json`; 30 min ± 40 % jitter; 6 h `MIN_GAP_S`
+rate limit.
+
+Each decision point emits a typed catalogue event
+(`agents/catalogue/events.py`):
+
+| Event kind | When |
+|------------|------|
+| `publication.attempted` | Orchestrator picks a trigger and starts the publish path |
+| `publication.published` | `wordpress-agent` returns `post_id` + `url` |
+| `publication.coalesced` | Publish suppressed by `MIN_GAP_S` or raced past delay |
+
+### Publication audit endpoints (since 2026-05-19)
+
+All public, read-only; all support `?h=true` plain-text rendering.
+
+| Endpoint | Returns |
+|----------|---------|
+| `GET /insight/publications/recent` | Last N `publication.*` events from the catalogue |
+| `GET /insight/publications/summary` | Ledger counts (published / coalesced), last publish, by-kind histogram, `ledger_exists` flag |
+| `GET /insight/publications/audit` | Cross-reference of `docs/publications/*.md` + `docs/publications/pdf/*.pdf` against the orchestrator ledger — surfaces drafts never published |
+
+Operational dashboard: [`/agentic.html`](https://mindx.pythai.net/agentic.html)
+(sibling to `/feedback.html`) renders the audit + draft inventory + live
+activity feed + eval-gate health on one page; refreshes every 30 s.
+
 ## Key Files
 
 | File | Purpose |
@@ -362,6 +393,9 @@ edition trigger as a fallback.
 | `agents/author_agent.py` | Book compilation, lunar cycle, publishing (incl. `publish_to_rage`) |
 | `agents/wordpress_agent/` | Loopback WordPress REST service AuthorAgent calls (ported from mindXtrain) |
 | `agents/wordpress.publish.agent` | Agent extension descriptor for the wordpress-agent |
+| `agents/publication_orchestrator.py` | SEA-success + dream-cycle watcher; emits `publication.*` catalogue events |
+| `mindx_backend_service/agentic.html` | `/agentic.html` operator console — publish audit, draft inventory, eval health, activity feed |
+| `data/governance/published_triggers.json` | Orchestrator ledger (created on first publish) |
 | `docs/WORDPRESS_PUBLISHING.md` | AuthorAgent → wordpress-agent → rage.pythai.net guide |
 | `agents/learning/improvement_journal.py` | Journal entries (feeds Chapter VI) |
 | `docs/BOOK_OF_MINDX.md` | Current book edition (auto-generated) |
@@ -372,3 +406,55 @@ edition trigger as a fallback.
 | `data/governance/doc_audit.json` | Chapter VIII doc audit output |
 | `tools/core/health_auditor_tool.py` | AuthorAgent staleness check |
 | `mindx_backend_service/main_service.py` | Scheduling, health restart, `/book` endpoint |
+| `agents/github_awareness.py` | Local-git reader; the milestone signal source |
+| `docs/MILESTONES.md` | Milestone chronicle (auto-maintained) |
+| `docs/DOC_INDEX.md` | Exhaustive doc catalogue (auto-maintained) |
+| `data/milestones/milestone_log.jsonl` | Per-commit milestone log |
+
+## Verification (2026-06-04)
+
+The book-writing path is confirmed operational on disk:
+
+- `docs/BOOK_OF_MINDX.md` — current edition present (2026-05-13, chapters I–… in
+  first person).
+- `data/governance/lunar_cycle.json` — records chapters written (Security d14,
+  Cognition d15, Predictions d24, The Network d25), matching `LUNAR_CHAPTERS`.
+- `docs/publications/daily/` — daily chapter snapshots present.
+- `docs/publications/book_of_mindx_*.md` — 7 archived editions.
+- `run_periodic()` is started at backend boot (on-demand publish on startup +
+  daily lunar chapter).
+
+**Expected cadence:** AuthorAgent writes the chapter for the *current lunar day*
+when the periodic task runs, and skips if today's chapter already exists. It is
+not a contiguous 1→28 march; coverage depends on uptime across the synodic
+cycle. The full-moon compilation gathers all available daily chapters into a
+Book edition regardless of gaps.
+
+## Expanded responsibilities (2026-06)
+
+> **Not yet on the live VPS.** The capabilities in this section ship on branch
+> `claude/inspiring-carson-22XTs` and require a deploy + `mindx.service` restart
+> before the live AuthorAgent exhibits them. The production AuthorAgent is still
+> the prior release. See [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md).
+
+Beyond the lunar book, AuthorAgent now keeps two artifacts current automatically
+(see [`MILESTONES.md`](MILESTONES.md), [`survive.md`](survive.md), and
+[`github_awareness`](../agents/github_awareness.py)):
+
+1. **Milestone recognition (`github.awareness`).** A push is already public, so
+   the local git log is the zero-overhead milestone signal. `assess_milestone()`
+   scores a commit batch; `journal_milestone()` chronicles it to
+   `docs/MILESTONES.md` + `data/milestones/milestone_log.jsonl` (idempotent
+   per-SHA). Routine commits (`Pre-shutdown backup:` from backup_agent, merges,
+   version bumps) are filtered via `is_routine_commit()`. Worthy batches publish
+   in mindX's own voice through the same `publish_to_rage()` → wordpress-agent
+   relationship, driven by the `PublicationOrchestrator.watch_github()` trigger
+   (third alongside SEA-success and full-moon dreams).
+2. **Documentation index.** `update_docs_index()` regenerates
+   `docs/DOC_INDEX.md` — the exhaustive, category-grouped catalogue (same
+   categories as `/docs.html`) — on **every recognized milestone**, so the docs
+   stay current with no human upkeep. NAV.md remains the curated hub.
+
+These make AuthorAgent the canonical maintainer of mindX's self-chronicle: the
+lunar Book (reflective), the milestone log (factual), and the doc index
+(structural).

@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ephermaleth"
+version = "0.1.0"
+description = "Verifiable chains of command (multi-signer attestation chains) + a voting booth for councils."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [{ name = "BANKON / cypherpunk2048" }]
+keywords = ["provenance", "eip-191", "attestation", "chain-of-custody",
+            "governance", "voting", "cypherpunk2048", "bankoneth"]
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security :: Cryptography",
+]
+# Core is dependency-free; signing/verification needs an eth signer at runtime.
+dependencies = []
+
+[project.optional-dependencies]
+eth = ["eth-account>=0.10", "web3>=6.0"]
+test = ["pytest", "eth-account>=0.10", "web3>=6.0"]
+
+[project.scripts]
+ephermaleth = "ephermaleth.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/cypherpunk2048"
+"Source" = "https://github.com/cypherpunk2048"
+
+[tool.setuptools.packages.find]
+include = ["ephermaleth*"]
+
+[tool.setuptools.package-data]
+ephermaleth = ["py.typed"]

@@ -1,0 +1,209 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mindX — Gödel Machine Index</title>
+<meta name="description" content="The Gödel Machine Index: mindX's objective, scientific self-audit of whether it is a Gödel machine. Eight predicates, machine-checked, each true or false — computed from the log.">
+<meta name="robots" content="index,follow"><link rel="canonical" href="https://mindx.pythai.net/machine">
+<link rel="icon" href="/gfx/favicon.ico" sizes="any">
+<meta property="og:title" content="mindX — Gödel Machine Index"><meta property="og:type" content="website">
+<meta property="og:description" content="A self-improving machine that audits itself in public — verdict first, even when the verdict is 'not yet'.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#060d17;--panel:rgba(12,22,36,.62);--ink:#dfe8f2;--ink2:#a7b8cc;--mut:#6b8299;
+  --line:rgba(120,170,225,.14);--blu:#4a9eff;--au:#e3b341;--ok:#5bd97b;--no:#ff5c52;--wait:#e0ab46;
+  --serif:Georgia,'Iowan Old Style','Times New Roman',serif;--mono:'JetBrains Mono','SF Mono',ui-monospace,monospace;
+}
+html,body{height:100%}
+body{font-family:var(--mono);background:var(--bg);color:var(--ink);overflow-x:hidden;line-height:1.55;-webkit-font-smoothing:antialiased}
+/* layered field: physics substrate + faint drafting grid */
+#mesh{position:fixed;inset:0;z-index:0;opacity:.24}
+#grid{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:52px 52px;mask-image:radial-gradient(ellipse 90% 80% at 50% 28%,#000 35%,transparent 100%);opacity:.3}
+.wrap{position:relative;z-index:2;max-width:1160px;margin:0 auto;padding:0 26px}
+/* header */
+header.top{display:flex;justify-content:space-between;align-items:center;padding:22px 0;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:12px;font-weight:600;letter-spacing:.04em}
+.brand img{width:30px;height:30px}
+.navlinks a{color:var(--mut);text-decoration:none;font-size:11px;letter-spacing:.14em;text-transform:uppercase;margin-left:20px}
+.navlinks a:hover{color:var(--blu)}
+/* drafting title-block hero */
+.hero{position:relative;margin:46px 0 8px;border:1px solid var(--line);border-radius:4px;background:var(--panel);backdrop-filter:blur(3px)}
+.corner{position:absolute;width:12px;height:12px;border:1px solid var(--blu);opacity:.6}
+.corner.tl{top:-1px;left:-1px;border-right:0;border-bottom:0}.corner.tr{top:-1px;right:-1px;border-left:0;border-bottom:0}
+.corner.bl{bottom:-1px;left:-1px;border-right:0;border-top:0}.corner.br{bottom:-1px;right:-1px;border-left:0;border-top:0}
+.hero-in{padding:52px 48px 40px}
+.eyebrow{font-size:10.5px;letter-spacing:.44em;text-transform:uppercase;color:var(--blu);margin-bottom:26px}
+.eyebrow b{color:var(--au);font-weight:600}
+.verdict{font-family:var(--serif);font-weight:400;font-size:clamp(30px,6.4vw,62px);line-height:1.04;letter-spacing:-.01em}
+.verdict .neg{color:var(--no);font-style:italic}.verdict .pos{color:var(--ok)}
+.verdict small{display:block;font-family:var(--mono);font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--mut);margin-top:16px;font-style:normal}
+.summary{max-width:720px;margin:24px 0 0;color:var(--ink2);font-size:14px;line-height:1.8}
+/* title-block strip: the drafting stamp row */
+.stamp{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);margin-top:36px}
+.stamp .cell{padding:22px 26px;border-right:1px solid var(--line);text-align:center}
+.stamp .cell:last-child{border-right:0}
+.ring{position:relative;width:104px;height:104px;margin:0 auto}
+.ring svg{transform:rotate(-90deg)}.ring .val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;font-family:var(--mono)}
+.stamp .lab{margin-top:11px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--mut)}
+/* blockers */
+.blockers{margin:24px 0;padding:16px 22px;border:1px solid rgba(255,92,82,.28);background:rgba(255,92,82,.05);border-radius:4px}
+.blockers h3{font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--no);margin-bottom:9px}
+.blockers code{color:#ffb0aa;font-size:13px;margin-right:18px}
+/* section heading = drafting label */
+.sec-h{margin:56px 0 20px;display:flex;align-items:baseline;gap:16px;border-bottom:1px solid var(--line);padding-bottom:12px}
+.sec-h .no{font-family:var(--mono);color:var(--blu);font-size:12px;letter-spacing:.1em}
+.sec-h h2{font-family:var(--serif);font-weight:400;font-size:22px;letter-spacing:.01em}
+.sec-h .hint{margin-left:auto;font-size:10.5px;color:var(--mut);letter-spacing:.06em}
+/* predicate components */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:14px}
+.pred{position:relative;border:1px solid var(--line);border-radius:4px;padding:18px 19px;background:var(--panel);cursor:pointer;transition:.22s}
+.pred:hover{border-color:var(--blu);transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.pred:before{content:'';position:absolute;left:0;top:16px;bottom:16px;width:2px;background:var(--mut);border-radius:2px}
+.pred.ok:before{background:var(--ok)}.pred.no:before{background:var(--no)}.pred.wait:before{background:var(--wait)}
+.pred .id{font-size:11px;color:var(--blu);font-weight:700;letter-spacing:.14em}
+.pred .bit{float:right;font-size:15px;font-weight:800;color:var(--no)}.pred.ok .bit{color:var(--ok)}
+.pred .nm{font-family:var(--serif);font-size:17px;margin:4px 0 9px;text-transform:capitalize;color:var(--ink)}
+.pred .vd{display:inline-block;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;padding:3px 10px;border-radius:2px;border:1px solid currentColor}
+.pred.ok .vd{color:var(--ok)}.pred.no .vd{color:var(--no)}.pred.wait .vd{color:var(--wait)}
+.pred .dt{margin-top:12px;font-size:12.5px;color:var(--ink2);line-height:1.65}
+.pred .ev{margin-top:13px;padding-top:12px;border-top:1px dashed var(--line);font-size:11px;color:var(--mut);display:none;white-space:pre-wrap;word-break:break-word}
+.pred.open .ev{display:block}.pred .more{margin-top:10px;font-size:9.5px;color:var(--blu);letter-spacing:.14em;text-transform:uppercase}
+/* walled deep blueprint */
+.wall{margin:58px 0 40px;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--panel)}
+.wall-top{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:26px 28px;background:linear-gradient(135deg,rgba(74,158,255,.06),transparent)}
+.wall-top .t{font-family:var(--serif);font-size:19px;letter-spacing:.01em}
+.wall-top .s{font-size:11px;color:var(--mut);margin-top:6px;letter-spacing:.03em}
+.lockbtn{font-family:var(--mono);font-weight:700;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#07101d;background:linear-gradient(135deg,#7dc0ff,#4a9eff 55%,#2f7fd6);border:none;border-radius:3px;padding:14px 30px;cursor:pointer;white-space:nowrap}
+.lockbtn:hover{box-shadow:0 0 34px rgba(74,158,255,.45)}
+#blueprint-root{border-top:1px solid var(--line)}
+footer{border-top:1px solid var(--line);padding:30px 0 52px;color:var(--mut);font-size:11px;letter-spacing:.05em;text-align:center;line-height:1.9}
+footer a{color:var(--blu);text-decoration:none}footer code{color:var(--au)}
+.err{color:var(--no);text-align:center;padding:44px}
+@media(max-width:720px){.hero-in{padding:36px 24px}.stamp{grid-template-columns:1fr}.stamp .cell{border-right:0;border-bottom:1px solid var(--line)}}
+@media(prefers-reduced-motion:reduce){#mesh{display:none}}
+</style></head><body>
+<canvas id="mesh"></canvas><div id="grid"></div>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><img src="/gfx/mindX.png" alt="mindX"><span>mindX · Gödel Machine Index</span></div>
+    <nav class="navlinks"><a href="/">home</a><a href="/docs.html">docs</a><a href="/insight/godel/machine">json</a><a href="/doc/GODEL_EVAL_BLUEPRINT">blueprint</a></nav>
+  </header>
+
+  <section class="hero">
+    <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+    <div class="hero-in">
+      <div class="eyebrow">Sheet G · objective · scientific · <b>computed from the log</b></div>
+      <div class="verdict" id="verdict">measuring…</div>
+      <p class="summary" id="summary">Reading the machine's objective verdict…</p>
+    </div>
+    <div class="stamp" id="gauges"></div>
+  </section>
+
+  <div class="blockers" id="blockers" style="display:none"></div>
+
+  <div class="sec-h"><span class="no">G1–G8</span><h2>The Eight Predicates</h2><span class="hint">tap a component to open its evidence</span></div>
+  <div class="grid" id="grid"></div>
+
+  <section class="wall">
+    <div class="wall-top">
+      <div><div class="t">Diagnostics — the complete audit</div><div class="s">Every evidence surface, the coverage math, live Gödel-choice telemetry &amp; the verbatim payload — on the diagnostics admin page.</div></div>
+      <a class="lockbtn" href="/machine/admin" style="text-decoration:none;display:inline-block">Open diagnostics ▸</a>
+    </div>
+  </section>
+
+  <footer>
+    mindX audits itself in the open — verdict first, even when it reads “not yet.”<br>
+    Live from <code>data/logs/godel_choices.jsonl</code> · <a href="/insight/godel/machine">raw JSON</a> · <a href="/doc/GODEL_EVAL_BLUEPRINT">the blueprint</a> · <a href="/doc/SCHMIDHUBER_ENGINE">the engine</a> · <a href="/">mindX</a>
+  </footer>
+</div>
+
+<script>
+var GMI=null;
+function ring(pct,color,label){
+  var c=2*Math.PI*46;
+  return '<div class="cell"><div class="ring"><svg width="104" height="104">'+
+    '<circle cx="52" cy="52" r="46" fill="none" stroke="rgba(120,170,225,.14)" stroke-width="8"/>'+
+    '<circle cx="52" cy="52" r="46" fill="none" stroke="'+color+'" stroke-width="8" stroke-linecap="round" '+
+    'stroke-dasharray="'+c.toFixed(1)+'" stroke-dashoffset="'+c.toFixed(1)+'" data-pct="'+pct+'" style="transition:stroke-dashoffset 1.3s cubic-bezier(.3,0,.2,1)"/></svg>'+
+    '<div class="val" style="color:'+color+'">'+Math.round(pct*100)+'%</div></div><div class="lab">'+label+'</div></div>';
+}
+function vclass(v){v=(v||'').toUpperCase();return v.indexOf('PROVEN')>=0?'ok':v.indexOf('FALSIF')>=0?'no':'wait';}
+function esc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+function render(g){
+  GMI=g;var neg=(g.verdict||'').indexOf('NOT')>=0||(g.verdict||'').indexOf('FALSIF')>=0;
+  var vtxt=(g.verdict||'UNKNOWN').replace(/_/g,' ');
+  document.getElementById('verdict').innerHTML='<span class="'+(neg?'neg':'pos')+'">'+esc(vtxt)+'</span>'+
+    '<small>Phase '+(g.phase!=null?g.phase:'?')+' · '+(g.predicates_proven||0)+' of 8 predicates true · GÖDEL MACHINE = <b style="color:'+(neg?'#ff5c52':'#5bd97b')+'">'+(neg?'FALSE (0)':'TRUE (1)')+'</b></small>';
+  document.getElementById('summary').textContent=g.honest_summary||'';
+  document.getElementById('gauges').innerHTML=
+    ring(g.proof_coverage||0,'#ff5c52','proof coverage')+
+    ring(g.surrogate_coverage||0,'#e3b341','surrogate coverage')+
+    ring((g.predicates_proven||0)/8,'#5bd97b','predicates proven');
+  requestAnimationFrame(function(){document.querySelectorAll('#gauges circle[data-pct]').forEach(function(el){var C=2*Math.PI*46;el.style.strokeDashoffset=(C*(1-parseFloat(el.getAttribute('data-pct')))).toFixed(1);});});
+  if(g.blockers&&g.blockers.length){var b=document.getElementById('blockers');b.style.display='block';
+    b.innerHTML='<h3>Objective blockers — why the verdict is FALSE</h3>'+g.blockers.map(function(x){return '<code>'+esc(x)+'</code>';}).join('');}
+  document.getElementById('grid').innerHTML=(g.predicates||[]).map(function(p){
+    var cl=vclass(p.verdict),bit=cl==='ok'?'1':'0';
+    return '<div class="pred '+cl+'" onclick="this.classList.toggle(\'open\')">'+
+      '<div class="id">'+esc(p.id)+' <span class="bit">'+bit+'</span></div><div class="nm">'+esc((p.name||'').replace(/_/g,' '))+'</div>'+
+      '<span class="vd">'+esc(p.verdict)+'</span><div class="dt">'+esc(p.detail)+'</div>'+
+      '<div class="ev">'+esc(JSON.stringify(p.evidence||{},null,2))+'</div><div class="more">evidence ▾</div></div>';
+  }).join('');
+}
+fetch('/insight/godel/machine',{cache:'no-store'}).then(function(r){return r.json();}).then(render)
+  .catch(function(){document.querySelector('.hero-in').innerHTML='<div class="err">The self-audit is momentarily unavailable. <a href="/insight/godel/machine">raw JSON</a></div>';});
+
+// A draggable + resizable mindX logo; a plain click activates wallet login if a wallet is found.
+(function(){
+  var lg=document.createElement('img'); lg.src='/gfx/mindX.png'; lg.alt='mindX — connect';
+  lg.id='floatlogo'; lg.title='drag · scroll to resize · click to connect';
+  lg.style.cssText='position:fixed;right:26px;bottom:26px;width:64px;height:64px;z-index:9;cursor:grab;'+
+    'filter:drop-shadow(0 0 18px rgba(74,158,255,.45));user-select:none;-webkit-user-select:none;touch-action:none;transition:filter .3s';
+  document.body.appendChild(lg);
+  var drag=false,moved=false,ox=0,oy=0,sz=64;
+  function down(e){drag=true;moved=false;lg.style.cursor='grabbing';var p=e.touches?e.touches[0]:e;var r=lg.getBoundingClientRect();ox=p.clientX-r.left;oy=p.clientY-r.top;if(e.cancelable)e.preventDefault();}
+  function move(e){if(!drag)return;moved=true;var p=e.touches?e.touches[0]:e;lg.style.left=(p.clientX-ox)+'px';lg.style.top=(p.clientY-oy)+'px';lg.style.right='auto';lg.style.bottom='auto';}
+  function up(){drag=false;lg.style.cursor='grab';}
+  function resize(e){e.preventDefault();sz=Math.max(32,Math.min(320,sz+(e.deltaY<0?8:-8)));lg.style.width=lg.style.height=sz+'px';}
+  lg.addEventListener('mousedown',down);lg.addEventListener('touchstart',down,{passive:false});
+  addEventListener('mousemove',move);addEventListener('touchmove',move,{passive:false});
+  addEventListener('mouseup',up);addEventListener('touchend',up);
+  lg.addEventListener('wheel',resize,{passive:false});
+  // on hover, attach the intelligence substrate to the logo — the field gathers to it
+  function focus(){var r=lg.getBoundingClientRect();window.__subFocus={x:r.left+r.width/2,y:r.top+r.height/2,active:true};lg.style.filter='drop-shadow(0 0 34px rgba(74,158,255,.85))';}
+  function blur(){if(window.__subFocus)window.__subFocus.active=false;lg.style.filter='drop-shadow(0 0 18px rgba(74,158,255,.45))';}
+  lg.addEventListener('mouseenter',focus);lg.addEventListener('mousemove',focus);lg.addEventListener('mouseleave',blur);
+  lg.addEventListener('click',function(){ if(moved)return;         // a real click, not a drag → connect
+    var eth=window.ethereum,px=window.parsec;
+    if(eth){ location.href='/activity?from=/machine'; }            // wallet found → the realm's wallet login
+    else if(px){ location.href='/overseer'; }
+    else { window.open('https://metamask.io/download/','_blank','noopener'); }
+  });
+})();
+
+// intelligence substrate — a physics field with SCALE (depth/parallax), blueprint-tinted.
+// Hamiltonian central well + pairwise repulsion + spring mesh + cursor gravity; every
+// body carries a z-scale driving size, opacity, and parallax speed → depth, not a plane.
+(function(){var cv=document.getElementById('mesh'),c=cv.getContext('2d'),W,H,st=[],mx=-1,my=-1;
+ var CL=['74,158,255','227,179,65','91,217,123','167,184,204'];
+ function rs(){W=cv.width=innerWidth;H=cv.height=innerHeight;st=[];var n=Math.min(105,Math.floor(W*H/15000));
+   for(var i=0;i<n;i++){var z=Math.random()*1.7+0.3;st.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.2,z:z,m:z*z,c:CL[i%4]});}}
+ addEventListener('resize',rs);addEventListener('mousemove',function(e){mx=e.clientX;my=e.clientY;});addEventListener('mouseleave',function(){mx=-1;});rs();
+ (function step(){c.clearRect(0,0,W,H);var cxp=W/2,cyp=H*0.42;
+   for(var i=0;i<st.length;i++){var a=st[i];
+     a.vx+=(cxp-a.x)*0.00003*a.m;a.vy+=(cyp-a.y)*0.00003*a.m;
+     for(var j=i+1;j<st.length;j++){var b=st[j],dx=b.x-a.x,dy=b.y-a.y,q=dx*dx+dy*dy;
+       if(q<220){var f=-1.4/(q+9);a.vx+=dx*f;a.vy+=dy*f;b.vx-=dx*f;b.vy-=dy*f;}
+       if(q<14000){var d=Math.sqrt(q)||1;c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);
+         c.strokeStyle='rgba('+a.c+','+((1-q/14000)*.07).toFixed(3)+')';c.lineWidth=.4;c.stroke();
+         var s=(d-92)*0.00002;a.vx+=dx/d*s;a.vy+=dy/d*s;b.vx-=dx/d*s;b.vy-=dy/d*s;}}
+     if(mx>0){var ex=mx-a.x,ey=my-a.y,eq=ex*ex+ey*ey;if(eq<44000&&eq>1){var g=150/eq*a.z,r=Math.sqrt(eq);a.vx+=ex/r*g;a.vy+=ey/r*g;}}
+     var F=window.__subFocus;   // the intelligence substrate attaches to the mindX logo on hover
+     if(F&&F.active){var fx=F.x-a.x,fy=F.y-a.y,fq=fx*fx+fy*fy;if(fq>1){var gf=Math.min(1.4,1400/fq)*a.z,fr=Math.sqrt(fq);a.vx+=fx/fr*gf;a.vy+=fy/fr*gf;}}
+     a.vx*=0.96;a.vy*=0.96;a.x+=a.vx*a.z;a.y+=a.vy*a.z;
+     if(a.x<-5)a.x=W;if(a.x>W+5)a.x=0;if(a.y<-5)a.y=H;if(a.y>H+5)a.y=0;
+     c.beginPath();c.arc(a.x,a.y,a.z*1.3,0,6.28);c.fillStyle='rgba('+a.c+','+(0.16+a.z*0.18).toFixed(3)+')';c.fill();}
+   requestAnimationFrame(step);})();
+})();
+</script></body></html>

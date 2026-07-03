@@ -1,0 +1,76 @@
+/* styled.css — SoundWave voiceprint dApp (compiled from styled.scss). cypherpunk2048 aesthetic. */
+:root {
+  --bg: #05060a;
+  --ink: #cdd6e6;
+  --wav: #19d3ff;     /* WAV cyan */
+  --snd: #f0387a;     /* SND magenta */
+  --line: #1b2740;
+  --card: rgba(12, 18, 32, 0.72);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  color: var(--ink);
+  background: var(--bg);
+  overflow-x: hidden;
+}
+#deltaverse { position: fixed; inset: 0; z-index: 0; display: block; }
+header, main, footer { position: relative; z-index: 1; }
+
+.topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 20px; border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(5,6,10,.9), rgba(5,6,10,.3));
+  backdrop-filter: blur(4px);
+}
+.brand { font-size: 18px; }
+.brand .ticker { color: var(--wav); margin-left: 6px; font-size: 12px; letter-spacing: 1px; }
+.conn { display: flex; gap: 8px; align-items: center; }
+.chip { font-size: 11px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 10px; color: #8aa; }
+button, select, input {
+  font-family: inherit; font-size: 12px; color: var(--ink);
+  background: #0a1120; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px;
+}
+button { cursor: pointer; border-color: #2a3c5e; }
+button:hover { border-color: var(--wav); color: #fff; }
+
+main { max-width: 980px; margin: 0 auto; padding: 24px 20px 80px; }
+.hero h1 { font-size: 2.4em; margin: .3em 0 .1em;
+  background: linear-gradient(90deg, var(--snd), var(--wav)); -webkit-background-clip: text;
+  background-clip: text; color: transparent; }
+.hero p { color: #9fb0c8; max-width: 70ch; line-height: 1.5; }
+.hero a { color: var(--wav); }
+.supply { margin-top: 10px; font-size: 13px; color: #aebdd4; }
+.supply b { color: #fff; }
+
+.card { margin-top: 22px; padding: 18px; border: 1px solid var(--line);
+  border-radius: 12px; background: var(--card); }
+.card h2 { margin: 0 0 6px; color: var(--wav); font-size: 1.15em; }
+.card .hint { color: #6f86a8; font-size: 11px; margin: 0 0 12px; }
+code { color: var(--snd); }
+
+.vp-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0; }
+#voiceprint-form input { width: 100%; }
+#vp-go { margin-top: 8px; width: 100%; background: linear-gradient(90deg, #1a2b1e, #102a2e);
+  border-color: var(--wav); padding: 10px; font-size: 13px; }
+
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.cols h3 { color: #7f95b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+.fn { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+.fn-name { font-weight: bold; color: #dfe7f4; }
+.fn-name .sig { color: #5d7398; font-weight: normal; font-size: 11px; }
+.fn input { display: block; width: 100%; margin: 4px 0; }
+.fn .out { font-size: 11px; color: #8fd; white-space: pre-wrap; word-break: break-all; margin-top: 4px; }
+
+.log { margin-top: 20px; font-size: 11px; }
+.logline { padding: 4px 0; border-bottom: 1px dashed #14203a; word-break: break-all; }
+.logline.ok { color: #5fd08a; }
+.logline.err { color: #ff7b8a; }
+
+footer { display: flex; justify-content: space-between; padding: 14px 20px;
+  border-top: 1px solid var(--line); font-size: 11px; color: #6b7d9c;
+  background: rgba(5,6,10,.8); }
+.cp2048 { color: var(--snd); }
+
+@media (max-width: 720px) { .cols, .vp-grid { grid-template-columns: 1fr; } }

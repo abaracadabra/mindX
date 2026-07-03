@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  foundry:
+    name: Foundry build + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install deps
+        run: |
+          forge install openzeppelin/openzeppelin-contracts@v5.0.2 --no-commit
+          forge install foundry-rs/forge-std --no-commit
+
+      - name: Build
+        run: forge build --sizes
+
+      - name: Test
+        run: forge test -vv
+        env:
+          FOUNDRY_PROFILE: ci
+
+      - name: Format check
+        run: forge fmt --check
+
+  typescript:
+    name: TS typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install
+        run: npm install --workspaces=false && (cd api && npm install) && (cd frontend && npm install)
+
+      - name: API typecheck
+        run: cd api && npm run typecheck
+
+      - name: Frontend typecheck
+        run: cd frontend && npm run typecheck

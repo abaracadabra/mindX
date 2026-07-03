@@ -1,5 +1,12 @@
 # @bankoneth/parsec-adapter
 
+> ⚠️ **Superseded by [`@bankoneth/parsec-view`](../parsec-view/).** This adapter
+> exposes a Lit web-component, but parsec-wallet is vanilla TS + Blueprint (no
+> Lit) — so it never matched parsec's actual view system. The new
+> `@bankoneth/parsec-view` renders through parsec's own `el`/`btn`/`store`/`ethers`
+> and slots in natively. Use that for parsec; this package remains only for
+> Lit-based hosts that genuinely want a web component.
+
 > PARSEC wallet-component bridge for bankoneth. First-class consumer surface
 > — PARSEC adopts this contract shape.
 

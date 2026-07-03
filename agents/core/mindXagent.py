@@ -228,6 +228,18 @@ class MindXAgent:
         self.running = False
         self.autonomous_mode = False
         self.autonomous_task: Optional[asyncio.Task] = None
+        # Real loop telemetry surfaced on the public "Autonomous Systems" tab.
+        self._cycle_count = 0
+        self._last_cycle_time: Optional[str] = None
+        self._last_skip_reason: Optional[str] = None
+        # Objective self-eval feedback — the core evolution edge that turns
+        # mindX's own campaign success rate back into corrective action.
+        self._self_eval: Optional[Dict[str, Any]] = None
+        try:
+            from agents.core.self_eval_feedback import SelfEvalFeedback
+            self._self_eval_feedback = SelfEvalFeedback(log_prefix=f"{getattr(self,'log_prefix','SelfEval:')} ")
+        except Exception:
+            self._self_eval_feedback = None
 
         # LLM configuration for autonomous mode — model discovered at startup, not hardcoded
         self.llm_provider = "ollama"
@@ -1500,11 +1512,21 @@ class MindXAgent:
             # Get next steps from analysis
             next_steps = result_analysis.improvement_opportunities.copy()
             
-            # Check if any improvement requires a restart (code promoted to main)
-            _restart_needed = any(
-                imp.get("code_updated_requires_restart") or imp.get("promoted_to_main")
-                for imp in improvements_made if isinstance(imp, dict)
-            )
+            # Check if any improvement requires a restart (code promoted to main).
+            # The SIA cycle result that sets these flags is nested INSIDE the
+            # campaign/result payloads, not at the top level, so a shallow .get()
+            # over improvements_made always missed it (the restart never fired).
+            # Scan recursively, and match `is True` strictly — external cycles
+            # set promoted_to_main="N/A" (a truthy string) which must NOT count.
+            def _needs_restart(obj) -> bool:
+                if isinstance(obj, dict):
+                    if obj.get("code_updated_requires_restart") is True or obj.get("promoted_to_main") is True:
+                        return True
+                    return any(_needs_restart(v) for v in obj.values())
+                if isinstance(obj, (list, tuple)):
+                    return any(_needs_restart(v) for v in obj)
+                return False
+            _restart_needed = _needs_restart(improvements_made)
             result = ImprovementResult(
                 goal=improvement_goal,
                 success=success,
@@ -2619,12 +2641,64 @@ class MindXAgent:
                     metadata={"autonomous_mode": True, "previous_session": self.current_session.session_id if self.current_session else None}
                 )
         
+        # ── Engage AGInt — the P-O-D-A cognitive core ("the soul") ──────────────────────────────────
+        # Was dormant (0 cognitive cycles). Run a bounded set of Perceive-Orient-Decide-Act cycles once at
+        # loop start (before the Mastermind loop's 60s campaign warmup, so it doesn't contend on the shared
+        # BDI). AGInt perceives system state and decides BDI_DELEGATION / RESEARCH / SELF_REPAIR / COOLDOWN —
+        # the adaptive decision layer above the BDI. Flag-gated + fail-safe: an AGInt error never stops the loop.
+        import os as _os_agint
+        if _os_agint.getenv("MINDX_ENABLE_AGINT", "1") == "1" and getattr(self, "_agint", None) is None:
+            try:
+                mm = self.mastermind_agent
+                mm_bdi = getattr(mm, "bdi_agent", None) if mm else None
+                mm_reg = getattr(mm, "model_registry", None) if mm else None
+                if mm_bdi is not None and mm_reg is not None:
+                    from agents.core.agint import AGInt
+                    self._agint = AGInt(
+                        agent_id="agint_soul_of_mindx",
+                        bdi_agent=mm_bdi,
+                        model_registry=mm_reg,
+                        belief_system=self.belief_system,
+                        coordinator_agent=self.coordinator_agent,
+                        memory_agent=self.memory_agent,
+                        config=self.config,
+                    )
+                    self._agint.set_max_cycles(int(self.config.get("agint.max_cycles", 3)))
+                    self._agint.start(
+                        "Assess mindX system health and strategic self-improvement priorities; perceive the "
+                        "state of the autonomous loop and decide whether to delegate, research, repair, or cool down."
+                    )
+                    logger.info(f"{self.log_prefix} AGInt (P-O-D-A soul) engaged — {self.config.get('agint.max_cycles', 3)} bounded cognitive cycles")
+                else:
+                    logger.info(f"{self.log_prefix} AGInt not engaged: mastermind BDI/registry unavailable")
+            except Exception as _ag_e:
+                logger.warning(f"{self.log_prefix} AGInt engage failed (loop continues): {_ag_e}")
+
         cycle_count = 0
-        
+
         while self.running and self.autonomous_mode:
             try:
                 cycle_count += 1
+                # Surface real loop state for /diagnostics/live → the public
+                # "Autonomous Systems" tab. Previously the tab read dead flags
+                # (_autonomous_running, never set) and always showed "stopped".
+                self._cycle_count = cycle_count
+                self._last_cycle_time = datetime.utcnow().isoformat() + "Z"
                 logger.info(f"{self.log_prefix} === AUTONOMOUS CYCLE {cycle_count} ===")
+
+                # Objective self-eval feedback (cheap, no inference) — read our
+                # own campaign success rate every cycle, even one about to defer,
+                # so the loop is aware of its own track record.
+                if self._self_eval_feedback is not None:
+                    try:
+                        self._self_eval = self._self_eval_feedback.assess(
+                            loop_skip_reason=self._last_skip_reason)
+                        if self._self_eval.get("verdict") in ("failing", "resource_bound"):
+                            logger.info(
+                                f"{self.log_prefix} Self-eval: {self._self_eval['verdict']} "
+                                f"({self._self_eval['sample']}) — {self._self_eval['recommendation']}")
+                    except Exception as _se_e:
+                        logger.debug(f"{self.log_prefix} self-eval assess failed: {_se_e}")
 
                 # PREREQUISITE: Verify inference is available before this cycle
                 cycle_model = await self._resolve_inference_model()
@@ -2693,6 +2767,62 @@ class MindXAgent:
                             f"Aware of {len(ltm_insights)} learned patterns from past cycles")
                 except Exception:
                     pass
+
+                # Dynamic CPU gate — yield the processor before the heavy,
+                # inference-driven part of the cycle. If the box is over the
+                # autonomous ceiling (~92%), back off in a bounded loop; if still
+                # saturated, skip this cycle so the web service keeps the CPU.
+                # Fail-open: governor unavailable → proceed.
+                try:
+                    from agents.resource_governor import ResourceGovernor
+                    _gov = await ResourceGovernor.get_instance()
+                    if not await _gov.throttle_for_cpu(label="mindx_loop", max_wait=180):
+                        self._last_skip_reason = "CPU over ceiling — sharing processor"
+                        logger.info(
+                            f"{self.log_prefix} Cycle {cycle_count}: CPU over ceiling "
+                            f"after backoff — skipping cycle (shares processor)"
+                        )
+                        await asyncio.sleep(120)
+                        continue
+                    self._last_skip_reason = None  # cycle is proceeding
+                except Exception:
+                    pass
+
+                # The cycle is proceeding (inference available, CPU under
+                # ceiling). If the objective self-eval says we're failing on
+                # our merits — not resource-bound — engage SEA with a corrective
+                # campaign. Cooldown-guarded; never doom-loops onto a hot box.
+                if self._self_eval_feedback is not None and self._self_eval:
+                    try:
+                        esc = await self._self_eval_feedback.maybe_escalate(
+                            getattr(self, "strategic_evolution_agent", None),
+                            self._self_eval, inference_available=bool(cycle_model))
+                        if esc:
+                            logger.info(
+                                f"{self.log_prefix} Self-eval escalated corrective campaign "
+                                f"to SEA: {esc.get('status')} (trigger {esc.get('trigger_sample')})")
+                    except Exception as _se_esc:
+                        logger.debug(f"{self.log_prefix} self-eval escalate failed: {_se_esc}")
+
+                # RIGHT apex (knowledge->wisdom->weights): autonomous Schmidhüber
+                # ascent via mindXtrain. Separately gated — needs BOTH
+                # MINDX_ENABLE_MINDXTRAIN and MINDX_ENABLE_AUTONOMOUS_TRAIN, is
+                # not-resource-bound, and respects a 24h cooldown — so merely
+                # arming the bridge for an operator ascent never trains here.
+                try:
+                    from mindx.godel.mindxtrain import autonomous_train_enabled
+                    if autonomous_train_enabled():
+                        from mindx.godel.ascend_scheduler import run_ascent_if_due
+                        asc = await run_ascent_if_due(
+                            self._self_eval,
+                            sea=getattr(self, "strategic_evolution_agent", None))
+                        if asc:
+                            logger.info(
+                                f"{self.log_prefix} Autonomous ascent gen "
+                                f"{asc.get('generation')}: stage={asc.get('stage')} "
+                                f"model={asc.get('ollama_model')}")
+                except Exception as _asc_e:
+                    logger.debug(f"{self.log_prefix} autonomous ascent skipped: {_asc_e}")
 
                 # Log thinking step
                 self._log_thinking("analyzing_system_state", "Analyzing current system state for improvement opportunities")
@@ -3362,7 +3492,30 @@ class MindXAgent:
                 logger.debug(f"{self.log_prefix} Could not get resource metrics: {e}")
         
         return state
-    
+
+    @staticmethod
+    def _is_inference_error(response: Any) -> bool:
+        """True if an LLM response is an error/empty rather than usable text.
+
+        A timed-out or failed inference returns an "Error: ..." string or an
+        error envelope ({"error": "TimeoutError", ...}). Such a value must never
+        become an improvement "goal" that gets executed downstream — that is how
+        a {"error":"TimeoutError"} dict ended up as the autonomous loop's goal.
+        """
+        if response is None:
+            return True
+        if not isinstance(response, str):
+            return True  # dicts/objects (e.g. error envelopes) are not usable text
+        text = response.strip()
+        if len(text) <= 10:
+            return True
+        low = text.lower()
+        if low.startswith("error:"):
+            return True
+        markers = ("timeouterror", "connectionerror", '"error"', "'error'",
+                   "request timed out", "traceback (most recent")
+        return any(m in low for m in markers)
+
     async def _identify_improvement_opportunities(self, system_state: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Identify improvement opportunities from system state, backlog, and model intelligence."""
         opportunities = []
@@ -3397,7 +3550,11 @@ class MindXAgent:
                 api = self.ollama_chat_manager.ollama_api
                 if api:
                     response = await api.generate_text(prompt, model=self.llm_model, use_chat=True, max_tokens=100)
-                    if response and len(response) > 10:
+                    # Guard: never let a failed/timed-out inference become a goal.
+                    if self._is_inference_error(response):
+                        logger.warning(f"{self.log_prefix} Discarded inference error as improvement goal: {str(response)[:100]}")
+                        self._last_skip_reason = "inference error — local-model opportunity skipped"
+                    else:
                         opportunities.append({
                             "goal": response[:200],
                             "priority": 5,

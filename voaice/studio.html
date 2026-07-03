@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>voaice · studio — voice, oscilloscope-as-mouth, KITT, 18-dp voiceprint</title>
+<style>
+  :root { --grn:#0f8; --grn2:#0fa; --bg:#05060a; --panel:#001008; --red:#ff2a2a; --amber:#ffb000; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--grn);
+    font-family:'Courier New',ui-monospace,monospace; }
+  h1 { color:var(--grn); text-align:center; margin:10px; font-size:18px; letter-spacing:2px; }
+  h1 small { color:#0a6; display:block; font-size:11px; letter-spacing:1px; }
+  .wrap { display:grid; grid-template-columns:300px 1fr 320px; gap:10px; padding:10px;
+    height:calc(100vh - 64px); }
+  .panel { border:1px solid var(--grn); background:var(--panel); border-radius:4px; padding:12px;
+    overflow:auto; }
+  .panel h2 { font-size:12px; color:var(--grn2); margin:0 0 10px; letter-spacing:1px;
+    border-bottom:1px solid #063; padding-bottom:6px; }
+  label { display:block; font-size:11px; color:#0c9; margin:10px 0 3px; }
+  textarea, input[type=text], select { width:100%; background:#000; color:var(--grn);
+    border:1px solid #063; border-radius:3px; padding:6px; font-family:inherit; font-size:12px; }
+  textarea { height:70px; resize:vertical; }
+  .row { display:flex; gap:10px; align-items:center; }
+  .knobs { display:flex; gap:18px; justify-content:space-around; margin:12px 0; }
+  .knob { text-align:center; font-size:10px; color:#0c9; user-select:none; }
+  .knob svg { cursor:ns-resize; display:block; margin:0 auto 3px; }
+  .knob b { color:#fff; font-size:12px; }
+  button { width:100%; background:#021; color:var(--grn); border:1px solid var(--grn);
+    border-radius:3px; padding:9px; font-family:inherit; font-size:12px; letter-spacing:1px;
+    cursor:pointer; margin-top:10px; transition:.12s; }
+  button:hover { background:var(--grn); color:#000; }
+  button.alt { border-color:var(--amber); color:var(--amber); }
+  button.alt:hover { background:var(--amber); color:#000; }
+  button.kitt { border-color:var(--red); color:var(--red); }
+  button.kitt.on { background:var(--red); color:#000; }
+  .toggle { display:flex; align-items:center; gap:8px; font-size:11px; color:#0c9; margin-top:8px; }
+  .stage { position:relative; display:flex; flex-direction:column; }
+  canvas { width:100%; flex:1; background:#000308; border:1px solid #063; border-radius:4px; }
+  .status { font-size:11px; color:#0a6; margin-top:6px; min-height:14px; }
+  .vp { font-size:11px; }
+  .vp .meas { display:flex; justify-content:space-between; gap:6px; padding:3px 0;
+    border-bottom:1px dotted #052; }
+  .vp .meas span:first-child { color:#0c9; }
+  .vp .val { color:#fff; font-size:10px; word-break:break-all; text-align:right; }
+  .vp .hash { color:var(--amber); font-size:9px; word-break:break-all; margin-top:8px; }
+  .vp .empty { color:#063; font-style:italic; }
+  .cap { font-size:10px; color:#063; text-align:center; padding:4px; }
+  .badge { display:inline-block; font-size:9px; padding:1px 5px; border:1px solid #063;
+    border-radius:8px; color:#0a6; margin-left:6px; }
+</style>
+</head>
+<body>
+<h1>voaice · studio
+  <small>voice → oscilloscope-as-mouth · KITT mode · scientific 18-decimal voiceprint · in-house, no CDN</small>
+</h1>
+<select id="theme" style="position:fixed;top:10px;right:12px;z-index:9;background:#000;color:var(--grn);border:1px solid #063;border-radius:3px;font-family:inherit;font-size:11px;padding:3px"></select>
+
+<div class="wrap">
+  <!-- ───────── controls ───────── -->
+  <div class="panel">
+    <h2>VOICE CONSOLE</h2>
+    <label>text</label>
+    <textarea id="text">I am the sovereign voice. Point me at a reference and I will learn it.</textarea>
+
+    <label>voice <span id="capBadge" class="badge">…</span></label>
+    <select id="voice"></select>
+
+    <div class="knobs">
+      <div class="knob" id="knob-speed" data-min="0.5" data-max="2" data-val="1" data-step="0.05">
+        <svg width="58" height="58"></svg><div>SPEED</div><b>1.00×</b>
+      </div>
+      <div class="knob" id="knob-steps" data-min="2" data-max="16" data-val="4" data-step="1">
+        <svg width="58" height="58"></svg><div>NUMSTEPS</div><b>4</b>
+      </div>
+    </div>
+
+    <div class="toggle"><input type="checkbox" id="normalize" checked /> loudness-normalise output (−20 LUFS)</div>
+    <div class="toggle"><input type="checkbox" id="nativeVoice" /> native voice — premium browser TTS (real OS voice; bypasses the visualizer)</div>
+    <div class="toggle"><input type="checkbox" id="spatial" /> spatial audio (3D) <input type="range" id="azimuth" min="-90" max="90" value="0" style="flex:1" /> <span id="azv" style="color:#fff">0°</span></div>
+
+    <label>emotion <span id="emoReadout" class="badge">neutral</span></label>
+    <div class="row">
+      <select id="emotion" style="flex:1"></select>
+      <div class="knob" id="knob-emo" data-min="0" data-max="1" data-val="0.6" data-step="0.05" style="min-width:62px">
+        <svg width="48" height="48"></svg><div>INTENSITY</div><b>0.60</b>
+      </div>
+    </div>
+    <div class="row" style="gap:5px;margin-top:6px">
+      <button class="tag" data-tag="laugh" style="margin:0;padding:5px;font-size:10px">[laugh]</button>
+      <button class="tag" data-tag="chuckle" style="margin:0;padding:5px;font-size:10px">[chuckle]</button>
+      <button class="tag" data-tag="cough" style="margin:0;padding:5px;font-size:10px">[cough]</button>
+    </div>
+
+    <button id="speak">▶ SPEAK</button>
+
+    <h2 style="margin-top:18px">MICROPHONE</h2>
+    <label>input device <span id="micState" class="badge">not connected</span></label>
+    <div class="row">
+      <select id="micDevice" style="flex:1"><option value="">— grant access to list mics —</option></select>
+      <button id="micRefresh" title="rescan devices" style="width:auto;margin:0;padding:6px 9px">⟳</button>
+    </div>
+    <button id="micConnect">🎙 CONNECT MIC</button>
+    <div class="status" id="micStatus">live mic drives the Persona mouth / KITT directly</div>
+
+    <h2 style="margin-top:18px">CLONE A VOICE</h2>
+    <label>reference transcript (what the clip says — improves the clone)</label>
+    <input type="text" id="reftext" placeholder="e.g. hello, this is my voice" />
+
+    <div class="cap" style="text-align:left;margin-top:10px;color:#0c9">① record a clip from your mic</div>
+    <button class="alt" id="recClip">● RECORD 5s</button>
+    <canvas id="clipCanvas" style="width:100%;height:48px;border:1px solid #063;border-radius:3px;background:#000308;margin-top:6px;display:none"></canvas>
+    <div class="status" id="clipInfo" style="min-height:0"></div>
+    <button class="alt" id="cloneRecorded" disabled>⌖ ② clone the recorded clip</button>
+
+    <div class="cap" style="text-align:left;margin-top:12px;color:#0c9">③ or upload a .wav</div>
+    <input type="file" id="reffile" accept="audio/wav" style="font-size:11px;color:#0a6" />
+    <button class="alt" id="cloneUploaded" disabled>⌖ ④ clone the uploaded file</button>
+
+    <div id="cloneProc" style="font-size:10px;color:#0fa;margin-top:10px;white-space:pre-line;min-height:14px"></div>
+    <div class="status" id="cloneStatus"></div>
+  </div>
+
+  <!-- ───────── persona / KITT stage ───────── -->
+  <div class="panel stage">
+    <h2>PERSONA · <span id="modeLabel">MOUTH = OSCILLOSCOPE</span></h2>
+    <canvas id="face"></canvas>
+    <div class="status" id="status">idle · press SPEAK</div>
+    <div class="toggle" style="justify-content:center;flex-wrap:wrap">
+      <input type="checkbox" id="mirror" /> MIRROR mic→oscilloscope · feedback
+      <input type="range" id="mirrortime" min="0" max="0.95" step="0.05" value="0.6" style="flex:1;max-width:170px" />
+      <span id="mtv" style="color:#fff">0.60</span><span style="color:#063">mirrortime</span>
+    </div>
+    <button class="kitt" id="kitt">◉ KITT MODE</button>
+  </div>
+
+  <!-- ───────── scientific voiceprint ───────── -->
+  <div class="panel">
+    <h2>SCIENTIFIC VOICEPRINT · 18-DECIMAL</h2>
+    <div class="vp" id="vp">
+      <div class="empty">No voiceprint yet. Clone a voice to measure a forensic,
+      18-decimal voiceprint (SoundWaveToken-ready).</div>
+    </div>
+    <div class="cap">Scientific.js · VoiceAnalyzer FFT · sha256 · fixed-point real×1e18</div>
+  </div>
+</div>
+
+<script>
+// ───────── state ─────────
+// ── visual themes (matrix green default + new palettes) ──
+const THEMES = { matrix:['#0f8','#0fa',150], amber:['#ffb000','#fd0',42], ice:['#0cf','#0ef',195], synthwave:['#f0a','#f6c',320], crimson:['#f44','#f77',2], mono:['#cfd','#fff',180] };
+function setTheme(n){ const t=THEMES[n]||THEMES.matrix; const r=document.documentElement.style; r.setProperty('--grn',t[0]); r.setProperty('--grn2',t[1]); }
+function accent(){ return getComputedStyle(document.documentElement).getPropertyValue('--grn').trim()||'#0f8'; }
+{ const sel=document.getElementById('theme'); sel.innerHTML=Object.keys(THEMES).map(t=>`<option${t==='matrix'?' selected':''}>${t}</option>`).join(''); sel.onchange=e=>setTheme(e.target.value); }
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const analyser = audioCtx.createAnalyser();
+analyser.fftSize = 2048;
+analyser.smoothingTimeConstant = 0.75;
+const timeBuf = new Float32Array(analyser.fftSize);
+const freqBuf = new Uint8Array(analyser.frequencyBinCount);
+
+// ── spatial audio (webaudio_orientation): position the voice in 3D via a PannerNode ──
+let panner = null, spatialOn = false;
+function spatialOut(){ if(!spatialOn) return audioCtx.destination;
+  if(!panner){ panner=audioCtx.createPanner(); panner.panningModel='HRTF'; panner.connect(audioCtx.destination); }
+  return panner; }
+function setAzimuth(deg){ if(!panner)return; const a=deg*Math.PI/180; if(panner.positionX){ panner.positionX.value=Math.sin(a)*3; panner.positionZ.value=-Math.cos(a)*3; } }
+document.getElementById('spatial').onchange=e=>{ spatialOn=e.target.checked; if(spatialOn){ spatialOut(); setAzimuth(+document.getElementById('azimuth').value); } };
+document.getElementById('azimuth').oninput=e=>{ document.getElementById('azv').textContent=e.target.value+'°'; setAzimuth(+e.target.value); };
+let kittMode = false;
+let speaking = false;
+let micLive = false;           // true while a microphone stream feeds the analyser
+let micStream = null;          // active MediaStream
+let micSource = null;          // MediaStreamAudioSourceNode
+let lastWav = null;            // ArrayBuffer of the last synthesized clip (for clone-last)
+let activeEmbeddingId = null;  // when set, speak in the cloned voice
+const MEAS_NAMES = ['dominantFrequency','amplitude','spectralCentroid','spectralRolloff','zeroCrossingRate','harmonicNoiseRatio'];
+
+// ───────── rotary knobs ─────────
+function makeKnob(el) {
+  const min = +el.dataset.min, max = +el.dataset.max, step = +el.dataset.step;
+  let val = +el.dataset.val;
+  const svg = el.querySelector('svg'), out = el.querySelector('b');
+  const fmt = () => el.id === 'knob-speed' ? val.toFixed(2) + '×' : String(val);
+  function draw() {
+    const a = (val - min) / (max - min);           // 0..1
+    const ang = (-135 + a * 270) * Math.PI / 180;   // -135°..+135°
+    const cx = 29, cy = 29, r = 22;
+    const px = cx + Math.cos(ang) * r, py = cy + Math.sin(ang) * r;
+    svg.innerHTML =
+      `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#010" stroke="#063"/>` +
+      `<path d="M ${cx + Math.cos(-2.356)*r} ${cy + Math.sin(-2.356)*r} A ${r} ${r} 0 1 1 ${cx + Math.cos(2.356)*r} ${cy + Math.sin(2.356)*r}" fill="none" stroke="#042" stroke-width="2"/>` +
+      `<line x1="${cx}" y1="${cy}" x2="${px}" y2="${py}" stroke="#0f8" stroke-width="2"/>` +
+      `<circle cx="${px}" cy="${py}" r="3" fill="#0fa"/>`;
+    out.textContent = fmt();
+    el.dataset.val = val;
+  }
+  let dragging = false, startY = 0, startVal = 0;
+  svg.addEventListener('pointerdown', (e) => { dragging = true; startY = e.clientY; startVal = val; svg.setPointerCapture(e.pointerId); });
+  svg.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dv = ((startY - e.clientY) / 120) * (max - min);
+    val = Math.min(max, Math.max(min, Math.round((startVal + dv) / step) * step));
+    if (el.id === 'knob-speed') val = +val.toFixed(2);
+    draw();
+  });
+  svg.addEventListener('pointerup', () => dragging = false);
+  svg.addEventListener('wheel', (e) => { e.preventDefault(); val = Math.min(max, Math.max(min, val + (e.deltaY < 0 ? step : -step))); if (el.id==='knob-speed') val=+val.toFixed(2); draw(); }, { passive:false });
+  draw();
+  return { get: () => +el.dataset.val };
+}
+const speedKnob = makeKnob(document.getElementById('knob-speed'));
+const stepsKnob = makeKnob(document.getElementById('knob-steps'));
+const emoKnob = makeKnob(document.getElementById('knob-emo'));
+
+// ───────── emotion (Chatterbox-shaped control → voice + face) ─────────
+// currentEmotion drives the Persona's facial morphs; updated from the X-Voaice-Emotion header.
+let currentEmotion = { expression: 'neutral', weight: 0, hue: 150, label: 'neutral' };
+const EMO_FACE = { // expression → {curve(+smile/-frown), brow(+angry inner-down), eye(open scale)}
+  neutral:{c:0,b:0,e:1}, happy:{c:0.85,b:-0.1,e:1.05}, excited:{c:0.7,b:-0.2,e:1.28},
+  smile:{c:0.5,b:0,e:1}, sad:{c:-0.7,b:-0.45,e:0.8}, angry:{c:-0.2,b:0.8,e:0.85},
+  surprised:{c:0.05,b:-0.3,e:1.45}, confused:{c:-0.1,b:0.35,e:1}, thinking:{c:-0.05,b:0.12,e:0.95},
+  laugh:{c:1,b:-0.2,e:1.12}, coding:{c:0,b:0.1,e:0.95}, speaking:{c:0.1,b:0,e:1},
+};
+async function loadEmotions() {
+  try {
+    const r = await fetch('/emotions'); const j = await r.json();
+    document.getElementById('emotion').innerHTML = j.labels.map(l => `<option${l==='neutral'?' selected':''}>${l}</option>`).join('');
+  } catch (e) { /* sidecar offline */ }
+}
+function emoLabel(){ return document.getElementById('emotion').value || 'neutral'; }
+document.getElementById('emotion').onchange = async () => {
+  // preview the fan-out on selection (label → exaggeration/cfg/temp)
+  try {
+    const r = await fetch('/emotions?label=' + emoLabel() + '&intensity=' + emoKnob.get());
+    const j = await r.json();
+    document.getElementById('emoReadout').textContent =
+      j.label + ' · exg ' + j.voice.exaggeration.toFixed(2) + ' · cfg ' + j.voice.cfg_weight.toFixed(2);
+    currentEmotion = { ...j.face };  // show the resting expression immediately
+  } catch (e) {}
+};
+document.querySelectorAll('button.tag').forEach(btn => btn.onclick = () => {
+  const ta = document.getElementById('text');
+  ta.value = (ta.value.trim() + ' [' + btn.dataset.tag + ']').trim();
+});
+
+// ───────── voices ─────────
+async function loadVoices() {
+  try {
+    const r = await fetch('/voices'); const j = await r.json();
+    const sel = document.getElementById('voice');
+    sel.innerHTML = j.voices.map(v => `<option>${v}</option>`).join('');
+    const c = j.capability || {};
+    document.getElementById('capBadge').textContent =
+      'backend:' + (c.backend || '?') + (c.clone ? ' · clone' : ' · no-clone');
+  } catch (e) { document.getElementById('capBadge').textContent = 'sidecar offline'; }
+}
+
+// ───────── synthesis + playback ─────────
+async function speak(text, embeddingId) {
+  // premium path: native browser TTS (real OS voices). Plays directly — no PCM, so it bypasses
+  // the oscilloscope/mouth visualizer; emotion still drives the face + maps to rate/pitch.
+  if (document.getElementById('nativeVoice').checked && 'speechSynthesis' in window) {
+    const u = new SpeechSynthesisUtterance(text);
+    const r = await fetch('/emotions?label=' + emoLabel() + '&intensity=' + emoKnob.get()).then(x=>x.json()).catch(()=>null);
+    u.rate = Math.max(0.5, Math.min(2, speedKnob.get() * (r ? r.voice.prosody.speed : 1)));
+    u.pitch = Math.max(0, Math.min(2, (r ? r.voice.prosody.pitch : 1)));
+    const vs = speechSynthesis.getVoices();
+    if (vs.length) u.voice = vs.find(v => /en/i.test(v.lang)) || vs[0];
+    if (r && r.face) { currentEmotion = { ...r.face }; document.getElementById('emoReadout').textContent = r.label; }
+    u.onstart = () => setStatus('speaking · native (' + (u.voice ? u.voice.name : 'default') + ')');
+    u.onend = () => setStatus('idle · press SPEAK');
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+    return;
+  }
+  const body = { text, voiceId: document.getElementById('voice').value,
+    speed: speedKnob.get(), numSteps: stepsKnob.get(), embeddingId: embeddingId || undefined,
+    emotion: { label: emoLabel(), intensity: emoKnob.get() } };
+  setStatus('synthesising…');
+  const res = await fetch('/speak', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (!res.ok) { const e = await res.json().catch(()=>({})); setStatus('error: ' + (e.error||res.statusText)); return; }
+  const backend = res.headers.get('X-Voaice-Backend') || '?';
+  // the FACE descriptor rides on the response header → drive the Persona emotion in sync
+  try {
+    const emo = JSON.parse(res.headers.get('X-Voaice-Emotion') || 'null');
+    if (emo && emo.face) { currentEmotion = { ...emo.face }; document.getElementById('emoReadout').textContent = emo.label; }
+  } catch (e) {}
+  lastWav = await res.arrayBuffer();
+  const audio = await audioCtx.decodeAudioData(lastWav.slice(0));
+  const src = audioCtx.createBufferSource();
+  src.buffer = audio; src.connect(analyser); analyser.connect(spatialOut());
+  speaking = true; setStatus('speaking · ' + backend + (embeddingId ? ' · CLONED' : ''));
+  src.onended = () => { speaking = false; setStatus('idle · press SPEAK'); };
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+  src.start();
+}
+function setStatus(s){ document.getElementById('status').textContent = s; }
+
+document.getElementById('speak').onclick = () =>
+  speak(document.getElementById('text').value, activeEmbeddingId);
+
+// ───────── cloning + 18-dp voiceprint ─────────
+function fmt18(fixedIntStr) {
+  // real value = integer / 1e18 ; insert the decimal point 18 digits from the right
+  let s = String(fixedIntStr);
+  const neg = s.startsWith('-'); if (neg) s = s.slice(1);
+  s = s.padStart(19, '0');
+  const intp = s.slice(0, -18).replace(/^0+(?=\d)/, '');
+  const frac = s.slice(-18);
+  return (neg ? '-' : '') + intp + '.' + frac;
+}
+function renderVoiceprint(j) {
+  const m = (j.registerArgs && j.registerArgs.m) || [];
+  const vp = document.getElementById('vp');
+  vp.innerHTML =
+    `<div class="meas"><span>backend</span><span class="val">${j.backend}</span></div>` +
+    `<div class="meas"><span>sampleRate</span><span class="val">${j.voiceprint.sampleRate} Hz</span></div>` +
+    m.map((v,i) => `<div class="meas"><span>${MEAS_NAMES[i]}</span><span class="val">${fmt18(v)}</span></div>`).join('') +
+    `<div class="meas"><span>precision</span><span class="val">${j.registerArgs ? fmt18(j.registerArgs.precisionScore) : '—'}</span></div>` +
+    `<div class="hash">sha256 ${j.voiceprint.hash}</div>` +
+    (j.embeddingId ? `<div class="meas" style="margin-top:8px"><span>embeddingId</span><span class="val">${j.embeddingId}</span></div>` : '') +
+    (j.needsText ? `<div class="hash" style="color:#f80">⚠ ZipVoice wants a reference transcript — fill it in for a real clone.</div>` : '');
+}
+// ── clip preview (visual feedback of the clip being cloned) ──
+const clipCv = document.getElementById('clipCanvas'), clipCtx = clipCv.getContext('2d');
+function drawClipWave(samples){
+  clipCv.style.display='block'; clipCv.width=clipCv.clientWidth; clipCv.height=clipCv.clientHeight;
+  clipCtx.clearRect(0,0,clipCv.width,clipCv.height); clipCtx.strokeStyle=accent(); clipCtx.lineWidth=1; clipCtx.beginPath();
+  const W=clipCv.width,H=clipCv.height,step=Math.max(1,(samples.length/W)|0);
+  for(let x=0;x<W;x++){ const v=samples[Math.min(samples.length-1,x*step)]||0; const y=H/2-v*H*0.45; x?clipCtx.lineTo(x,y):clipCtx.moveTo(x,y); }
+  clipCtx.stroke();
+}
+
+// ── clone with processor feedback (a live event log + per-step timing) ──
+async function clone(buffer, refText, previewSamples){
+  const cs=document.getElementById('cloneStatus'), proc=document.getElementById('cloneProc');
+  if (previewSamples) drawClipWave(previewSamples);
+  const log=[], tick=m=>{ log.push(m); proc.textContent=log.join('\n'); };
+  const t0=performance.now();
+  tick('▸ clip → '+((buffer.byteLength/1024)|0)+' KB WAV'+(refText?' · transcript "'+refText.slice(0,22)+'…"':''));
+  tick('▸ POST /clone → measuring forensic voiceprint…'); cs.textContent='cloning…';
+  const headers={'Content-Type':'audio/wav'}; if(refText) headers['X-Reference-Text']=refText;
+  try {
+    const t1=performance.now();
+    const res=await fetch('/clone',{ method:'POST', headers, body:buffer });
+    if(!res.ok){ const e=await res.json().catch(()=>({})); tick('✗ '+(e.error||res.statusText)); cs.textContent='error'; return; }
+    const j=await res.json(); const ms=(performance.now()-t1)|0;
+    renderVoiceprint(j); activeEmbeddingId=j.embeddingId;
+    tick('▸ voiceprint measured in '+ms+'ms · backend '+j.backend);
+    tick('✓ done in '+((performance.now()-t0)|0)+'ms · sha256 '+j.voiceprint.hash.slice(0,18)+'…');
+    cs.textContent = j.embeddingId ? 'cloned ✓ — SPEAK now uses this voice ('+j.backend+')'
+                                   : 'voiceprint ✓ ('+j.backend+') — SPEAK uses a preset until neural clone weights load';
+  } catch(e){ tick('✗ '+e.message); cs.textContent='error: '+e.message; }
+}
+
+// ── ① record a clip (stores it; does NOT auto-clone) ──
+let recordedClip = null;
+async function recordClip(secs){
+  if(!micLive){ const ok=await connectMic(micSel.value); if(!ok) return null; }
+  const proc=audioCtx.createScriptProcessor(4096,1,1), sink=audioCtx.createGain(); sink.gain.value=0;
+  const chunks=[]; let total=0;
+  proc.onaudioprocess=e=>{ const d=e.inputBuffer.getChannelData(0); chunks.push(new Float32Array(d)); total+=d.length; };
+  micSource.connect(proc); proc.connect(sink); sink.connect(audioCtx.destination);
+  const ci=document.getElementById('clipInfo');
+  for(let t=secs;t>0;t--){ ci.textContent='● recording '+t+'s…'; await new Promise(r=>setTimeout(r,1000)); }
+  try{ proc.disconnect(); micSource.disconnect(proc); }catch{} micSource.connect(analyser);
+  const all=new Float32Array(total); let off=0; for(const c of chunks){ all.set(c,off); off+=c.length; }
+  return { samples:all, sampleRate:audioCtx.sampleRate };
+}
+document.getElementById('recClip').onclick = async () => {
+  const btn=document.getElementById('recClip'); btn.disabled=true; btn.textContent='● recording…';
+  const clip=await recordClip(5); btn.disabled=false; btn.textContent='● RECORD 5s';
+  if(!clip){ document.getElementById('clipInfo').textContent='connect a mic first'; return; }
+  recordedClip=clip; drawClipWave(clip.samples);
+  document.getElementById('clipInfo').textContent='✓ captured '+(clip.samples.length/clip.sampleRate).toFixed(2)+'s @ '+clip.sampleRate+'Hz — ready to clone';
+  document.getElementById('cloneRecorded').disabled=false;
+};
+// ② clone the recorded clip
+document.getElementById('cloneRecorded').onclick = () => {
+  if(!recordedClip){ document.getElementById('cloneStatus').textContent='record a clip first'; return; }
+  clone(encodeWavPCM16(recordedClip.samples, recordedClip.sampleRate), document.getElementById('reftext').value, recordedClip.samples);
+};
+// ③ upload a .wav → enable ④
+document.getElementById('reffile').onchange = () => {
+  document.getElementById('cloneUploaded').disabled = !document.getElementById('reffile').files[0];
+};
+// ④ clone the uploaded file
+document.getElementById('cloneUploaded').onclick = async () => {
+  const f=document.getElementById('reffile').files[0]; if(!f){ document.getElementById('cloneStatus').textContent='pick a .wav first'; return; }
+  const ab=await f.arrayBuffer();
+  let preview=null; try{ const a=await audioCtx.decodeAudioData(ab.slice(0)); preview=a.getChannelData(0); }catch{}
+  clone(ab, document.getElementById('reftext').value, preview);
+};
+
+// ───────── KITT toggle ─────────
+const kittBtn = document.getElementById('kitt');
+kittBtn.onclick = () => {
+  kittMode = !kittMode;
+  kittBtn.classList.toggle('on', kittMode);
+  document.getElementById('modeLabel').textContent = kittMode ? 'KITT VOICE MODULATOR' : 'MOUTH = OSCILLOSCOPE';
+};
+
+// ───────── microphone: connect to ANY input device ─────────
+const micSel = document.getElementById('micDevice');
+async function listMics() {
+  try {
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    const ins = devs.filter(d => d.kind === 'audioinput');
+    const cur = micSel.value;
+    micSel.innerHTML = ins.length
+      ? ins.map((d,i) => `<option value="${d.deviceId}">${d.label || ('microphone ' + (i+1))}</option>`).join('')
+      : '<option value="">no input devices found</option>';
+    if (cur) micSel.value = cur;
+  } catch (e) { /* enumeration unavailable */ }
+}
+async function connectMic(deviceId) {
+  await disconnectMic(false);
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio: deviceId ? { deviceId: { exact: deviceId } } : true,
+    });
+  } catch (e) {
+    document.getElementById('micStatus').textContent = 'mic error: ' + e.name + ' — ' + e.message;
+    return false;
+  }
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+  micSource = audioCtx.createMediaStreamSource(micStream);
+  micSource.connect(analyser); // analyser ONLY — never destination (avoids feedback howl)
+  micLive = true;
+  document.getElementById('micState').textContent = 'live';
+  document.getElementById('micConnect').textContent = '■ DISCONNECT';
+  document.getElementById('micStatus').textContent = 'mic live — drives the Persona mouth / KITT';
+  await listMics(); // device labels populate once permission is granted
+  return true;
+}
+async function disconnectMic(updateUi = true) {
+  if (micSource) { try { micSource.disconnect(); } catch {} micSource = null; }
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  micLive = false;
+  if (updateUi) {
+    document.getElementById('micState').textContent = 'not connected';
+    document.getElementById('micConnect').textContent = '🎙 CONNECT MIC';
+    document.getElementById('micStatus').textContent = 'disconnected';
+  }
+}
+document.getElementById('micConnect').onclick = () => (micLive ? disconnectMic() : connectMic(micSel.value));
+document.getElementById('micRefresh').onclick = listMics;
+micSel.onchange = () => { if (micLive) connectMic(micSel.value); }; // hot-switch device
+if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+  navigator.mediaDevices.addEventListener('devicechange', listMics); // plug/unplug refresh
+}
+
+// record N seconds of the live mic → WAV (PCM16) → /clone
+function encodeWavPCM16(float32, sampleRate) {
+  const n = float32.length, buf = new ArrayBuffer(44 + n * 2), dv = new DataView(buf);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); dv.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+  dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, sampleRate, true); dv.setUint32(28, sampleRate * 2, true);
+  dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); w(36, 'data'); dv.setUint32(40, n * 2, true);
+  let o = 44; for (let i = 0; i < n; i++) { const s = Math.max(-1, Math.min(1, float32[i])); dv.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true); o += 2; }
+  return buf;
+}
+// ───────── render loop ─────────
+const cv = document.getElementById('face'); const ctx = cv.getContext('2d');
+function resize(){ cv.width = cv.clientWidth; cv.height = cv.clientHeight; }
+window.addEventListener('resize', resize); resize();
+
+function rms() { let s = 0; for (let i=0;i<timeBuf.length;i++) s += timeBuf[i]*timeBuf[i]; return Math.sqrt(s/timeBuf.length); }
+
+function drawFace(W, H, amp, mirror, emo) {
+  // emotion morph params (scaled by the emotion weight 0..1)
+  const m = EMO_FACE[emo.expression] || EMO_FACE.neutral;
+  const w = emo.weight || 0;
+  const curve = m.c * w, browA = m.b * w, eyeScale = 1 + (m.e - 1) * w;
+  const hue = (emo.hue != null) ? emo.hue : 150;
+  const accent = `hsl(${hue},90%,55%)`, accentDim = `hsl(${hue},70%,38%)`;
+
+  // head, tinted by emotion hue
+  ctx.strokeStyle = accentDim; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(W/2, H/2, W*0.28, H*0.40, 0, 0, Math.PI*2); ctx.stroke();
+
+  const eyeY = H*0.40, eo = W*0.11;
+  // brows — angle conveys emotion (angry: inner-down /\, sad: inner-up, surprised: raised)
+  ctx.strokeStyle = accent; ctx.lineWidth = 2.5;
+  for (const s of [-1, 1]) {
+    const ex = W/2 + s*eo, innerX = ex - s*12, outerX = ex + s*16;
+    const innerY = eyeY - 20 + browA*16, outerY = eyeY - 20 - Math.abs(browA)*4;
+    ctx.beginPath(); ctx.moveTo(innerX, innerY); ctx.lineTo(outerX, outerY); ctx.stroke();
+  }
+  // eyes — openness by emotion × a little life from amplitude
+  const er = Math.max(2, (9 * eyeScale) + amp*22);
+  ctx.strokeStyle = accent; ctx.lineWidth = 1.5;
+  for (const ex of [W/2-eo, W/2+eo]) {
+    ctx.beginPath(); ctx.ellipse(ex, eyeY, 13, er, 0, 0, Math.PI*2); ctx.stroke();
+    ctx.fillStyle = '#0fa'; ctx.beginPath(); ctx.arc(ex, eyeY, 3, 0, Math.PI*2); ctx.fill();
+  }
+
+  // MOUTH: the live oscilloscope, riding an EMOTIONAL lip curve (smile/frown) and opening by RMS.
+  const mY = H*0.66, mW = W*0.34, mX = W/2 - mW/2;
+  const open = 8 + amp * H * 0.30;
+  const depth = H*0.06;
+  // quadratic lip baseline: corners lift +curve, centre dips -curve → smile (U) / frown (∩)
+  const P0y = mY - curve*depth, P1y = mY + curve*depth, P2y = mY - curve*depth;
+  const N = timeBuf.length, stepX = mW / N;
+  const baseY = (t) => (1-t)*(1-t)*P0y + 2*(1-t)*t*P1y + t*t*P2y;
+  // lip rest curve
+  ctx.strokeStyle = accentDim; ctx.lineWidth = 1.5; ctx.beginPath();
+  for (let i=0;i<=N;i+=4){ const t=i/N, x=mX+i*stepX; i===0?ctx.moveTo(x,baseY(t)):ctx.lineTo(x,baseY(t)); }
+  ctx.stroke();
+  // oscilloscope on the curve
+  ctx.strokeStyle = accent; ctx.lineWidth = 2; ctx.beginPath();
+  for (let i=0;i<N;i++){ const t=i/N, x=mX+i*stepX, y=baseY(t)+timeBuf[i]*open; i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }
+  ctx.stroke();
+  // mirrortime: reflect the (mic) waveform across the curved lip line
+  if (mirror) {
+    ctx.strokeStyle = 'rgba(0,255,170,.6)'; ctx.beginPath();
+    for (let i=0;i<N;i++){ const t=i/N, x=mX+i*stepX, y=baseY(t)-timeBuf[i]*open; i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }
+    ctx.stroke();
+  }
+}
+
+function drawKitt(W, H, amp) {
+  // Knight Rider voice modulator: symmetric center-out red segments driven by spectrum.
+  analyser.getByteFrequencyData(freqBuf);
+  const bars = 24, gap = 4, cx = W/2;
+  const bw = (W*0.9) / (bars*2);
+  const half = (i) => { // map bar index to a frequency band energy
+    const lo = Math.floor((i/bars) * (freqBuf.length*0.5));
+    const hi = Math.floor(((i+1)/bars) * (freqBuf.length*0.5));
+    let m = 0; for (let k=lo;k<=hi;k++) m = Math.max(m, freqBuf[k]); return m/255;
+  };
+  for (let i=0;i<bars;i++){
+    const e = Math.max(half(i), amp*1.3*(1 - i/bars));
+    const h = Math.max(3, e * H * 0.7);
+    const lvl = Math.min(1, e*1.2);
+    const col = `rgb(${180+75*lvl|0},${30*lvl|0},${20*lvl|0})`;
+    ctx.fillStyle = col; ctx.shadowColor = '#f00'; ctx.shadowBlur = 12*lvl;
+    // right of centre and mirrored left
+    const xR = cx + i*(bw+gap) + gap, xL = cx - i*(bw+gap) - gap - bw;
+    ctx.fillRect(xR, H/2 - h/2, bw, h);
+    ctx.fillRect(xL, H/2 - h/2, bw, h);
+  }
+  ctx.shadowBlur = 0;
+}
+
+const mirrorEl = document.getElementById('mirror');
+const mirrortimeEl = document.getElementById('mirrortime');
+const mtv = document.getElementById('mtv');
+mirrortimeEl.oninput = () => { mtv.textContent = (+mirrortimeEl.value).toFixed(2); };
+
+function loop() {
+  requestAnimationFrame(loop);
+  analyser.getFloatTimeDomainData(timeBuf);
+  const amp = (speaking || micLive) ? rms() : 0;   // live mic OR playback drives motion
+  const W = cv.width, H = cv.height;
+  const mirror = mirrorEl.checked;
+  const mt = +mirrortimeEl.value;                   // mirrortime = phosphor-persistence / feedback
+  // mirrortime feedback: fade prior frames instead of a hard clear (oscilloscope persistence)
+  if (mirror && mt > 0) { ctx.fillStyle = `rgba(5,6,10,${(1 - mt).toFixed(3)})`; ctx.fillRect(0, 0, W, H); }
+  else ctx.clearRect(0, 0, W, H);
+  if (!mirror) { // scanline grid only when not persisting (else it accumulates)
+    ctx.strokeStyle = 'rgba(0,80,40,.25)'; ctx.lineWidth = 1;
+    for (let y = 0; y < H; y += 24) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  }
+  if (kittMode) drawKitt(W, H, amp); else drawFace(W, H, amp, mirror, currentEmotion);
+}
+loop();
+loadVoices();
+loadEmotions();
+</script>
+</body>
+</html>

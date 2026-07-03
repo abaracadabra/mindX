@@ -1,0 +1,55 @@
+/* Copyright 2026 BANKON. Apache-2.0. dato UI — cypherpunk2048 dark. */
+:root {
+  --dato-bg: #0a0c10; --dato-panel: #11151c; --dato-line: rgba(88,166,255,.14);
+  --dato-fg: #e6edf3; --dato-mut: #7d8794; --dato-acc: #58a6ff; --dato-warn: #d29922;
+  --dato-ok: #3fb950; --dato-err: #f85149; --dato-imm: #d2a8ff;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--dato-bg); color: var(--dato-fg);
+  font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.dato-app { max-width: 720px; margin: 0 auto; padding: 24px 18px 64px; }
+.dato-view__header { margin-bottom: 18px; }
+.dato-brand { display: flex; align-items: center; gap: 10px; }
+.dato-brand__mark { color: var(--dato-acc); font-size: 22px; }
+.dato-view__header h2, .dato-view__bar h2 { margin: 0; font-size: 20px; letter-spacing: .5px; }
+.dato-view__sub, .dato-view__foot { color: var(--dato-mut); font-size: 12px; }
+.dato-view__bar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.dato-card { background: var(--dato-panel); border: 1px solid var(--dato-line);
+  border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.dato-hub__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.dato-tile { background: var(--dato-panel); border: 1px solid var(--dato-line);
+  border-radius: 12px; padding: 18px; cursor: pointer; transition: border-color .15s, transform .1s; }
+.dato-tile:hover { border-color: var(--dato-acc); transform: translateY(-1px); }
+.dato-tile h3 { margin: 0 0 6px; } .dato-tile p { margin: 0 0 10px; color: var(--dato-mut); font-size: 12px; }
+.dato-tile__go { color: var(--dato-acc); font-size: 12px; }
+.dato-label { color: var(--dato-mut); font-size: 11px; text-transform: uppercase; letter-spacing: .6px; }
+.dato-input, .dato-select, .dato-textarea { width: 100%; background: #0d1117; color: var(--dato-fg);
+  border: 1px solid var(--dato-line); border-radius: 8px; padding: 9px 11px; font: inherit; }
+.dato-input:focus, .dato-select:focus, .dato-textarea:focus { outline: none; border-color: var(--dato-acc); }
+.dato-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.dato-help { color: var(--dato-mut); font-size: 11px; margin: 2px 0 0; }
+.dato-name__previewRow { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.dato-name__preview { color: var(--dato-imm); background: #0d1117; padding: 4px 8px; border-radius: 6px; }
+.dato-note { font-size: 12px; color: var(--dato-mut); border-left: 2px solid var(--dato-line); padding: 6px 10px; }
+.dato-note--warn { color: var(--dato-warn); border-left-color: var(--dato-warn); }
+.dato-btn { background: #1b2230; color: var(--dato-fg); border: 1px solid var(--dato-line);
+  border-radius: 8px; padding: 9px 14px; cursor: pointer; font: inherit; align-self: flex-start; }
+.dato-btn:hover { border-color: var(--dato-acc); }
+.dato-btn--primary { background: var(--dato-acc); color: #04101f; border-color: var(--dato-acc); font-weight: 600; }
+.dato-btn--minimal { background: transparent; border-color: transparent; color: var(--dato-acc); padding-left: 0; }
+.dato-section { margin: 22px 0 8px; font-size: 13px; color: var(--dato-mut); text-transform: uppercase; letter-spacing: .6px; }
+.dato-list { display: flex; flex-direction: column; gap: 6px; }
+.dato-row { display: flex; align-items: center; gap: 10px; background: var(--dato-panel);
+  border: 1px solid var(--dato-line); border-radius: 8px; padding: 8px 12px; font-size: 12px; }
+.dato-row code { color: var(--dato-fg); } .dato-row__meta { color: var(--dato-mut); margin-left: auto; }
+.dato-pill { font-size: 10px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--dato-line); }
+.dato-pill--immortal { color: var(--dato-imm); border-color: var(--dato-imm); }
+.dato-pill--immutable { color: var(--dato-acc); border-color: var(--dato-acc); }
+.dato-pill--mutable { color: var(--dato-ok); border-color: var(--dato-ok); }
+.dato-muted { color: var(--dato-mut); font-size: 12px; }
+.dato-toasts { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 99; }
+.dato-toast { padding: 10px 14px; border-radius: 8px; font-size: 12px; max-width: 360px;
+  background: var(--dato-panel); border: 1px solid var(--dato-line); }
+.dato-toast--success { border-color: var(--dato-ok); } .dato-toast--warn { border-color: var(--dato-warn); }
+.dato-toast--error { border-color: var(--dato-err); }
+@media (max-width: 560px) { .dato-hub__grid, .dato-row2 { grid-template-columns: 1fr; } }

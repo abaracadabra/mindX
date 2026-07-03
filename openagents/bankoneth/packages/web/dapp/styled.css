@@ -1,0 +1,44 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* styled.css — shared cypherpunk skin for the BANKON web3 dApp prototype
+   (index.html landing · dapp.html app · admin.html). */
+:root{
+  --bg0:#000;--accent:#56CCF2;--accent2:#8b5cf6;--gold:#e8c468;
+  --text:#fff;--muted:rgba(255,255,255,.66);--border:#22283a;--card:rgba(15,19,30,.86);
+  --ok:#27d07f;--warn:#ffb020;--err:#ff5a6a;
+}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 ui-sans-serif,system-ui,Segoe UI,Roboto,Inter,sans-serif;color:var(--text);
+  background:radial-gradient(circle at 50% 0%,#101626,#000 70%);min-height:100vh}
+#bg-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+.wrap{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:26px 18px 80px}
+a{color:var(--accent)}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.brand{font-weight:800;font-size:1.4rem;letter-spacing:.3px}
+.brand .g{background:linear-gradient(135deg,var(--gold),var(--accent));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.sub{color:var(--muted);font-size:.86rem;margin:-2px 0 18px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button,select,input{font:inherit;border-radius:10px;border:1px solid var(--border);background:#0d1320;color:var(--text);padding:10px 14px;transition:.15s}
+button{cursor:pointer}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#04121a;font-weight:700}
+button.gold{background:linear-gradient(135deg,var(--gold),#caa23e);border:none;color:#1a1206;font-weight:800}
+input{min-width:0}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin:14px 0;backdrop-filter:blur(8px)}
+.card h3{margin:0 0 10px;font-size:1.05rem}
+.muted{color:var(--muted)} .gold-t{color:var(--gold)} .ok{color:var(--ok)} .err{color:var(--err)}
+.mono{font-family:ui-monospace,Menlo,monospace;word-break:break-all}
+label.fld{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted);margin-bottom:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fn{border:1px solid var(--border);border-radius:10px;padding:12px;margin:8px 0;background:#0b1019}
+.fn .name{font-weight:600}
+.fn .ro{color:var(--accent)} .fn .wr{color:var(--gold)}
+.out{font-family:ui-monospace,monospace;font-size:.82rem;color:var(--muted);white-space:pre-wrap;word-break:break-all;margin-top:6px}
+.center{min-height:74vh;display:grid;place-items:center;text-align:center}
+.center .hero{max-width:520px}
+.center h1{font-size:2rem;margin:.2em 0}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border:1px solid var(--border);border-radius:20px;font-size:.8rem;color:var(--muted)}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#0d1320;border:1px solid var(--border);padding:12px 18px;border-radius:10px;z-index:9;max-width:90vw}
+.toast.err{border-color:var(--err)} .toast.ok{border-color:var(--ok)}
+.tag{font-size:.7rem;padding:2px 8px;border:1px solid var(--border);border-radius:20px;color:var(--muted)}

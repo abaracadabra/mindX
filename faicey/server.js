@@ -12,8 +12,20 @@ import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { JaimlaAgent } from './src/agents/JaimlaAgent.js';
-import { FaiceyCore } from './src/FaiceyCore.js';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+// Faice — the FACE-as-a-service surface (facets -> wireframe FACE, x402-gated).
+import {
+  attachFaice,
+  faiceDescriptor,
+  faiceIndex,
+  faiceQuote,
+  faiceInteract,
+  renderFacePage,
+} from './src/faice/service.js';
+import { faiceX402Gate, requireOverlord } from './src/faice/x402.js';
+// Legacy voice-reactive demo agents (JaimlaAgent / FaiceyCore) are loaded LAZILY inside
+// initializeDemoAgent so the FACE service boots independently of the voice stack — voice
+// concerns now live in the agnostic `voaice` peer package.
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -36,19 +48,19 @@ class FaiceyServer {
             jaimla: {
                 name: 'Jaimla Agent Demo',
                 description: 'Interactive Jaimla - The Machine Learning Agent',
-                agent: JaimlaAgent,
+                agentType: 'jaimla',
                 endpoint: '/jaimla'
             },
             oscilloscope: {
                 name: 'Advanced Oscilloscope',
-                description: 'D3.js Voice Analysis Visualization',
-                agent: FaiceyCore,
+                description: 'D3.js Voice Analysis Visualization (see voaice)',
+                agentType: 'faicey',
                 endpoint: '/oscilloscope'
             },
             voiceanalysis: {
                 name: 'Voice Analysis Lab',
-                description: 'Comprehensive Voice Pattern Analysis',
-                agent: FaiceyCore,
+                description: 'Comprehensive Voice Pattern Analysis (see voaice)',
+                agentType: 'faicey',
                 endpoint: '/voice-analysis'
             }
         };
@@ -99,6 +111,8 @@ class FaiceyServer {
         // Static files
         this.app.use('/static', express.static(join(__dirname, 'static')));
         this.app.use('/assets', express.static(join(__dirname, 'assets')));
+        // Face-clone ES modules (the in-house clone engine, served for the browser studio).
+        this.app.use('/src/face_clone', express.static(join(__dirname, 'src/face_clone')));
     }
 
     setupRoutes() {
@@ -106,6 +120,104 @@ class FaiceyServer {
         this.app.get('/', (req, res) => {
             this.serveDemoSelector(res);
         });
+
+        // Face clone: single image / perspective images / video → cloned wireframe + 18-dp faceprint.
+        this.app.get('/clone-face', (req, res) => {
+            res.sendFile(join(__dirname, 'face-clone.html'));
+        });
+        // Persist a clone's faceprint (detection is client-side; this stores the result —
+        // the visual parallel of voaice's POST /clone).
+        this._faceClones = this._faceClones || [];
+        this.app.post('/api/clone-face', (req, res) => {
+            const { source, faceprint, registerArgs, proportions } = req.body || {};
+            if (!faceprint) return res.status(400).json({ error: 'faceprint required' });
+            const record = { source, faceprint, registerArgs, proportions, at: Date.now() };
+            this._faceClones.push(record);
+            if (this._faceClones.length > 200) this._faceClones.shift();
+            res.json({ ok: true, faceprint, stored: this._faceClones.length });
+        });
+        this.app.get('/api/clone-face/recent', (req, res) => {
+            res.json({ clones: (this._faceClones || []).slice(-20).map(c => ({ source: c.source, faceprint: c.faceprint, at: c.at })) });
+        });
+        // Unified persona print (FACE + VOICE) — registerPersona, the union of face/voice prints.
+        this._personas = this._personas || [];
+        this.app.post('/api/persona', (req, res) => {
+            const { persona, modalities, faceHash, voiceHash } = req.body || {};
+            if (!persona) return res.status(400).json({ error: 'persona hash required' });
+            this._personas.push({ persona, modalities, faceHash, voiceHash, at: Date.now() });
+            if (this._personas.length > 200) this._personas.shift();
+            res.json({ ok: true, persona, modalities });
+        });
+        this.app.get('/api/persona/recent', (req, res) => {
+            res.json({ personas: (this._personas || []).slice(-20) });
+        });
+        // Give a cloned face to a .persona: store a face artifact AND, if the named .persona exists,
+        // write embodiment.face (faceprint + cloneProportions) into it so the persona's faicey wears it.
+        this.app.post('/api/persona/face', (req, res) => {
+            const { persona, faceprint, cloneProportions, registerArgs } = req.body || {};
+            if (!faceprint || !cloneProportions) return res.status(400).json({ error: 'faceprint + cloneProportions required' });
+            const name = String(persona || faceprint).replace(/[^a-z0-9_-]/gi, '_');
+            const dir = dirname(fileURLToPath(import.meta.url));
+            // 1) always store a portable face artifact in faicey
+            const faceDir = join(dir, 'data', 'persona-faces');
+            mkdirSync(faceDir, { recursive: true });
+            const embodiment = { engine: 'faicey', faceprint, cloneProportions, registerArgs, note: 'cloned via faicey /clone-face' };
+            writeFileSync(join(faceDir, name + '.json'), JSON.stringify(embodiment, null, 2));
+            // 2) if a matching .persona exists (mindXtrain personas), write embodiment.face into it
+            let personaUpdated = false, personaPath = null;
+            try {
+                const pPath = join(dir, '..', 'mindx', 'godel', 'mindxtrain', 'personas', name + '.persona');
+                if (persona && existsSync(pPath)) {
+                    const doc = JSON.parse(readFileSync(pPath, 'utf8'));
+                    doc.embodiment = doc.embodiment || {};
+                    doc.embodiment.face = { engine: 'faicey', faceprint, cloneProportions, note: 'cloned via faicey /clone-face' };
+                    writeFileSync(pPath, JSON.stringify(doc, null, 2) + '\n');
+                    personaUpdated = true; personaPath = pPath;
+                }
+            } catch (e) { /* artifact still stored even if the .persona write fails */ }
+            res.json({ ok: true, persona: name, faceprint, personaUpdated, personaPath });
+        });
+
+        // ============================================================
+        // Faice — the FACE of an AI service (facets -> wireframe FACE)
+        // ============================================================
+        // Free: service index + known agents
+        this.app.get('/api/faice', (req, res) => {
+            res.json(faiceIndex());
+        });
+        // Free: price + privilege verdict for an agent (no gating)
+        this.app.get('/api/faice/:agent/quote', attachFaice, (req, res) => {
+            res.json(faiceQuote(req));
+        });
+        // Gated: FACE descriptor JSON — privilege (reputation) OR x402 settlement
+        this.app.get(
+            '/api/faice/:agent',
+            attachFaice,
+            faiceX402Gate('/api/faice/:agent'),
+            (req, res) => {
+                res.json(faiceDescriptor(req));
+            }
+        );
+        // Gated: rendered wireframe FACE page
+        this.app.get(
+            '/faice/:agent',
+            attachFaice,
+            faiceX402Gate('/faice/:agent'),
+            (req, res) => {
+                res.set('Content-Type', 'text/html');
+                res.send(renderFacePage(req, this.port));
+            }
+        );
+        // Overlord-only: interact with a FACE (drive expression / override facets).
+        // The ultimate privilege — bankon.eth, signature-proven — drives the FACE.
+        this.app.post(
+            '/api/faice/:agent/interact',
+            attachFaice,
+            requireOverlord('member'),
+            (req, res) => {
+                res.json(faiceInteract(req, req.body || {}));
+            }
+        );
 
         // Individual demo routes
         this.app.get('/jaimla', (req, res) => {
@@ -205,9 +317,16 @@ class FaiceyServer {
         try {
             let agent;
 
-            if (demoConfig.agent === JaimlaAgent) {
+            // Lazy-load the legacy voice agent only when a voice demo is actually served.
+            // These modules pull in the voice stack (now belonging to voaice); keeping the
+            // import here means the FACE service boots even if the voice stack is absent.
+            const isJaimla = demoConfig.agentType === 'jaimla';
+            this._isJaimla = isJaimla;
+            if (isJaimla) {
+                const { JaimlaAgent } = await import('./src/agents/JaimlaAgent.js');
                 agent = new JaimlaAgent({ debug: true });
             } else {
+                const { FaiceyCore } = await import('./src/FaiceyCore.js');
                 agent = new FaiceyCore({
                     agentId: this.demo,
                     persona: 'default',
@@ -220,21 +339,28 @@ class FaiceyServer {
                 console.log(`✅ ${demoConfig.name} initialized`);
             });
 
-            if (agent instanceof JaimlaAgent) {
+            if (isJaimla) {
                 this.setupJaimlaEventListeners(agent);
             } else {
                 this.setupFaiceyEventListeners(agent);
             }
 
-            // Initialize agent
+            // Initialize agent. agent.init() drives the browser-side pipeline
+            // (Web Audio, getUserMedia, WebGLRenderer) which has no equivalent under
+            // bare Node. The visible wireframe now renders in the browser via the
+            // canonical engine (static/vendor/faicey-engine.js), so a Node-side init
+            // failure must NOT stop the HTTP/WebSocket server from serving the demo.
             await agent.init();
             this.agents.set(this.demo, agent);
 
             console.log(`✅ Demo agent ${this.demo} ready`);
 
         } catch (error) {
-            console.error(`❌ Failed to initialize demo agent:`, error);
-            throw error;
+            console.warn(
+                `⚠️  Demo agent ${this.demo} could not run its browser pipeline under Node ` +
+                `(${error?.message || error}). Serving the engine-driven demo page anyway; ` +
+                `rendering happens client-side via static/vendor/faicey-engine.js.`
+            );
         }
     }
 
@@ -277,7 +403,7 @@ class FaiceyServer {
             if (agent && this.clients.size > 0) {
                 let voiceData = null;
 
-                if (agent instanceof JaimlaAgent) {
+                if (this._isJaimla) {
                     voiceData = agent.faiceyCore.getVoiceData();
                 } else {
                     voiceData = agent.getVoiceData();
@@ -342,7 +468,7 @@ class FaiceyServer {
                 if (agent) {
                     ws.send(JSON.stringify({
                         type: 'status',
-                        data: agent instanceof JaimlaAgent ? agent.getStatus() : { status: 'active' }
+                        data: this._isJaimla ? agent.getStatus() : { status: 'active' }
                     }));
                 }
                 break;
@@ -350,7 +476,7 @@ class FaiceyServer {
             case 'setExpression':
                 const expressionAgent = this.agents.get(this.demo);
                 if (expressionAgent) {
-                    if (expressionAgent instanceof JaimlaAgent) {
+                    if (this._isJaimla) {
                         expressionAgent.faiceyCore.targetExpression = data.expression;
                     } else {
                         expressionAgent.targetExpression = data.expression;
@@ -407,7 +533,7 @@ class FaiceyServer {
             agents: Array.from(this.agents.entries()).map(([id, agent]) => ({
                 id: id,
                 type: agent.constructor.name,
-                status: agent instanceof JaimlaAgent ? agent.getStatus() : { active: true }
+                status: this._isJaimla ? agent.getStatus() : { active: true }
             })),
             clients: this.clients.size,
             timestamp: new Date().toISOString()
@@ -439,7 +565,7 @@ class FaiceyServer {
             return;
         }
 
-        const details = agent instanceof JaimlaAgent ? agent.getStatus() : {
+        const details = this._isJaimla ? agent.getStatus() : {
             id: agentId,
             type: agent.constructor.name,
             status: 'active'
@@ -458,7 +584,7 @@ class FaiceyServer {
         }
 
         let nftData = {};
-        if (agent instanceof JaimlaAgent) {
+        if (this._isJaimla) {
             nftData = agent.exportAgentData();
         } else {
             nftData = agent.exportNFTMetadata ? agent.exportNFTMetadata() : {
@@ -479,7 +605,7 @@ class FaiceyServer {
         }
 
         let voiceData = {};
-        if (agent instanceof JaimlaAgent) {
+        if (this._isJaimla) {
             voiceData = agent.faiceyCore.getVoiceData();
         } else {
             voiceData = agent.getVoiceData ? agent.getVoiceData() : {
@@ -493,42 +619,93 @@ class FaiceyServer {
 
     // HTML generators (simplified - full implementations would be in separate files)
     generateDemoSelectorHTML() {
-        return `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Faicey 2.0 Demo Selector</title>
-    <style>
-        body { font-family: 'Courier New', monospace; background: #000; color: #00ff00; padding: 20px; }
-        h1 { color: #ff0080; text-align: center; }
-        .demo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .demo-card { border: 2px solid #00ff00; padding: 20px; border-radius: 10px; text-align: center; }
-        .demo-card:hover { background: rgba(0, 255, 0, 0.1); }
-        .demo-title { color: #00ffff; font-size: 1.5em; margin-bottom: 10px; }
-        .demo-desc { margin: 10px 0; }
-        .demo-link { display: inline-block; margin-top: 15px; padding: 10px 20px; background: #ff0080; color: #fff; text-decoration: none; border-radius: 5px; }
-        .footer { text-align: center; margin-top: 40px; color: #666; }
-    </style>
-</head>
-<body>
-    <h1>🎭 Faicey 2.0 - Demo Selector</h1>
-    <p style="text-align: center;">© Professor Codephreak - Advanced Voice-Reactive 3D Face System</p>
+        const secondary = Object.entries(this.demos).map(([key, demo]) => `
+            <a class="card" href="${demo.endpoint}">
+              <div class="ct">${demo.name}</div>
+              <div class="cd">${demo.description}</div>
+              <div class="go">${demo.endpoint} ›</div>
+            </a>`).join('');
+        return `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>faicey · the FACE of an AI service</title>
+<style>
+  :root { --grn:#0f8; --grn2:#0fa; --bg:#05060a; --panel:#001008; --amber:#ffb000; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--grn); font-family:'Courier New',ui-monospace,monospace;
+    background-image:radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,255,136,.07), transparent); }
+  .wrap { max-width:1000px; margin:0 auto; padding:28px 18px 60px; }
+  header { text-align:center; padding:26px 0 18px; }
+  header h1 { font-size:30px; letter-spacing:6px; margin:0; color:#fff; }
+  header h1 b { color:var(--grn); }
+  header p { color:#0a6; font-size:12px; letter-spacing:2px; margin:8px 0 0; }
+  .badges { margin-top:14px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .badge { font-size:10px; color:#0a6; border:1px solid #063; border-radius:10px; padding:3px 9px; }
+  .hero { display:grid; grid-template-columns:1.3fr 1fr; gap:16px; margin:22px 0; border:1px solid var(--grn);
+    border-radius:8px; background:var(--panel); overflow:hidden; }
+  .hero .copy { padding:24px; }
+  .hero h2 { color:var(--grn2); font-size:18px; letter-spacing:1px; margin:0 0 10px; }
+  .hero p { color:#0c9; font-size:13px; line-height:1.6; margin:0 0 14px; }
+  .hero ul { margin:0 0 18px; padding-left:18px; color:#0a8; font-size:12px; line-height:1.8; }
+  .cta { display:inline-block; background:var(--grn); color:#000; text-decoration:none; font-weight:bold;
+    letter-spacing:1px; padding:11px 22px; border-radius:4px; font-size:13px; transition:.12s; }
+  .cta:hover { background:#fff; }
+  .hero .art { background:#000308; display:flex; align-items:center; justify-content:center; border-left:1px solid #063; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; }
+  .card { display:block; border:1px solid #063; background:var(--panel); border-radius:6px; padding:16px;
+    text-decoration:none; transition:.12s; }
+  .card:hover { border-color:var(--grn); background:#021810; transform:translateY(-2px); }
+  .ct { color:var(--grn2); font-size:14px; letter-spacing:1px; margin-bottom:6px; }
+  .cd { color:#0a8; font-size:11px; line-height:1.5; min-height:30px; }
+  .go { color:var(--amber); font-size:11px; margin-top:10px; }
+  h3.sec { color:#063; font-size:11px; letter-spacing:3px; margin:30px 0 12px; border-bottom:1px solid #052; padding-bottom:6px; }
+  footer { text-align:center; color:#063; font-size:10px; margin-top:40px; letter-spacing:1px; }
+  /* mini wireframe face mark */
+  svg.face { width:200px; height:200px; }
+  @media (max-width:720px){ .hero { grid-template-columns:1fr; } .hero .art { display:none; } }
+</style></head>
+<body><div class="wrap">
+  <header>
+    <h1>f<b>ai</b>cey</h1>
+    <p>THE FACE OF AN AI SERVICE · WIREFRAME PERSONA · IN-HOUSE · NO CDN</p>
+    <div class="badges"><span class="badge">MediaPipe · torch-free</span><span class="badge">478-landmark clone</span>
+      <span class="badge">18-decimal faceprint</span><span class="badge">9 emotions</span><span class="badge">3D Three.js</span></div>
+  </header>
 
-    <div class="demo-grid">
-        ${Object.entries(this.demos).map(([key, demo]) => `
-            <div class="demo-card">
-                <div class="demo-title">${demo.name}</div>
-                <div class="demo-desc">${demo.description}</div>
-                <a href="${demo.endpoint}" class="demo-link">Launch Demo</a>
-            </div>
-        `).join('')}
+  <section class="hero">
+    <div class="copy">
+      <h2>⌖ Clone a face</h2>
+      <p>Turn a person into a wireframe Persona — from a single photo, front/left/right perspectives, your
+      webcam, or a video clip. The same forensic engine that gives voaice its 18-decimal voiceprint gives
+      a face its <b>18-decimal faceprint</b>.</p>
+      <ul>
+        <li>webcam capture — front · left · right</li>
+        <li>478-landmark wireframe + live 3D faicey</li>
+        <li>emotes across 9 emotions (in lockstep with the voice)</li>
+        <li>registerable faceprint → unified persona (face + voice)</li>
+      </ul>
+      <a class="cta" href="/clone-face">OPEN FACE CLONE ›</a>
     </div>
+    <div class="art">
+      <svg class="face" viewBox="0 0 200 200" fill="none" stroke="#0a6" stroke-width="1.3">
+        <ellipse cx="100" cy="100" rx="56" ry="78"/>
+        <path d="M55 78 L78 74" stroke="#0f8" stroke-width="2"/><path d="M122 74 L145 78" stroke="#0f8" stroke-width="2"/>
+        <ellipse cx="74" cy="88" rx="12" ry="7" stroke="#0f8"/><ellipse cx="126" cy="88" rx="12" ry="7" stroke="#0f8"/>
+        <circle cx="74" cy="88" r="2.5" fill="#0fa"/><circle cx="126" cy="88" r="2.5" fill="#0fa"/>
+        <path d="M100 96 L100 120 M90 124 L110 124" stroke="#0a6"/>
+        <path d="M76 142 Q100 158 124 142" stroke="#0f8" stroke-width="2"/>
+      </svg>
+    </div>
+  </section>
 
-    <div class="footer">
-        <p>🌐 rage.pythai.net | github.com/agenticplace | github.com/cryptoagi</p>
-    </div>
-</body>
-</html>`;
+  <h3 class="sec">MORE SURFACES</h3>
+  <div class="grid">
+    <a class="card" href="/clone-face"><div class="ct">⌖ Face Clone Studio</div><div class="cd">single · perspective · webcam · video → wireframe + faceprint + live 3D</div><div class="go">/clone-face ›</div></a>
+    ${secondary}
+  </div>
+
+  <footer>faicey · peer of voaice (the VOICE) · rage.pythai.net · github.com/agenticplace</footer>
+</div></body></html>`;
     }
 
     generateJaimlaDemoHTML() {
@@ -538,8 +715,20 @@ class FaiceyServer {
 <html>
 <head>
     <title>Jaimla Demo - The Machine Learning Agent</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <!--
+      three.js is served locally (no CDN) from the in-repo vendored source via the
+      canonical Faicey wireframe engine. The import map below resolves any bare
+      three specifier to the locally vendored module; the engine bundle itself
+      already inlines three. Both are copied into static/vendor by scripts/sync-engine.mjs.
+    -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "/static/vendor/three.module.js",
+        "three/examples/jsm/controls/OrbitControls.js": "/static/vendor/jsm/controls/OrbitControls.js"
+      }
+    }
+    </script>
     <style>
         body { margin: 0; font-family: 'Courier New', monospace; background: #000; color: #fff; }
         .container { display: grid; grid-template-columns: 1fr 400px; height: 100vh; }
@@ -565,41 +754,38 @@ class FaiceyServer {
         </div>
     </div>
 
-    <script>
-        const ws = new WebSocket('ws://localhost:${this.port}');
-        ws.onmessage = (event) => {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'status') {
-                document.getElementById('status').textContent = 'Active';
-                if (msg.data.expression) {
-                    document.getElementById('expression').textContent = msg.data.expression;
-                }
-            }
-        };
-
-        // Basic 3D setup
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('face-canvas') });
+    <script type="module">
+        // Canonical wireframe rendering service — the same engine FaceRig uses,
+        // built from facerig/src/lib/faicey and served locally (no CDN).
+        import { Faicey } from '/static/vendor/faicey-engine.js';
 
         const canvas = document.getElementById('face-canvas');
         const container = canvas.parentElement;
-        renderer.setSize(container.clientWidth, container.clientHeight);
 
-        // Simple face wireframe
-        const geometry = new THREE.RingGeometry(0.5, 1.5, 16);
-        const material = new THREE.LineBasicMaterial({ color: 0xff0080 });
-        const face = new THREE.LineLoop(geometry, material);
-        scene.add(face);
+        const faicey = new Faicey();
+        await faicey.init(canvas, {
+            width: container.clientWidth,
+            height: container.clientHeight,
+            wireframe: true,
+            faceColor: 0xff0080,   // Jaimla pink
+            cameraZ: 5,
+        });
+        document.getElementById('status').textContent = 'Active';
 
-        camera.position.z = 3;
-
-        function animate() {
-            requestAnimationFrame(animate);
-            face.rotation.y += 0.01;
-            renderer.render(scene, camera);
-        }
-        animate();
+        // Drive the real morph-target expression engine from the live voice WebSocket.
+        const ws = new WebSocket('ws://localhost:${this.port}');
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            const expr = msg.data && msg.data.expression;
+            if (expr) {
+                faicey.setExpression(expr, (msg.data && msg.data.intensity) || 1.0);
+                document.getElementById('expression').textContent = expr;
+            }
+            if (msg.type === 'analysis' && msg.data) {
+                document.getElementById('voice-active').textContent =
+                    String((msg.data.rms || 0) > 0.01);
+            }
+        };
     </script>
 </body>
 </html>`;

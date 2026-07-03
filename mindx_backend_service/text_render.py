@@ -11,9 +11,50 @@ Plan: ~/.claude/plans/luminous-humming-knuth.md
 from __future__ import annotations
 
 import math
+import re
 import time
 from datetime import datetime, timezone
 from typing import Any, Callable, Iterable
+
+
+# ── Secret redaction ──────────────────────────────────────────────────────
+#
+# Activity-feed `content` and memory snippets are free text — they can carry
+# API keys, private keys, JWTs or absolute home paths. Any public surface
+# (agentic.html, feedback.html) MUST run user-visible free text through
+# `sanitize_text` first so a leaked credential never reaches a browser.
+
+_SECRET_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\bsk-[A-Za-z0-9_-]{16,}"), "<key>"),                 # OpenAI-style
+    (re.compile(r"\bAIza[A-Za-z0-9_-]{20,}"), "<key>"),                # Google
+    (re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}"), "<key>"),            # GitHub
+    (re.compile(r"\bxox[bap]-[A-Za-z0-9-]{10,}"), "<key>"),            # Slack
+    (re.compile(r"\b0x[a-fA-F0-9]{64}\b"), "<privkey>"),               # ETH private key
+    (re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}"), "<jwt>"),
+    (re.compile(
+        r"(?i)\b(api[_-]?key|secret|password|passwd|token|bearer|private[_-]?key|"
+        r"mnemonic|seed[_-]?phrase)\b\s*[=:]\s*[\"']?[^\s\"',;]{6,}"
+    ), r"\1=<redacted>"),
+    (re.compile(r"/home/[A-Za-z0-9_.-]+"), "~"),                       # absolute home paths
+)
+
+
+def sanitize_text(s: Any, max_len: int = 160) -> str:
+    """Redact secrets + collapse whitespace + truncate. Safe for public HTML.
+
+    ETH wallet *addresses* (0x + 40 hex) are intentionally NOT redacted —
+    in mindX the wallet address is the agent's public identity. Only 64-hex
+    private keys are scrubbed.
+    """
+    if not s:
+        return ""
+    out = str(s)
+    for pat, repl in _SECRET_PATTERNS:
+        out = pat.sub(repl, out)
+    out = " ".join(out.split())  # collapse newlines / runs of whitespace
+    if len(out) > max_len:
+        out = out[: max_len - 1].rstrip() + "…"
+    return out
 
 
 # ── Humanizer primitives ──────────────────────────────────────────────────
@@ -400,6 +441,31 @@ def render_boardroom_recent(d: dict) -> str:
             ("score",   "weighted_score",  lambda v: f"{float(v):.3f}" if isinstance(v, (int, float)) else "?"),
             ("votes",   "votes",           _votes),
             ("directive", "directive",     lambda v: human_hash(v, 60)),
+        ],
+        max_col=80,
+    )
+
+
+def render_dojo_decisions(d: dict) -> str:
+    """Plain-text rendering of /insight/dojo/decisions — the Dojo's consensus
+    arbitration ledger (boardroom/warcouncil/mindXtrain/DAIO → one verdict)."""
+    rows = d.get("decisions") or []
+    if not rows:
+        models = ", ".join(d.get("consensus_models") or [])
+        return f"no dojo decisions yet\nconsensus models: {models}\n"
+    def _origins(ballots: Any) -> str:
+        if not isinstance(ballots, list):
+            return ""
+        return ",".join(sorted(set(str(b.get("origin", "?")) for b in ballots)))
+    return render_table(
+        rows,
+        [
+            ("ts",       "ts_utc",     lambda v: str(v)[:19]),
+            ("decision", "decision",   lambda v: str(v).upper()),
+            ("model",    "model",      None),
+            ("score",    "score",      lambda v: f"{float(v):.3f}" if isinstance(v, (int, float)) else "?"),
+            ("from",     "ballots",    _origins),
+            ("subject",  "subject",    lambda v: human_hash(v, 46)),
         ],
         max_col=80,
     )
@@ -799,6 +865,7 @@ def render_improvement_summary(d: dict) -> str:
             f"total={human_count(b.get('total', 0))} "
             f"ok={human_count(b.get('succeeded', 0))} "
             f"fail={human_count(b.get('failed', 0))} "
+            f"incomplete={human_count(b.get('incomplete', 0))} "
             f"running={human_count(b.get('running', 0))}"
         )
     out = render_kv(
@@ -1212,7 +1279,454 @@ def render_host_probes(d: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def render_eval_health(d: dict) -> str:
+    in_p = d.get("in_process") or {}
+    on_d = d.get("on_disk") or {}
+    gate = in_p.get("gate_open")
+    gate_s = "OPEN" if gate else ("CLOSED" if gate is False else "?")
+    mean = in_p.get("mean_score")
+    mean_s = f"{mean:.3f}" if isinstance(mean, (int, float)) else "—"
+    disk_mean = on_d.get("mean_score_disk")
+    disk_mean_s = f"{disk_mean:.3f}" if isinstance(disk_mean, (int, float)) else "—"
+    sr = in_p.get("success_rate")
+    sr_s = f"{sr * 100:.1f}%" if isinstance(sr, (int, float)) else "—"
+    lines = [
+        f"eval gate:       {gate_s}",
+        f"actual eval:     hits={human_count(in_p.get('hits', 0))} "
+        f"misses={human_count(in_p.get('misses', 0))} "
+        f"rate={sr_s} "
+        f"window_n={human_count(in_p.get('scores_in_window', 0))} "
+        f"mean={mean_s}  (LLM-judged only)",
+        f"deferred proxy:  {human_count(in_p.get('heuristic_hits', 0))} "
+        f"(heuristic fallback when CPU-throttled — NOT counted as actual eval)",
+        f"last score:      {human_ts_with_rel(in_p.get('last_score_ts'))}",
+        f"last miss:       {human_ts_with_rel(in_p.get('last_miss_ts'))}",
+        f"on-disk (tail):  scanned={human_count(on_d.get('scanned', 0))} "
+        f"scored={human_count(on_d.get('scored', 0))} "
+        f"mean={disk_mean_s}",
+    ]
+    err = in_p.get("error") or on_d.get("error")
+    if err:
+        lines.append(f"error:           {err}")
+    return "\n".join(lines) + "\n"
+
+
+def render_inference_appetite(d: dict) -> str:
+    b = d.get("daily_budget") or {}
+    mh = (d.get("model_health") or {}).get("summary") or {}
+    providers = d.get("providers") or {}
+    lt = d.get("lifetime_tokens") or {}
+    ceiling = b.get("ceiling_per_day")
+    used = b.get("used_today")
+    util = b.get("utilization_pct")
+    lines = ["mindX inference appetite (free-tier)", "─" * 60]
+    if lt.get("total") is not None:
+        lines.append(
+            f"lifetime tokens: {human_count(lt.get('total'))} ingested  "
+            f"(seed {human_count(lt.get('seed'))} + {human_count(lt.get('ingested_since_seed'))} actual)"
+        )
+        lines.append(
+            f"  split:         {human_count(lt.get('cpu_tokens', 0))} CPU/local · "
+            f"{human_count(lt.get('cloud_tokens', 0))} cloud  over {human_count(lt.get('calls_since_seed', 0))} calls"
+        )
+        lines.append("─" * 60)
+    lines += [
+        f"daily ceiling:   {human_count(ceiling) if ceiling is not None else '—'} calls/day "
+        f"(target max-1 = {human_count(b.get('target_per_day')) if b.get('target_per_day') is not None else '—'})",
+        f"used today:      {human_count(used) if used is not None else '—'}  "
+        f"({util if util is not None else '—'}% of ceiling)  "
+        f"remaining {human_count(b.get('remaining_today')) if b.get('remaining_today') is not None else '—'}",
+        f"conversation:    {b.get('conversational_floor_per_hour','—')}/hr = "
+        f"{b.get('conversational_floor_per_day','—')}/day per thread  "
+        f"(~{human_count(b.get('concurrent_conversations_supported', 0))} threads/day supported)",
+        "─" * 60,
+        f"models:          {mh.get('live', 0)} live · {mh.get('dead', 0)} dead · "
+        f"{mh.get('probing', 0)} probing  ·  "
+        f"{human_count(mh.get('total_tokens', 0))} tokens over {human_count(mh.get('total_calls', 0))} calls",
+        "per-provider connections + tokens/min:",
+    ]
+    if providers:
+        for name, p in sorted(providers.items()):
+            lines.append(
+                f"  {name:14s} conns={human_count(p.get('total_req', 0))} "
+                f"429={human_count(p.get('total_429', 0))} "
+                f"tok/min={human_count(p.get('tokens_min', 0))} "
+                f"headroom={p.get('headroom', '—')}"
+                + (f" backoff={p.get('backoff_s')}s" if p.get('backoff_s') else "")
+            )
+    else:
+        lines.append("  (no provider activity recorded yet)")
+    dead = (d.get("model_health") or {}).get("dead_slugs") or []
+    if dead:
+        lines.append(f"dead slugs:      {', '.join(dead[:8])}" + (" …" if len(dead) > 8 else ""))
+    return "\n".join(lines) + "\n"
+
+
+def render_publications_summary(d: dict) -> str:
+    by_kind = d.get("by_kind") or {}
+    last = d.get("last_entry") or {}
+    lines = [
+        f"ledger:          {'present' if d.get('ledger_exists') else 'MISSING (no orchestrator publish yet)'}",
+        f"path:            {d.get('ledger_path', '?')}",
+        f"total entries:   {human_count(d.get('total_entries', 0))}",
+        f"published:       {human_count(d.get('published_count', 0))}",
+        f"coalesced:       {human_count(d.get('coalesced_count', 0))}",
+    ]
+    if by_kind:
+        lines.append("by kind:")
+        for k, v in sorted(by_kind.items(), key=lambda kv: -kv[1]):
+            lines.append(f"  {k:<26} {v}")
+    lp = d.get("last_published_at")
+    lines.append(f"last published: {human_ts_with_rel(lp) if lp else '—'}")
+    if last:
+        lines.append(f"  trigger:       {human_hash(last.get('trigger_id', '?'), 32)}")
+        lines.append(f"  kind:          {last.get('kind', '?')}")
+        lines.append(f"  post_id:       {last.get('post_id', '—')}")
+        lines.append(f"  url:           {last.get('url', '—')}")
+        if last.get("title"):
+            lines.append(f"  title:         {last.get('title')[:60]}")
+    return "\n".join(lines) + "\n"
+
+
+def render_publications_recent(d: dict) -> str:
+    rows = d.get("events") or []
+    return render_table(
+        rows,
+        [
+            ("ts",       "ts",      lambda v: human_rel_ts(v) if v else ""),
+            ("kind",     "kind",    lambda v: (v or "").replace("publication.", "")[:14]),
+            ("trigger",  "payload", lambda p: human_hash((p or {}).get("trigger_id", ""), 26)),
+            ("from",     "payload", lambda p: ((p or {}).get("kind") or "")[:18]),
+            ("post_id",  "payload", lambda p: str((p or {}).get("post_id") or "—")),
+            ("note",     "payload", lambda p: (
+                f"url={(p or {}).get('url')}" if (p or {}).get("url")
+                else f"reason={(p or {}).get('reason') or ''}"
+            )[:42]),
+        ],
+        max_col=80,
+    )
+
+
+def render_publications_audit(d: dict) -> str:
+    md = d.get("markdown_drafts") or []
+    pdfs = d.get("pdf_drafts") or []
+    pub = d.get("published_via_orchestrator") or []
+    pub_titles = {(e or {}).get("title", "").lower() for e in pub if (e or {}).get("title")}
+    lines = [
+        f"publications dir: {d.get('publications_dir', '?')}",
+        f"ledger:           {'present' if d.get('ledger_exists') else 'MISSING'}",
+        f"markdown drafts:  {human_count(len(md))}",
+        f"pdf drafts:       {human_count(len(pdfs))}",
+        f"published (orch): {human_count(len(pub))}",
+        "",
+        "markdown:",
+    ]
+    for f in md[:40]:
+        size = human_bytes(f.get("size_bytes", 0))
+        mtime = human_rel_ts(f.get("mtime"))
+        match = "  ✓pub" if any(f["name"].lower().startswith(t.split()[0].lower()[:20])
+                                for t in pub_titles) else ""
+        lines.append(f"  {f.get('name', '?')[:42]:<42} {size:>8}  {mtime:>10}{match}")
+    if len(md) > 40:
+        lines.append(f"  … +{len(md) - 40} more")
+    lines.append("")
+    lines.append("pdf:")
+    for f in pdfs[:40]:
+        size = human_bytes(f.get("size_bytes", 0))
+        mtime = human_rel_ts(f.get("mtime"))
+        lines.append(f"  {f.get('name', '?')[:42]:<42} {size:>8}  {mtime:>10}")
+    if len(pdfs) > 40:
+        lines.append(f"  … +{len(pdfs) - 40} more")
+    return "\n".join(lines) + "\n"
+
+
+def render_memory_recent(d: dict) -> str:
+    """Plain-text for /insight/memory/recent — logs becoming memories."""
+    rows = d.get("events") or []
+
+    def _src(v: Any) -> str:
+        # Show the leaf of the source-log path — "godel_choices.jsonl",
+        # "…/2026-…system_state.memory.json" → "system_state.memory.json".
+        s = str(v or "")
+        return (s.rsplit("/", 1)[-1] or s)[:34]
+
+    def _imp(v: Any) -> str:
+        return {1: "CRIT", 2: "HIGH", 3: "MED", 4: "LOW"}.get(v, str(v or "?"))
+
+    return render_table(
+        rows,
+        [
+            ("ts",     "ts",          lambda v: human_rel_ts(v) if v else ""),
+            ("agent",  "actor",       lambda v: human_hash(v, 20)),
+            ("from log", "source_log", _src),
+            ("mem type", "memory_type", lambda v: str(v or "?")[:16]),
+            ("imp",    "importance",  _imp),
+        ],
+        max_col=80,
+    )
+
+
+def render_agentic_activity(d: dict) -> str:
+    rows = d.get("events") or []
+    return render_table(
+        rows,
+        [
+            ("ts",       "timestamp", lambda v: human_rel_ts(v) if v else ""),
+            ("tier",     "tier_label", None),
+            ("agent",    "agent",     lambda v: human_hash(v, 20)),
+            ("type",     "type",      lambda v: (v or "")[:18]),
+            ("headline", "headline",  lambda v: (v or "")[:64]),
+        ],
+        max_col=80,
+    )
+
+
+# ── Knowledge Catalogue (Phase 1 read-model) renderers ──
+
+def render_catalogue_recent(d: dict) -> str:
+    rows = d.get("entries") or []
+    if not rows:
+        return f"(no catalogue entries for kind={d.get('kind_filter','all')})\n"
+    head = f"catalogue · {d.get('count',0)} entries · kind={d.get('kind_filter','all')}\n\n"
+    return head + render_table(
+        rows,
+        [
+            ("when",  "ts",    human_rel_ts),
+            ("kind",  "kind",  None),
+            ("title", "title", lambda v: (v or "")[:54]),
+            ("actor", "actor", lambda v: human_hash(v, 18)),
+            ("tags",  "tags",  lambda v: ",".join(v[:3]) if isinstance(v, list) else ""),
+        ],
+        max_col=58,
+    )
+
+
+def render_catalogue_search(d: dict) -> str:
+    rows = d.get("results") or []
+    legs = d.get("legs") or {}
+    head = (f"query: {d.get('query','')}\n"
+            f"{d.get('count',0)} results · legs dense={legs.get('dense',0)} "
+            f"bm25={legs.get('bm25',0)} · rerank={d.get('rerank','deferred')}\n\n")
+    if not rows:
+        return head + "(no results)\n"
+    return head + render_table(
+        rows,
+        [
+            ("score", "score", lambda v: f"{float(v):.4f}" if v is not None else "—"),
+            ("d",     "dense", lambda v: f"{float(v):.2f}" if v is not None else "·"),
+            ("bm25",  "bm25",  lambda v: f"{float(v):.2f}" if v is not None else "·"),
+            ("kind",  "kind",  None),
+            ("title", "title", lambda v: (v or "")[:50]),
+        ],
+        max_col=54,
+    )
+
+
+def render_catalogue_entry(d: dict) -> str:
+    if not d.get("found", True) or d.get("urn") is None:
+        return f"entry not found: {d.get('urn','?')}\n"
+    out = render_kv(
+        {
+            "urn": d.get("urn"), "kind": d.get("kind"), "actor": d.get("actor"),
+            "when": human_ts_with_rel(d.get("ts")), "embedded": d.get("embedded"),
+            "title": d.get("title"),
+        },
+        {"actor": lambda v: human_hash(v, 30)},
+    )
+    text = (d.get("text") or "").strip()
+    if text:
+        out += "\n\ntext:\n  " + text[:600].replace("\n", "\n  ")
+    links = d.get("links") or []
+    if links:
+        out += "\n\nlinks:\n" + "\n".join(
+            f"  {l.get('type','?')} → {l.get('target_urn','?')}" for l in links[:12])
+    sids = d.get("source_event_ids") or []
+    if sids:
+        out += f"\n\nsource events: {len(sids)} ({', '.join(sids[:3])}…)"
+    return out + "\n"
+
+
+def render_catalogue_stats(d: dict) -> str:
+    if d.get("status") in ("no_pool", "error"):
+        return f"catalogue: {d.get('status')} {d.get('error','')}\n"
+    wm = d.get("watermark") or {}
+    out = render_kv({
+        "total entries": human_count(d.get("total", 0)),
+        "embedded": f"{human_count(d.get('embedded',0))} "
+                    f"({100*d.get('embedded',0)//max(d.get('total',1),1)}%)",
+        "lineage edges": human_count(d.get("edges", 0)),
+        "wm offset": human_bytes(wm.get("byte_offset", 0)),
+        "events seen": human_count(wm.get("events_seen", 0)),
+        "version": wm.get("version"),
+    })
+    bk = d.get("by_kind") or {}
+    if bk:
+        out += "\n\nby kind:\n" + render_table(
+            [{"kind": k, "n": n} for k, n in bk.items()],
+            [("kind", "kind", None), ("count", "n", human_count)])
+    return out
+
+
+def render_catalogue_kinds(d: dict) -> str:
+    emitted = set(d.get("emitted_event_kinds") or d.get("active_event_kinds") or [])
+    mapping = d.get("mapping") or {}
+    out = (f"entry kinds ({len(d.get('entry_kinds',[]))}): "
+           f"{', '.join(d.get('entry_kinds', []))}\n\n"
+           f"event kinds ({len(d.get('event_kinds',[]))}, "
+           f"{len(emitted)} emitted in stream):\n\n")
+    return out + render_table(
+        [{"event": k, "entry": mapping.get(k, "?"),
+          "emitted": "•" if k in emitted else ""} for k in d.get("event_kinds", [])],
+        [("event_kind", "event", None), ("→ entry", "entry", None), ("emitted", "emitted", None)])
+
+
+def _lineage_rows(edges: list, nodes: dict, arrow: str, node_key: str) -> str:
+    # node_key = which endpoint of the edge is the "other" node to show:
+    #   ancestors walk out-edges (root=src) → show dst; descendants walk in-edges
+    #   (root=dst) → show src.
+    if not edges:
+        return "  (none)\n"
+    out = []
+    for e in edges:
+        urn = e.get(node_key, "")
+        nd = nodes.get(urn) or {}
+        label = (nd.get("title") or urn)[:48]
+        kind = nd.get("kind") or ("?" if urn not in nodes else "")
+        dangling = "" if urn in nodes else "  (dangling)"
+        out.append(f"  {'  ' * (e.get('depth',1)-1)}{arrow} [{e.get('edge_type','')}] "
+                   f"{kind}: {label}{dangling}")
+    return "\n".join(out) + "\n"
+
+
+def render_catalogue_lineage(d: dict) -> str:
+    urn = d.get("urn", "?")
+    root = d.get("root") or {}
+    c = d.get("counts") or {}
+    head = (f"lineage · {urn}\n"
+            f"root: {('%s — %s' % (root.get('kind'), (root.get('title') or '')[:50])) if root else '(not materialized)'}\n"
+            f"dir={d.get('direction')} depth={d.get('depth')} · "
+            f"{c.get('ancestors',0)} ancestors, {c.get('descendants',0)} descendants, "
+            f"{c.get('dangling',0)} dangling refs\n")
+    nodes = d.get("nodes") or {}
+    out = head
+    if d.get("direction") in ("ancestors", "both"):
+        out += "\nancestors (what this derives from / was produced by):\n"
+        out += _lineage_rows(d.get("ancestors") or [], nodes, "↑", "dst_urn")
+    if d.get("direction") in ("descendants", "both"):
+        out += "\ndescendants (what derived from / was produced by this):\n"
+        out += _lineage_rows(d.get("descendants") or [], nodes, "↓", "src_urn")
+    return out
+
+
+def render_self_diagnostic(d: dict) -> str:
+    """Plain-text form of /insight/self/diagnostic — the honest 'what is mindX
+    actually improving?' answer. Verdict first; substance before counters."""
+    v = d.get("verdict") or {}
+    out = "mindX self-diagnostic — what is actually being improved\n"
+    out += "─" * 60 + "\n"
+    out += (v.get("line") or "verdict unavailable") + "\n"
+    for ev in v.get("evidence") or []:
+        out += f"  · {ev}\n"
+
+    rc = d.get("real_changes") or {}
+    out += "\nreal changes (substance)\n"
+    for m in rc.get("milestones") or []:
+        out += f"  [milestone] {m.get('ts','?')}  {m.get('sha','')}  {m.get('subject','')}\n"
+    for p in rc.get("publications") or []:
+        out += f"  [published] {human_rel_ts(p.get('ts'))}  {p.get('note','')}\n"
+    for a in rc.get("adoptions") or []:
+        out += f"  [adopted]   {human_rel_ts(a.get('ts'))}  {a.get('package','?')} -> {a.get('decision','?')}\n"
+    for c in rc.get("code_change_events") or []:
+        out += f"  [{c.get('kind','?')}] {human_rel_ts(c.get('ts'))}  {c.get('detail','')}\n"
+    sia = rc.get("sia_diffs") or {}
+    out += f"  autonomous code diffs: {sia.get('count', 0)}"
+    out += f" — {sia['note']}\n" if sia.get("note") else "\n"
+
+    cons = d.get("consolidation") or {}
+    if cons:
+        out += "\nconsolidation (machine dreaming)\n"
+        out += render_kv({
+            "last_dream":    cons.get("last_dream_ts"),
+            "agents":        cons.get("agents_dreamed"),
+            "insights":      cons.get("insights"),
+            "ltm_promotions": cons.get("ltm_promotions"),
+            "cadence_ok":    cons.get("cadence_ok"),
+        })
+
+    ph = d.get("process_health") or {}
+    c7 = ph.get("campaigns_7d") or {}
+    bl = ph.get("backlog") or {}
+    out += "\nprocess health (truth, not theater)\n"
+    out += render_kv({
+        "campaigns_7d": (
+            f"total={c7.get('total',0)} ok={c7.get('succeeded',0)} fail={c7.get('failed',0)} "
+            f"timed_out={c7.get('timed_out',0)} max_cycles={c7.get('max_cycles_reached',0)} "
+            f"errored={c7.get('errored',0)}"
+        ),
+        "backlog": (
+            f"{human_count(bl.get('size',0))} items / {bl.get('unique',0)} unique "
+            f"(dup_factor {bl.get('dup_factor','?')}x"
+            + (", dedup live)" if bl.get("dedup_live") else ")")
+        ),
+        "stuck_loops": (ph.get("stuck_loops") or {}).get("count", 0),
+        "eval_gate": "open" if (ph.get("eval_gate") or {}).get("gate_open") else "closed/unknown",
+    })
+    for shape in ph.get("top_failure_shapes") or []:
+        out += f"  shape ×{shape.get('count',0)}: {shape.get('shape','')}\n"
+    for loop in ph.get("looped_directives") or []:
+        out += f"  LOOP ×{loop.get('count',0)}: {loop.get('directive','')}\n"
+        out += f"       diagnosis: {loop.get('diagnosis','')}\n"
+
+    si = d.get("self_interaction") or {}
+    edges = (si.get("matrix") or {}).get("edges") or []
+    if edges:
+        out += "\nself-interaction (who talks to whom)\n"
+        for e in edges[:12]:
+            out += f"  {e.get('from','?')} -> {e.get('to','?')}  ×{e.get('count',0)}  ({e.get('type','')})\n"
+    hb = si.get("heartbeat_sample") or []
+    if hb:
+        out += "\nheartbeat introspection (latest thoughts)\n"
+        for h in hb:
+            out += f"  [{h.get('model','?')}] {h.get('thought','')}\n"
+    out += "\nsee also: / (landing diagnostic) · /feedback.html · docs/SYSTEM_REVIEW_2026_06.md\n"
+    return out
+
+
+def render_sentinel_status(d: dict) -> str:
+    """Plain-text render of the self-improvement sentinel target status."""
+    if d.get("fallback"):
+        return "sentinel: unavailable\n"
+    health = "healthy" if d.get("healthy") else "UNHEALTHY"
+    out = "self-improvement sentinel\n"
+    out += f"  target     {d.get('target','?')}\n"
+    out += f"  status     {health} (v{d.get('version','?')}, {d.get('lines','?')} lines, sha {d.get('sha8','?')})\n"
+    if d.get("error"):
+        out += f"  error      {d['error']}\n"
+    if d.get("seeded"):
+        changed = d.get("changed_by_loop")
+        out += f"  baseline   {d.get('baseline_sha8','?')} — {'CHANGED by loop' if changed else 'unchanged'} ({d.get('change_count',0)} change(s))\n"
+    else:
+        out += "  baseline   not seeded yet\n"
+    bl = d.get("backlog") or {}
+    out += f"  backlog    {'present ('+str(bl.get('status'))+', prio '+str(bl.get('priority'))+')' if bl.get('present') else 'absent'}\n"
+    camp = d.get("campaigns") or {}
+    out += f"  campaigns  {camp.get('count',0)} targeting sentinel"
+    if camp.get("last"):
+        out += f" — last: {camp['last'].get('status','?')}"
+    out += "\n"
+    out += f"  note       {d.get('note','')}\n"
+    return out
+
+
 RENDERERS: dict[str, Callable[[dict], str]] = {
+    "/insight/self/diagnostic":     render_self_diagnostic,
+    "/insight/sentinel/status":     render_sentinel_status,
+    "/insight/catalogue/recent":    render_catalogue_recent,
+    "/insight/catalogue/search":    render_catalogue_search,
+    "/insight/catalogue/entry":     render_catalogue_entry,
+    "/insight/catalogue/stats":     render_catalogue_stats,
+    "/insight/catalogue/kinds":     render_catalogue_kinds,
+    "/insight/catalogue/lineage":   render_catalogue_lineage,
     "/insight/storage/status":      render_storage_status,
     "/insight/storage/recent":      render_storage_recent,
     "/insight/cost/summary":        render_cost_summary,
@@ -1226,7 +1740,9 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/model_selector/recent": render_model_selector_recent,
     "/insight/eval/recent":         render_eval_recent,
     "/insight/eval/summary":        render_eval_summary,
+    "/insight/inference/appetite":  render_inference_appetite,
     "/insight/boardroom/recent":    render_boardroom_recent,
+    "/insight/dojo/decisions":      render_dojo_decisions,
     "/insight/boardroom/session":   render_boardroom_session,
     "/insight/boardroom/roles":     render_boardroom_roles,
     "/insight/memory/audit":        render_memory_audit,
@@ -1245,6 +1761,11 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/host/probes":         render_host_probes,
     "/insight/host/htop":           render_host_htop,
     "/insight/narrative/recent":    render_narrative_recent,
+    "/insight/eval/health":         render_eval_health,
+    "/insight/publications/recent": render_publications_recent,
+    "/insight/publications/summary": render_publications_summary,
+    "/insight/publications/audit":  render_publications_audit,
+    "/insight/agentic/activity":    render_agentic_activity,
 }
 
 

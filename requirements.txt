@@ -64,6 +64,7 @@ asyncpg>=0.31.0
 SQLAlchemy>=2.0.48
 # sentence-transformers>=2.2.0  # OPTIONAL: requires torch (~1GB). Code is try/except guarded.
 #                                 # Install manually: pip install sentence-transformers
+pypdf>=4.0.0           # reference-corpus ingestion — PDF text extraction (scripts/ingest_reference_docs.py)
 
 # ── Testing ──
 pytest>=9.0.2
