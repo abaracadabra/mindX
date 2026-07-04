@@ -140,6 +140,15 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
         handler. A ledger-dead model is skipped (straight to the direct-cloud
         probe for *-cloud tags) instead of replaying a known failure; probing
         after the 6h cooldown flows through and a success revives the slug."""
+        # Normalize provider-prefixed tags: the model registry hands out IDs like
+        # "ollama/qwen3:1.7b" and several meta-agents (mindXagent, AGInt,
+        # blueprint) pass them straight through — Ollama 404s the prefixed form
+        # ("model not found") while the bare tag works. Strip at the wire so
+        # every caller is corrected and the health ledger keys stay canonical.
+        if model and "/" in model:
+            _head, _rest = model.split("/", 1)
+            if _head.lower() in ("ollama", "ollama_cloud", "ollama_local"):
+                model = _rest
         try:
             from llm import model_health as _mh
         except Exception:
