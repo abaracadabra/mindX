@@ -128,10 +128,49 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
             logger.debug(f"OllamaHandler: direct cloud fallback failed: {e}")
             return None
 
-    async def generate_text(self, prompt: str, model: str, 
+    async def generate_text(self, prompt: str, model: str,
+                            max_tokens: Optional[int] = None,
+                            temperature: Optional[float] = 0.7,
+                            json_mode: Optional[bool] = False,
+                            **kwargs: Any) -> Optional[str]:
+        """Health-ledgered wire: every Ollama call feeds llm.model_health so
+        the WHOLE intelligence chain (mastermind orchestration → mindXagent →
+        AGInt → BDI → blueprint → SimpleCoder) inherits dead-roster
+        self-healing from this one seam — the same pattern as the OpenRouter
+        handler. A ledger-dead model is skipped (straight to the direct-cloud
+        probe for *-cloud tags) instead of replaying a known failure; probing
+        after the 6h cooldown flows through and a success revives the slug."""
+        try:
+            from llm import model_health as _mh
+        except Exception:
+            _mh = None
+        if _mh is not None and model and _mh.is_dead(model):
+            _tag = model.split(":", 1)[-1].lower() if ":" in model else ""
+            if _tag.endswith("cloud"):
+                # Local proxy is moot for a retired cloud slug; the direct
+                # endpoint is the only path that could disagree with the ledger.
+                direct = await self._generate_cloud_direct(
+                    prompt, model, {"temperature": temperature} if temperature is not None else {},
+                    bool(json_mode))
+                if direct:
+                    _mh.record(model, ok=True, provider="ollama")
+                    return direct
+            logger.info(f"OllamaHandler: skipping ledger-dead model '{model}'")
+            return None
+        result = await self._generate_text_impl(
+            prompt, model, max_tokens=max_tokens, temperature=temperature,
+            json_mode=json_mode, **kwargs)
+        if _mh is not None and model:
+            _ok = bool(result and result.strip() and not result.lstrip().startswith("Error:"))
+            _mh.record(model, ok=_ok,
+                       error_text=None if _ok else (result or "empty/none response")[:250],
+                       provider="ollama")
+        return result
+
+    async def _generate_text_impl(self, prompt: str, model: str,
                             max_tokens: Optional[int] = None, # Ollama calls this 'num_predict'
                             temperature: Optional[float] = 0.7,
-                            json_mode: Optional[bool] = False, 
+                            json_mode: Optional[bool] = False,
                             **kwargs: Any) -> Optional[str]:
         """
         Generates text using the specified Ollama model via HTTP API.

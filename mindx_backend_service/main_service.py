@@ -974,7 +974,19 @@ async def read_doc(name: str, request: Request):
     # public; the depth is earned). Anything else routes a wallet-less visitor to
     # the /activity realm door.
     _PUBLIC_DOCS = {"THESIS", "MANIFESTO"}
-    if doc_path.stem.upper() not in _PUBLIC_DOCS:
+    # Member-tier docs (OVERLORD protocol): the Gödel-machine internals are for
+    # members and above — participants get the realm door. Extend the set via
+    # MINDX_MEMBER_ONLY_DOCS (comma-separated stems).
+    _MEMBER_DOCS = {"SCHMIDHUBER_ENGINE"} | {
+        d.strip().upper().removesuffix(".MD")
+        for d in os.environ.get("MINDX_MEMBER_ONLY_DOCS", "").split(",") if d.strip()
+    }
+    _stem_u = doc_path.stem.upper()
+    if _stem_u in _MEMBER_DOCS:
+        _tg = await _tier_gate(request, "member", f"/doc/{safe}")
+        if _tg is not None:
+            return _tg
+    elif _stem_u not in _PUBLIC_DOCS:
         _tg = await _tier_gate(request, "participant", f"/doc/{safe}")
         if _tg is not None:
             return _tg
@@ -1174,6 +1186,20 @@ _BOOK_STYLE = """<style>
 }
 </style>"""
 
+@app.get("/members", response_class=_DashResponse, tags=["realm"], include_in_schema=False)
+@app.get("/members.html", response_class=_DashResponse, tags=["realm"], include_in_schema=False)
+async def members_page(request: Request):
+    """Membership has its privileges — MEMBER-gated privileges page (OVERLORD
+    protocol): BANKON PYTHAI sale access, BONA FIDE reputation, AgenticPlace
+    marketspace listing, and the member library (/book + member-tier docs)."""
+    _g = await _tier_gate(request, "member", "/members")
+    if _g is not None:
+        return _g
+    if _MEMBERS_HTML_PATH.exists():
+        return _DashResponse(content=_MEMBERS_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX members</h1><p>Page not deployed.</p>")
+
+
 @app.get("/book", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
 async def book_of_mindx_page(request: Request):
     """The Book of mindX — gated to MEMBER (own a *.bankon.eth subname / token,
@@ -1358,6 +1384,7 @@ _AGENTIC_HTML_PATH = Path(__file__).parent / "agentic.html"
 _ACTIVITY_HTML_PATH = Path(__file__).parent / "activity.html"
 _REFERENCE_HTML_PATH = Path(__file__).parent / "reference.html"
 _THOT_HTML_PATH = Path(__file__).parent / "THOT.html"
+_MEMBERS_HTML_PATH = Path(__file__).parent / "members.html"
 _BOARDROOM_HTML_PATH = Path(__file__).parent / "boardroom.html"
 _CABINET_HTML_PATH = Path(__file__).parent / "cabinet.html"
 _KEEPERHUB_HTML_PATH = Path(__file__).parent / "keeperhub.html"
@@ -2540,6 +2567,7 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/realm/deploy/feedback",          # deploy-feedback record (handler-gated to overlord/overseer)
     "/machine", "/machine/admin",      # Gödel Machine Index (public) + diagnostics admin page (public data)
     "/book",                           # listed public so the middleware defers; the handler _tier_gate enforces MEMBER
+    "/members", "/members.html",       # membership privileges page — middleware defers; handler _tier_gate enforces MEMBER
     # NOTE: /docs.html, /book, /doc/*, /automindx stay listed public so the MIDDLEWARE
     # defers to them; the per-handler _tier_gate does the tier enforcement (participant/member),
     # redirecting to the /activity realm door (NOT /login, which wants a vault session).

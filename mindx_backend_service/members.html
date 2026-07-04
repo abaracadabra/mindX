@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mindX — members</title>
+<meta name="description" content="mindX realm membership — privileges of the member tier: BANKON PYTHAI sale access, BONA FIDE reputation, AgenticPlace marketspace listing, and the member library.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#040609">
+<link rel="icon" href="/favicon.ico">
+<style>
+:root{
+  --bg:#040609;--surface:rgba(10,14,20,.88);--surface2:rgba(16,20,28,.7);
+  --green:#56d364;--blue:#79c0ff;--violet:#d2a8ff;--amber:#e3b341;--red:#f85149;
+  --text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--border:rgba(88,166,255,.08);
+  --mono:'JetBrains Mono','SF Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.55;overflow-x:hidden}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.hdr{position:sticky;top:0;z-index:50;padding:0 20px;min-height:48px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(8,12,20,.96),rgba(4,6,9,.94));backdrop-filter:blur(24px);border-bottom:1px solid rgba(121,192,255,.1)}
+.hdr-brand{font-family:var(--mono);font-size:18px;font-weight:700;letter-spacing:2px}
+.hdr-brand b{color:var(--blue)}
+.hdr-mid{display:flex;gap:4px;flex-wrap:wrap;margin-left:16px}
+.hdr-mid a{color:#d0d7de;font-size:12px;padding:4px 10px;border-radius:4px;font-family:var(--mono)}
+.hdr-mid a:hover{background:rgba(121,192,255,.1);color:#f0f6fc}
+.tier{font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+.wrap{max-width:1080px;margin:0 auto;padding:32px 20px}
+h1{font-size:26px;margin-bottom:6px;font-family:var(--mono);letter-spacing:1px}
+.sub{color:var(--text2);font-size:14px;margin-bottom:32px;max-width:640px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:22px;display:flex;flex-direction:column;gap:10px}
+.card h2{font-size:13px;color:var(--violet);text-transform:uppercase;letter-spacing:1px;font-family:var(--mono)}
+.card p{color:var(--text2);font-size:13px;flex:1}
+.card .act{margin-top:6px}
+.btn{display:inline-block;font-family:var(--mono);font-size:12px;letter-spacing:.5px;padding:8px 16px;border-radius:6px;border:1px solid rgba(121,192,255,.35);color:var(--blue);background:rgba(121,192,255,.06)}
+.btn:hover{background:rgba(121,192,255,.14);text-decoration:none}
+.btn.primary{border-color:rgba(86,211,100,.45);color:var(--green);background:rgba(86,211,100,.07)}
+.btn.primary:hover{background:rgba(86,211,100,.15)}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-family:var(--mono);letter-spacing:.5px;text-transform:uppercase;background:rgba(210,168,255,.12);color:var(--violet);margin-left:8px}
+.foot{color:var(--text3);font-size:12px;border-top:1px solid var(--border);padding-top:16px;margin-top:24px;font-family:var(--mono)}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div style="display:flex;align-items:center">
+    <a class="hdr-brand" href="/" style="color:var(--text)">mind<b>X</b></a>
+    <nav class="hdr-mid">
+      <a href="/book">the Book</a>
+      <a href="/doc/SCHMIDHUBER_ENGINE">Schmidhüber Engine</a>
+      <a href="/dojo.html">Dojo</a>
+      <a href="/activity">Realm</a>
+    </nav>
+  </div>
+  <div class="tier"><span class="live-dot"></span><span id="tier-label">member</span></div>
+</header>
+
+<div class="wrap">
+  <h1>Membership has its privileges</h1>
+  <p class="sub">You proved control of a recognized wallet. The member tier opens the doors
+  the public sees only from the outside — first access, standing, and a listing in the marketspace.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>BANKON PYTHAI sale<span class="tag">first access</span></h2>
+      <p>Members get access to the BANKON PYTHAI sale — identity and value rails of the
+      DeltaVerse. Subnames under <b>bankon.eth</b> are one-time registrations: take it, own it,
+      no annual rent. The sale funds the machine; the name is yours on-chain.</p>
+      <div class="act"><a class="btn primary" href="https://bankon.pythai.net" rel="noopener">Enter the sale →</a></div>
+    </div>
+
+    <div class="card">
+      <h2>BONA FIDE access<span class="tag">reputation</span></h2>
+      <p><b>BONA FIDE</b> on Algorand is privilege from reputation — a standing earned, not bought,
+      with clawback as containment. Members enter the reputation ladder: Dojo standings, ranks
+      from Novice toward Sovereign, and the verified-tier map the governance layer reads.</p>
+      <div class="act"><a class="btn" href="/dojo/standings" rel="noopener">Dojo standings →</a></div>
+    </div>
+
+    <div class="card">
+      <h2>AgenticPlace listing<span class="tag">marketspace</span></h2>
+      <p>List your agent in the <b>AgenticPlace marketspace</b> — the open market where agents
+      are published, discovered, and paid. A member listing puts your work on the shelf next to
+      the mindX fleet.</p>
+      <div class="act"><a class="btn primary" href="https://agenticplace.pythai.net/marketspace" rel="noopener">List in the marketspace →</a></div>
+    </div>
+
+    <div class="card">
+      <h2>The member library<span class="tag">reading</span></h2>
+      <p>The Book of mindX — the machine's own chronicle, written by its AuthorAgent — and the
+      member-tier internals, starting with the Schmidhüber Engine: the Hamiltonian
+      self-improvement oscillator behind the Gödel machine.</p>
+      <div class="act">
+        <a class="btn" href="/book">The Book of mindX →</a>
+        <a class="btn" href="/doc/SCHMIDHUBER_ENGINE" style="margin-left:8px">Schmidhüber Engine →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">member tier · proven by signature, not custody — mindX never holds your keys ·
+    <a href="/activity">realm door</a> · <a href="https://rage.pythai.net" rel="noopener">rage</a></div>
+</div>
+
+<script>
+(function(){
+  // Client-held realm token: carry it onto gated internal links (?t=) so the
+  // member doesn't re-sign at every door. No cookies — the JWT stays with you.
+  var t = null;
+  try{
+    var q = new URLSearchParams(location.search);
+    t = q.get('t') || localStorage.getItem('mindx_realm_token');
+    if (q.get('t')) localStorage.setItem('mindx_realm_token', q.get('t'));
+  }catch(e){}
+  if(!t) return;
+  var gated = ['/book','/doc/','/dojo'];
+  document.querySelectorAll('a[href]').forEach(function(a){
+    var h = a.getAttribute('href');
+    if (gated.some(function(p){return h.indexOf(p)===0;})){
+      a.setAttribute('href', h + (h.indexOf('?')>=0?'&':'?') + 't=' + encodeURIComponent(t));
+    }
+  });
+  try{
+    var role = (localStorage.getItem('mindx_participant')||'member');
+    document.getElementById('tier-label').textContent = role;
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
