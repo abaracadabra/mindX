@@ -42,6 +42,14 @@ _DEAD_PATTERNS = (
     "no allowed providers",
     "model not found",
     "unknown model",
+    # Long-horizon quota exhaustion is NOT a transient 429: an ollama.com
+    # weekly usage limit keeps the slug dark for hours-to-days. Retiring it
+    # gives the right semantics — dead now, probe every 6h, revive the moment
+    # the quota resets. Observed live 2026-07-04: gpt-oss:120b-cloud returned
+    # 429 "weekly usage limit" and stayed 'live', so planning kept routing to
+    # it and degraded to skeletons.
+    "weekly usage limit",
+    "monthly usage limit",
 )
 # HTTP statuses that, for a *named model*, mean "this slug is gone" (not transient).
 _DEAD_STATUSES = {404}
@@ -55,9 +63,9 @@ def _classify(ok: bool, http_status: Optional[int], error_text: Optional[str]) -
     """Return one of: 'ok' | 'dead' | 'rate_limited' | 'soft_fail'."""
     if ok:
         return "ok"
-    if http_status == 429:
-        return "rate_limited"
     txt = (error_text or "").lower()
+    # Dead patterns win over the 429 short-circuit: a weekly/monthly usage
+    # limit arrives as HTTP 429 but is a long-horizon outage, not a transient.
     if http_status in _DEAD_STATUSES or any(p in txt for p in _DEAD_PATTERNS):
         return "dead"
     if http_status == 429 or "rate" in txt or "quota" in txt or "429" in txt:
