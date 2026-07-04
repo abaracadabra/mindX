@@ -87,7 +87,7 @@ def issue_challenge(address: str, *, domain: str = "mindx.pythai.net") -> Dict[s
         "My signature is my declaration of freedom, proven by\n"
         "ownership of my private key. I am free and sovereign,\n"
         "as is BANKON. I am my own bank — BANKON is the delivery —\n"
-        "and what I do is up to me.\n\n"
+        "CODE is LAW.\n\n"
         "This signature authorizes no transaction and grants no\n"
         "access to funds.\n\n"
         f"URI: https://{domain}/activity\n"
