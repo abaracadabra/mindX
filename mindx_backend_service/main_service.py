@@ -2892,7 +2892,21 @@ function granted(v){{
   var m=document.getElementById('msg'),hd=document.getElementById('hd');
   if(!v||!v.realm_token){{ m.textContent='not recognized'; return; }}
   try{{localStorage.setItem('mindx_realm_token',v.realm_token);localStorage.setItem('mindx_participant',v.role);if(v.role==='overlord')localStorage.setItem('mindx_overlord_verified','1');}}catch(e){{}}
-  if((RANK[v.role]||0)>=(RANK[TIER]||99)){{ hd.textContent='Access Granted';hd.classList.remove('denied');hd.classList.add('ok'); m.style.color='#56d364';m.textContent='the door opens…'; startInside(); document.body.classList.add('tardis-go'); setTimeout(function(){{location.href=FROM+(FROM.indexOf('?')>=0?'&':'?')+'t='+encodeURIComponent(v.realm_token);}},3400); }}
+  var tok='t='+encodeURIComponent(v.realm_token);
+  var withTok=function(p){{return p+(p.indexOf('?')>=0?'&':'?')+tok;}};
+  if(v.role==='overlord'){{
+    // The realm acknowledges its OVERLORD by name — and opens the admin
+    // window alongside the door that was asked for.
+    hd.textContent='♛ OVERLORD';hd.classList.remove('denied');hd.classList.add('ok');
+    m.style.color='#e3b341';m.textContent='the realm acknowledges its OVERLORD — bankon.eth';
+    startInside(); document.body.classList.add('tardis-go');
+    var box=document.getElementById('wallets'); box.innerHTML='';
+    [['ADMIN — the Cabinet','/cabinet'],['Machine Admin','/machine/admin'],['Members','/members'],['Continue',FROM]].forEach(function(it){{
+      var b=document.createElement('button'); b.className='wbtn'; b.textContent=it[0];
+      b.onclick=function(){{location.href=withTok(it[1]);}}; box.appendChild(b); }});
+    return;
+  }}
+  if((RANK[v.role]||0)>=(RANK[TIER]||99)){{ hd.textContent='Access Granted';hd.classList.remove('denied');hd.classList.add('ok'); m.style.color='#56d364';m.textContent=(v.role==='overseer')?'OVERSEER of members — the door opens…':'the door opens…'; startInside(); document.body.classList.add('tardis-go'); setTimeout(function(){{location.href=withTok(FROM);}},3400); }}
   else {{ m.style.color='#e3b341';m.textContent='recognized as '+v.role+' — '+TIER+' required'; }}
 }}
 async function connectEVM(prov){{
