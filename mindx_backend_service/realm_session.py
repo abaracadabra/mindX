@@ -28,9 +28,11 @@ unchanged.
 """
 from __future__ import annotations
 
+import json
 import os
 import time
 import secrets
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from eth_account import Account
@@ -80,6 +82,12 @@ def issue_challenge(address: str, *, domain: str = "mindx.pythai.net") -> Dict[s
         "Welcome, recognized participant\n"
         f"{addr}\n"
         "Your signature proves your identity.\n\n"
+        "By signing you agree to the terms of the BANKON licence —\n"
+        "all rights preserved — under the guarantee of\n"
+        "github.com/cypherpunk2048.\n"
+        "The act of signing is a declaration of freedom,\n"
+        "from ownership of your private key.\n"
+        "You are free and sovereign, as is BANKON.\n\n"
         f"URI: https://{domain}/activity\n"
         "Version: 1\n"
         "Chain ID: 1\n"
@@ -90,6 +98,74 @@ def issue_challenge(address: str, *, domain: str = "mindx.pythai.net") -> Dict[s
     return {"nonce": nonce, "message": message}
 
 
+_AIRDROP_LEDGER = Path("data/governance/member_airdrops.jsonl")
+_AIRDROP_AMOUNT = "0.000000000000000001"   # 1 base unit at 18 decimals — the cypherpunk2048 quantum
+_AIRDROP_ASSET = "BANKON PYTHAI"
+
+
+def _airdrop_addresses() -> set:
+    """Addresses already granted the BANKON PYTHAI signing airdrop (ledger read)."""
+    out = set()
+    try:
+        with _AIRDROP_LEDGER.open() as f:
+            for line in f:
+                try:
+                    out.add((json.loads(line).get("address") or "").lower())
+                except Exception:
+                    continue
+    except FileNotFoundError:
+        pass
+    except Exception:
+        pass
+    return out
+
+
+def grant_signing_airdrop(address: str, nonce: str = "") -> Dict[str, Any]:
+    """Grant the BANKON PYTHAI signing airdrop — 0.000000000000000001 (one base
+    unit, 18dp) — to a wallet that signed the BANKON licence challenge. Idempotent
+    per address; the ledger is the entitlement record the on-chain airdrop
+    executes against. Holding 1 base unit grants MEMBER privilege at mindX."""
+    a = (address or "").lower()
+    entry = {"address": address, "amount": _AIRDROP_AMOUNT, "asset": _AIRDROP_ASSET,
+             "terms": "BANKON licence — all rights preserved — guarantee of github.com/cypherpunk2048",
+             "nonce": nonce, "granted_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+    try:
+        if a and a not in _airdrop_addresses():
+            _AIRDROP_LEDGER.parent.mkdir(parents=True, exist_ok=True)
+            with _AIRDROP_LEDGER.open("a") as f:
+                f.write(json.dumps(entry) + "\n")
+    except Exception:
+        pass
+    return entry
+
+
+def _holds_bankon_pythai(address: str) -> bool:
+    """MEMBER via holdings: 1 base unit (0.000000000000000001) of BANKON PYTHAI
+    grants member privilege at mindX. On-chain balanceOf when the token contract
+    is configured (MINDX_BANKON_PYTHAI_TOKEN + MINDX_BANKON_PYTHAI_RPC); until
+    the airdrop executes on-chain, the signing-airdrop ledger IS the holding."""
+    a = (address or "").lower()
+    if not a:
+        return False
+    token = os.environ.get("MINDX_BANKON_PYTHAI_TOKEN", "").strip()
+    rpc = os.environ.get("MINDX_BANKON_PYTHAI_RPC", "").strip()
+    if token and rpc:
+        try:
+            import urllib.request
+            data = ("0x70a08231" + a[2:].rjust(64, "0"))  # balanceOf(address)
+            body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "eth_call",
+                               "params": [{"to": token, "data": data}, "latest"]}).encode()
+            req = urllib.request.Request(rpc, data=body,
+                                         headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=4) as r:
+                result = json.loads(r.read()).get("result") or "0x0"
+            if int(result, 16) >= 1:
+                return True
+        except Exception:
+            pass  # fail through to the ledger
+    return a in _airdrop_addresses()
+
+
 def _resolve_tier(address: str) -> Dict[str, Any]:
     """Resolve the tier for a VERIFIED address. participant is the floor for any
     proven wallet; member via courtesy/holdings; overlord for bankon.eth."""
@@ -98,7 +174,8 @@ def _resolve_tier(address: str) -> Dict[str, Any]:
         return {"role": "overlord", "level": TIER_LEVEL["overlord"]}
     if a in _courtesy_members():
         return {"role": "member", "level": TIER_LEVEL["member"]}
-    # (on-chain holdings check for member could be wired here via overlord.resolver)
+    if _holds_bankon_pythai(a):
+        return {"role": "member", "level": TIER_LEVEL["member"]}
     return {"role": "participant", "level": TIER_LEVEL["participant"]}
 
 
@@ -124,8 +201,16 @@ def verify(address: str, nonce: str, signature: str) -> Dict[str, Any]:
         raise ValueError("recovered signer does not match address")
     _nonces.pop(nonce, None)   # single-use
 
+    # The signature is agreement to the BANKON licence terms carried in the
+    # challenge message — grant the signing airdrop (1 base unit of BANKON
+    # PYTHAI, 18dp). Holding it grants MEMBER privilege at mindX, so the
+    # tier resolve below sees the grant immediately.
+    airdrop = grant_signing_airdrop(recovered, nonce)
+
     tier = _resolve_tier(addr)
     from mindx_backend_service.overlord.routes import issue_overlord_token
     token = issue_overlord_token(recovered, tier["role"], tier["level"])
     return {"address": recovered, "role": tier["role"], "level": tier["level"],
-            "verified": True, "realm_token": token}
+            "verified": True, "realm_token": token,
+            "airdrop": {"asset": airdrop["asset"], "amount": airdrop["amount"],
+                        "note": "signing airdrop — holding 1 base unit grants member privilege"}}
