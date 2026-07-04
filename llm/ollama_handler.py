@@ -58,6 +58,76 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
             self.http_client_session = aiohttp.ClientSession(json_serialize=json.dumps)
         return self.http_client_session
 
+    # ── ezAGI dual-endpoint pattern (github.com/easyglm/ezagi webmind/ollama_handler.py) ──
+    # The local daemon serves *-cloud aliases only when the box is signed in to
+    # ollama.com; when it isn't, every cloud call dies and BDI planning degrades
+    # to skeletons. ezAGI talks to https://ollama.com directly with
+    # Authorization: Bearer $OLLAMA_API_KEY and plain model tags (gpt-oss:120b,
+    # gpt-oss:20b) — so a dark local proxy doesn't take the cloud tier down.
+    _CLOUD_HOST = "https://ollama.com"
+
+    @staticmethod
+    def _strip_cloud_suffix(model: str) -> str:
+        """gpt-oss:120b-cloud → gpt-oss:120b · deepseek-v3.2:cloud → deepseek-v3.2"""
+        m = model or ""
+        if m.endswith("-cloud"):
+            return m[: -len("-cloud")]
+        if m.endswith(":cloud"):
+            return m[: -len(":cloud")]
+        return m
+
+    async def _generate_cloud_direct(self, prompt: str, model: str,
+                                     options: Dict[str, Any],
+                                     json_mode: bool) -> Optional[str]:
+        """Direct Ollama Cloud call (/api/chat on ollama.com) as fallback when
+        the local daemon can't proxy a cloud model. Returns text or None.
+
+        Reads the reasoning background channel too: gpt-oss puts its chain in
+        message.thinking; when content is empty the thinking channel is the
+        response (the ezAGI 'background response from reasoning')."""
+        import os
+        api_key = os.getenv("OLLAMA_API_KEY", "").strip()
+        if not api_key:
+            return None
+        payload: Dict[str, Any] = {
+            "model": self._strip_cloud_suffix(model),
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+        }
+        if options:
+            payload["options"] = options
+        if json_mode:
+            payload["format"] = "json"
+        try:
+            session = await self._get_client_session()
+            async with session.post(
+                f"{self._CLOUD_HOST}/api/chat", json=payload,
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=aiohttp.ClientTimeout(total=120),
+            ) as response:
+                if response.status != 200:
+                    body = await response.text()
+                    logger.warning(
+                        f"OllamaHandler: direct cloud call failed for "
+                        f"'{payload['model']}' ({response.status}): {body[:200]}"
+                    )
+                    return None
+                data = await response.json(loads=json.loads)
+                msg = data.get("message") or {}
+                content = (msg.get("content") or "").strip()
+                if not content:
+                    # Reasoning models can emit only the background channel.
+                    content = str(msg.get("thinking") or "").strip()
+                if content:
+                    logger.info(
+                        f"OllamaHandler: direct ollama.com cloud served "
+                        f"'{payload['model']}' (local proxy unavailable)"
+                    )
+                return content or None
+        except Exception as e:
+            logger.debug(f"OllamaHandler: direct cloud fallback failed: {e}")
+            return None
+
     async def generate_text(self, prompt: str, model: str, 
                             max_tokens: Optional[int] = None, # Ollama calls this 'num_predict'
                             temperature: Optional[float] = 0.7,
@@ -136,6 +206,12 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
                                        retry_after=float(_ra) if (_ra and _ra.isdigit()) else None)
                     except Exception:
                         pass
+                    # Cloud model + failed local proxy → try ollama.com directly
+                    # (ezAGI dual-endpoint pattern) before giving up.
+                    if _is_cloud:
+                        direct = await self._generate_cloud_direct(prompt, model, ollama_options, bool(json_mode))
+                        if direct:
+                            return direct
                     # Graceful failure - return None instead of error string to indicate fallback needed
                     if response.status == 404 and "not found" in error_text.lower():
                         logger.info(f"Ollama model '{model}' not found. This is expected if Ollama is not installed or model not pulled.")
@@ -184,6 +260,12 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
                     response_content_full = response_data["response"].strip()
                 elif "error" in response_data: # pragma: no cover
                     logger.error(f"Ollama API returned an error in JSON for model '{model}': {response_data['error']}")
+                    # e.g. ollama.com weekly-usage-limit surfaces as 200 + error
+                    # body through the local proxy; give the direct endpoint a shot.
+                    if _is_cloud:
+                        direct = await self._generate_cloud_direct(prompt, model, ollama_options, bool(json_mode))
+                        if direct:
+                            return direct
                     return f"Error: {response_data['error']}"
                 else: # pragma: no cover
                     logger.warning(f"Ollama response for model '{model}' missing 'response' field. Full data: {str(response_data)[:500]}")
@@ -213,15 +295,30 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
             except Exception:
                 pass
 
+            # Empty cloud response through the local proxy (starved free tier or
+            # signed-out daemon) → try ollama.com directly before returning "".
+            if _is_cloud and not response_content_full:
+                direct = await self._generate_cloud_direct(prompt, model, ollama_options, bool(json_mode))
+                if direct:
+                    return direct
+
             logger.debug(f"OllamaHandler response for '{model}' (first 100 chars): {response_content_full[:100]}")
             return response_content_full
 
         except aiohttp.ClientConnectorError as e_conn: # pragma: no cover
             logger.warning(f"OllamaHandler: Connection error for model '{model}' at {self.api_base_url}: {e_conn}")
+            if _is_cloud:
+                direct = await self._generate_cloud_direct(prompt, model, ollama_options, bool(json_mode))
+                if direct:
+                    return direct
             logger.info("Ollama connection failed. This is expected if Ollama is not installed or not running.")
             return None  # Graceful failure - return None to indicate fallback needed
         except Exception as e: # pragma: no cover
             logger.warning(f"OllamaHandler: Exception during API call for model '{model}': {e}")
+            if _is_cloud:
+                direct = await self._generate_cloud_direct(prompt, model, ollama_options, bool(json_mode))
+                if direct:
+                    return direct
             logger.info("Ollama API call failed. This is expected if Ollama is not properly configured.")
             return None  # Graceful failure - return None to indicate fallback needed
 

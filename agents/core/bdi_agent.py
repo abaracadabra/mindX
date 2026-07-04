@@ -709,8 +709,21 @@ class BDIAgent:
                 try:
                     from llm.model_selector import TaskType
                     ranked = self.model_registry.get_handler_and_model_for_purpose(TaskType.REASONING)
+                    try:
+                        from llm import model_health as _mh
+                    except Exception:
+                        _mh = None
                     for cand_handler, model_name in ranked:
                         if not cand_handler:
+                            continue
+                        # Health gate: the registry ranks by capability, not by
+                        # whether the model currently answers. A dead cloud pillar
+                        # (e.g. gpt-oss:120b-cloud with ollama.com dark) otherwise
+                        # wins every cycle and planning degrades to skeleton spam.
+                        if _mh is not None and model_name and _mh.is_dead(model_name):
+                            self.logger.info(
+                                f"{self.agent_id}: skipping dead planner model '{model_name}' (model_health)"
+                            )
                             continue
                         if getattr(cand_handler, "model_name_for_api", None) == model_name:
                             return cand_handler
@@ -760,6 +773,21 @@ class BDIAgent:
             return None
 
     async def plan(self, goal_entry: Dict[str, Any]) -> bool:
+        # Drop a handler whose model has since been retired by the health
+        # ledger — holding on to it replays the identical failure for every
+        # goal in the queue (the degraded_planning spam of 2026-07-04).
+        if self.llm_handler is not None:
+            try:
+                from llm import model_health as _mh
+                if _mh.is_dead(getattr(self.llm_handler, "model_name_for_api", None)):
+                    self.logger.warning(
+                        f"{self.agent_id}: planner model "
+                        f"'{getattr(self.llm_handler, 'model_name_for_api', '?')}' is dead per "
+                        f"model_health — re-resolving handler"
+                    )
+                    self.llm_handler = None
+            except Exception:
+                pass
         if not self.llm_handler:
             # No model pinning: re-resolve via the self-aware selector, then a bare
             # default, before giving up. Guards against init racing ahead of
@@ -1036,6 +1064,15 @@ class BDIAgent:
                             self.logger.info(f"Corrected generic placeholder path '{param_value}' to 'tools' for {action_type}.{param_name}")
 
                 self.logger.info(f"Plan successfully generated and validated after {attempt} attempts.")
+                try:
+                    from llm import model_health as _mh
+                    _mh.record(
+                        getattr(self.llm_handler, "model_name_for_api", None),
+                        ok=True,
+                        provider=getattr(self.llm_handler, "provider_name", None),
+                    )
+                except Exception:
+                    pass
                 self.set_plan(new_plan_actions, goal_id)
                 return True
 
@@ -1301,6 +1338,27 @@ class BDIAgent:
                 }) + "\n")
         except Exception:
             pass
+
+        # Feed the failure back into the model_health ledger and release the
+        # handler. Without this the dead-roster self-healing never sees BDI
+        # planning failures (only the OpenRouter wire records), so selection
+        # keeps routing to the same dark model and every queued goal degrades
+        # to a skeleton — 15 identical godel events in 20s on prod 2026-07-04.
+        # After enough consecutive fails the slug soft-retires, the health
+        # gate in _resolve_active_handler skips it, and the next plan() call
+        # cascades to a live model (local Ollama as the failsafe tail).
+        try:
+            from llm import model_health as _mh
+            if self.llm_handler is not None:
+                _mh.record(
+                    getattr(self.llm_handler, "model_name_for_api", None),
+                    ok=False,
+                    error_text="BDI planning exhausted (empty/invalid plan output)",
+                    provider=getattr(self.llm_handler, "provider_name", None),
+                )
+        except Exception:
+            pass
+        self.llm_handler = None  # force re-resolution on the next plan()
 
         return True
 

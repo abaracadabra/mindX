@@ -562,12 +562,31 @@ class AGInt:
         if _os_agint.getenv("MINDX_AGINT_CLOUD", "1") == "1":
             try:
                 from llm.llm_factory import create_llm_handler
+                try:
+                    from llm import model_health as _mh_agint
+                except Exception:
+                    _mh_agint = None
                 _model = (self.config.get("agint.cloud_model", "gpt-oss:120b-cloud")
                           if self.config else "gpt-oss:120b-cloud")
+                # Health gate: when the cloud pillar is dark, don't hammer it
+                # every P-O-D-A tick — fall through to the registry cascade.
+                if _mh_agint is not None and _mh_agint.is_dead(_model):
+                    raise RuntimeError(f"cloud model '{_model}' retired by model_health")
                 _h = await create_llm_handler("ollama", _model)
                 _gk = {k: v for k, v in kwargs.items() if k in ("json_mode", "max_tokens", "temperature")}
                 _gk.setdefault("max_tokens", 1024)   # reasoning models return '' at tiny budgets
                 resp = await _h.generate_text(prompt, model=_model, **_gk)
+                # Handler failure modes: None, "", or an "Error: ..." string
+                # (e.g. the ollama.com weekly-usage-limit JSON error). All three
+                # are failures — recording an error string as ok would keep the
+                # dark cloud pillar ranked alive forever.
+                _ok = bool(resp and resp.strip() and not resp.lstrip().startswith("Error:"))
+                if _mh_agint is not None:
+                    _mh_agint.record(_model, ok=_ok,
+                                     error_text=None if _ok else (resp or "empty response")[:200],
+                                     provider="ollama")
+                if not _ok:
+                    resp = None
                 if resp and resp.strip():
                     ok = True
                     if kwargs.get("json_mode"):

@@ -48,7 +48,7 @@
     "cro_risk":       {"tier1": "qwen3:1.7b",        "tier2": "minimax-m2.5:cloud",      "tier3": "deepseek-v3.1:671b-cloud", "role": "Reasoning → agentic m2.5 → 671B max risk modeling"}
   },
   "cloud_pool": [
-    "gpt-oss:120b-cloud", "cogito-2.1:671b-cloud", "deepseek-v3.1:671b-cloud", "deepseek-v3.2:cloud",
+    "gpt-oss:120b-cloud", "gpt-oss:20b-cloud", "cogito-2.1:671b-cloud", "deepseek-v3.1:671b-cloud", "deepseek-v3.2:cloud",
     "devstral-small-2:24b-cloud", "gemma3:12b-cloud", "gemma4:31b-cloud",
     "glm-4.6:cloud", "glm-4.7:cloud",
     "minimax-m2:cloud", "minimax-m2.1:cloud", "minimax-m2.5:cloud",
@@ -71,11 +71,11 @@
   "task_routing": {
     "_note": "Pick best model for the job from a max-return-per-token perspective. Order = preference. Selector falls through on rate-limit starvation, then to local CPU. All cloud entries verified working via local daemon proxy on 2026-05-04.",
     "code": ["vllm", "qwen3-coder-next:cloud", "qwen3-coder:480b-cloud", "devstral-small-2:24b-cloud", "rnj-1:8b-cloud", "qwen3:1.7b"],
-    "reasoning": ["vllm", "deepseek-r1:1.5b", "deepseek-v3.2:cloud", "deepseek-v3.1:671b-cloud", "cogito-2.1:671b-cloud", "qwen3:1.7b"],
+    "reasoning": ["vllm", "deepseek-r1:1.5b", "gpt-oss:20b-cloud", "deepseek-v3.2:cloud", "deepseek-v3.1:671b-cloud", "cogito-2.1:671b-cloud", "qwen3:1.7b"],
     "long_context": ["qwen3-coder:480b-cloud", "deepseek-v3.1:671b-cloud", "cogito-2.1:671b-cloud"],
     "vision": ["qwen3-vl:235b-cloud", "gemma4:31b-cloud", "gemma3:12b-cloud"],
     "fast_general": ["qwen3:0.6b", "qwen3:1.7b", "granite4.1:3b", "ministral-3:14b-cloud"],
-    "agentic_general": ["vllm", "granite4.1:3b", "minimax-m2.5:cloud", "minimax-m2:cloud", "nemotron-3-super:cloud", "gpt-oss:120b-cloud"],
+    "agentic_general": ["vllm", "granite4.1:3b", "minimax-m2.5:cloud", "minimax-m2:cloud", "nemotron-3-super:cloud", "gpt-oss:120b-cloud", "gpt-oss:20b-cloud"],
     "embedding": ["mxbai-embed-large:latest", "nomic-embed-text:latest"]
   }
 }
