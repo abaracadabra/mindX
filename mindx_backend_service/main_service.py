@@ -2895,15 +2895,32 @@ function granted(v){{
   var tok='t='+encodeURIComponent(v.realm_token);
   var withTok=function(p){{return p+(p.indexOf('?')>=0?'&':'?')+tok;}};
   if(v.role==='overlord'){{
-    // The realm acknowledges its OVERLORD by name — and opens the admin
-    // window alongside the door that was asked for.
+    // The realm acknowledges its OVERLORD by name. The crown plays, then the
+    // advanced admin window rises ABOVE the door canvas (a fixed overlay —
+    // buttons parked in #wallets are covered by the tardis animation).
     hd.textContent='♛ OVERLORD';hd.classList.remove('denied');hd.classList.add('ok');
     m.style.color='#e3b341';m.textContent='the realm acknowledges its OVERLORD — bankon.eth';
     startInside(); document.body.classList.add('tardis-go');
-    var box=document.getElementById('wallets'); box.innerHTML='';
-    [['ADMIN — the Cabinet','/cabinet'],['Machine Admin','/machine/admin'],['Members','/members'],['Continue',FROM]].forEach(function(it){{
-      var b=document.createElement('button'); b.className='wbtn'; b.textContent=it[0];
-      b.onclick=function(){{location.href=withTok(it[1]);}}; box.appendChild(b); }});
+    setTimeout(function(){{
+      var ov=document.createElement('div');
+      ov.style.cssText='position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:rgba(4,6,9,.85);font-family:JetBrains Mono,monospace;overflow-y:auto';
+      var g=function(title,items){{
+        var h='<div style="margin-bottom:14px"><div style="font-size:10px;letter-spacing:2px;color:#6e7681;text-transform:uppercase;margin-bottom:6px">'+title+'</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+        items.forEach(function(it){{h+='<a href="'+it[1]+'" style="color:#79c0ff;border:1px solid rgba(121,192,255,.25);border-radius:5px;padding:6px 10px;font-size:12px;text-decoration:none;background:rgba(121,192,255,.06)">'+it[0]+'</a>';}});
+        return h+'</div></div>';
+      }};
+      var html='<div style="max-width:580px;width:92%;max-height:88vh;overflow-y:auto;background:rgba(10,14,20,.97);border:1px solid rgba(227,179,65,.4);border-radius:10px;padding:26px;box-shadow:0 0 60px rgba(227,179,65,.15)">';
+      html+='<div style="font-size:20px;color:#e3b341;margin-bottom:2px">♛ OVERLORD</div>';
+      html+='<div style="font-size:12px;color:#b1bac4;margin-bottom:18px">mindX advanced administration — bankon.eth</div>';
+      html+=g('Admin',[['the Cabinet','/cabinet'],['Machine Admin','/machine/admin'],['Members',withTok('/members')],['Reference',withTok('/reference')],['Book',withTok('/book')]]);
+      html+=g('API',[['Swagger UI','/docs'],['ReDoc','/redoc'],['openapi.json','/openapi.json']]);
+      html+=g('Feedback',[['feedback.html','/feedback.html'],['feedback.txt','/feedback.txt'],['agentic console','/agentic.html'],['improvement journal','/journal'],['boardroom','/boardroom'],['dreams','/dreams']]);
+      html+=g('Diagnostics',[['diagnostics','/diagnostics'],['Gödel machine','/machine'],['netstat','/netstat'],['dojo','/dojo'],['self-eval (txt)','/insight/autonomous/feedback?h=true'],['inference appetite (txt)','/insight/inference/appetite?h=true'],['gödel choices (txt)','/insight/godel/recent?h=true'],['storage (txt)','/insight/storage/status?h=true']]);
+      html+='<a href="'+withTok(FROM)+'" style="display:block;text-align:center;margin-top:6px;color:#56d364;border:1px solid rgba(86,211,100,.4);border-radius:6px;padding:10px;font-size:13px;text-decoration:none;background:rgba(86,211,100,.08)">Continue → '+FROM+'</a>';
+      html+='</div>';
+      ov.innerHTML=html;
+      document.body.appendChild(ov);
+    }},2600);
     return;
   }}
   if((RANK[v.role]||0)>=(RANK[TIER]||99)){{ hd.textContent='Access Granted';hd.classList.remove('denied');hd.classList.add('ok'); m.style.color='#56d364';m.textContent=(v.role==='overseer')?'OVERSEER of members — the door opens…':'the door opens…'; startInside(); document.body.classList.add('tardis-go'); setTimeout(function(){{location.href=withTok(FROM);}},3400); }}
