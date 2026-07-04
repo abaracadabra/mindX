@@ -2269,16 +2269,34 @@ class MindXAgent:
                 from tools.cloud.ollama_cloud_tool import OllamaCloudTool
                 self._cloud_tool = OllamaCloudTool(config=self.config)
 
-            # Test cloud connectivity via list_models (no rate limit cost)
+            # Test cloud connectivity via list_models (no rate limit cost).
+            # LISTING IS NOT GENERATING: the daemon lists cloud models even when
+            # the account quota is exhausted (weekly limit → every generate
+            # fails). Gate the guarantee on the model_health ledger so a
+            # quota-dead pillar can't capture all of mindXagent's inference.
             result = await self._cloud_tool.execute(operation="list_models")
             if result.get("success") and result.get("count", 0) > 0:
-                cloud_model = "gpt-oss:120b-cloud"
-                logger.info(
-                    f"{self.log_prefix} Cloud guarantee: {result['count']} models available, "
-                    f"using {cloud_model}"
-                )
-                self._cloud_inference_active = True
-                return cloud_model
+                try:
+                    from llm import model_health as _mh
+                except Exception:
+                    _mh = None
+                candidates = ["gpt-oss:120b-cloud", "gpt-oss:20b-cloud"]
+                try:
+                    pool = (self.config.get("cloud_pool") if self.config else None) or []
+                    candidates += [m for m in pool if m not in candidates]
+                except Exception:
+                    pass
+                for cloud_model in candidates:
+                    if _mh is not None and _mh.is_dead(cloud_model):
+                        continue
+                    logger.info(
+                        f"{self.log_prefix} Cloud guarantee: {result['count']} models available, "
+                        f"using {cloud_model}"
+                    )
+                    self._cloud_inference_active = True
+                    return cloud_model
+                logger.warning(f"{self.log_prefix} Cloud guarantee declined: all cloud "
+                               f"candidates are ledger-dead (quota/outage)")
         except Exception as e:
             logger.debug(f"{self.log_prefix} Cloud tool guarantee failed: {e}")
 
@@ -2858,6 +2876,24 @@ class MindXAgent:
                     # Execute top priority improvement
                     if prioritized:
                         top_priority = prioritized[0]
+                        # ezAGI rule (easyglm/ezagi openmind.reasoning_loop): re-reason an
+                        # unchanged prompt at most three times. The loop used to select
+                        # "Improve improvement success rate" every cycle forever — burning
+                        # inference on the same goal with no new information. After 3
+                        # consecutive passes on the same goal, rotate to the next option.
+                        _lg = getattr(self, "_last_improvement_goal", None)
+                        _lc = getattr(self, "_same_goal_count", 0)
+                        if top_priority["goal"] == _lg and _lc >= 3:
+                            _alt = next((p for p in prioritized[1:] if p.get("goal") != _lg), None)
+                            if _alt is not None:
+                                logger.info(f"{self.log_prefix} goal '{str(_lg)[:60]}' reasoned to rest "
+                                            f"({_lc} passes) — rotating to next option")
+                                top_priority = _alt
+                        if top_priority["goal"] == _lg:
+                            self._same_goal_count = _lc + 1
+                        else:
+                            self._last_improvement_goal = top_priority["goal"]
+                            self._same_goal_count = 1
                         self._log_thinking("executing_improvement", f"Executing improvement: {top_priority['goal']}")
                         logger.info(f"{self.log_prefix} Executing improvement: {top_priority['goal']}")
 
@@ -2934,14 +2970,21 @@ class MindXAgent:
                             error_message = str(e)
                             logger.error(f"{self.log_prefix} Error in improvement execution: {e}", exc_info=True)
                         if self.memory_agent:
+                            # ezAGI rule (easyglm/ezagi SocraticReasoning): an unvalidated
+                            # conclusion is never recorded as truth. "success" requires
+                            # EVIDENCE (file changes); a cycle that merely completed is
+                            # "completed_unvalidated" — the eval scored the old vacuous
+                            # success 0.0 and it poisoned the improvement ledger.
                             await self.memory_agent.log_godel_choice({
                                 "source_agent": self.agent_id,
                                 "choice_type": "mindx_improvement_execution",
                                 "perception_summary": top_priority["goal"][:500],
                                 "options_considered": [top_priority["goal"]],
                                 "chosen_option": top_priority["goal"],
-                                "rationale": "autonomous_improvement_loop",
-                                "outcome": "success" if success else ("error: " + (error_message or "unknown")[:200]),
+                                "rationale": f"autonomous_improvement_loop validated_changes={has_file_changes}",
+                                "outcome": ("success" if (success and has_file_changes)
+                                            else ("completed_unvalidated" if success
+                                                  else "error: " + (error_message or "unknown")[:200])),
                             })
                         # Update action status — descriptive result with test outcome
                         try:
