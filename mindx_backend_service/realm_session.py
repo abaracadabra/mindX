@@ -78,18 +78,18 @@ def issue_challenge(address: str, *, domain: str = "mindx.pythai.net") -> Dict[s
     addr = (address or "").strip()
     issued = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     message = (
-        f"{domain}\n"
-        "Welcome, recognized participant\n"
-        f"{addr}\n"
-        "Your signature proves your identity.\n\n"
-        "By signing you agree to the terms of the BANKON licence —\n"
-        "all rights preserved — under the guarantee of\n"
-        "github.com/cypherpunk2048.\n"
-        "The act of signing is a declaration of freedom,\n"
-        "from ownership of your private key.\n"
-        "You are free and sovereign, as is BANKON.\n"
-        "Be your own BANK — BANKON is the delivery.\n"
-        "What you do is up to you.\n\n"
+        f"{domain} wants you to sign in with your Ethereum account:\n"
+        f"{addr}\n\n"
+        "BANKON — All Rights Preserved.\n\n"
+        "By signing, you accept the terms of the BANKON Licence,\n"
+        "held in guarantee at github.com/cypherpunk2048.\n\n"
+        "Oath of Sovereignty:\n"
+        "My signature is my declaration of freedom, proven by\n"
+        "ownership of my private key. I am free and sovereign,\n"
+        "as is BANKON. I am my own bank — BANKON is the delivery —\n"
+        "and what I do is up to me.\n\n"
+        "This signature authorizes no transaction and grants no\n"
+        "access to funds.\n\n"
         f"URI: https://{domain}/activity\n"
         "Version: 1\n"
         "Chain ID: 1\n"
@@ -210,6 +210,15 @@ def verify(address: str, nonce: str, signature: str) -> Dict[str, Any]:
     airdrop = grant_signing_airdrop(recovered, nonce)
 
     tier = _resolve_tier(addr)
+    # Observable recognition: log every mint so a "signed in but not
+    # recognized" report can be traced to the exact address/role/expected-apex.
+    try:
+        import logging
+        logging.getLogger(__name__).info(
+            "realm_session: minted role=%s level=%s for %s (overlord apex=%s)",
+            tier["role"], tier["level"], recovered, _overlord_address())
+    except Exception:
+        pass
     from mindx_backend_service.overlord.routes import issue_overlord_token
     token = issue_overlord_token(recovered, tier["role"], tier["level"])
     return {"address": recovered, "role": tier["role"], "level": tier["level"],
