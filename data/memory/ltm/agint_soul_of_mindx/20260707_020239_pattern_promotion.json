@@ -1,0 +1,55 @@
+{
+  "agent_id": "agint_soul_of_mindx",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 63,
+  "patterns": {
+    "success_patterns": [
+      {
+        "pattern": "success_rate_observed",
+        "success_rate": 1.0,
+        "success_count": 9,
+        "top_processes": [
+          "agint_action",
+          "agint_action",
+          "agint_action",
+          "agint_action",
+          "agint_action",
+          "agint_action",
+          "agint_action",
+          "agint_action",
+          "agint_action"
+        ],
+        "timestamp": "2026-07-07T02:02:39.487433"
+      }
+    ],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Success rate: 100.0% (9 success, 0 failure)",
+      "Top processes: agint_action(9), godel_core_choice(9), agint_decision(9), agint_orient_response(9), agint_orient_prompt(9)",
+      "Peak activity hour: 1:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 63
+        },
+        "process_distribution": {
+          "agint_action": 9,
+          "godel_core_choice": 9,
+          "agint_decision": 9,
+          "agint_orient_response": 9,
+          "agint_orient_prompt": 9,
+          "agint_rule_decision": 9,
+          "agint_perception": 9
+        },
+        "total_memories": 63,
+        "timestamp": "2026-07-07T02:02:39.487463"
+      }
+    ]
+  },
+  "promoted_at": "2026-07-07T02:02:39.487472",
+  "promotion_criteria": {
+    "pattern_threshold": 3,
+    "days_analyzed": 7
+  }
+}

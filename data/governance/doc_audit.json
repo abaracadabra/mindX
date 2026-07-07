@@ -1,19 +1,19 @@
 {
-  "timestamp": 1783411068.9732182,
+  "timestamp": 1783414779.6825879,
   "total_docs": 258,
   "archived": 6,
   "deprecated": 1,
   "recently_modified": [
+    "BOOK_OF_MINDX",
     "COMPUTE_PLANT",
     "DOC_INDEX",
+    "EMBEDDING_SYSTEM",
     "IMPROVEMENT_JOURNAL",
     "MANIFESTO",
     "MILESTONES",
     "NAV",
     "OVERLORD_PROTOCOL",
-    "PERMAWEB_IMAGE_FORMATS",
-    "lineage",
-    "roadmap"
+    "PERMAWEB_IMAGE_FORMATS"
   ],
   "conflicts": [
     "TECHNICAL: MindXAgent is meta-agent",

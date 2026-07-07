@@ -235,7 +235,7 @@ class VLLMAgent:
             "log": str(VLLM_BUILD_LOG),
         }
 
-    async def serve_model(self, model: str = "mixedbread-ai/mxbai-embed-large-v1",
+    async def serve_model(self, model: str = "BAAI/bge-m3",
                           dtype: str = "float32", max_model_len: int = 512) -> Dict[str, Any]:
         """Start vLLM serving a model."""
         if not self.status.installed or self.status.backend not in ("ready", "cpu"):

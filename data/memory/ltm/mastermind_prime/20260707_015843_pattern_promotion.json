@@ -1,0 +1,40 @@
+{
+  "agent_id": "mastermind_prime",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 3,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [
+      {
+        "timestamp": "2026-07-07T01:00:25.488084",
+        "process": "mastermind_strategy_proposal_failed",
+        "reason": ""
+      }
+    ],
+    "behavioral_insights": [
+      "Success rate: 0.0% (0 success, 1 failure)",
+      "High error rate: 33.3% (1 errors)",
+      "Top processes: mastermind_strategy_proposal_failed(1), mastermind_strategy_proposal_start(1), godel_core_choice(1)",
+      "Peak activity hour: 1:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 3
+        },
+        "process_distribution": {
+          "mastermind_strategy_proposal_failed": 1,
+          "mastermind_strategy_proposal_start": 1,
+          "godel_core_choice": 1
+        },
+        "total_memories": 3,
+        "timestamp": "2026-07-07T01:58:43.276546"
+      }
+    ]
+  },
+  "promoted_at": "2026-07-07T01:58:43.276567",
+  "promotion_criteria": {
+    "pattern_threshold": 2,
+    "days_analyzed": 7
+  }
+}

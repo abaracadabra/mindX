@@ -10824,7 +10824,7 @@ async def vllm_build_cpu():
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/vllm/serve", tags=["vllm"], summary="Start vLLM model serving")
-async def vllm_serve(model: str = "mixedbread-ai/mxbai-embed-large-v1"):
+async def vllm_serve(model: str = "BAAI/bge-m3"):
     try:
         from agents.vllm_agent import VLLMAgent
         agent = await VLLMAgent.get_instance()

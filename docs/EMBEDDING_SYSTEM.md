@@ -4,21 +4,47 @@
 
 **RAGE** (Retrieval Augmented Generative Engine) **embed** is the embedding layer of mindX. It bridges LLM inference with pgvector database storage, enabling semantic search over all documentation and agent memories.
 
-mindX embeds all documentation (194 files) and agent memories into pgvector using mxbai-embed-large (1024 dimensions). RAGE facilitates the interaction between LLM and pgvectorscale, providing the semantic retrieval layer for RAG (Retrieval Augmented Generation) queries.
+mindX embeds all documentation and agent memories into pgvector. The **active embed model is
+switchable** via a registry (see below); the **default is `bge-m3`** (1024-dim, 8192-token context).
+RAGE provides the semantic retrieval layer for RAG (Retrieval Augmented Generation) queries.
 
 ## Architecture
 
 ```
-Question → Embed (mxbai-embed-large) → pgvector cosine similarity → Top-K chunks → qwen3:0.6b answer
+Question → Embed (active model, default bge-m3) → pgvector cosine similarity → Top-K chunks → qwen3:0.6b answer
 ```
+
+### Switchable embed models (registry)
+
+The embed backend is **not hardcoded** — `agents/memory_pgvector.py` defines an `EMBED_MODELS` registry so
+the store can be optimized/adapted to different data and types. Select the active model with the env var
+**`MINDX_EMBED_MODEL`** (default `bge-m3`); truncation (`_EMBED_MAX_CHARS`) and default chunk size
+(`DEFAULT_CHUNK_WORDS`) **derive automatically** from the active model's context window.
+
+| Model | Dims | Context | Default chunk | In-schema? |
+|-------|------|---------|---------------|------------|
+| **bge-m3** (default) | 1024 | 8192 tok | 512 words | ✅ drop-in for `VECTOR(1024)` |
+| mxbai-embed-large | 1024 | 512 tok | 200 words | ✅ interchangeable (re-embed to switch) |
+| nomic-embed-text | 768 | 8192 tok | 512 words | ⚠️ needs `VECTOR(768)` migration + re-embed |
+| all-minilm | 384 | 256 tok | 200 words | ⚠️ needs `VECTOR(384)` migration + re-embed |
+
+**Dimension guard:** the pgvector columns are hard-typed `VECTOR(1024)` (`SCHEMA_EMBED_DIMS`). Selecting a
+model whose `dims` ≠ 1024 logs a loud warning and embeddings fail until you migrate the column type **and**
+re-embed every doc + memory (mixed-dimension / mixed-model vectors break cosine search). The two 1024-dim
+models (bge-m3, mxbai) are dimensionally interchangeable but still occupy **different vector spaces** — a
+model switch always requires a full re-embed, never a live mix.
 
 ### Embedding Pipeline
 
-1. **Model**: mxbai-embed-large via Ollama (1024-dimensional vectors)
-2. **Production (VPS)**: Ollama `/api/embeddings` on port 11434 — CPU-native, always running
-3. **GPU path**: vLLM `/v1/embeddings` on port 8001 — auto-activates when GPU hardware available
-4. **Storage**: PostgreSQL pgvector — `doc_embeddings` and `memories.embedding` columns
-5. **Indexing**: IVFFlat cosine similarity index for fast nearest-neighbor search
+1. **Model**: active from the registry — default **bge-m3** (1024-dim, 8192-token window)
+2. **Three sources (use every source to advantage)** — `generate_embedding()` tries in order:
+   1. **vLLM** `/v1/embeddings` on :8001 — fast/batched, only when a GPU node serves it (`POST /vllm/serve`)
+   2. **Ollama** `/api/embeddings` on :11434 — CPU-native, always running; the effective embedder on CPU-only nodes
+   3. **HuggingFace Inference** `feature-extraction` (remote) — gated on `HF_TOKEN`; works with **no local
+      model pulled and no GPU**. Endpoint `…/hf-inference/models/{repo}/pipeline/feature-extraction`
+      (repo = the registry's `vllm_id`, e.g. `BAAI/bge-m3`). Returns None only if **all** available legs fail.
+3. **Storage**: PostgreSQL pgvector — `doc_embeddings` and `memories.embedding` columns
+4. **Indexing**: IVFFlat cosine similarity index for fast nearest-neighbor search
 
 ### Tables
 
@@ -38,7 +64,21 @@ memories.embedding vector(1024)
 
 ### Chunking Strategy
 
-Documents are split into ~500-word chunks. Each chunk is embedded independently. A 10KB doc typically produces 3-5 chunks. This ensures that search results return specific, relevant passages rather than entire documents.
+Chunk size is **derived from the active model** (`DEFAULT_CHUNK_WORDS` in `agents/memory_pgvector.py`):
+long-context models take big chunks, short-context ones stay small. With the default **bge-m3** it's
+**512-word chunks** (8192-token window has ample room); on **mxbai** it auto-drops to **200 words** (512-token
+window). Each chunk is embedded independently so search returns specific passages, not whole documents.
+
+### Input truncation (the single choke point)
+
+Every embedding input — doc chunk **and** memory — is truncated to **`_EMBED_MAX_CHARS`** inside
+`generate_embedding()` before any source is called. The cap is **derived from the active model** (override
+with `MINDX_EMBED_MAX_CHARS`): **bge-m3 → 4000 chars** (~1000 tokens, holds a 512-word chunk inside the 8192
+window); **mxbai → 1400 chars** (~350 tokens, under its 512 window). This is the single guarantee that an
+input can't overflow the model window — overflow used to return `None`, leaving the row perpetually
+unembedded and retried every cycle → sustained CPU churn. **Consequence:** text beyond the cap in a single
+chunk/memory is not embedded — chunk long
+content upstream rather than relying on a single large embed call.
 
 ## API Endpoints
 
@@ -88,11 +128,13 @@ Response:
 
 ## Embedding Models
 
-| Model | Dimensions | Speed | Use |
-|-------|-----------|-------|-----|
-| mxbai-embed-large | 1024 | ~100ms/query | Primary — best quality |
-| nomic-embed-text | 768 | ~80ms/query | Available as alternative |
-| qwen3:0.6b | N/A | ~3-6s/query | Chat/generation (not embedding) |
+See **[Switchable embed models (registry)](#switchable-embed-models-registry)** above — the `EMBED_MODELS`
+registry in `agents/memory_pgvector.py` is the single source of truth (models, dims, context windows,
+default chunk sizes, in-schema status). Select with `MINDX_EMBED_MODEL`. Default: **bge-m3**.
+
+**Switching models always requires a full re-embed** (different models = different vector spaces, even at
+the same dimension), and switching to a non-1024-dim model additionally requires a `VECTOR(n)` schema
+migration. The dimension guard warns on mismatch.
 
 ## Batch Embedding
 
@@ -131,13 +173,13 @@ New memories are auto-embedded on save via `MemoryAgent.save_timestamped_memory(
 
 - **vLLM 0.19.0** installed, backend=ready
 - **AMD EPYC 7543P** (2 vCPUs, AVX2 supported)
-- **7.8GB RAM** — sufficient for mxbai-embed-large
-- **Ollama** handles chat (qwen3:0.6b) and embeddings (mxbai-embed-large) on CPU
+- **7.8GB RAM** — sufficient for bge-m3 (~1.2GB) on CPU
+- **Ollama** handles chat (qwen3:0.6b) and embeddings (bge-m3, the active model) on CPU
 - **vLLM** can serve embeddings when started (`POST /vllm/serve`)
 
 ### Efficiency Strategy
 
-1. **Embeddings**: vLLM on port 8001 (when serving) → Ollama fallback on port 11434
+1. **Embeddings**: vLLM :8001 (GPU, when serving) → Ollama :11434 (CPU) → HuggingFace Inference (remote, `HF_TOKEN`)
 2. **Chat/Generation**: Ollama qwen3:0.6b (always available, CPU-native)
 3. **Cloud LLM**: Gemini, Groq, etc. for complex reasoning
 4. **Multi-stream**: Parallel queries across providers for critical decisions
@@ -145,13 +187,22 @@ New memories are auto-embedded on save via `MemoryAgent.save_timestamped_memory(
 ## Configuration
 
 ```bash
-# Environment variables
-VLLM_EMBED_URL=http://localhost:8001  # vLLM embedding server
-VLLM_PORT=8001                        # vLLM serving port
-EMBED_MODEL=mxbai-embed-large         # Default embedding model
+# --- Embedding model selection (registry in agents/memory_pgvector.py) ---
+MINDX_EMBED_MODEL=bge-m3               # active model; default bge-m3 (also: mxbai-embed-large, …)
+MINDX_EMBED_MAX_CHARS=4000             # optional override; else derived from the active model
 
-# Ollama models (pull if not present)
-ollama pull mxbai-embed-large
-ollama pull nomic-embed-text
-ollama pull qwen3:0.6b
+# --- Sources (tried in order; each optional) ---
+VLLM_EMBED_URL=http://localhost:8001   # 1) vLLM embedding server (GPU)
+HF_TOKEN=hf_xxx                        # 3) enables the HuggingFace Inference fallback (feature-extraction)
+                                       #    also read from HUGGINGFACE_TOKEN / HUGGINGFACEHUB_API_TOKEN
+HF_EMBED_URL=https://router.huggingface.co/hf-inference/models  # optional override
+
+# --- Ollama models (2, CPU fallback — pull the active model if not present) ---
+ollama pull bge-m3                     # default embedder (1024-dim, 8192-token)
+ollama pull qwen3:0.6b                 # chat/generation
+# ollama pull mxbai-embed-large        # only if MINDX_EMBED_MODEL=mxbai-embed-large
 ```
+
+> **HF_TOKEN is not in `.env` by default** — the HuggingFace leg stays dormant until you add a token
+> (`.env` or export). With it set, embeddings work with **no local model pulled and no GPU** — useful for a
+> fresh node or while `ollama pull` is still downloading.

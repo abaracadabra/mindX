@@ -12,5 +12,33 @@
       "autonomous_mode": true,
       "last_improvement": "llm.ollama_handler: Install Ollama and pull required models for local AI inference"
     }
+  },
+  "mindx_meta_agent_f45f4000": {
+    "session_id": "mindx_meta_agent_f45f4000",
+    "agent_id": "mindx_meta_agent",
+    "created_at": 1783412652.336251,
+    "last_activity": 1783412978.8381348,
+    "expires_at": 1783499052.336251,
+    "cycle_count": 1,
+    "circuit_breaker_trips": 0,
+    "last_reset_reason": null,
+    "metadata": {
+      "autonomous_mode": true,
+      "last_improvement": "llm.ollama_handler: Install Ollama and pull required models for local AI inference"
+    }
+  },
+  "mindx_meta_agent_eef59806": {
+    "session_id": "mindx_meta_agent_eef59806",
+    "agent_id": "mindx_meta_agent",
+    "created_at": 1783414759.3358257,
+    "last_activity": 1783414821.17529,
+    "expires_at": 1783501159.3358257,
+    "cycle_count": 1,
+    "circuit_breaker_trips": 0,
+    "last_reset_reason": null,
+    "metadata": {
+      "autonomous_mode": true,
+      "last_improvement": "llm.ollama_handler: Install Ollama and pull required models for local AI inference"
+    }
   }
 }

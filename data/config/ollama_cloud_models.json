@@ -63,6 +63,7 @@
     {"name": "deepseek-r1:1.5b", "size_gb": 1.1},
     {"name": "qwen3.5:2b", "size_gb": 2.7},
     {"name": "qwen3:1.7b", "size_gb": 1.4},
+    {"name": "bge-m3:latest", "size_gb": 1.2, "best_for": "DEFAULT embedder — long-context (8192 tok), 1024-dim"},
     {"name": "mxbai-embed-large:latest", "size_gb": 0.7},
     {"name": "nomic-embed-text:latest", "size_gb": 0.3},
     {"name": "qwen3:0.6b", "size_gb": 0.5},
@@ -76,6 +77,6 @@
     "vision": ["qwen3-vl:235b-cloud", "gemma4:31b-cloud", "gemma3:12b-cloud"],
     "fast_general": ["qwen3:0.6b", "qwen3:1.7b", "granite4.1:3b", "ministral-3:14b-cloud"],
     "agentic_general": ["vllm", "granite4.1:3b", "minimax-m2.5:cloud", "minimax-m2:cloud", "nemotron-3-super:cloud", "gpt-oss:120b-cloud", "gpt-oss:20b-cloud"],
-    "embedding": ["mxbai-embed-large:latest", "nomic-embed-text:latest"]
+    "embedding": ["bge-m3:latest", "mxbai-embed-large:latest", "nomic-embed-text:latest"]
   }
 }

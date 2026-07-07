@@ -10,7 +10,7 @@
 
 set -e
 
-MODEL="mixedbread-ai/mxbai-embed-large-v1"
+MODEL="BAAI/bge-m3"
 PORT=8001
 HOST="0.0.0.0"
 

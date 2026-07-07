@@ -162,7 +162,7 @@ class InferenceDiscovery:
         self.task_model_map = {
             # Local models (fast, always available, light tasks)
             "heartbeat": {"provider": "ollama_local", "model": "qwen3:0.6b", "reason": "fast, low resource"},
-            "embedding": {"provider": "ollama_local", "model": "mxbai-embed-large", "reason": "embedding-native"},
+            "embedding": {"provider": "ollama_local", "model": "bge-m3", "reason": "embedding-native"},
             "simple_chat": {"provider": "ollama_local", "model": "qwen3:1.7b", "reason": "balanced speed/quality"},
             # Cloud models (heavy reasoning, free tier with limits)
             "reasoning": {"provider": "ollama_cloud", "model": "deepseek-v3.2", "reason": "671B reasoning, free tier"},
@@ -474,7 +474,7 @@ class InferenceDiscovery:
             if cloud and cloud.status == ProviderStatus.AVAILABLE:
                 cloud_model_map = {
                     "heartbeat": "ministral-3:3b",
-                    "embedding": "mxbai-embed-large",
+                    "embedding": "bge-m3",
                     "simple_chat": "ministral-3:3b",
                     "reasoning": "deepseek-v3.2",
                     "coding": "qwen3-coder-next",
@@ -493,7 +493,7 @@ class InferenceDiscovery:
             if local and local.status == ProviderStatus.AVAILABLE:
                 local_model_map = {
                     "heartbeat": "qwen3:0.6b",
-                    "embedding": "mxbai-embed-large",
+                    "embedding": "bge-m3",
                     "simple_chat": "qwen3:1.7b",
                     "reasoning": "qwen3:1.7b",
                     "coding": "qwen3:1.7b",
@@ -527,7 +527,7 @@ class InferenceDiscovery:
             # Route to appropriate local model by task
             local_model_map = {
                 "heartbeat": "qwen3:0.6b",
-                "embedding": "mxbai-embed-large",
+                "embedding": "bge-m3",
                 "simple_chat": "qwen3:1.7b",
                 "reasoning": "qwen3:1.7b",  # small model, still reasons
                 "coding": "qwen3:1.7b",
@@ -543,7 +543,7 @@ class InferenceDiscovery:
         if cloud and cloud.status == ProviderStatus.AVAILABLE:
             cloud_model_map = {
                 "heartbeat": "ministral-3:3b",
-                "embedding": "mxbai-embed-large",
+                "embedding": "bge-m3",
                 "simple_chat": "ministral-3:3b",
                 "reasoning": "deepseek-v3.2",
                 "coding": "qwen3-coder-next",

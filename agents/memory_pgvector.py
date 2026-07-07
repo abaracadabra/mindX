@@ -652,17 +652,74 @@ async def get_recent_actions(limit: int = 20) -> List[Dict[str, Any]]:
 #  EMBEDDING ENGINE — vLLM primary, Ollama fallback → pgvector
 # ═══════════════════════════════════════════════════════════════
 
-EMBED_MODEL = "mxbai-embed-large"
+# ═══ Embedding model registry — switchable backends ══════════════════════════
+# Keep multiple embed models available so the store can be optimized/adapted to
+# different data and types. The ACTIVE model is chosen via MINDX_EMBED_MODEL
+# (default bge-m3). Truncation and default chunk size DERIVE from the active model
+# (below), so switching model auto-adjusts the pipeline.
+#
+# HARD CONSTRAINT: the pgvector columns are VECTOR(SCHEMA_EMBED_DIMS) (=1024). A
+# model whose `dims` != that width cannot be made active without a schema migration
+# (ALTER column type) AND a full re-embed. Such models stay in the registry —
+# documented, not hidden — and the dim-guard below warns loudly if one is selected.
+SCHEMA_EMBED_DIMS = 1024  # width baked into doc_embeddings.embedding / memories.embedding
+
+EMBED_MODELS: Dict[str, Dict[str, Any]] = {
+    "bge-m3": {
+        "dims": 1024, "context_tokens": 8192, "max_chars": 4000,
+        "vllm_id": "BAAI/bge-m3",
+        "notes": "DEFAULT. Long-context (8192 tok), 1024-dim → drop-in for VECTOR(1024). "
+                 "Best for large chunks / mixed data / multilingual.",
+    },
+    "mxbai-embed-large": {
+        "dims": 1024, "context_tokens": 512, "max_chars": 1400,
+        "vllm_id": "mixedbread-ai/mxbai-embed-large-v1",
+        "notes": "Short-context (512 tok), high quality, 1024-dim → interchangeable with "
+                 "bge-m3 in-schema (re-embed to switch). Good for short passages.",
+    },
+    "nomic-embed-text": {
+        "dims": 768, "context_tokens": 8192, "max_chars": 4000,
+        "vllm_id": "nomic-ai/nomic-embed-text-v1.5",
+        "notes": "Long-context 768-dim — REQUIRES VECTOR(768) migration + full re-embed before activation.",
+    },
+    "all-minilm": {
+        "dims": 384, "context_tokens": 256, "max_chars": 800,
+        "vllm_id": "sentence-transformers/all-MiniLM-L6-v2",
+        "notes": "Tiny/fast 384-dim — cheap for high-volume, lower precision; requires VECTOR(384) migration.",
+    },
+}
+
+EMBED_MODEL = os.getenv("MINDX_EMBED_MODEL", "bge-m3")
+_ACTIVE_EMBED = EMBED_MODELS.get(EMBED_MODEL) or EMBED_MODELS["bge-m3"]
+EMBED_DIMS = _ACTIVE_EMBED["dims"]
+EMBED_CONTEXT_TOKENS = _ACTIVE_EMBED["context_tokens"]
+
 VLLM_EMBED_URL = os.getenv("VLLM_EMBED_URL", "http://localhost:8001")  # vLLM serving embeddings
 OLLAMA_EMBED_URL = "http://localhost:11434"  # Ollama fallback
+# HuggingFace Inference (remote) — the "use every source" leg: works with no local
+# model pulled and no GPU. Gated on a token; the active model's `vllm_id` doubles as
+# its HF repo id (e.g. "BAAI/bge-m3"). Uses the feature-extraction pipeline (raw vector).
+HF_EMBED_URL = os.getenv("HF_EMBED_URL", "https://router.huggingface.co/hf-inference/models")
+HF_TOKEN = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_TOKEN") or os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
+# Truncate ALL embedding inputs at this single choke point so a pathological input
+# can't overflow the model window or run away CPU. Derived from the active model
+# (override with MINDX_EMBED_MAX_CHARS). bge-m3: 4000 chars ≈ ~1000 tokens, holds a
+# 512-word chunk (~700 tok) well inside the 8192 window. mxbai: 1400 chars ≈ 350 tok
+# under its 512 window. Overflow used to return None → row stayed unembedded, retried
+# every cycle = sustained CPU churn; truncation here guarantees it can't happen.
+_EMBED_MAX_CHARS = int(os.getenv("MINDX_EMBED_MAX_CHARS", str(_ACTIVE_EMBED["max_chars"])))
 
-# mxbai-embed-large has a 512-token (~1500-char) context window. Truncate ALL
-# embedding inputs here — the single choke point — so memory/doc embeds never
-# overflow it. Overflow returned None ("input exceeds context length") and left
-# the input perpetually "unembedded", so it was retried every cycle = sustained
-# ollama CPU churn. 1400 chars ≈ 350 tokens, safely under 512 with headroom.
-_EMBED_MAX_CHARS = 1400
+# Default doc chunk size (words), matched to the active model's window: long-context
+# models take big chunks, short-context models stay small to avoid truncation.
+DEFAULT_CHUNK_WORDS = 512 if EMBED_CONTEXT_TOKENS >= 2048 else 200
+
+if EMBED_DIMS != SCHEMA_EMBED_DIMS:
+    logger.warning(
+        "embed: active model '%s' is %d-dim but the pgvector schema is %d-dim — needs an "
+        "ALTER + full re-embed before it works; embeddings will fail until reconciled.",
+        EMBED_MODEL, EMBED_DIMS, SCHEMA_EMBED_DIMS,
+    )
 
 
 async def _bg_governor(interactive: bool):
@@ -677,14 +734,30 @@ async def _bg_governor(interactive: bool):
         return None
 
 
+def _hf_pool(data: Any) -> Optional[List[float]]:
+    """Normalize HuggingFace feature-extraction output to a flat 1-D embedding.
+    sentence-transformers models (bge-m3) return a 1-D vector; raw models return
+    2-D token vectors → mean-pool over tokens. Tolerates an extra [[...]] wrapper."""
+    if isinstance(data, list) and data:
+        if isinstance(data[0], (int, float)):
+            return [float(x) for x in data]
+        if isinstance(data[0], list) and data[0]:
+            if isinstance(data[0][0], (int, float)):
+                n, dim = len(data), len(data[0])
+                return [sum(row[i] for row in data) / n for i in range(dim)]
+            return _hf_pool(data[0])  # unwrap [[...]]
+    return None
+
+
 async def generate_embedding(
     text: str, model: str = EMBED_MODEL, *, interactive: bool = False
 ) -> Optional[List[float]]:
     """
-    Generate embedding. Tries vLLM first (OpenAI-compatible /v1/embeddings),
-    falls back to Ollama /api/embeddings. Returns None on failure with a
-    WARNING-level log so the operator can see the failure mode (rather
-    than the previous DEBUG silence which hid 0/105 backfill failures).
+    Generate embedding across THREE sources (use every source to advantage):
+    vLLM `/v1/embeddings` → Ollama `/api/embeddings` → HuggingFace Inference
+    `feature-extraction` (remote, gated on HF_TOKEN; works with no local model /
+    no GPU). Returns None only if all available sources fail, with a WARNING-level
+    log of every leg's status (not the old DEBUG silence that hid backfill failures).
 
     The Ollama (CPU) fallback is serialized through the ResourceGovernor's
     background-only inference semaphore so concurrent background embeds can't
@@ -740,18 +813,47 @@ async def generate_embedding(
     except Exception as e:
         ollama_status = f"err:{type(e).__name__}"
 
+    # 3. Fallback to HuggingFace Inference (remote, needs HF_TOKEN). Works when no
+    #    local model is pulled and no GPU is present — the "use every source" leg.
+    #    feature-extraction returns the raw vector (NOT sentence-similarity, which
+    #    returns scores). vllm_id doubles as the HF repo id (e.g. BAAI/bge-m3).
+    hf_status = None
+    if HF_TOKEN:
+        try:
+            hf_id = _ACTIVE_EMBED.get("vllm_id", model)
+            url = f"{HF_EMBED_URL}/{hf_id}/pipeline/feature-extraction"
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as sess:
+                async with sess.post(
+                    url,
+                    headers={"Authorization": f"Bearer {HF_TOKEN}"},
+                    json={"inputs": text, "options": {"wait_for_model": True}},
+                ) as resp:
+                    hf_status = resp.status
+                    if resp.status == 200:
+                        vec = _hf_pool(await resp.json())
+                        if vec and len(vec) == EMBED_DIMS:
+                            return vec
+                        hf_status = f"200_baddim:{len(vec) if vec else 0}!={EMBED_DIMS}"
+                    else:
+                        hf_status = f"{resp.status}:{(await resp.text())[:160]}"
+        except Exception as e:
+            hf_status = f"err:{type(e).__name__}"
+
     logger.warning(
-        f"generate_embedding({model}, len={len(text)}): vLLM={vllm_status} ollama={ollama_status}"
+        f"generate_embedding({model}, len={len(text)}): vLLM={vllm_status} "
+        f"ollama={ollama_status} hf={hf_status if HF_TOKEN else 'no_token'}"
     )
     return None
 
 
-# mxbai-embed-large has a 512-token context window. 200 words ≈ 260-300 tokens
-# in English markdown, leaving headroom under the limit. Earlier chunk_size=500
-# produced 600-900 tokens and triggered HTTP 500 from Ollama on every chunk —
-# the entire failure was logged only at DEBUG, leaving 105/210 docs unembedded
-# with no operator-visible signal. See: 2026-04-29 backfill diagnosis.
-async def embed_and_store_doc(doc_name: str, text_content: str, chunk_size: int = 200,
+# chunk_size (words) defaults to DEFAULT_CHUNK_WORDS, matched to the active embed
+# model's window (bge-m3 8192 tok → 512 words; mxbai 512 tok → 200). Each chunk is
+# still hard-truncated at _EMBED_MAX_CHARS in generate_embedding(), so an over-long
+# chunk can't overflow the window. (Historical failure: chunk_size=500 on mxbai's
+# 512-token window produced 600-900 tokens → HTTP 500 per chunk, logged only at
+# DEBUG, 105/210 docs unembedded. See 2026-04-29 backfill diagnosis. The registry +
+# derived chunk size prevent that class of mismatch.)
+async def embed_and_store_doc(doc_name: str, text_content: str, chunk_size: int = DEFAULT_CHUNK_WORDS,
                               interactive: bool = False, bail_on_first_failure: bool = False) -> int:
     """Chunk a document and store embeddings in doc_embeddings table.
 
@@ -1122,7 +1224,8 @@ async def init_catalogue_schema() -> bool:
     One flat ``catalogue_entries`` table (DataHub entity-aspect collapse,
     simplified): aspects live in JSONB ``payload``, EntryLinks inline in
     ``links``, BM25 leg via ``fts`` tsvector, dense leg via ``embedding``
-    (VECTOR(1024), mxbai-embed-large), NULL until embedded. No ivfflat index
+    (VECTOR(1024), active embed model — default bge-m3, see EMBED_MODELS registry),
+    NULL until embedded. No ivfflat index
     at Phase-1 scale (<100k rows) — cosine seq-scan is sub-100ms.
     """
     pool = await get_pool()

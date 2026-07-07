@@ -73,7 +73,7 @@ def _ollama_base_url() -> str:
 
 
 def _embed_model() -> str:
-    return os.environ.get("MINDX_SKILLS_EMBED_MODEL", "mxbai-embed-large")
+    return os.environ.get("MINDX_SKILLS_EMBED_MODEL", "bge-m3")
 
 
 def _embed_text(text: str, *, timeout: float = 5.0) -> Optional[list[float]]:
