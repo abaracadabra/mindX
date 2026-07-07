@@ -510,6 +510,12 @@ class StartupAgent:
             env_base_url = os.environ.get("MINDX_LLM__OLLAMA__BASE_URL")
             if env_base_url:
                 base_url = env_base_url
+                # Derive host/port from the env URL so the success/telemetry paths
+                # below always have config_host/config_port defined (avoids UnboundLocalError).
+                from urllib.parse import urlparse
+                _parsed = urlparse(base_url)
+                config_host = _parsed.hostname or default_host
+                config_port = _parsed.port or default_port
                 logger.info(f"{self.log_prefix} Using Ollama base URL from .env: {base_url}")
             else:
                 # Also check config for Ollama settings

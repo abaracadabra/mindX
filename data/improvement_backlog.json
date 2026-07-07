@@ -6,7 +6,10 @@
     "priority": 8,
     "occurrences": 2480,
     "first_seen": null,
-    "last_seen": null
+    "last_seen": null,
+    "status": "attempted",
+    "attempted_at": 1783411188.6395106,
+    "cooldown_until": 1783497588.6395106
   },
   {
     "target_component_path": "llm.model_registry",

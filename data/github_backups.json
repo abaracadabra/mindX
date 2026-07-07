@@ -3032,16 +3032,25 @@
       "source_commit": "fc12c0c136ad8cf412788c2e14b6401169c06825",
       "created_at": "2026-06-25T03:00:50.743699",
       "status": "created"
+    },
+    {
+      "branch_name": "backup/shutdown-backup-20260707_005528",
+      "backup_type": "shutdown_backup",
+      "reason": "System shutdown - automatic backup",
+      "source_branch": "fix/self-improving-loop-and-freetier",
+      "source_commit": "204c63614b51034bd8eeb1ef4ef02fed21710f40",
+      "created_at": "2026-07-07T00:55:42.593241",
+      "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/daily-backup-20260625_030046",
-    "backup_type": "daily_backup",
-    "reason": "Scheduled daily backup",
+    "branch_name": "backup/shutdown-backup-20260707_005528",
+    "backup_type": "shutdown_backup",
+    "reason": "System shutdown - automatic backup",
     "source_branch": "fix/self-improving-loop-and-freetier",
-    "source_commit": "fc12c0c136ad8cf412788c2e14b6401169c06825",
-    "created_at": "2026-06-25T03:00:50.743699",
+    "source_commit": "204c63614b51034bd8eeb1ef4ef02fed21710f40",
+    "created_at": "2026-07-07T00:55:42.593241",
     "status": "created"
   },
-  "last_backup_at": "2026-06-25T03:00:50.743722"
+  "last_backup_at": "2026-07-07T00:55:42.593272"
 }

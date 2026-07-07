@@ -84,8 +84,15 @@
       "title": "Governance",
       "phase": "waxing gibbous",
       "timestamp": "2026-06-25T23:09:56.181921+00:00"
+    },
+    {
+      "date": "2026-07-07",
+      "day": 21,
+      "title": "Resource Governor",
+      "phase": "last quarter",
+      "timestamp": "2026-07-07T07:57:49.046024+00:00"
     }
   ],
-  "current_day": 11,
+  "current_day": 21,
   "full_moons": []
 }
