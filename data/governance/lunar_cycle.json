@@ -77,8 +77,15 @@
       "title": "Memory",
       "phase": "waxing gibbous",
       "timestamp": "2026-06-24T20:24:05.180937+00:00"
+    },
+    {
+      "date": "2026-06-25",
+      "day": 11,
+      "title": "Governance",
+      "phase": "waxing gibbous",
+      "timestamp": "2026-06-25T23:09:56.181921+00:00"
     }
   ],
-  "current_day": 10,
+  "current_day": 11,
   "full_moons": []
 }

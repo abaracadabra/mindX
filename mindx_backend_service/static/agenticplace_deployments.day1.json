@@ -1,0 +1,52 @@
+{
+  "_doc": "DAY-1 FLIP TEMPLATE — after the OVERLORD signs the Base canary (`PRIVATE_KEY=… ./deployer.sh base`) and the explorer confirms code at both CREATE2 addresses, REPLACE agenticplace_deployments.json with this file (fill the tx hashes from live/agenticplace/base-deploy.json). This activates the /inft mint handoff with zero code change. AgenticPlace iNFT mint deployment registry, read by /inft (inft_mint.js). Addresses are DETERMINISTIC (CREATE2 via Nick's factory) — identical on every chain.",
+  "agenticplace": {
+    "chainId": 8453,
+    "chainName": "base",
+    "handoffMintUrl": "https://agenticplace.pythai.net/inft",
+    "mintMode": "handoff",
+    "explorer": "https://basescan.org",
+    "create2": {
+      "factory": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+      "owner": "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169",
+      "ownerEns": "bankon.eth",
+      "deterministic": true,
+      "chains": ["base-8453", "moonbeam-1284", "blast-81457", "0g-16602", "ethereum-1", "polygon-137"]
+    },
+    "contracts": {
+      "IntelligentNFT": {
+        "name": "iNFT_7857",
+        "standard": "ERC-7857",
+        "address": "0x8F880281aaa6D163552eBb11825e43f133188fD9",
+        "salt": "deltaverse.inft.v1",
+        "mintFn": "mintAgent",
+        "mintSig": "mintAgent(address,bytes32,string,bytes32,uint32,uint8,bytes32,string)",
+        "mintSelector": "0xbabb11b9",
+        "abiPath": "DeltaVerse/deploy/artifacts/inft/iNFT_7857.json",
+        "deployed": true,
+        "deployTx": "FILL_FROM_live/agenticplace/base-deploy.json"
+      },
+      "Scientific": {
+        "name": "Scientific",
+        "role": "first-light canary — seconds the iNFT deploy",
+        "address": "0x428222a63809C98FcA59fd0ca36619F551Ff67c0",
+        "salt": "deltaverse.scientific.v1",
+        "abiPath": "DeltaVerse/deploy/artifacts/settlement-tokens/Scientific.json",
+        "deployed": true,
+        "deployTx": "FILL_FROM_live/agenticplace/base-deploy.json"
+      }
+    }
+  },
+  "x402": {
+    "_doc": "E4 settlement-infra + E5 x402-evm, deployed by scripts/deploy-x402-base.mjs. Same CREATE2 determinism — these exact addresses on every chain. Fill txs from live/agenticplace/base-x402-deploy.json.",
+    "chainId": 8453,
+    "contracts": {
+      "BankonPriceOracle":    { "address": "0xeb555cfF1603ad609446C82cF5807d65353Ca7C5", "salt": "deltaverse.x402.oracle.v1",  "deployed": true },
+      "BankonReputationGate": { "address": "0x0AE564598DcC4e6adAD049604A7d451586351510", "salt": "deltaverse.x402.gate.v1",    "deployed": true },
+      "BankonPaymentRouter":  { "address": "0xe5Abbcf71C6594CcdC92FBd15fd119983da22B5a", "salt": "deltaverse.x402.router.v1",  "deployed": true },
+      "X402Receipt":          { "address": "0xCDf6CdE9be92433d2B23598D9eA5EC0B7be940a1", "salt": "deltaverse.x402.receipt.v1", "deployed": true }
+    }
+  },
+  "_status": "deployed_base_canary",
+  "_activation": "LIVE on Base (8453). Crosschain continuance: LAUNCH settlement-tokens on GLMR 1284 / Blast 81457 / 0G via pages/deploy.html — same addresses land on every chain. Then append each chain's record here."
+}

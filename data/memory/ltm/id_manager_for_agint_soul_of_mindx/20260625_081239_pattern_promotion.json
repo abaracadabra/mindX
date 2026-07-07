@@ -1,0 +1,44 @@
+{
+  "agent_id": "id_manager_for_agint_soul_of_mindx",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 4,
+  "patterns": {
+    "success_patterns": [
+      {
+        "pattern": "success_rate_observed",
+        "success_rate": 1.0,
+        "success_count": 1,
+        "top_processes": [
+          "id_manager_wallet_created"
+        ],
+        "timestamp": "2026-06-25T08:12:39.861597"
+      }
+    ],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Success rate: 100.0% (1 success, 0 failure)",
+      "Top processes: id_manager_wallet_exists(1), id_manager_address_lookup(1), id_manager_wallet_created(1), id_manager_address_not_found(1)",
+      "Peak activity hour: 16:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 4
+        },
+        "process_distribution": {
+          "id_manager_wallet_exists": 1,
+          "id_manager_address_lookup": 1,
+          "id_manager_wallet_created": 1,
+          "id_manager_address_not_found": 1
+        },
+        "total_memories": 4,
+        "timestamp": "2026-06-25T08:12:39.861610"
+      }
+    ]
+  },
+  "promoted_at": "2026-06-25T08:12:39.861613",
+  "promotion_criteria": {
+    "pattern_threshold": 3,
+    "days_analyzed": 7
+  }
+}

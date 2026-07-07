@@ -126,3 +126,11 @@ data/godel/certificates.jsonl
 data/godel/sensor_chain.jsonl
 data/godel/utility_ledger.jsonl
 data/config/mindxtrain_regimen.json
+
+# PYTHAI/ = confidential contract holdings, private until each contract is released live.
+# Blocks unreleased holdings from being committed. NOTE: DAY1_ANNOUNCEMENT_rage.md and
+# DAY1_RUNBOOK.md are already tracked and stay tracked (a folder ignore won't untrack them).
+PYTHAI/
+
+# Transient self-deleting ops checklist (repo root) — never commit.
+/todo.md
