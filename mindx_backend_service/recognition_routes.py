@@ -134,11 +134,16 @@ async def recognition_offer() -> Dict[str, Any]:
             "enabled": bool(ad.get("enabled")),
             "requireCovenantSignature": bool(ad.get("requireCovenantSignature", True)),
             "oncePerAddress": bool(ad.get("oncePerAddress", True)),
+            "assets": ad.get("assets", {}),
             "grants": [
-                {**g, "configured": bool(g.get("asset_id") or g.get("contract"))}
+                {**g, **{k: v for k, v in ad.get("assets", {}).get(g.get("asset"), {}).items()
+                         if k in ("symbol", "kind", "chain", "decimals")},
+                 "configured": bool((ad.get("assets", {}).get(g.get("asset"), {}) or {}).get("contract")
+                                    or (ad.get("assets", {}).get(g.get("asset"), {}) or {}).get("asset_id"))}
                 for g in ad.get("grants", [])
             ],
         },
+        "notBonaFide": cfg.get("notBonaFide"),
         "substrate": cfg.get("substrate", {}),
         "recognized_count": len(_read_roll()),
     }
@@ -203,8 +208,13 @@ async def airdrop(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         raise HTTPException(403, "not recognized — POST /recognition/recognize first")
 
     rung = rec.get("rung")
-    grant = next((g for g in ad.get("grants", []) if g.get("rung") == rung), None)
-    if not grant:
+    assets = ad.get("assets", {})
+    # A rung may carry MORE THAN ONE grant — mindX gives what it has: its VALUE (BANKON PYTHAI,
+    # the fixed-supply repunit OFT) and its MEMORY (THlNK MINDX, the iNFT carrying the THOT of the
+    # mind at the moment you were recognized). BONA FIDE is NOT here: reputation is earned through
+    # the DAIO's own procedure, and reputation that could be airdropped would not be reputation.
+    grants = [g for g in ad.get("grants", []) if g.get("rung") == rung]
+    if not grants:
         return {"ok": True, "queued": False, "reason": f"no grant configured for rung '{rung}'",
                 "rung": rung}
 
@@ -216,20 +226,30 @@ async def airdrop(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         except Exception:
             pass
 
-    configured = bool(grant.get("asset_id") or grant.get("contract"))
-    entry = {"address": address, "chain": grant.get("chain"), "asset": grant.get("asset"),
-             "asset_id": grant.get("asset_id"), "contract": grant.get("contract"),
-             "amount": grant.get("amount"), "rung": rung, "configured": configured,
-             "iat": int(time.time())}
-    _append(QUEUE_PATH, entry)
-    logger.info("recognition: airdrop QUEUED %s → %s %s (configured=%s)",
-                address, grant.get("amount"), grant.get("asset"), configured)
+    queued, pending = [], []
+    for g in grants:
+        a = assets.get(g.get("asset"), {})
+        configured = bool(a.get("contract") or a.get("asset_id"))
+        entry = {"address": address, "rung": rung,
+                 "asset": g.get("asset"), "symbol": a.get("symbol"), "kind": a.get("kind"),
+                 "chain": a.get("chain"), "decimals": a.get("decimals"),
+                 "contract": a.get("contract"), "asset_id": a.get("asset_id"),
+                 "amount": g.get("amount"), "configured": configured, "iat": int(time.time())}
+        _append(QUEUE_PATH, entry)
+        queued.append(entry)
+        if not configured:
+            pending.append(a.get("symbol") or g.get("asset"))
+        logger.info("recognition: airdrop QUEUED %s → %s %s (configured=%s)",
+                    address, g.get("amount"), g.get("asset"), configured)
+
     return {
-        "ok": True, "queued": True, "grant": entry,
+        "ok": True, "queued": True, "rung": rung, "grants": queued,
         "delivery": "an OVERSEER settles the queue on-chain; mindX moves no funds from this endpoint",
-        "warning": None if configured else
-                   f"the '{grant.get('asset')}' grant has no asset_id/contract configured yet — "
-                   f"your place is held, delivery waits on the operator deploying the asset",
+        "warning": None if not pending else
+                   f"{' and '.join(pending)} is not deployed yet — your place is held; delivery "
+                   f"waits on the operator deploying the asset",
+        "notBonaFide": "BONA FIDE is not airdropped — it is earned through the DAIO's verification "
+                       "procedure (reputation that could be airdropped would not be reputation).",
         "rights": cfg.get("covenant", {}).get("rights"),
     }
 

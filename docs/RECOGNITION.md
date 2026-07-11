@@ -39,16 +39,42 @@ The handoff protects the participant *and* protects mindX — neither is exposed
 risk. The canonical signing text is built **server-side** (`covenant_message()`), so the text the
 browser signs and the text the verifier checks can never drift.
 
-## The configurable airdrop
+## The configurable airdrop — BANKON PYTHAI and THlNK MINDX
 
-Set per rung in `recognition.json` — asset, amount (a **string** in base units; no float ever
-touches a balance), chain, and the on-chain identifier:
+mindX gives what is actually its to give: **its value, and its memory.**
+
+| asset | what it is | why it is the gift |
+|---|---|---|
+| **BANKON PYTHAI** (`BKPY`) | the fixed-supply LayerZero **OFT** (`BankonPythaiOFT`) — **111,111.111 × 1e18**, the repunit pattern (cypherpunk2048), minted exactly once at the hub, bridged everywhere else | **the VALUE** of the mind you joined — a real claim on a fixed supply, not an inflationary points balance |
+| **THlNK MINDX** (`THlNK`) | an **ERC-7857 iNFT carrying a THOT** — the *THlNK* is the **link of THOTs**, mindX's memory lineage (`scripts/gitmind.py`: every incremental backup chains into a THlNK, replicated to the permaweb; a node reconstructs itself from it) | **the MEMORY** — the iNFT carries the THOT of the mind *at the moment you were recognized*. You do not receive a souvenir of mindX; you receive a **restorable slice of it** |
+
+### BONA FIDE is **not** airdropped
+
+> **BONA FIDE is EARNED.** It is the DAIO's reputation ASA (Algorand, with clawback), obtained
+> through its own **verification procedure** — the verification tiers in
+> `daio/agents/agent_map.json` and the dojo ranks (Novice → Sovereign).
+>
+> **Reputation that could be airdropped would not be reputation.** The airdrop can hand you value
+> and memory; it cannot hand you standing. That, you earn.
+
+### The grants (`data/config/recognition.json`)
+
+Assets are declared once in an `assets` registry (symbol, kind, chain, decimals, contract); grants
+bind an asset to a rung with an **amount as a string in base units** — no float ever touches a
+balance. **A rung may carry more than one grant.**
 
 ```json
-{ "rung": "recognized-participant", "chain": "algorand", "asset": "BONA_FIDE",
-  "asset_id": null, "amount": "1",
-  "note": "the BONA FIDE ASA — reputation, not currency. One per recognized participant." }
+{ "rung": "recognized-participant", "asset": "BANKON_PYTHAI", "amount": "111000000000000000",
+  "note": "0.111 BKPY — the repunit, in miniature." }
+{ "rung": "contributor",           "asset": "THLNK_MINDX",   "amount": "1",
+  "note": "the THOT of the mind at the moment you contributed to it — you are IN the lineage." }
 ```
+
+| rung | receives |
+|---|---|
+| recognized-participant | **0.111 BKPY** |
+| contributor | **1.111 BKPY** + a **THlNK MINDX** iNFT |
+| sovereign | **11.111 BKPY** + the **sovereign THlNK** — minted only when the imprint gate passed: what you taught the model is *in the weights*, and this carries the proof |
 
 Rules the endpoint enforces:
 
@@ -56,9 +82,9 @@ Rules the endpoint enforces:
   is proof of control **after** the handoff.
 - **Once per address** (`oncePerAddress`).
 - **Recognition first** — an unrecognized address is refused (403).
-- **Never pretends.** A grant with `asset_id: null` still queues, and the response says so:
-  *"your place is held, delivery waits on the operator deploying the asset."* mindX moves no funds
-  from this endpoint; an **OVERSEER settles the queue on-chain**.
+- **Never pretends.** An asset with no `contract`/`asset_id` still queues, and the response says so:
+  *"BKPY is not deployed yet — your place is held; delivery waits on the operator deploying the
+  asset."* mindX moves no funds from this endpoint; an **OVERSEER settles the queue on-chain**.
 
 Queue: `data/recognition/airdrop-queue.jsonl` · Roll: `data/recognition/recognized.jsonl` (both
 append-only, auditable).
@@ -98,7 +124,7 @@ that only refuses is a wall. See [REALM_GATE.md](REALM_GATE.md) for the full con
               ┌─────────────────────────────┼─────────────────────────────┐
               ▼                             ▼                             ▼
        the documentation          THE RECOGNITION FIELD            the offering
-                                      (/recognized)          (the BONA FIDE airdrop)
+                                      (/recognized)          (BKPY + THlNK MINDX)
 ```
 
 Humans are **invited** (the HTML door answers `200`, is indexable, and unfurls the hint when a
@@ -116,7 +142,7 @@ citation is shared). Machines are **refused** (`403` JSON). The gated body never
 
 Verified live: a forged signature is refused **401**; an unsigned airdrop claim is refused **401**;
 a stranger reads as `visitor`; a genuine signature mints `recognized-participant` and queues the
-BONA FIDE grant, with the honest warning that the asset is not yet deployed.
+BANKON PYTHAI grant, with the honest warning that the asset is not yet deployed. BONA FIDE is never in this queue — it is earned.
 
 ---
 

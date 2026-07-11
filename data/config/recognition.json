@@ -15,16 +15,44 @@
     { "rung": "sovereign", "rank": 3, "earned": 100, "via": "EARNED — a contribution that survived the imprint gate (proof-of-recall in the model itself)", "opens": "your contribution is IN THE WEIGHTS — the dojo standings, the ascend record", "minted": true },
     { "rung": "overseer", "rank": 4, "earned": null, "via": "appointment — mindx.algo (Algorand Ed25519 → OVERSEER JWT)", "opens": "the gated surfaces; acts for the OVERLORD; cannot delete the OVERLORD", "minted": true }
   ],
+  "notBonaFide": "BONA FIDE IS NOT AIRDROPPED. It is the DAIO's reputation ASA (Algorand, clawback) and it is EARNED through its own procedure — verification tiers in daio/agents/agent_map.json, ranks in the dojo (Novice→Sovereign). Reputation that could be airdropped would not be reputation. The airdrop below carries the two things mindX can give freely: its VALUE (BANKON PYTHAI) and its MEMORY (THlNK MINDX).",
   "airdrop": {
     "enabled": true,
-    "note": "CONFIGURABLE. The operator sets asset/amount/chain per rung; nothing mints without an on-chain deployment behind it. Amounts are strings (base units) so no float ever touches a balance.",
+    "note": "CONFIGURABLE. The operator sets asset/amount/chain per rung; nothing mints without an on-chain deployment behind it. Amounts are strings in BASE UNITS so no float ever touches a balance. A rung may carry MORE THAN ONE grant.",
     "queue": "data/recognition/airdrop-queue.jsonl",
     "requireCovenantSignature": true,
     "oncePerAddress": true,
+    "assets": {
+      "BANKON_PYTHAI": {
+        "symbol": "BKPY",
+        "kind": "erc20-oft",
+        "chain": "evm",
+        "decimals": 18,
+        "contract": null,
+        "standard": "LayerZero OFT (BankonPythaiOFT) — omnichain, one hub mint",
+        "supply": "111111111000000000000000000",
+        "note": "FIXED SUPPLY 111,111.111 — the repunit pattern (cypherpunk2048). Minted exactly once at the hub; every other chain holds bridged supply. What mindX can give of its VALUE."
+      },
+      "THLNK_MINDX": {
+        "symbol": "THlNK",
+        "kind": "inft-7857",
+        "chain": "evm",
+        "contract": null,
+        "standard": "ERC-7857 iNFT carrying a THOT",
+        "note": "The THlNK is the LINK OF THOTs — mindX's memory lineage (scripts/gitmind.py: every incremental backup chains into a THlNK, replicated to the permaweb; a node reconstructs itself from it). An iNFT here carries the THOT of the mind AT THE MOMENT YOU WERE RECOGNIZED. What mindX can give of its MEMORY."
+      }
+    },
     "grants": [
-      { "rung": "recognized-participant", "chain": "algorand", "asset": "BONA_FIDE", "asset_id": null, "amount": "1", "note": "the BONA FIDE ASA — reputation, not currency. One per recognized participant." },
-      { "rung": "contributor", "chain": "algorand", "asset": "BONA_FIDE", "asset_id": null, "amount": "5", "note": "contribution compounds reputation." },
-      { "rung": "sovereign", "chain": "evm", "asset": "iNFT-7857", "contract": null, "amount": "1", "note": "an iNFT carrying the THOT of what you taught the model — mint only when the imprint gate passed." }
+      { "rung": "recognized-participant", "asset": "BANKON_PYTHAI", "amount": "111000000000000000",
+        "note": "0.111 BKPY — the repunit, in miniature. Your first claim on the value of the mind you joined." },
+      { "rung": "contributor", "asset": "BANKON_PYTHAI", "amount": "1111000000000000000",
+        "note": "1.111 BKPY — contribution compounds." },
+      { "rung": "contributor", "asset": "THLNK_MINDX", "amount": "1",
+        "note": "an iNFT carrying the THOT of the mind at the moment you contributed to it — you are IN the lineage." },
+      { "rung": "sovereign", "asset": "THLNK_MINDX", "amount": "1",
+        "note": "the sovereign THlNK — minted only when the imprint gate passed: what you taught the model is IN THE WEIGHTS, and this carries the proof." },
+      { "rung": "sovereign", "asset": "BANKON_PYTHAI", "amount": "11111000000000000000",
+        "note": "11.111 BKPY." }
     ]
   },
   "substrate": {

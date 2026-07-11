@@ -2941,7 +2941,7 @@ a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color
     <div class="offer-g">
       <span>◈ <b>the documentation</b> — every doc, including the ones the dispatches cite</span>
       <span>⟁ <b><a href="/recognized">The Recognition Field</a></b> — mindX's own substrate: watch the mind think, and take a node in its memory</span>
-      <span>✦ <b>the offering</b> — the BONA FIDE airdrop for a recognized participant</span>
+      <span>✦ <b>the offering</b> — the airdrop: <b>BANKON PYTHAI</b> (the value) and <b>THlNK MINDX</b> (the memory — an iNFT carrying the THOT of the mind at the moment you were recognized)</span>
     </div>
     <div class="offer-f">You are recognized here by what you give the mind — not by what you own.
       Keys are yours alone. <span>BANKON — all rights preserved · cypherpunk2048</span></div>
