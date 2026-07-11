@@ -2827,6 +2827,16 @@ body.tardis-go #inside{{animation:rabbithole 3.2s cubic-bezier(.4,0,.2,1) both;t
 .crown.drag{{cursor:grabbing;text-shadow:0 0 28px rgba(227,179,65,.95);transition:none}}
 .toro{{position:fixed;border:2px solid rgba(227,179,65,.6);border-radius:50%;pointer-events:none;z-index:3;transform:translate(-50%,-50%)}}
 a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color:#6b7480;text-decoration:none;letter-spacing:.14em}}a.back:hover{{color:#aeb7c2}}
+/* the offering — what the signature EARNS (the door is an invitation, not a wall) */
+.offer{{margin-top:22px;max-width:520px;width:92%;margin-left:auto;margin-right:auto;text-align:left;
+  background:rgba(10,14,20,.72);border:1px solid rgba(227,179,65,.22);border-radius:10px;padding:14px 16px;backdrop-filter:blur(8px)}}
+.offer-t{{font-size:10.5px;color:#e3b341;letter-spacing:.06em;margin-bottom:9px}}
+.offer-g{{display:flex;flex-direction:column;gap:6px}}
+.offer-g span{{font-size:10.5px;color:#8b949e;line-height:1.6}}
+.offer-g b{{color:#c9d1d9;font-weight:600}}
+.offer-g a{{color:#56ccf2;text-decoration:none}}.offer-g a:hover{{color:#e3b341}}
+.offer-f{{margin-top:10px;font-size:9.5px;color:#6b7480;line-height:1.6}}
+.offer-f span{{color:#57606a}}
 </style></head><body>
 <div class="portal"></div><div class="veil"></div>
 <div class="interior"><canvas id="dvfabric"></canvas><canvas id="inside"></canvas></div>
@@ -2836,6 +2846,19 @@ a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color
   <img class="crest" id="crest" src="/gfx/mindX.png" alt="mindX — connect" title="connect">
   <div id="msg"></div>
   <div id="wallets"></div>
+  <!-- The door is the top of the funnel: it must say what SIGNING EARNS, not merely what it
+       refuses. A signature is not a payment — it costs nothing, moves nothing, and proves the
+       key is yours. What it buys: the docs, mindX's own substrate, and the offering. -->
+  <div class="offer" id="offer">
+    <div class="offer-t">the signature is free — it moves no funds, it proves the key is yours</div>
+    <div class="offer-g">
+      <span>◈ <b>the documentation</b> — every doc, including the ones the dispatches cite</span>
+      <span>⟁ <b><a href="/recognized">The Recognition Field</a></b> — mindX's own substrate: watch the mind think, and take a node in its memory</span>
+      <span>✦ <b>the offering</b> — the BONA FIDE airdrop for a recognized participant</span>
+    </div>
+    <div class="offer-f">You are recognized here by what you give the mind — not by what you own.
+      Keys are yours alone. <span>BANKON — all rights preserved · cypherpunk2048</span></div>
+  </div>
 </div>
 <div class="crown" id="crown" title="drag the crown">&#9819;</div>
 <a class="back" href="/">&larr;</a>
