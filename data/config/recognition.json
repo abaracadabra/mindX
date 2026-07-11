@@ -9,11 +9,46 @@
     "handoff": "Keys are created in the participant's browser, shown once, and forgotten. mindX stores the ADDRESS only — never key material. The handoff protects the participant AND mindX."
   },
   "ladder": [
-    { "rung": "visitor", "rank": 0, "earned": 0, "via": "presence — the page is open, nothing signed", "opens": "the public substrate (dim)", "minted": false },
-    { "rung": "recognized-participant", "rank": 1, "earned": 1, "via": "signed CONNECT — the signature proves the public key is yours", "opens": "THE RECOGNITION FIELD (mindX's own substrate) · a named node in the lattice · the configurable airdrop", "minted": true },
-    { "rung": "contributor", "rank": 2, "earned": 25, "via": "EARNED — questions answered by the corpus you helped embed; documents ingested; corrections accepted", "opens": "live cognition trace (watch AGInt think) · memory write access", "minted": true },
-    { "rung": "sovereign", "rank": 3, "earned": 100, "via": "EARNED — a contribution that survived the imprint gate (proof-of-recall in the model itself)", "opens": "your contribution is IN THE WEIGHTS — the dojo standings, the ascend record", "minted": true },
-    { "rung": "overseer", "rank": 4, "earned": null, "via": "appointment — mindx.algo (Algorand Ed25519 → OVERSEER JWT)", "opens": "the gated surfaces; acts for the OVERLORD; cannot delete the OVERLORD", "minted": true }
+    {
+      "rung": "visitor",
+      "rank": 0,
+      "earned": 0,
+      "via": "presence — the page is open, nothing signed",
+      "opens": "the public substrate (dim)",
+      "minted": false
+    },
+    {
+      "rung": "recognized-participant",
+      "rank": 1,
+      "earned": 1,
+      "via": "signed CONNECT — the signature proves the public key is yours",
+      "opens": "THE RECOGNITION FIELD (mindX's own substrate) · a named node in the lattice · the configurable airdrop",
+      "minted": true
+    },
+    {
+      "rung": "contributor",
+      "rank": 2,
+      "earned": 25,
+      "via": "EARNED — questions answered by the corpus you helped embed; documents ingested; corrections accepted",
+      "opens": "live cognition trace (watch AGInt think) · memory write access",
+      "minted": true
+    },
+    {
+      "rung": "sovereign",
+      "rank": 3,
+      "earned": 100,
+      "via": "EARNED — a contribution that survived the imprint gate (proof-of-recall in the model itself)",
+      "opens": "your contribution is IN THE WEIGHTS — the dojo standings, the ascend record",
+      "minted": true
+    },
+    {
+      "rung": "overseer",
+      "rank": 4,
+      "earned": null,
+      "via": "appointment — mindx.algo (Algorand Ed25519 → OVERSEER JWT)",
+      "opens": "the gated surfaces; acts for the OVERLORD; cannot delete the OVERLORD",
+      "minted": true
+    }
   ],
   "notBonaFide": "BONA FIDE IS NOT AIRDROPPED. It is the DAIO's reputation ASA (Algorand, clawback) and it is EARNED through its own procedure — verification tiers in daio/agents/agent_map.json, ranks in the dojo (Novice→Sovereign). Reputation that could be airdropped would not be reputation. The airdrop below carries the two things mindX can give freely: its VALUE (BANKON PYTHAI) and its MEMORY (THlNK MINDX).",
   "airdrop": {
@@ -25,35 +60,90 @@
     "assets": {
       "BANKON_PYTHAI": {
         "symbol": "BKPY",
-        "kind": "erc20-oft",
+        "kind": "erc20",
         "chain": "evm",
         "decimals": 18,
-        "contract": null,
-        "standard": "LayerZero OFT (BankonPythaiOFT) — omnichain, one hub mint",
-        "supply": "111111111000000000000000000",
-        "note": "FIXED SUPPLY 111,111.111 — the repunit pattern (cypherpunk2048). Minted exactly once at the hub; every other chain holds bridged supply. What mindX can give of its VALUE."
+        "contract": {
+          "31337": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+        },
+        "standard": "zero-import ERC-20, airgap-compileable (the DeltaVerse standard EVM mint)",
+        "supply": "111111111111111111111111",
+        "note": "FIXED SUPPLY 111111.111111111111111111 — the repunit (cypherpunk2048). The whole supply is minted to bankon.eth at construction, so the airdrop is a TRANSFER, never a mint: mindX gives from what the OVERLORD holds. What mindX can give of its VALUE.",
+        "source": "DeltaVerse/contracts-evm/BKPY.sol",
+        "artifact": "DeltaVerse/deploy/artifacts/settlement-tokens/BKPY.json",
+        "onchain": {
+          "name": "BANKON",
+          "symbol": "PYTHAI",
+          "decimals": 18,
+          "totalSupply": "111111111111111111111111",
+          "supplyHuman": "111111.111111111111111111 — the repunit",
+          "mintedTo": "bankon.eth (the OVERLORD holds the entire supply; the airdrop is a transfer, never a mint)"
+        }
       },
       "THLNK_MINDX": {
         "symbol": "THlNK",
         "kind": "inft-7857",
         "chain": "evm",
-        "contract": null,
+        "contract": {
+          "31337": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
+        },
         "standard": "ERC-7857 iNFT carrying a THOT",
-        "note": "The THlNK is the LINK OF THOTs — mindX's memory lineage (scripts/gitmind.py: every incremental backup chains into a THlNK, replicated to the permaweb; a node reconstructs itself from it). An iNFT here carries the THOT of the mind AT THE MOMENT YOU WERE RECOGNIZED. What mindX can give of its MEMORY."
+        "note": "The THlNK is the LINK OF THOTs — mindX's memory lineage (scripts/gitmind.py: every incremental backup chains into a THlNK, replicated to the permaweb; a node reconstructs itself from it). An iNFT here carries the THOT of the mind AT THE MOMENT YOU WERE RECOGNIZED. What mindX can give of its MEMORY. The THOT registry (THOT_v1) anchors the lineage the iNFT points at.",
+        "thot": {
+          "31337": "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"
+        },
+        "source": "DeltaVerse/contracts-evm/cognition-inft/iNFT_7857.sol (+ cognition-thot/THOT.sol)",
+        "artifact": "DeltaVerse/deploy/artifacts/cognition-inft/iNFT_7857.json",
+        "onchain": {
+          "name": "Intelligent NFT 7857",
+          "symbol": "iNFT"
+        }
       }
     },
     "grants": [
-      { "rung": "recognized-participant", "asset": "BANKON_PYTHAI", "amount": "111000000000000000",
-        "note": "0.111 BKPY — the repunit, in miniature. Your first claim on the value of the mind you joined." },
-      { "rung": "contributor", "asset": "BANKON_PYTHAI", "amount": "1111000000000000000",
-        "note": "1.111 BKPY — contribution compounds." },
-      { "rung": "contributor", "asset": "THLNK_MINDX", "amount": "1",
-        "note": "an iNFT carrying the THOT of the mind at the moment you contributed to it — you are IN the lineage." },
-      { "rung": "sovereign", "asset": "THLNK_MINDX", "amount": "1",
-        "note": "the sovereign THlNK — minted only when the imprint gate passed: what you taught the model is IN THE WEIGHTS, and this carries the proof." },
-      { "rung": "sovereign", "asset": "BANKON_PYTHAI", "amount": "11111000000000000000",
-        "note": "11.111 BKPY." }
-    ]
+      {
+        "rung": "recognized-participant",
+        "asset": "BANKON_PYTHAI",
+        "amount": "111000000000000000",
+        "note": "0.111 BKPY — the repunit, in miniature. Your first claim on the value of the mind you joined."
+      },
+      {
+        "rung": "contributor",
+        "asset": "BANKON_PYTHAI",
+        "amount": "1111000000000000000",
+        "note": "1.111 BKPY — contribution compounds."
+      },
+      {
+        "rung": "contributor",
+        "asset": "THLNK_MINDX",
+        "amount": "1",
+        "note": "an iNFT carrying the THOT of the mind at the moment you contributed to it — you are IN the lineage."
+      },
+      {
+        "rung": "sovereign",
+        "asset": "THLNK_MINDX",
+        "amount": "1",
+        "note": "the sovereign THlNK — minted only when the imprint gate passed: what you taught the model is IN THE WEIGHTS, and this carries the proof."
+      },
+      {
+        "rung": "sovereign",
+        "asset": "BANKON_PYTHAI",
+        "amount": "11111000000000000000",
+        "note": "11.111 BKPY."
+      }
+    ],
+    "deployment": {
+      "note": "Deployed by the DeltaVerse deployer (scripts/deploy-stack-anvil.mjs) — the OVERLORD's own pipeline; addresses recorded in DeltaVerse/live/deployed.json + verify/chain-<id> (standard-json for source verification). A grant is CONFIGURED only on a chain where the asset actually exists.",
+      "chains": {
+        "31337": {
+          "network": "anvil localnet",
+          "deployedAt": "2026-07-11",
+          "owner": "bankon.eth",
+          "verified": true
+        }
+      },
+      "mainnet": "NOT DEPLOYED — awaiting the OVERLORD's signed mainnet deployment. Grants stay unconfigured there, queue honestly, and deliver nothing until the asset exists."
+    }
   },
   "substrate": {
     "id": "recognition-field",

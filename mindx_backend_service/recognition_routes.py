@@ -24,6 +24,7 @@ real on-chain asset. An unconfigured grant (asset_id null) queues and says so �
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -42,6 +43,20 @@ STATE_DIR = PROJECT_ROOT / "data" / "recognition"
 QUEUE_PATH = STATE_DIR / "airdrop-queue.jsonl"
 ROLL_PATH = STATE_DIR / "recognized.jsonl"
 FIELD_HTML = Path(__file__).parent / "recognition_field.html"
+
+
+# Where a claim lands when the caller does not say. 31337 = the anvil localnet the DeltaVerse
+# deployer targets; set MINDX_RECOGNITION_CHAIN_ID to point the offering at another chain.
+DEFAULT_CHAIN_ID = os.getenv("MINDX_RECOGNITION_CHAIN_ID", "31337")
+
+
+def _addr_for(field: Any, chain_id: str) -> Optional[str]:
+    """Resolve a per-chain address. Accepts {"31337": "0x…"} (the DeltaVerse convention) or a bare
+    string (single-chain). Returns None where the asset is not deployed — which is how an honest
+    grant knows to queue and SAY SO instead of pretending."""
+    if isinstance(field, dict):
+        return field.get(str(chain_id))
+    return field or None
 
 
 def _config() -> Dict[str, Any]:
@@ -135,11 +150,16 @@ async def recognition_offer() -> Dict[str, Any]:
             "requireCovenantSignature": bool(ad.get("requireCovenantSignature", True)),
             "oncePerAddress": bool(ad.get("oncePerAddress", True)),
             "assets": ad.get("assets", {}),
+            "deployment": ad.get("deployment", {}),
+            "chainId": DEFAULT_CHAIN_ID,
             "grants": [
-                {**g, **{k: v for k, v in ad.get("assets", {}).get(g.get("asset"), {}).items()
+                {**g, **{k: v for k, v in (ad.get("assets", {}).get(g.get("asset")) or {}).items()
                          if k in ("symbol", "kind", "chain", "decimals")},
-                 "configured": bool((ad.get("assets", {}).get(g.get("asset"), {}) or {}).get("contract")
-                                    or (ad.get("assets", {}).get(g.get("asset"), {}) or {}).get("asset_id"))}
+                 "contract": _addr_for((ad.get("assets", {}).get(g.get("asset")) or {}).get("contract"),
+                                       DEFAULT_CHAIN_ID),
+                 "configured": bool(
+                     _addr_for((ad.get("assets", {}).get(g.get("asset")) or {}).get("contract"), DEFAULT_CHAIN_ID)
+                     or _addr_for((ad.get("assets", {}).get(g.get("asset")) or {}).get("asset_id"), DEFAULT_CHAIN_ID))}
                 for g in ad.get("grants", [])
             ],
         },
@@ -226,14 +246,20 @@ async def airdrop(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         except Exception:
             pass
 
+    # Which chain is the participant claiming on? Addresses are keyed by chainId (the DeltaVerse
+    # privilege-tiers convention): an asset is CONFIGURED only where it actually exists on-chain.
+    chain_id = str(payload.get("chainId") or DEFAULT_CHAIN_ID)
+
     queued, pending = [], []
     for g in grants:
         a = assets.get(g.get("asset"), {})
-        configured = bool(a.get("contract") or a.get("asset_id"))
-        entry = {"address": address, "rung": rung,
+        contract = _addr_for(a.get("contract"), chain_id)
+        asset_id = _addr_for(a.get("asset_id"), chain_id)
+        configured = bool(contract or asset_id)
+        entry = {"address": address, "rung": rung, "chainId": chain_id,
                  "asset": g.get("asset"), "symbol": a.get("symbol"), "kind": a.get("kind"),
                  "chain": a.get("chain"), "decimals": a.get("decimals"),
-                 "contract": a.get("contract"), "asset_id": a.get("asset_id"),
+                 "contract": contract, "asset_id": asset_id,
                  "amount": g.get("amount"), "configured": configured, "iat": int(time.time())}
         _append(QUEUE_PATH, entry)
         queued.append(entry)
