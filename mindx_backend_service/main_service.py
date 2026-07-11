@@ -982,12 +982,15 @@ async def read_doc(name: str, request: Request):
         for d in os.environ.get("MINDX_MEMBER_ONLY_DOCS", "").split(",") if d.strip()
     }
     _stem_u = doc_path.stem.upper()
+    # The door shows the HINT of what access provides — this doc's title, shape and opening lines.
+    # A preview is not access: the body of the doc never crosses the gate.
+    _pv = _doc_preview(doc_path, f"/doc/{safe}")
     if _stem_u in _MEMBER_DOCS:
-        _tg = await _tier_gate(request, "member", f"/doc/{safe}")
+        _tg = await _tier_gate(request, "member", f"/doc/{safe}", preview=_pv)
         if _tg is not None:
             return _tg
     elif _stem_u not in _PUBLIC_DOCS:
-        _tg = await _tier_gate(request, "participant", f"/doc/{safe}")
+        _tg = await _tier_gate(request, "participant", f"/doc/{safe}", preview=_pv)
         if _tg is not None:
             return _tg
     md = doc_path.read_text(encoding="utf-8", errors="replace")
@@ -2727,7 +2730,8 @@ async def _reference_access_ok(request: Request) -> bool:
         return False
 
 
-async def _tier_gate(request: "Request", min_tier: str, html_from: str):
+async def _tier_gate(request: "Request", min_tier: str, html_from: str,
+                     preview: Optional[Dict[str, Any]] = None):
     """OVERLORD-protocol tier gate. Resolve the viewer's realm tier from the
     signature-derived JWT (via _viewer_role: Bearer / X-Overlord-Token / ?t=),
     rank it on the canonical hierarchy ladder (public < participant < member <
@@ -2772,20 +2776,93 @@ async def _tier_gate(request: "Request", min_tier: str, html_from: str):
     accept = request.headers.get("accept", "")
     if "text/html" in accept and getattr(request, "method", "GET") == "GET":
         safe_from = html_from if html_from.startswith("/") and not html_from.startswith("//") else "/"
-        return _DashResponse(content=_access_denied_page(safe_from, min_tier), status_code=403)
+        # STATUS 200 for the HTML door (2026-07-11). A door is not a refusal: it is a page a human
+        # is meant to READ and ACT on. Under 403, crawlers refuse to index it, and every link-preview
+        # unfurler (X, Discord, Slack, Google) renders a dead card — so the docs the public dispatches
+        # CITE became invisible exactly where the funnel needed them visible. The door now answers 200
+        # and carries a PREVIEW of the doc behind it: a preview is not access, it is the HINT OF WHAT
+        # ACCESS PROVIDES. The gated content itself never crosses this line — only its title, shape and
+        # opening lines. API clients (no text/html) still get a hard 403 below: machines are refused,
+        # humans are invited.
+        return _DashResponse(content=_access_denied_page(safe_from, min_tier, preview=preview),
+                             status_code=200)
     raise HTTPException(status_code=403, detail=f"realm tier '{min_tier}' required — connect at /activity")
 
 
-def _access_denied_page(from_path: str, min_tier: str) -> str:
+def _doc_preview(doc_path, url_path: str) -> Dict[str, Any]:
+    """The HINT of what access provides — never the access itself.
+
+    Title, shape (headings, length), and the opening prose of the doc behind the door. Deliberately
+    bounded: one teaser paragraph and the section titles. Enough to know whether it is worth a
+    signature; never enough to be a substitute for one.
+    """
+    import re as _re
+    try:
+        md = doc_path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return {}
+    lines = md.split("\n")
+    title = next((l[2:].strip() for l in lines if l.startswith("# ")), doc_path.stem)
+    headings = [l.lstrip("#").strip() for l in lines if l.startswith("## ")][:6]
+    prose = []
+    for l in lines:
+        s = l.strip()
+        if not s or s.startswith(("#", ">", "|", "```", "-", "*", "<", "!")):
+            continue
+        prose.append(_re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", s))
+        if sum(len(p) for p in prose) > 320:
+            break
+    teaser = " ".join(prose)[:320].rsplit(" ", 1)[0] + "…" if prose else ""
+    words = len(_re.findall(r"[A-Za-z0-9']+", md))
+    return {"title": title, "teaser": teaser, "headings": headings, "words": words,
+            "kb": round(len(md) / 1024, 1), "path": url_path}
+
+
+def _access_denied_page(from_path: str, min_tier: str,
+                        preview: Optional[Dict[str, Any]] = None) -> str:
     """THE standard mindX realm gate — image-forward, few words. A doorway portal,
     a single CONNECT. Sign proves control (no funds access); on a sufficient tier
-    it opens the requested page, else it names the tier. Harmonized across gates."""
+    it opens the requested page, else it names the tier. Harmonized across gates.
+
+    With a `preview`, the door shows the HINT of what access provides: the title, shape and
+    opening lines of the doc behind it — plus OpenGraph tags so a shared link unfurls that hint
+    rather than a dead card. A preview is not access. The gated text never crosses this line.
+    """
+    import html as _html
     import json as _json
     frm = _json.dumps(from_path)
     tier = _json.dumps(min_tier)
+    p = preview or {}
+    _e = lambda s: _html.escape(str(s or ""), quote=True)
+    og_title = f"{p['title']} — mindX" if p.get("title") else "mindX — the Realm"
+    og_desc = (p.get("teaser") or
+               "Sign to be recognized. The signature is free, moves no funds, and proves the key is "
+               "yours — it opens the documentation, mindX's own substrate, and the offering.")
+    preview_html = ""
+    if p:
+        _heads = "".join(f"<li>{_e(h)}</li>" for h in p.get("headings", []))
+        _words = f"{int(p.get('words', 0) or 0):,}"   # format the INT, then escape — ',' on a str raises
+        preview_html = (
+            '<div class="peek">'
+            f'<div class="peek-k">behind this door · {_e(_words)} words · {_e(p.get("kb", 0))} KB</div>'
+            f'<div class="peek-t">{_e(p.get("title"))}</div>'
+            f'<div class="peek-x">{_e(p.get("teaser"))}</div>'
+            + (f'<ul class="peek-h">{_heads}</ul>' if _heads else "")
+            + '<div class="peek-f">a preview is not access — it is the hint of what access provides. '
+              'One signature opens it, and everything else behind the realm.</div>'
+            '</div>'
+        )
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>mindX — the Realm</title><meta name="robots" content="noindex,nofollow">
+<title>{_e(og_title)}</title>
+<meta name="description" content="{_e(og_desc)}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="{_e(og_title)}">
+<meta property="og:description" content="{_e(og_desc)}">
+<meta property="og:site_name" content="mindX">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{_e(og_title)}">
+<meta name="twitter:description" content="{_e(og_desc)}">
 <link rel="icon" href="/gfx/favicon.ico" sizes="any">
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
@@ -2827,6 +2904,15 @@ body.tardis-go #inside{{animation:rabbithole 3.2s cubic-bezier(.4,0,.2,1) both;t
 .crown.drag{{cursor:grabbing;text-shadow:0 0 28px rgba(227,179,65,.95);transition:none}}
 .toro{{position:fixed;border:2px solid rgba(227,179,65,.6);border-radius:50%;pointer-events:none;z-index:3;transform:translate(-50%,-50%)}}
 a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color:#6b7480;text-decoration:none;letter-spacing:.14em}}a.back:hover{{color:#aeb7c2}}
+/* the peek — the HINT of what access provides (never the access itself) */
+.peek{{margin-top:20px;max-width:520px;width:92%;margin-left:auto;margin-right:auto;text-align:left;
+  background:rgba(10,14,20,.72);border:1px solid rgba(86,204,242,.22);border-radius:10px;padding:14px 16px;backdrop-filter:blur(8px)}}
+.peek-k{{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#57606a;margin-bottom:6px}}
+.peek-t{{font-size:14px;color:#c9d1d9;margin-bottom:7px}}
+.peek-x{{font-size:10.5px;color:#8b949e;line-height:1.75}}
+.peek-h{{margin:9px 0 0 16px;padding:0}}
+.peek-h li{{font-size:10px;color:#6b7480;line-height:1.7;list-style:'· '}}
+.peek-f{{margin-top:10px;font-size:9.5px;color:#57606a;line-height:1.6;font-style:italic}}
 /* the offering — what the signature EARNS (the door is an invitation, not a wall) */
 .offer{{margin-top:22px;max-width:520px;width:92%;margin-left:auto;margin-right:auto;text-align:left;
   background:rgba(10,14,20,.72);border:1px solid rgba(227,179,65,.22);border-radius:10px;padding:14px 16px;backdrop-filter:blur(8px)}}
@@ -2846,6 +2932,7 @@ a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color
   <img class="crest" id="crest" src="/gfx/mindX.png" alt="mindX — connect" title="connect">
   <div id="msg"></div>
   <div id="wallets"></div>
+  {preview_html}
   <!-- The door is the top of the funnel: it must say what SIGNING EARNS, not merely what it
        refuses. A signature is not a payment — it costs nothing, moves nothing, and proves the
        key is yours. What it buys: the docs, mindX's own substrate, and the offering. -->
