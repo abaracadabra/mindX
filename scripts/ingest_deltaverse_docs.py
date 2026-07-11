@@ -25,6 +25,8 @@ Usage:
   --interactive  bypass the ResourceGovernor throttle (operator-supervised backfill)
   --check        diagnostics only: report store counts, no ingestion
   --docs-only    skip the /data JSON surfaces
+  --resume       skip surfaces already embedded (default OFF = full re-embed).
+                 CPU embeds cost ~1 min/chunk — never re-grind good work.
 """
 
 import sys, json, time, asyncio
@@ -37,6 +39,7 @@ DIAG_OUT = DELTAVERSE / "live" / "rage-ingest.json"
 INTERACTIVE = "--interactive" in sys.argv
 CHECK = "--check" in sys.argv
 DOCS_ONLY = "--docs-only" in sys.argv
+RESUME = "--resume" in sys.argv
 MAX_DATA_BYTES = 200_000          # cap per JSON data file (pretty-printed)
 
 DDL = """
@@ -134,6 +137,14 @@ async def main():
     print(f"embed model OK — {len(probe)} dims · backend {diag['backend']} · index {diag['index']}")
 
     work = deltaverse_docs() + ([] if DOCS_ONLY else deltaverse_data())
+    if RESUME:
+        async with pool.acquire() as c:
+            have = {r["doc_name"] for r in await c.fetch(
+                "SELECT DISTINCT doc_name FROM doc_embeddings WHERE doc_name LIKE 'deltaverse/%'")}
+        before = len(work)
+        work = [(n, p) for (n, p) in work if n not in have]
+        diag["resumed"] = {"already_embedded": len(have), "skipped": before - len(work)}
+        print(f"resume: {len(have)} surfaces already in the store · {len(work)} remain")
     print(f"maintaining {len(work)} DeltaVerse surfaces in RAGE…")
     for i, (name, path) in enumerate(work):
         try:

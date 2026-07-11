@@ -13,6 +13,7 @@ Connection: postgresql://mindx:mindx_secure_2026@localhost:5432/mindx
 
 import json
 import os
+import time
 import asyncio
 from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime, timezone
@@ -734,6 +735,42 @@ async def _bg_governor(interactive: bool):
         return None
 
 
+# ── anti-starvation + failure-noise discipline (the 2026-07-11 productive-state fix) ──
+# On a 2-core box whose CPU is ALWAYS busy (resident gen model), "defer until idle"
+# never fires: 698/727 embeds in 30 min were cpu_throttled_deferred → memory/RAG
+# starved while the journal filled with per-call WARNINGs. Three module-level valves:
+#   _vllm_down_until — negative-cache a dead vLLM endpoint (skip the leg 10 min after
+#                      a connect error; one probe revives it).
+#   _trickle_next    — the STARVATION FLOOR: even when the governor says throttle,
+#                      allow one embed per TRICKLE_S (default 10s ≈ 6/min ≈ ~10% of one
+#                      core for short texts). Starving memory is worse than 10% load.
+#   _warn_state      — roll per-call failure WARNINGs into one summary line per 60s.
+_VLLM_COOLDOWN_S = float(os.getenv("MINDX_VLLM_EMBED_COOLDOWN_S", "600"))
+_TRICKLE_S = float(os.getenv("MINDX_EMBED_TRICKLE_S", "10"))
+# CPU embeds are SLOW (measured: bge-m3 ~57s/chunk on a 2-core box). The old hard-coded
+# 30s client timeout guaranteed failure on exactly the hardware mindX runs on.
+_EMBED_TIMEOUT_S = float(os.getenv("MINDX_EMBED_TIMEOUT_S", "180"))
+_vllm_down_until = 0.0
+_trickle_next = 0.0
+_warn_state = {"t": 0.0, "n": 0, "last": ""}
+
+
+def _warn_rollup(msg: str) -> None:
+    """One WARNING per 60s summarizing embed failures; the rest stay DEBUG."""
+    now = time.monotonic()
+    _warn_state["n"] += 1
+    _warn_state["last"] = msg
+    if now - _warn_state["t"] >= 60.0:
+        logger.warning(
+            f"generate_embedding: {_warn_state['n']} failure(s) in the last "
+            f"{'∞' if not _warn_state['t'] else '60s'} · last: {msg}"
+        )
+        _warn_state["t"] = now
+        _warn_state["n"] = 0
+    else:
+        logger.debug(f"generate_embedding failure: {msg}")
+
+
 def _hf_pool(data: Any) -> Optional[List[float]]:
     """Normalize HuggingFace feature-extraction output to a flat 1-D embedding.
     sentence-transformers models (bge-m3) return a 1-D vector; raw models return
@@ -769,19 +806,26 @@ async def generate_embedding(
 
     vllm_status = ollama_status = None
 
-    # 1. Try vLLM (fast, batched, production)
-    try:
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15)) as sess:
-            payload = {"model": model, "input": text[:8000]}
-            async with sess.post(f"{VLLM_EMBED_URL}/v1/embeddings", json=payload) as resp:
-                vllm_status = resp.status
-                if resp.status == 200:
-                    data = await resp.json()
-                    emb_data = data.get("data", [])
-                    if emb_data and "embedding" in emb_data[0]:
-                        return emb_data[0]["embedding"]
-    except Exception as e:
-        vllm_status = f"err:{type(e).__name__}"
+    # 1. Try vLLM (fast, batched, production) — negative-cached: a dead endpoint is
+    #    skipped for _VLLM_COOLDOWN_S rather than re-erroring on every call.
+    global _vllm_down_until, _trickle_next
+    if time.monotonic() < _vllm_down_until:
+        vllm_status = "cooldown_skip"
+    else:
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15)) as sess:
+                payload = {"model": model, "input": text[:8000]}
+                async with sess.post(f"{VLLM_EMBED_URL}/v1/embeddings", json=payload) as resp:
+                    vllm_status = resp.status
+                    if resp.status == 200:
+                        data = await resp.json()
+                        emb_data = data.get("data", [])
+                        if emb_data and "embedding" in emb_data[0]:
+                            return emb_data[0]["embedding"]
+        except Exception as e:
+            vllm_status = f"err:{type(e).__name__}"
+            if "Connect" in type(e).__name__ or "ConnectionRefused" in str(e):
+                _vllm_down_until = time.monotonic() + _VLLM_COOLDOWN_S
 
     # 2. Fallback to Ollama (reliable, CPU). This shares the processor with
     #    web-serving: when the box is over the CPU ceiling, DEFER the embed (return
@@ -791,12 +835,26 @@ async def generate_embedding(
     import contextlib
     try:
         gov = await _bg_governor(interactive)
-        if gov is not None and gov.should_throttle():
+        throttled = gov is not None and gov.should_throttle()
+        if throttled and time.monotonic() >= _trickle_next:
+            # the STARVATION FLOOR: on a box that is never idle, "defer until idle"
+            # starves memory forever — let one embed through per _TRICKLE_S anyway.
+            _trickle_next = time.monotonic() + _TRICKLE_S
+            throttled = False
+        if throttled:
             ollama_status = "cpu_throttled_deferred"
         else:
             slot = gov.inference_slot() if gov is not None else contextlib.nullcontext()
             async with slot:
-                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as sess:
+                # CPU-REALITY TIMEOUT (2026-07-11): the old 30s ceiling was SHORTER than a
+                # real CPU embed. Measured on the 2-core class of box mindX actually runs on:
+                # bge-m3 (566M, F16) takes ~57s for a 500-word chunk; mxbai ~15-40s under load.
+                # Every over-budget embed died as TimeoutError → None → "0 chunks embedded",
+                # so a doc corpus silently never landed (149/221 surfaces in the 2026-07-11
+                # DeltaVerse backfill). The wall-clock cost of waiting is real work completing;
+                # the cost of timing out is the SAME CPU burned for nothing. Override with
+                # MINDX_EMBED_TIMEOUT_S.
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=_EMBED_TIMEOUT_S)) as sess:
                     async with sess.post(f"{OLLAMA_EMBED_URL}/api/embeddings", json={"model": model, "prompt": text[:8000]}) as resp:
                         ollama_status = resp.status
                         if resp.status == 200:
@@ -839,7 +897,7 @@ async def generate_embedding(
         except Exception as e:
             hf_status = f"err:{type(e).__name__}"
 
-    logger.warning(
+    _warn_rollup(
         f"generate_embedding({model}, len={len(text)}): vLLM={vllm_status} "
         f"ollama={ollama_status} hf={hf_status if HF_TOKEN else 'no_token'}"
     )

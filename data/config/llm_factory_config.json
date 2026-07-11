@@ -38,7 +38,7 @@
       "inference_timeout": 180
     },
     "vllm": {
-      "base_url": "http://localhost:8000",
+      "base_url": "http://localhost:8001",
       "default_model": "Qwen/Qwen3-0.6B",
       "timeout": 300,
       "inference_timeout": 300
@@ -90,6 +90,19 @@
     "max_repeated_errors": 5,
     "circuit_breaker_threshold": 3
   },
-  "default_provider_preference_order": ["vllm", "ollama", "ollama_cloud", "groq", "gemini", "mistral", "grok"],
-  "free_tier_pool": ["ollama_cloud", "groq", "gemini", "mistral"]
+  "default_provider_preference_order": [
+    "ollama",
+    "ollama_cloud",
+    "gemini",
+    "groq",
+    "mistral",
+    "vllm",
+    "grok"
+  ],
+  "free_tier_pool": [
+    "ollama_cloud",
+    "groq",
+    "gemini",
+    "mistral"
+  ]
 }

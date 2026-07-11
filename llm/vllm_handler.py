@@ -18,6 +18,7 @@ pacing) — realistic API consumption, not shotgunning.
 """
 import json
 import os
+import time
 from typing import Dict, Any, Optional, List
 
 try:
@@ -36,6 +37,11 @@ class VLLMHandler(LLMHandlerInterface):
     Handles interactions with a vLLM server via its OpenAI-compatible API.
     """
 
+    # Class-level negative cache: when no vLLM server answers, every handler instance
+    # stops dialing the local legs until the cooldown lapses (see generate_text).
+    _down_until: float = 0.0
+    _DOWN_COOLDOWN_S: float = float(os.getenv("MINDX_VLLM_DOWN_COOLDOWN_S", "300"))
+
     def __init__(
         self,
         model_name_for_api: Optional[str] = None,
@@ -45,12 +51,30 @@ class VLLMHandler(LLMHandlerInterface):
     ):
         super().__init__("vllm", model_name_for_api, api_key, base_url)
 
+        # SELF-CALL GUARD (2026-07-11). vLLM's OpenAI server conventionally listens on
+        # :8000 — but that is ALSO mindX's own FastAPI port. On any node where the backend
+        # serves :8000, the old default made every "vLLM" call POST to mindX ITSELF, where
+        # the api_access_gate answered 401 auth_required. Result on the live VPS: vllm sits
+        # FIRST in default_provider_preference_order, so every inference burned a round-trip
+        # into our own gate, logged a WARNING, and cascaded to "All model attempts failed"
+        # in AGInt. The embed leg already used :8001 (VLLM_EMBED_URL) — this aligns the
+        # completion leg with it, and refuses any base_url that points back at ourselves.
+        _self_port = os.getenv("MINDX_BACKEND_PORT", "8000")
         self.api_base_url = (
             self.base_url
             or os.getenv("VLLM_BASE_URL")
-            or "http://localhost:8000"
+            or "http://localhost:8001"
         )
         self.api_base_url = self.api_base_url.rstrip("/")
+        if f":{_self_port}" in self.api_base_url and "localhost" in self.api_base_url or \
+           f":{_self_port}" in self.api_base_url and "127.0.0.1" in self.api_base_url:
+            logger.warning(
+                "vLLM base_url %s points at mindX's OWN backend port (%s) — a self-call that "
+                "the access gate answers with 401. Redirecting to :8001 (the vLLM convention "
+                "used by VLLM_EMBED_URL). Set VLLM_BASE_URL explicitly to override.",
+                self.api_base_url, _self_port,
+            )
+            self.api_base_url = self.api_base_url.replace(f":{_self_port}", ":8001")
 
         # vLLM supports optional API key via --api-key flag
         self.vllm_api_key = (
@@ -112,21 +136,40 @@ class VLLMHandler(LLMHandlerInterface):
             logger.warning(f"VLLMHandler: Rate limiter retries exhausted for '{model}'")
             return None
 
-        # Try local vLLM first (primary — free, fast, no rate limits)
-        result = await self._try_chat_completions(
-            session, prompt, model, max_tokens, temperature, json_mode, **kwargs
-        )
+        # NEGATIVE CACHE (2026-07-11): when no vLLM server is listening, both local legs
+        # dial a refused socket on EVERY inference — two failed round-trips + two WARNINGs
+        # per call, forever (26 in 4 min on the live VPS). A dead endpoint is skipped for
+        # _DOWN_COOLDOWN_S; the first call after the cooldown probes again, so a vLLM server
+        # coming up is picked back up within a cooldown window with no operator action.
+        local_dark = time.monotonic() < VLLMHandler._down_until
+        result = None
+        if not local_dark:
+            # Try local vLLM first (primary — free, fast, no rate limits)
+            result = await self._try_chat_completions(
+                session, prompt, model, max_tokens, temperature, json_mode, **kwargs
+            )
         if result is not None:
             self._using_cloud = False
+            VLLMHandler._down_until = 0.0   # alive → clear the cache
             return result
 
         # Fallback to raw completions endpoint (still local)
-        result = await self._try_completions(
-            session, prompt, model, max_tokens, temperature, json_mode, **kwargs
-        )
+        if not local_dark:
+            result = await self._try_completions(
+                session, prompt, model, max_tokens, temperature, json_mode, **kwargs
+            )
         if result is not None:
             self._using_cloud = False
+            VLLMHandler._down_until = 0.0
             return result
+        if not local_dark:
+            # both local legs failed just now → mark dark and stop dialing for a while
+            VLLMHandler._down_until = time.monotonic() + VLLMHandler._DOWN_COOLDOWN_S
+            logger.info(
+                "vLLM local (%s) is not serving — skipping the local legs for %.0fs "
+                "(auto-reprobes after the cooldown; cloud fallback continues).",
+                self.api_base_url, VLLMHandler._DOWN_COOLDOWN_S,
+            )
 
         # Local vLLM unreachable — fall back to Ollama cloud (same protocol)
         return await self._try_cloud_fallback(

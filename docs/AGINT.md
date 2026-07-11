@@ -257,6 +257,98 @@ AGInt maintains comprehensive memory integration:
 
 ---
 
+## The Cognition Workflow — how a thought actually completes (2026-07-11)
+
+Everything above describes the *cycle*. This section documents the **workflow inside one
+`_execute_cognitive_task()` call** — the path a single thought takes from prompt to answer,
+the cascade it walks, and the failure modes that have actually bitten production. Read this
+before touching model selection.
+
+### The four-stage inference cascade
+
+```
+_execute_cognitive_task(prompt, json_mode?)
+│
+├─ 1. CLOUD FAST-PATH        MINDX_AGINT_CLOUD=1 (default)
+│     └─ ollama handler → agint.cloud_model (default gpt-oss:120b-cloud)
+│        · gated by llm/model_health.is_dead() → a retired slug is skipped, not hammered
+│        · failure modes: None · "" · "Error: …" (all three are FAILURE — recording an error
+│          string as ok would keep a dark pillar ranked alive forever)
+│        · json_mode: invalid JSON ⇒ fall through (never hand prose to a JSON caller)
+│
+├─ 2. REGISTRY CASCADE       ranked_models ∩ model_registry.capabilities
+│     └─ per model_id: get_handler(capability.provider) → generate_text()
+│        · this list is populated with vLLM-provider models (HF repo ids:
+│          Qwen/Qwen3-1.7B, meta-llama/Llama-3.1-8B-Instruct …)
+│        · on a CPU node with no vLLM server, EVERY entry returns None
+│
+├─ 3. LOCAL LAST RESORT      ← the CPU standing baseline (added 2026-07-11)
+│     └─ ollama handler → MINDX_AGINT_LOCAL_MODEL / agint.local_model (default qwen3:1.7b)
+│        · json_mode: retries through utils/json_extract.extract_json (small local models
+│          wrap JSON in prose/<think>; json.loads alone dies — the dead-roster lesson)
+│        · on success: llm_status = "Online - Ollama local (<model>)"
+│
+└─ 4. OFFLINE                llm_operational=False → the P-O-D-A loop chooses COOLDOWN
+                             rather than deliberating (it must not spin on a dark brain)
+```
+
+**Why stage 3 exists — the 2026-07-11 outage.** The live VPS logged
+`AGInt: All model attempts failed. LLM operations unavailable.` on a loop while a perfectly
+healthy Ollama sat on the same box holding `mindx-gen2`, `mindxsovereign`, and `qwen3:1.7b`.
+Cause: the registry cascade is *entirely* vLLM-provider models, and no vLLM server runs on a
+CPU node. AGInt declared itself dark with a working brain one socket away, and the loop
+degenerated into `COOLDOWN → wait 30s → COOLDOWN`. **CPU is the standing baseline** (GPU/VPS
+scaling is rented and episodic) — so Ollama is the *floor*, never a luxury, and the cognitive
+core must never go dark while a local model answers.
+
+### The vLLM self-call trap (same day, same outage)
+
+`llm/vllm_handler.py` defaulted to `http://localhost:8000` — the vLLM OpenAI convention. But
+**:8000 is also mindX's own FastAPI port.** With `vllm` sitting *first* in
+`default_provider_preference_order`, every inference POSTed into **mindX's own API**, where
+`api_access_gate` answered `401 auth_required`. Symptoms: 26 `vllm_handler` WARNINGs per 4
+minutes, a wasted round-trip on every call, and stage 2 exhausting straight into stage 4.
+
+Three defences now stand:
+1. **Self-call guard** — any `base_url` pointing at our own backend port is rewritten to
+   `:8001` with a WARNING (config, env, and constructor arg all pass through it).
+2. **Negative cache** — when no vLLM answers, both local legs are skipped for
+   `MINDX_VLLM_DOWN_COOLDOWN_S` (default 300s); the first call after the cooldown re-probes,
+   so a vLLM server coming up is adopted automatically, with no operator action.
+3. **Preference order** — `ollama` leads; `vllm` stays in the chain and takes back the lead
+   the moment a real server answers on `:8001`.
+
+### Operating the cascade
+
+| Knob | Default | Effect |
+|---|---|---|
+| `MINDX_AGINT_CLOUD` | `1` | stage 1 on/off |
+| `agint.cloud_model` | `gpt-oss:120b-cloud` | the cloud pillar |
+| `MINDX_AGINT_LOCAL_MODEL` / `agint.local_model` | `qwen3:1.7b` | **stage 3 — the floor** |
+| `VLLM_BASE_URL` | `http://localhost:8001` | never point this at the backend port |
+| `MINDX_VLLM_DOWN_COOLDOWN_S` | `300` | how long a dark vLLM is skipped |
+
+### Reading the health of the core
+
+```bash
+# is the brain lit? (the line to grep for)
+journalctl -u mindx --since "-10m" | grep -oE "Online - [^\"]+" | tail -1
+#   → Online - Ollama local (qwen3:1.7b)          ✅ productive (stage 3)
+#   → Online - Ollama Cloud (gpt-oss:120b-cloud)  ✅ productive (stage 1)
+
+# the failure signature that must stay at ZERO:
+journalctl -u mindx --since "-10m" | grep -c "All model attempts failed"
+
+# a dead endpoint re-dialled every call? (settles to ~0 after one cooldown)
+journalctl -u mindx --since "-10m" | grep -c "vllm_handler"
+```
+
+**Verified 2026-07-11 on the live VPS after the fixes:** `All model attempts failed` = **0**
+(was 3 per 10 min), `Online - Ollama local (qwen3:1.7b)` steady, vLLM re-dials collapsed to a
+single probe per cooldown, load average **2.34 → 0.14**.
+
+---
+
 ## Summary
 
 AGInt represents a breakthrough in cognitive AI architecture, combining the proven P-O-D-A decision-making framework with modern AI capabilities. Its sophisticated design enables:

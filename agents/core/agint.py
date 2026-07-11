@@ -681,6 +681,49 @@ class AGInt:
                 logger.error(f"{self.log_prefix} Cognitive attempt with model '{model_id}' failed: {e}. Trying next.", exc_info=False)
                 continue
         
+        # ── LOCAL LAST RESORT (2026-07-11): the standing CPU baseline ──────────────
+        # The registry cascade is populated with vLLM-provider models (HF repo ids like
+        # Qwen/Qwen3-1.7B). On a CPU node with no vLLM server those ALL return None, and
+        # AGInt declared itself "Offline - All models failed" — while a perfectly healthy
+        # Ollama sat on the same box holding mindx-gen2 / mindxsovereign / qwen3. The
+        # cognitive core must never go dark while a local model is answering: CPU is the
+        # standing baseline (rented GPU/VPS is episodic), so Ollama is the floor, not a
+        # luxury. Override the model with MINDX_AGINT_LOCAL_MODEL / config agint.local_model.
+        try:
+            from llm.llm_factory import create_llm_handler
+            import os as _os_local
+            _local = (_os_local.getenv("MINDX_AGINT_LOCAL_MODEL")
+                      or (self.config.get("agint.local_model", "qwen3:1.7b") if self.config else "qwen3:1.7b"))
+            _h_local = await create_llm_handler("ollama", _local)
+            _gk = {k: v for k, v in kwargs.items() if k in ("json_mode", "max_tokens", "temperature")}
+            _gk.setdefault("max_tokens", 1024)
+            resp_local = await _h_local.generate_text(prompt, model=_local, **_gk)
+            _ok_local = bool(resp_local and resp_local.strip()
+                             and not resp_local.lstrip().startswith("Error:"))
+            if _ok_local and kwargs.get("json_mode"):
+                try:
+                    json.loads(resp_local)
+                except json.JSONDecodeError:
+                    # free/small local models wrap JSON in prose or <think> — use the
+                    # tolerant extractor the dead-roster lesson mandates for ALL LLM JSON.
+                    try:
+                        from utils.json_extract import extract_json  # type: ignore
+                        _cand = extract_json(resp_local)
+                        if _cand:
+                            resp_local = _cand if isinstance(_cand, str) else json.dumps(_cand)
+                        else:
+                            _ok_local = False
+                    except Exception:
+                        _ok_local = False
+            if _ok_local:
+                logger.info(f"{self.log_prefix} local last-resort answered: {_local}")
+                self.state_summary["llm_operational"] = True
+                self.state_summary["llm_status"] = f"Online - Ollama local ({_local})"
+                self.state_summary["llm_suggestion"] = "LLM operational (local CPU baseline)"
+                return resp_local
+        except Exception as _e_local:
+            logger.warning(f"{self.log_prefix} local last-resort failed: {_e_local}")
+
         logger.error(f"{self.log_prefix} All model attempts failed. LLM operations unavailable.")
         self.state_summary["llm_operational"] = False
         self.state_summary["llm_status"] = "Offline - All models failed"
