@@ -78,6 +78,32 @@ over a fabric, mindX renders **cognition + memory**:
 - **Your node** ignites gold the instant recognition is minted, and threads itself to the core. You
   do not stand outside the mind looking in. **You enter the lattice.**
 
+## The funnel — how a reader becomes a participant
+
+The documentation is **gated at `participant` tier by design**: it is the sign-up funnel. But a gate
+that only refuses is a wall. See [REALM_GATE.md](REALM_GATE.md) for the full contract; in short:
+
+```
+  a public dispatch on RAGE  ──cites──▶  /doc/AGINT
+                                            │
+                                    THE DOOR (200, not 403)
+                                    · a PREVIEW of the doc: title, shape, teaser
+                                      — a preview is not access, it is the HINT
+                                        of what access provides
+                                    · what the signature EARNS
+                                    · CONNECT — free, moves no funds
+                                            │
+                                      RECOGNITION
+                                            │
+              ┌─────────────────────────────┼─────────────────────────────┐
+              ▼                             ▼                             ▼
+       the documentation          THE RECOGNITION FIELD            the offering
+                                      (/recognized)          (the BONA FIDE airdrop)
+```
+
+Humans are **invited** (the HTML door answers `200`, is indexable, and unfurls the hint when a
+citation is shared). Machines are **refused** (`403` JSON). The gated body never crosses the door.
+
 ## The API
 
 | route | auth | does |

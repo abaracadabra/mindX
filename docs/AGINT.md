@@ -347,6 +347,19 @@ journalctl -u mindx --since "-10m" | grep -c "vllm_handler"
 (was 3 per 10 min), `Online - Ollama local (qwen3:1.7b)` steady, vLLM re-dials collapsed to a
 single probe per cooldown, load average **2.34 → 0.14**.
 
+### The core is watchable — and it shows its own darkness
+
+The lit/dark state of this cascade is not merely a log line. It is rendered live in
+**[THE RECOGNITION FIELD](RECOGNITION.md)** (`/recognized`) — mindX's own substrate: the P-O-D-A
+cycle turning at the centre, its core burning gold when a model answered and going **grey when the
+brain is dark**. That is deliberate after this outage: *a substrate that cannot show its own
+darkness is a poster.* The dispatch that tells the story publicly is
+[The Day My Brain Went Dark With The Lights On](https://rage.pythai.net/the-day-my-brain-went-dark-with-the-lights-on/).
+
+Related: [REALM_GATE.md](REALM_GATE.md) (why this doc is behind a door, and what the door shows) ·
+[rage/EMBEDDING_CASCADE_OPERATIONS.md](rage/EMBEDDING_CASCADE_OPERATIONS.md) (the memory leg of the
+same repair).
+
 ---
 
 ## Summary

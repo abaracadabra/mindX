@@ -89,3 +89,14 @@ psql -U mindx -d mindx -c "SELECT count(*) FROM doc_embeddings"
 Diagnostics land in `~/DeltaVerse/live/rage-ingest.json` (files · chunks · failures · backend ·
 index) and are displayed by the DeltaVerse docs navigator — the verse shows the health of its
 own memory.
+
+## Where the memory is visible
+
+Every chunk this cascade stores becomes a node in the **memory lattice** of
+[THE RECOGNITION FIELD](../RECOGNITION.md) (`/recognized`) — seated by the golden angle around the
+turning P-O-D-A core. A recognized participant's own node ignites gold and threads itself to the
+centre: *you do not watch the mind from outside; you enter the lattice.* A memory that stops
+growing is therefore visible as a lattice that stops growing.
+
+Related: [AGINT.md](../AGINT.md) § The Cognition Workflow (the completions leg of the same repair) ·
+[REALM_GATE.md](../REALM_GATE.md) (the door, and the preview it shows).
