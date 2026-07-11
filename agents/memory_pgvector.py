@@ -755,6 +755,44 @@ _trickle_next = 0.0
 _warn_state = {"t": 0.0, "n": 0, "last": ""}
 
 
+_preflight_done = False
+
+
+async def _preflight_embed_model(model: str) -> None:
+    """LOUD, ONCE: is the configured embed model actually pulled in Ollama?
+
+    The 2026-07-11 memory freeze: the active embed model was switched to `bge-m3`, which was
+    never pulled on the VPS. Ollama answered 404 to every embed, memory stopped growing
+    entirely (34,879 rows, frozen) and the only trace was a per-call WARNING nobody read.
+    A missing model is an OPERATOR error with a one-line remedy — say so, exactly once, at
+    ERROR level, naming the fix. Do NOT auto-substitute another model: embeddings from
+    different models share no vector space, and silently mixing them poisons every future
+    similarity search.
+    """
+    global _preflight_done
+    if _preflight_done:
+        return
+    _preflight_done = True
+    try:
+        import aiohttp
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8)) as sess:
+            async with sess.get(f"{OLLAMA_EMBED_URL}/api/tags") as resp:
+                if resp.status != 200:
+                    return
+                have = {m.get("name", "").split(":")[0]
+                        for m in (await resp.json()).get("models", [])}
+        if model.split(":")[0] not in have:
+            logger.error(
+                "EMBED MODEL MISSING: '%s' is the active embed model but Ollama does not have it "
+                "(present: %s). Every embed will 404 and memory will STOP GROWING. Remedy: either "
+                "`ollama pull %s`, or set MINDX_EMBED_MODEL to a model that is present AND matches "
+                "the %d-dim schema. Do not mix embed models in one vector space.",
+                model, ", ".join(sorted(have)) or "none", model, SCHEMA_EMBED_DIMS,
+            )
+    except Exception:
+        pass   # preflight is advisory — never block embedding
+
+
 def _warn_rollup(msg: str) -> None:
     """One WARNING per 60s summarizing embed failures; the rest stay DEBUG."""
     now = time.monotonic()
@@ -803,6 +841,7 @@ async def generate_embedding(
     """
     import aiohttp
     text = text[:_EMBED_MAX_CHARS]
+    await _preflight_embed_model(model)   # loud + once if the model isn't pulled
 
     vllm_status = ollama_status = None
 
