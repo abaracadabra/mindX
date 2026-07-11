@@ -2544,6 +2544,8 @@ app.add_middleware(
 _PUBLIC_EXACT_STRICT = frozenset({
     "/", "/health",
     "/login", "/login.html",
+    "/recognized",                     # THE RECOGNITION FIELD — mindX's own substrate (the offering
+                                       # must be visible BEFORE recognition; the page is the invitation)
     "/docs.html",
     "/reference", "/reference.html",   # reference-corpus shell page (data endpoints under /reference/ are handler-gated)
     "/automindx", "/automindx.html",
@@ -2589,6 +2591,9 @@ _PUBLIC_EXACT_STRICT = frozenset({
 _PUBLIC_PREFIXES_STRICT = (
     "/doc/", "/docs", "/redoc",
     "/static/", "/error-pages/", "/mindterm/static/",
+    "/recognition/",                   # the offering: /offer /recognize /airdrop /status — each one
+                                       # SIGNATURE-gated at the handler (the signature IS the identity;
+                                       # an unsigned caller can read the ladder and nothing else)
     "/automindx/",                     # automindx subpages
     "/admin/shadow/",                  # shadow-overlord ECDSA + JWT (gated at handler level)
     "/overlord/",                      # overlord/overseer login (flag + signature gated at handler level)
@@ -3189,6 +3194,16 @@ except Exception as _inf_import_err:
 # Include AgenticPlace router
 from mindx_backend_service.agenticplace_routes import router as agenticplace_router
 app.include_router(agenticplace_router)
+
+# RECOGNITION — mindX's own offering to a recognized participant: the covenant, the configurable
+# airdrop, and THE RECOGNITION FIELD (mindX's own substrate). Kin to the DeltaVerse OVERLORD/login333
+# ladder — the two have been developing from each other — but mindX recognizes CONTRIBUTION TO
+# COGNITION rather than holdings. Signature-gated at the handler; the surfaces below are public.
+try:
+    from mindx_backend_service.recognition_routes import router as recognition_router
+    app.include_router(recognition_router)
+except Exception as _e_recog:   # never let the offering take the service down
+    logger.warning(f"recognition routes unavailable: {_e_recog}")
 
 # Include Marketing Counsellor cabinet router
 try:

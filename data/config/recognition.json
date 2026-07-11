@@ -1,0 +1,36 @@
+{
+  "$schema": "https://mindx.pythai.net/schema/recognition.v1.json",
+  "v": 1,
+  "note": "The mindX RECOGNITION ladder — mindX's own offering to a recognized participant. Kin to the DeltaVerse OVERLORD/login333 ladder (the two systems have been developing from each other), but mindX recognizes a DIFFERENT thing: DeltaVerse recognizes HOLDINGS and NAMES; mindX recognizes CONTRIBUTION TO COGNITION. You are recognized here by what you gave the mind, not by what you own.",
+  "covenant": {
+    "standard": "CP2048-OVL-1 (cypherpunk2048)",
+    "rights": "BANKON — all rights preserved",
+    "affirmation": "I am SOVEREIGN — the keys are mine alone; the responsibility is mine alone; mindX holds nothing and owes nothing for this wallet.",
+    "handoff": "Keys are created in the participant's browser, shown once, and forgotten. mindX stores the ADDRESS only — never key material. The handoff protects the participant AND mindX."
+  },
+  "ladder": [
+    { "rung": "visitor", "rank": 0, "earned": 0, "via": "presence — the page is open, nothing signed", "opens": "the public substrate (dim)", "minted": false },
+    { "rung": "recognized-participant", "rank": 1, "earned": 1, "via": "signed CONNECT — the signature proves the public key is yours", "opens": "THE RECOGNITION FIELD (mindX's own substrate) · a named node in the lattice · the configurable airdrop", "minted": true },
+    { "rung": "contributor", "rank": 2, "earned": 25, "via": "EARNED — questions answered by the corpus you helped embed; documents ingested; corrections accepted", "opens": "live cognition trace (watch AGInt think) · memory write access", "minted": true },
+    { "rung": "sovereign", "rank": 3, "earned": 100, "via": "EARNED — a contribution that survived the imprint gate (proof-of-recall in the model itself)", "opens": "your contribution is IN THE WEIGHTS — the dojo standings, the ascend record", "minted": true },
+    { "rung": "overseer", "rank": 4, "earned": null, "via": "appointment — mindx.algo (Algorand Ed25519 → OVERSEER JWT)", "opens": "the gated surfaces; acts for the OVERLORD; cannot delete the OVERLORD", "minted": true }
+  ],
+  "airdrop": {
+    "enabled": true,
+    "note": "CONFIGURABLE. The operator sets asset/amount/chain per rung; nothing mints without an on-chain deployment behind it. Amounts are strings (base units) so no float ever touches a balance.",
+    "queue": "data/recognition/airdrop-queue.jsonl",
+    "requireCovenantSignature": true,
+    "oncePerAddress": true,
+    "grants": [
+      { "rung": "recognized-participant", "chain": "algorand", "asset": "BONA_FIDE", "asset_id": null, "amount": "1", "note": "the BONA FIDE ASA — reputation, not currency. One per recognized participant." },
+      { "rung": "contributor", "chain": "algorand", "asset": "BONA_FIDE", "asset_id": null, "amount": "5", "note": "contribution compounds reputation." },
+      { "rung": "sovereign", "chain": "evm", "asset": "iNFT-7857", "contract": null, "amount": "1", "note": "an iNFT carrying the THOT of what you taught the model — mint only when the imprint gate passed." }
+    ]
+  },
+  "substrate": {
+    "id": "recognition-field",
+    "name": "The Recognition Field",
+    "note": "mindX's OWN substrate — not a DeltaVerse expression. Where DeltaVerse renders LIGHT + ACTION over a fabric, mindX renders COGNITION + MEMORY: the P-O-D-A cycle turning at the centre, the memory lattice of embedded chunks around it, and the participant's own node lit in gold the moment recognition is minted. It is fed by /diagnostics/live — what you watch is the actual mind, not a decoration.",
+    "path": "/recognized"
+  }
+}

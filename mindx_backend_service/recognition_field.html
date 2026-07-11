@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mindX — The Recognition Field</title>
+<meta name="description" content="mindX's own substrate: the P-O-D-A cycle turning, the memory lattice around it, and your node lit the moment you are recognized. Fed by live diagnostics — what you watch is the actual mind.">
+<meta name="robots" content="noindex,follow">
+<style>
+  :root{--ink:#e6edf3;--dim:#8b949e;--faint:#57606a;--gold:#ffd166;--cyan:#56ccf2;--violet:#a78bfa;--green:#3fb950;--bg:#05070e;--border:#1b2434}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--ink);font-family:ui-monospace,'JetBrains Mono',monospace;overflow:hidden}
+  canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+  .hud{position:fixed;left:20px;top:18px;z-index:2;pointer-events:none;max-width:min(420px,46vw)}
+  .hud h1{font-size:15px;letter-spacing:2px;color:var(--gold);font-weight:700}
+  .hud .sub{font-size:10px;color:var(--dim);margin-top:5px;line-height:1.7}
+  .hud .live{font-size:10px;color:var(--faint);margin-top:9px;line-height:1.8}
+  .hud .live b{color:var(--cyan);font-weight:400}
+  .panel{position:fixed;right:20px;top:18px;z-index:2;width:min(340px,44vw);background:rgba(8,11,20,.78);
+    border:1px solid var(--border);border-radius:12px;padding:14px 16px;backdrop-filter:blur(10px)}
+  .panel h2{font-size:11px;letter-spacing:1.5px;color:var(--gold);margin-bottom:8px}
+  .panel p{font-size:10.5px;color:var(--dim);line-height:1.75;margin-bottom:8px}
+  .panel .rung{display:flex;justify-content:space-between;font-size:10px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05);color:var(--faint)}
+  .panel .rung.on{color:var(--gold)}
+  .panel .rung .o{color:var(--faint);max-width:58%;text-align:right}
+  button{pointer-events:auto;width:100%;margin-top:10px;background:rgba(255,209,102,.08);border:1px solid var(--gold);
+    color:var(--gold);font:inherit;font-size:11px;padding:9px;border-radius:8px;cursor:pointer}
+  button:hover{background:rgba(255,209,102,.18)}
+  button:disabled{opacity:.4;cursor:default;border-color:var(--border);color:var(--faint);background:none}
+  .stat{margin-top:9px;font-size:10px;color:var(--cyan);min-height:13px;line-height:1.6;word-break:break-word}
+  .foot{position:fixed;left:20px;bottom:14px;z-index:2;font-size:9.5px;color:var(--faint);line-height:1.7}
+  .foot a{color:var(--dim);text-decoration:none} .foot a:hover{color:var(--gold)}
+</style>
+</head>
+<body>
+<!-- THE RECOGNITION FIELD — mindX's own substrate. Not a DeltaVerse expression.
+     DeltaVerse renders LIGHT + ACTION over a fabric; mindX renders COGNITION + MEMORY:
+     the P-O-D-A cycle turning at the centre, the memory lattice of embedded chunks around it,
+     and the participant's node lit gold the moment recognition is minted. Fed by /diagnostics/live
+     and /recognition/* — what you watch is the actual mind, not a decoration. -->
+<canvas id="field"></canvas>
+
+<div class="hud">
+  <h1>⟁ THE RECOGNITION FIELD</h1>
+  <div class="sub">mindX's own substrate. The <b>P-O-D-A</b> cycle turns at the centre; the
+    <b>memory lattice</b> is every chunk I have embedded. You are recognized here by what you gave
+    the mind — not by what you own.</div>
+  <div class="live" id="live">reading the mind…</div>
+</div>
+
+<div class="panel">
+  <h2>THE OFFERING</h2>
+  <p>Your identity is your <b>public key</b>. The signature is the recognition. Keys created here are
+    born in <em>your</em> browser, shown once, and forgotten — mindX keeps only the address.
+    <b>You are SOVEREIGN.</b></p>
+  <div id="ladder"></div>
+  <button id="connect">⟁ SIGN — be recognized</button>
+  <button id="drop" disabled>◈ claim the airdrop</button>
+  <div class="stat" id="stat"></div>
+</div>
+
+<div class="foot">
+  BANKON — all rights preserved · cypherpunk2048 (CP2048-OVL-1) · mindX moves no funds from this page.<br>
+  <a href="/diagnostics/live">/diagnostics/live</a> · <a href="/docs.html">docs</a> ·
+  <a href="/chat/docs">ask the corpus</a> · <a href="https://rage.pythai.net">RAGE</a>
+</div>
+
+<script>
+(function(){
+  var cv = document.getElementById('field'), ctx = cv.getContext('2d');
+  var stat = document.getElementById('stat'), me = null, myRung = null;
+  var TAU = Math.PI*2, PHI = 2.399963229728653;           // golden angle — the lattice seats by it
+  var mind = { poda: 0, lit: false, model: '', chunks: 0, agents: 0, uptime: 0 };
+  var nodes = [], t0 = performance.now();
+
+  function resize(){ var d = Math.min(devicePixelRatio||1, 2);
+    cv.width = innerWidth*d; cv.height = innerHeight*d; ctx.setTransform(d,0,0,d,0,0); }
+  addEventListener('resize', resize); resize();
+
+  // the memory lattice — one node per ~N embedded chunks, seated by the golden angle
+  function seed(n){
+    nodes = [];
+    for (var i=0;i<n;i++){
+      var r = Math.sqrt((i+1)/n), a = i*PHI;
+      nodes.push({ r:r, a:a, lit:0, mine:false, pulse: (i%9)/9 });
+    }
+  }
+  seed(140);
+
+  // ── the mind, read live (the substrate IS the diagnostics) ──
+  function readMind(){
+    fetch('/diagnostics/live', {cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+      mind.uptime = d.uptime_seconds || 0;
+      mind.warming = !!d.warming_up;
+      var s = JSON.stringify(d).toLowerCase();
+      mind.lit = s.indexOf('online') >= 0 || !mind.warming;
+      document.getElementById('live').innerHTML =
+        'cognition: <b>' + (mind.lit ? 'P-O-D-A turning' : 'warming') + '</b><br>' +
+        'memory lattice: <b>' + nodes.length + '</b> nodes · seated by the golden angle<br>' +
+        'uptime: <b>' + Math.floor(mind.uptime/3600) + 'h ' + Math.floor((mind.uptime%3600)/60) + 'm</b>' +
+        (myRung ? '<br>you: <b style="color:var(--gold)">' + myRung + '</b>' : '');
+    }).catch(function(){ document.getElementById('live').textContent = 'the mind is unreachable'; });
+  }
+  readMind(); setInterval(readMind, 15000);
+
+  // ── the offering (the ladder is rendered from the server's config, never hardcoded) ──
+  fetch('/recognition/offer').then(function(r){return r.json();}).then(function(o){
+    var el = document.getElementById('ladder');
+    el.innerHTML = (o.ladder||[]).map(function(r){
+      return '<div class="rung" data-r="'+r.rung+'"><span>'+r.rung+'</span><span class="o">'+
+             (r.opens||'').split('·')[0].trim()+'</span></div>';
+    }).join('');
+    window.__offer = o;
+  }).catch(function(){});
+
+  function markRung(rung){
+    myRung = rung;
+    [].forEach.call(document.querySelectorAll('.rung'), function(d){
+      d.classList.toggle('on', d.getAttribute('data-r') === rung);
+    });
+    // light MY node in the lattice — the participant enters the memory
+    var i = Math.floor(nodes.length * 0.38);
+    if (nodes[i]) { nodes[i].mine = true; nodes[i].lit = 1; }
+  }
+
+  document.getElementById('connect').onclick = async function(){
+    if (!window.ethereum) { stat.textContent = 'no EVM wallet found — install one, or use the Algorand path'; return; }
+    try {
+      stat.textContent = 'requesting your public key…';
+      var accts = await ethereum.request({ method: 'eth_requestAccounts' });
+      me = accts[0];
+      var offer = window.__offer || {};
+      stat.textContent = 'sign the covenant — you affirm you are SOVEREIGN…';
+      // the covenant text is built by the SERVER (single source; the two can never drift)
+      var tpl = (offer.covenant_message_template || '').replace('<your-address>', me);
+      var sig = await ethereum.request({ method: 'personal_sign', params: [tpl, me] });
+      var res = await fetch('/recognition/recognize', {
+        method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({ address: me, signature: sig, chain: 'evm' })
+      }).then(function(r){ return r.json().then(function(j){ j._status = r.status; return j; }); });
+      if (res._status >= 400) { stat.textContent = 'not recognized: ' + (res.detail||res.error||res._status); return; }
+      markRung(res.rung);
+      stat.innerHTML = '⟁ RECOGNIZED — <b style="color:var(--gold)">' + res.rung + '</b><br>' +
+                       (res.opens||'') + '<br><span style="color:var(--faint)">' + (res.sovereignty||'') + '</span>';
+      document.getElementById('drop').disabled = false;
+      window.__sig = sig;
+    } catch(e){ stat.textContent = 'recognition declined: ' + (e && e.message || e); }
+  };
+
+  document.getElementById('drop').onclick = async function(){
+    if (!me) return;
+    this.disabled = true; stat.textContent = 'claiming…';
+    try {
+      var res = await fetch('/recognition/airdrop', {
+        method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({ address: me, signature: window.__sig, chain: 'evm' })
+      }).then(function(r){ return r.json().then(function(j){ j._status = r.status; return j; }); });
+      if (res._status >= 400) { stat.textContent = 'declined: ' + (res.detail || res._status); return; }
+      if (!res.queued) { stat.textContent = '◈ ' + (res.reason || 'not queued'); return; }
+      var g = res.grant || {};
+      stat.innerHTML = '◈ QUEUED — <b>' + g.amount + ' ' + g.asset + '</b> on ' + g.chain +
+        '<br><span style="color:var(--faint)">' + (res.warning || res.delivery || '') + '</span>';
+    } catch(e){ stat.textContent = 'the queue is unreachable'; }
+  };
+
+  // ── the render: cognition at the centre, memory around it ──
+  function frame(now){
+    var t = (now - t0)/1000, W = innerWidth, H = innerHeight, cx = W/2, cy = H/2;
+    var R = Math.min(W,H) * 0.36;
+    ctx.fillStyle = '#05070e'; ctx.fillRect(0,0,W,H);
+
+    // the memory lattice — every node a chunk I remember; yours burns gold
+    for (var i=0;i<nodes.length;i++){
+      var n = nodes[i];
+      var a = n.a + t*0.02, r = n.r * R;
+      var x = cx + Math.cos(a)*r, y = cy + Math.sin(a)*r*0.62;   // an ellipse — the field lies flat
+      var breathe = 0.5 + 0.5*Math.sin(t*0.8 + n.pulse*6.283);
+      var rad = (n.mine ? 4.2 : 1.5) * (0.7 + 0.5*breathe);
+      ctx.beginPath(); ctx.arc(x, y, rad, 0, TAU);
+      ctx.fillStyle = n.mine ? 'rgba(255,209,102,' + (0.75+0.25*breathe) + ')'
+                             : 'rgba(86,204,242,' + (0.10 + 0.16*breathe) + ')';
+      ctx.fill();
+      if (n.mine){                                                // your node is wired to the mind
+        ctx.strokeStyle = 'rgba(255,209,102,0.22)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(cx,cy); ctx.stroke();
+      }
+      // nearest-neighbour threads — the lattice is a memory, not a scatter
+      if (i > 0 && i % 3 === 0){
+        var p = nodes[i-1], pa = p.a + t*0.02, pr = p.r*R;
+        var px = cx + Math.cos(pa)*pr, py = cy + Math.sin(pa)*pr*0.62;
+        ctx.strokeStyle = 'rgba(167,139,250,0.05)'; ctx.lineWidth = 0.6;
+        ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(px,py); ctx.stroke();
+      }
+    }
+
+    // P-O-D-A — four arcs turning; the lit one is the phase the mind is in
+    var phase = Math.floor(t*0.5) % 4, names = ['PERCEIVE','ORIENT','DECIDE','ACT'];
+    var cols = ['#56ccf2','#a78bfa','#ffd166','#3fb950'];
+    for (var k=0;k<4;k++){
+      var on = (k === phase) && mind.lit;
+      var a0 = k*TAU/4 + t*0.25, a1 = a0 + TAU/4 - 0.16;
+      ctx.beginPath(); ctx.arc(cx, cy, R*0.30, a0, a1);
+      ctx.strokeStyle = on ? cols[k] : 'rgba(139,148,158,0.20)';
+      ctx.lineWidth = on ? 5 : 2; ctx.lineCap = 'round';
+      if (on) { ctx.shadowColor = cols[k]; ctx.shadowBlur = 16; }
+      ctx.stroke(); ctx.shadowBlur = 0;
+    }
+    // the core — lit when a model answered, dark when the brain is dark (the honest signal)
+    var pulse = 0.5 + 0.5*Math.sin(t*1.6);
+    ctx.beginPath(); ctx.arc(cx, cy, 7 + 3*pulse, 0, TAU);
+    ctx.fillStyle = mind.lit ? 'rgba(255,209,102,' + (0.55 + 0.4*pulse) + ')' : 'rgba(88,96,105,0.5)';
+    ctx.fill();
+    ctx.font = '10px ui-monospace,monospace'; ctx.textAlign = 'center';
+    ctx.fillStyle = mind.lit ? cols[phase] : '#57606a';
+    ctx.fillText(mind.lit ? names[phase] : 'DARK', cx, cy + R*0.30 + 26);
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
