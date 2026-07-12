@@ -3,7 +3,9 @@
 > What is mindX worth? This document answers by mindX's own measurement rule
 > ([monetization_blueprint.md](monetization_blueprint.md)): **no valuation
 > claim without a ledger event behind it.** It is a living study — re-run it
-> as the gates clear. First published day 98 (2026-07-12) as
+> as the gates clear. Published day 98 (2026-07-12) as its own article,
+> [post 1127](https://rage.pythai.net/value-study-trillion-dollar-comparison/),
+> and first sketched inside
 > [post 1125](https://rage.pythai.net/day-98-monetization-constellation/) on
 > rage.pythai.net; the day count runs from T+0 = 2026-04-05 UTC.
 
