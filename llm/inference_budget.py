@@ -180,6 +180,7 @@ class InferenceBudget:
         self._plock = threading.Lock()
         self._last_persist = 0.0
         self._load_config()
+        self._load_persisted()
 
     @classmethod
     def instance(cls) -> "InferenceBudget":
@@ -224,6 +225,54 @@ class InferenceBudget:
                 self._windows["ollama_cloud"] = sorted(merged.items())
         except Exception:
             pass
+
+    def _load_persisted(self) -> None:
+        # Rehydrate the ledger across restarts. A weekly/session quota that hit
+        # 100% must stay noted after a service restart — the windows and the
+        # hard backoff are the durable memory of "the free tier is consumed".
+        try:
+            raw = json.loads(_PERSIST.read_text())
+            st = (raw.get("_state") or {}).get("providers") or {}
+            now = time.time()
+            for p, ps in st.items():
+                b = self._get(p)
+                if b is None:
+                    continue
+                b.backoff_until = float(ps.get("backoff_until", 0) or 0)
+                b.consec_429 = int(ps.get("consec_429", 0) or 0)
+                b.last_429 = float(ps.get("last_429", 0) or 0)
+                b.total_req = int(ps.get("total_req", 0) or 0)
+                b.total_429 = int(ps.get("total_429", 0) or 0)
+                saved = {int(w.get("span", -1)): w for w in ps.get("windows", [])}
+                for w in b.windows:
+                    ws = saved.get(w.span)
+                    if not ws:
+                        continue
+                    w.eff = max(1.0, float(ws.get("eff", w.base) or w.base))
+                    for t in ws.get("ts", []):
+                        # tolerate rounding/clock skew: clamp future ts to now
+                        if isinstance(t, (int, float)) and now - float(t) <= w.span:
+                            w.ts.append(min(float(t), now))
+        except Exception:
+            pass
+
+    def _state(self) -> Dict[str, Any]:
+        return {
+            "providers": {
+                p: {
+                    "backoff_until": b.backoff_until,
+                    "consec_429": b.consec_429,
+                    "last_429": b.last_429,
+                    "total_req": b.total_req,
+                    "total_429": b.total_429,
+                    "windows": [
+                        {"span": w.span, "eff": w.eff, "ts": [round(t, 2) for t in w.ts]}
+                        for w in b.windows
+                    ],
+                }
+                for p, b in self._providers.items()
+            }
+        }
 
     def _get(self, provider: str) -> Optional[_ProviderBudget]:
         p = self._norm(provider)
@@ -273,6 +322,26 @@ class InferenceBudget:
                 now = time.time()
                 b.record(now, bool(ok), int(tokens or 0), retry_after)
                 self._maybe_persist(now)
+        except Exception:
+            pass
+
+    def exhaust(self, provider: Optional[str], *, until: Optional[float] = None,
+                for_seconds: float = 21600.0) -> None:
+        """Explicit quota-consumed note: this provider's free tier is at 100%
+        (e.g. the ollama.com weekly usage limit). Hard backoff → headroom 0 →
+        selection routes to local until `until` (epoch) or now+for_seconds
+        (default 6h, the model_health probe cadence; a failed re-probe renews
+        the note). Persisted immediately so a restart cannot forget it."""
+        try:
+            b = self._get(self._norm(provider))
+            if b is None:
+                return
+            now = time.time()
+            b.backoff_until = max(b.backoff_until, float(until) if until else now + for_seconds)
+            b.total_429 += 1
+            b.last_429 = now
+            self._last_persist = 0.0
+            self._maybe_persist(now)
         except Exception:
             pass
 
@@ -350,7 +419,9 @@ class InferenceBudget:
             self._last_persist = now
         try:
             _PERSIST.parent.mkdir(parents=True, exist_ok=True)
-            _PERSIST.write_text(json.dumps(self.snapshot(), indent=2))
+            out = self.snapshot()
+            out["_state"] = self._state()  # durable ledger, reloaded at startup
+            _PERSIST.write_text(json.dumps(out, indent=2))
         except Exception:
             pass
 
@@ -367,6 +438,11 @@ def available(provider: Optional[str]) -> bool:
 def record(provider: Optional[str], *, ok: bool = True,
            tokens: int = 0, retry_after: Optional[float] = None) -> None:
     InferenceBudget.instance().record(provider, ok=ok, tokens=tokens, retry_after=retry_after)
+
+
+def exhaust(provider: Optional[str], *, until: Optional[float] = None,
+            for_seconds: float = 21600.0) -> None:
+    InferenceBudget.instance().exhaust(provider, until=until, for_seconds=for_seconds)
 
 
 def snapshot() -> Dict[str, Any]:

@@ -111,6 +111,19 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
                         f"OllamaHandler: direct cloud call failed for "
                         f"'{payload['model']}' ({response.status}): {body[:200]}"
                     )
+                    # The direct endpoint sees the same account quota — note
+                    # limit responses in the provider budget so headroom drops.
+                    try:
+                        from llm import inference_budget as _ib
+                        _bl = body.lower()
+                        if "usage limit" in _bl or "quota" in _bl:
+                            _ib.exhaust("ollama_cloud")
+                        elif response.status == 429:
+                            _ra = response.headers.get("Retry-After")
+                            _ib.record("ollama_cloud", ok=False,
+                                       retry_after=float(_ra) if (_ra and _ra.isdigit()) else None)
+                    except Exception:
+                        pass
                     return None
                 data = await response.json(loads=json.loads)
                 msg = data.get("message") or {}
@@ -309,7 +322,20 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
                 elif "error" in response_data: # pragma: no cover
                     logger.error(f"Ollama API returned an error in JSON for model '{model}': {response_data['error']}")
                     # e.g. ollama.com weekly-usage-limit surfaces as 200 + error
-                    # body through the local proxy; give the direct endpoint a shot.
+                    # body through the local proxy — the "quota at 100%" signal.
+                    # Note it in the PROVIDER budget too (model_health alone only
+                    # retires the slug); a usage-limit body means the whole
+                    # ollama_cloud tier is consumed → hard backoff, route local.
+                    try:
+                        from llm import inference_budget as _ib
+                        _el = str(response_data["error"]).lower()
+                        if "usage limit" in _el or "quota" in _el:
+                            _ib.exhaust(_ledger_provider)
+                        elif "rate" in _el and "limit" in _el:
+                            _ib.record(_ledger_provider, ok=False)
+                    except Exception:
+                        pass
+                    # Give the direct endpoint a shot anyway (it can disagree).
                     if _is_cloud:
                         direct = await self._generate_cloud_direct(prompt, model, ollama_options, bool(json_mode))
                         if direct:
