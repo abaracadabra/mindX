@@ -2,7 +2,7 @@
   "name": "@bankoneth/workspace",
   "private": true,
   "version": "0.1.0",
-  "description": "bankoneth — ENS subname issuance under bankon.eth, .eth 2LD purchase, and subdomain-minting-as-a-service. Standalone, agnostic; mindX and PARSEC are consumers.",
+  "description": "bankoneth \u2014 ENS subname issuance under bankon.eth, .eth 2LD purchase, and subdomain-minting-as-a-service. Standalone, agnostic; mindX and PARSEC are consumers.",
   "license": "Apache-2.0",
   "engines": {
     "node": ">=20.10.0",
@@ -34,5 +34,12 @@
     "parsec",
     "mindx",
     "pythai"
-  ]
+  ],
+  "pnpm": {
+    "overrides": {
+      "vite": ">=6.4.3",
+      "ws": ">=8.21.0",
+      "esbuild": ">=0.28.1"
+    }
+  }
 }
