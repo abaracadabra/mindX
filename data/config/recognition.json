@@ -64,7 +64,7 @@
         "chain": "evm",
         "decimals": 18,
         "contract": {
-          "31337": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+          "31337": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE"
         },
         "standard": "zero-import ERC-20, airgap-compileable (the DeltaVerse standard EVM mint)",
         "supply": "111111111111111111111111",
@@ -78,7 +78,17 @@
           "totalSupply": "111111111111111111111111",
           "supplyHuman": "111111.111111111111111111 — the repunit",
           "mintedTo": "bankon.eth (the OVERLORD holds the entire supply; the airdrop is a transfer, never a mint)"
-        }
+        },
+        "tradeLimits": {
+          "maxBuy": "1000000000000000000000",
+          "maxSell": "1000000000000000000000",
+          "note": "DEX-only caps of 1000 BKPY. INCREASE-ONLY (no lever exists to lower them or freeze trading at zero) and toggleable. A WALLET-TO-WALLET transfer is NEVER limited — so an airdrop delivery of any size passes: the queue settles by internal transfer, not through a pair."
+        },
+        "pairs": {
+          "primary": "wBTC (0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599)",
+          "note": "BKPY chooses its counter-asset; multiple pairs may be registered (wBTC first, then WETH/stables)."
+        },
+        "rescue": "Assets sent to the BKPY contract (ETH, any ERC-20, BKPY itself) are redeemable by the OVERLORD — the contract custodies nothing on anyone's behalf, so a rescue can only recover what was misdirected."
       },
       "THLNK_MINDX": {
         "symbol": "THlNK",
