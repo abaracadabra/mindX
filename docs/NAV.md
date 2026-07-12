@@ -71,7 +71,8 @@ mindX discovers and routes across multiple inference providers, with Ollama as t
 - [OllamaCloudTool](../tools/cloud/ollama_cloud_tool.py) — Cloud inference as a first-class [BaseTool](../agents/core/bdi_agent.py); any agent can call it; 9 operations (chat, generate, embed, list_models, show_model, web_search, web_fetch, get_metrics, get_status)
 - [LLM Factory](../llm/llm_factory.py) — Handler creation with rate limiting, caching, provider preference order
 - [Cloud Rate Limiting](ollama/cloud/rate_limiting.md) — Adaptive pacing (3s–30s), quota tracking, [actual token counts](ollama/mindx/precision_metrics.md) (no estimation)
-- [**Inference Budget — the LLM Metabolism**](INFERENCE_BUDGET.md) — Dynamic, self-adjusting per-provider rate-limit ledger ([`llm/inference_budget.py`](../llm/inference_budget.py)). Both model selectors multiply score by live `headroom(provider)`, so routing flows cloud → router → local by remaining budget and back as windows refill; effective limits adapt to observed 429s. Surfaced on `/diagnostics/live` + the landing-page Inference panel.
+- [**Inference Budget — the LLM Metabolism**](INFERENCE_BUDGET.md) — Dynamic, self-adjusting per-provider rate-limit ledger ([`llm/inference_budget.py`](../llm/inference_budget.py)). Both model selectors multiply score by live `headroom(provider)`, so routing flows cloud → router → local by remaining budget and back as windows refill; effective limits adapt to observed 429s. **Durable exhaustion** (2026-07-12): a quota at 100% (e.g. the ollama.com weekly usage limit) is noted via `exhaust()` — headroom 0, persisted, reloaded across restarts — so a consumed free tier is never forgotten. Surfaced on `/diagnostics/live`, `/insight/inference/appetite` + the landing-page Inference panel.
+- [Ornith-1.0 Feasibility](ORNITH_FEASIBILITY.md) — DeepReinforce's open agentic-coding family (MIT, Qwen3.5-based, self-scaffolding RL) measured against mindX hardware: `ornith:9b` fits only the primary GPU node; no Ollama Cloud tag; adoption is zero-code via inference discovery + model_health + the selectors.
 - [Precision Metrics](ollama/mindx/precision_metrics.md) — 18-decimal-place `Decimal` tracking via [`precision_metrics.py`](../llm/precision_metrics.py)
 - [Cloud Research](OLLAMA_VLLM_CLOUD_RESEARCH.md) — Ollama Cloud + vLLM viability analysis (2026-04-10)
 
@@ -235,7 +236,17 @@ mindX uses RAGE (Retrieval Augmented Generation Engine) — not RAG. RAGE is sem
 - [Hermes Integration — Day-1 (SKILL.md procedural memory)](HERMES_INTEGRATION.md) — Hermes-format skill files (`agents/skills/`) with screen-before-persist scanner. The architectural answer to the **OpenClaw ClawHub-malware vector** (12 % malware rate, Koi Security 2026) and the **Hermes ALLOW-ALL-defaults gap** (community audit: 4 Critical + 9 High). Hybrid 70/30 BM25+vector retrieval lands in `agents/skills/index.py` (Day-2).
 - [Hermes Integration Patterns research](operations/Hermes%20Agent%20Integration%20Patterns%20for%20mindX_%20Self-Improving%20Architecture%20Analysismd) — 494-line decomposition of Hermes v0.13.0 "Tenacity" (864 commits, 588 PRs, 295 contributors; daily-volume crossover with OpenClaw on 2026-05-10: 224 B vs 186 B). Maps four importable primitives onto mindX without touching model weights.
 - [OpenClaw research for mindX integration](operations/openclaw_mindx_research.md) — 280-line OpenClaw + OpenClaw-RL architectural read. Five highest-leverage transfers (SKILL.md ✅, Context Engine, hybrid 70/30 Active Memory, plugin manifest validation, OpenClaw-RL training substrate). Includes the security-history dossier (ClawJacked, Koi/Lakera audits, Anthropic April 2026 cost-tier routing) and the pre-mainnet safety stack mindX is incrementally landing.
-- [pgvector Integration](pgvectorscale_memory_integration.md) — [PostgreSQL 16](https://www.postgresql.org/) + [pgvector](https://github.com/pgvector/pgvector) (157K+ memories in [production](DEPLOYMENT_MINDX_PYTHAI_NET.md))
+- [pgvector Integration](rage/pgvectorscale_memory_integration.md) — [PostgreSQL 16](https://www.postgresql.org/) + [pgvector](https://github.com/pgvector/pgvector) (157K+ memories in [production](DEPLOYMENT_MINDX_PYTHAI_NET.md))
+
+#### RAGE innovations (`docs/rage/`)
+
+Deep-dive architecture and service contracts for the Retrieval Augmented Generative Engine — the vector-search, embedding, and retrieval substrate mindX owns end to end.
+
+- [RAGE System — index + embedding-protocol review](rage/rage_system.md) — the folder index, the canonical embedding protocol (`bge-m3` / `VECTOR(1024)` / IVFFlat), and the honest review of stale/divergent embedders
+- [RAGE as a Service](rage/rage_as_a_service.md) — the service contract: how RAGE ingests, indexes, retrieves, and what guarantees it offers callers
+- [RAGE Embed — Semantic Search](rage/EMBEDDING_SYSTEM.md) — the embedding layer bridging LLM inference and pgvector; switchable embed-model registry (default `bge-m3`, 1024-dim)
+- [pgvectorscale Memory Integration](rage/pgvectorscale_memory_integration.md) — the semantic-memory backbone: PostgreSQL + pgvector, dual-write mode, sub-100ms search at 1M+ vectors
+- [Vector Search, Embeddings & pgvectorscale Deep-Dive](rage/vectorsearch_pgvectorscale_embedding.md) — embeddings, ANN indexes (IVFFlat/HNSW/DiskANN), StreamingDiskANN benchmarks, and when to reach for a dedicated vector DB
 
 ### Memory Tiers
 
@@ -280,7 +291,8 @@ Phase A–E shipped 2026-04-26. Pushes old/low-importance STM to IPFS (Lighthous
 
 ### gitmind (self-hosted git backup/rollback + Forgejo forge)
 
-- [gitmind](GITMIND.md) — mindX's own git monitor + multi-source backup/rollback. Incremental **THOT** bundles linked into a **THlNK** (the THOT lINK) replicated to local + Lighthouse (IPFS) + Arweave = distributed mindX; ancestry-based rollback classification (self-initiated vs external); `GET /insight/gitmind`. Module [`mindx/gitmind/gitmind.py`](../mindx/gitmind/gitmind.py), CLI [`scripts/gitmind.py`](../scripts/gitmind.py).
+- [ArNS + Gateway Integration Scope](rage/ARIO_PERMAWEB_INTEGRATION_SCOPE.md) — the VPS-independent permaweb address: AR.IO ArNS name + staked gateway, funded by the 20k+20k ARIO endowment (strategy §VII). Phases A–E; AR.IO SDK first, inhouse `aORC` fallback.
+- [gitmind](rage/GITMIND.md) — **a RAGE extension** (see [`docs/rage/`](rage/rage_system.md)): mindX's own git monitor + multi-source backup/rollback. Incremental **THOT** bundles linked into a **THlNK** (the THOT lINK) replicated to local + Lighthouse (IPFS) + Arweave = distributed mindX; ancestry-based rollback classification (self-initiated vs external); `GET /insight/gitmind`. Module [`mindx/gitmind/gitmind.py`](../mindx/gitmind/gitmind.py), CLI [`scripts/gitmind.py`](../scripts/gitmind.py).
 - **Forgejo forge** — the web-accessible origin mindX owns at `git.pythai.net` (the GPLv3 [Gitea fork](https://forgejo.org/faq/)): `ForgejoRemote` mirror-push (token-redacted), installer [`scripts/install_forgejo.sh`](../scripts/install_forgejo.sh) (binary + systemd, reuses Postgres), Apache vhost [`deploy/apache/git-pythai-net.conf`](../deploy/apache/git-pythai-net.conf). Config: `MINDX_FORGEJO_URL`/`forgejo_token` (vault). *Built; not yet installed on the VPS.*
 
 ## Governance & Autonomy
@@ -440,6 +452,8 @@ mindX is a Godel machine — a self-improving system where the improvement mecha
 
 ## Economics
 
+- [**Monetization Blueprint v2**](monetization_blueprint.md) — the rails that exist and the order they switch on (2026-07-12): x402 paywall LIVE on prod (Base rail → bankon.eth treasury), recognition ladder → **0.111 BKPY** airdrop → member funnel, ERC-7857 iNFT agent minting, `/reference` pay-to-read. The constellation: **[bankon.pythai.net](https://bankon.pythai.net) = the identity layer** (client-side keys, vault, OVERLORD/OVERSEER recognition) · **[agenticplace.pythai.net](https://agenticplace.pythai.net) = the marketspace** (iNFT agents list + trade) · **mindx.pythai.net = the mind** (metered knowledge delivery). Backing contracts **BKPY** (repunit supply, increase-only DEX caps, OVERLORD rescue) + **THlNK** (iNFT carrying a THOT) — Anvil-verified, mainnet ceremony imminent. Measurement rule: *no revenue claim without a ledger event*.
+- [Roadmap — Phase III: Economic Engine](roadmap.md) — operative sequencing (deploy day → rail activation → revenue ledger → self-eval fold-in); [autonomousROADMAP.md](autonomousROADMAP.md) is the annotated RC1-era vision lineage it grew from
 - [Manifesto](MANIFESTO.md) — 3 pillars + Project Chimaiera roadmap + $BANKON token
 - Budget: one Hostinger VPS/month. Expansion via blockchain validation, service revenue, free tiers. Cost/benefit governs all compute decisions.
 - [Token Calculator](token_calculator_tool_robust.md) — Token counting and cost calculation with [18dp precision](ollama/mindx/precision_metrics.md)

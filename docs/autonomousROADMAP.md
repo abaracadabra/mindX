@@ -1,4 +1,22 @@
 # mindX (Augmentic Intelligence) - Web3 & Self-Funding Vision
+
+> **Status annotation (2026-07-12).** This is the original RC1-era vision
+> document, preserved as lineage. Reality has delivered most of its conceptual
+> milestones **under other names** — the operative documents are now
+> [roadmap.md](roadmap.md) (sequencing) and
+> [monetization_blueprint.md](monetization_blueprint.md) (economic model, v2):
+>
+> | Vision milestone (below) | Delivered as |
+> |---|---|
+> | 1.5 On-chain identity research | IDManagerAgent wallets; agents minted as **ERC-7857 iNFTs**; ERC-8004 AgentRegistry |
+> | 2.6 Smart-contract reader tool | Far exceeded: blockchain agents module, `agents/deployer/` (multi-chain DeployerService), `agents/storage/raw_tx.py` (EIP-1559 sender) + on-chain anchoring |
+> | 2.7 Decentralized storage research | Shipped: IPFS offload (Lighthouse + nft.storage) + ARC `DatasetRegistry` anchor + Arweave/permaweb via gitmind; ARIO endowment funded |
+> | 3.4 SelfFundingAgent + "S.M.A.I.R.T. presale" | bankon.eth treasury + **x402 paywall** (live on prod) + TokenCalculatorTool. The token is **BKPY** (fixed-supply, airdropped through the recognition ladder) — **no presale**; superseded by the [mindx_strategy.md](mindx_strategy.md) soulbound-royalty + BONA FIDE doctrine |
+> | 3.5 DAIO framework design | `daio/governance/` running: Boardroom, Dojo Arbiter, VotingBooth, CEOAgent as DAIO consensus bridge; on-chain constitution lands with the day-1 deployment |
+> | 3.6 On-chain agent registration | ERC-8004 AgentRegistry + iNFT mint pipeline (`POST /blockchain/agentfactory/mint`) |
+> | Phase IV "SelfFundingAgent v1.0 deploys a contract" | The DeltaVerse deployer + BKPY/THlNK contracts (Anvil-verified 2026-07-11; mainnet ceremony imminent) |
+> | "MindX contributes to its own ROADMAP.md updates" | Happening — AuthorAgent maintains MILESTONES/DOC_INDEX; this annotation is part of that loop |
+
 This document outlines the strategic development roadmap for the MindX system. It is a living document, intended to be reviewed and potentially updated by the MindX system itself as its capabilities evolve.
 Our Guiding Vision: To create a robust, secure, and increasingly autonomous AI system (MindX) that can intelligently manage its own evolution, improve its capabilities, enhance its efficiency, explore novel operational paradigms including decentralized ecosystems, and ultimately contribute to solving complex problems.
 Phase I: Foundational Stability & Core Self-Improvement Loop (RC1 - Current)

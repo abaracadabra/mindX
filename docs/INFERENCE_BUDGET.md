@@ -59,6 +59,32 @@ Per-provider state keyed by tier (`ollama_cloud`, `openrouter`, `ollama`/local, 
   `eff_rpm` climbs back toward (and can exceed) the configured limit — so the metabolism
   tracks a provider **raising** its limit just as it tracks one lowering it.
 
+## Durable exhaustion — the ledger remembers "100%" (2026-07-12)
+
+When a free tier is genuinely consumed (the operator-confirmed event: **Ollama Cloud at
+100% of usage**), the ledger must *know* it — across error shapes and across restarts.
+Three gaps used to hide that state (headroom read 0.955 while the account was at 100%):
+
+1. **The signal was dropped.** ollama.com's weekly-usage-limit arrives as an HTTP 200
+   with an `error` body through the local proxy; that path returned before the budget
+   record ran. `llm/ollama_handler.py` now classifies the error body — `usage limit` /
+   `quota` → **exhaustion note**, plain rate-limit → normal `ok=False` backoff — and the
+   direct-cloud fallback (`_generate_cloud_direct`) reports its non-200s the same way.
+2. **Restarts forgot.** Window timestamps and backoff lived in memory only. The persist
+   file now carries a `_state` section (backoff, per-window usage + effective limits,
+   counters) that is **reloaded at startup** — a consumed quota survives a service
+   restart.
+3. **Backoff was too short for long windows.** A 429 backed off at most 600 s — nothing
+   for a 5 h-session or weekly quota. The new **`exhaust(provider, until= | for_seconds=21600)`**
+   API pins headroom to 0 for 6 h by default (the `model_health` probe cadence — a failed
+   re-probe renews the note automatically), persisted immediately.
+
+Verified live: `/insight/inference/appetite` shows `ollama_cloud headroom=0.0 backoff≈6h`
+after a restart; selection routes to local until the quota refills. Local `ollama`
+remains headroom 1.0 (unlimited) — the failsafe is untouched. The exhaustion note is
+fail-open like everything else: it can only *deprioritise* a provider, never block
+inference.
+
 ## Real limits + safety margin
 
 Each provider is modelled with its **actual** free-tier limits as multiple windows;

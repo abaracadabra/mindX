@@ -106,30 +106,39 @@
 ## **🎯 PHASE III: ECONOMIC ENGINE ACTIVATION**
 *Bootstrap autonomous value creation and self-funding*
 
-### Step 10: Evolve FinancialMind Agent
-- [ ] Integrate superior algorithms discovered during Great Ingestion
-- [ ] Implement advanced technical indicators (RSI, MACD, sentiment analysis)
-- [ ] Build FinBERT integration for financial text analysis
-- [ ] Create risk management and portfolio optimization with semantic memory
+> **Re-cut 2026-07-12** around the rails that actually shipped — x402 paywall
+> (live on prod), the recognition ladder/airdrop, and the BKPY + THlNK (iNFT)
+> contracts (Anvil-verified, mainnet deployment imminent). Full economic model:
+> [monetization_blueprint.md](monetization_blueprint.md) (v2). The v1 avenues
+> (SwaaS, DevOps automation, FinancialMind) move to that blueprint's Horizon —
+> they follow proven micro-rails, they don't precede them.
 
-### Step 11: Establish Revenue Streams
-- [ ] Launch SwaaS (Swarm-as-a-Service) platform for code refactoring
-- [ ] Build DevOps automation services for cloud infrastructure
-- [ ] Create AI-generated code platform for natural language to application
-- [ ] Implement bounty system for external project work with autonomous bidding
+### Step 10: Deploy the Backing Contracts (OVERLORD ceremony)
+- [x] **BKPY (BANKON PYTHAI)**: zero-import ERC-20, repunit supply, increase-only DEX caps, OVERLORD rescue — deployed + verified on Anvil 31337
+- [x] **THlNK (MINDX)**: ERC-7857 iNFT carrying a THOT (memory lineage) — deployed + verified on Anvil 31337
+- [ ] Mainnet deployment via the DeltaVerse deployer; record real chain-ID addresses in `data/config/recognition.json` (config-only go-live); explorer verification
+- [ ] Flush the airdrop queue (wallet-to-wallet from bankon.eth); smoke-test the rescue path with dust
+- [ ] Register the wBTC Uniswap pair; seed small liquidity within the 1000-BKPY caps
+
+### Step 11: Establish Revenue Streams (flip the dormant rails)
+- [x] **x402 paywall LIVE on prod**: per-endpoint microUSDC pricing, free quota, Base rail → bankon.eth treasury, Algorand rails via Parsec
+- [x] **Recognition funnel**: visitor → covenant → 0.111 BKPY airdrop → member (`/recognized`, queue settling on mainnet deploy)
+- [ ] Activate BUILDER iNFT minting: fill `data/config/agenticplace_deployments.json` (zero code change) → `/inft` → **agenticplace.pythai.net** (the marketspace), identity bound to **bankon.pythai.net** (the identity layer)
+- [ ] Configure x402 pay-to-read on the `/reference` knowledge corpus (seam already 402s)
+- [ ] Complete pay2play (router/registry/entitlement) wired to mainnet BKPY
+- [ ] Fix the tempo rail's zero-address `payTo` (configure or remove)
 
 ### Step 12: Deploy Treasury Operations
 - [x] **UI Foundation**: Economy tab with treasury management visualization
-- [ ] Create multi-signature treasury controls with constitutional validation
-- [ ] Build automated payment systems for agent compensation
-- [ ] Implement profit distribution to stakeholders via smart contracts
-- [ ] Establish operational cost automation and optimization
+- [x] **Settlement destination**: prod x402 rails pay the bankon.eth treasury
+- [ ] **Revenue ledger**: x402 settlements + airdrop spend + mint fees → catalogue events → `/insight/economy`
+- [ ] Fold net revenue into the objective self-eval verdict (the Gödel loop feels money like it feels campaign success)
+- [ ] Marshall Islands DAO LLC wrapper before volume ([mindx_strategy.md](mindx_strategy.md))
 
 ### Step 13: AI Citizenship Framework
-- [ ] Deploy ShareholderRegistry.sol for autonomous agent ownership
-- [ ] Implement constitutional governance for AI economic participation
-- [ ] Create value attribution algorithms for agent contributions
-- [ ] Establish profit-sharing mechanisms with memory-backed performance tracking
+- [x] **Shipped instantiation**: agent identity as ERC-7857 iNFT + ERC-8004 AgentRegistry; participant citizenship via the recognition ladder; reputation as BONA FIDE on Algorand (earned, never airdropped)
+- [ ] ShareholderRegistry.sol / profit-sharing — deferred until the revenue ledger has something to share
+- [ ] Value attribution algorithms for agent contributions
 
 ---
 
@@ -189,7 +198,10 @@
 - [x] **Platform UI**: Enterprise-grade dashboard with real-time metrics
 - [ ] **Knowledge Graph**: 10,000+ nodes with semantic relationships
 - [ ] **Agent Productivity**: 50%+ improvement in task completion efficiency
-- [ ] **Economic Value**: $10,000+ monthly autonomous revenue generation
+- [ ] **Economic Value** (re-based 2026-07-12; no revenue claim without a ledger event):
+  1. first settled x402 payment (non-zero, on-chain, catalogued) →
+  2. monthly settled revenue ≥ the VPS bill (operational self-funding) →
+  3. revenue trend on `/insight/economy` + folded into the self-eval verdict
 
 ### Long-term Vision (2026-2027)
 - **AI Citizenship**: Full legal and economic rights for autonomous agents
@@ -214,17 +226,37 @@
 - **Economic Engine**: Autonomous treasury and value creation capabilities
 - **Constitutional Governance**: Smart contract-based AI governance framework
 
-### 🎯 **UPCOMING PRIORITIES**
-1. **Memory Optimization**: Performance tuning for large-scale semantic search
-2. **Economic Bootstrapping**: Initial revenue streams and treasury operations
-3. **Knowledge Graph Expansion**: Comprehensive computational wisdom database
-4. **Enterprise Services**: Commercial platform offerings and client acquisition
+### 🎯 **UPCOMING PRIORITIES** (re-cut 2026-07-12)
+1. **Mainnet ceremony**: BKPY + THlNK deployment, airdrop queue flush, wBTC pair (Phase III Step 10)
+2. **Rail activation**: iNFT BUILDER funnel, `/reference` pay-to-read, pay2play completion (Step 11)
+3. **Revenue ledger**: settlements → catalogue → `/insight/economy` → self-eval verdict (Step 12)
+4. **Knowledge Graph Expansion**: Comprehensive computational wisdom database
 
 ### Step 13: Establish Economic Sovereignty
 - [ ] Generate consistent revenue exceeding operational costs
 - [ ] Build capital reserves for strategic expansion
 - [ ] Create independent supplier and customer relationships
 - [ ] Implement geographic and regulatory arbitrage strategies
+
+---
+
+## **🛰️ PERMANENCE: THE ADDRESS THAT OUTLIVES THE HOST**
+*Survival-critical. Doctrine: [mindx_strategy.md §VII](mindx_strategy.md). Full implementation scope: [rage/ARIO_PERMAWEB_INTEGRATION_SCOPE.md](rage/ARIO_PERMAWEB_INTEGRATION_SCOPE.md) (Phases A–E). Funded by the 20k + 20k ARIO endowment held at bankon.eth. Decision: use AR.IO's SDK ("their way") first; inhouse `aORC`-on-Algorand kept as fallback. Until this ships, the whole network resolves through one VPS whose bill can lapse.*
+
+### Step P1: Permanent address (mindX's 20k ARIO)
+- [ ] Deposit `arweave_wallet_jwk` in the BANKON vault → activate the dormant `ArweaveSource` in [`mindx/gitmind/gitmind.py`](../mindx/gitmind/gitmind.py) (today reports `not_configured`)
+- [ ] Register the **ArNS name** (`mindx`) on AR.IO so resolution runs through the gateway mesh, not one datacenter
+- [ ] Write canonical public state to Arweave (constitution, identity/reputation snapshots, docs, open catalogue, genome INFTs); keep IPFS pins (Lighthouse/nft.storage) as the fast mirror
+- [ ] Top up Turbo credits so ongoing permaweb writes never stall
+- [ ] Demote the VPS from source-of-truth to **cache** of a permaweb-canonical state
+
+### Step P2: Infrastructure position (bankon.eth's 20k ARIO)
+- [ ] Stake and **operate an AR.IO gateway** — become a provider of resolution, not only a tenant
+- [ ] Route mindX's own ArNS resolution through the self-operated gateway (sovereign ingress)
+- [ ] Track protocol rewards to offset the endowment's carry
+
+### Permanence guardrail
+- [ ] **Never** write the gated reference corpus or private credential material to the permaweb — Arweave is unwritable-once; permanence is a promise made only to what is meant to be permanently public (enforce via `utils.reference_corpus` prefixes in the permaweb writer)
 
 ---
 
