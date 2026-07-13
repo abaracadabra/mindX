@@ -45,9 +45,21 @@ function fail(msg) {
   process.exit(1);
 }
 
-if (!existsSync(engineBundle)) {
+// Standalone clones (no facerig sibling) run off the committed static/vendor
+// copies — that's not an error. Only fail when there is NEITHER a facerig
+// source to sync from NOR an already-vendored engine to serve.
+const vendoredEngine = join(vendorOut, 'faicey-engine.js');
+if (!existsSync(facerigRoot) || !existsSync(engineBundle)) {
+  if (existsSync(vendoredEngine)) {
+    console.log(
+      '[sync-engine] facerig source not present — serving the committed ' +
+        'static/vendor engine as-is (canonical rebuilds happen in facerig).'
+    );
+    process.exit(0);
+  }
   fail(
     `engine bundle not found at\n  ${engineBundle}\n` +
+      `and no committed vendor copy at ${vendoredEngine}.\n` +
       `Build it first:  cd ../facerig && npm install && npm run build:lib`
   );
 }

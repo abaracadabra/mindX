@@ -36,7 +36,7 @@
 ## 📁 Project Structure
 
 ```
-/home/hacker/mindX/faicey/
+./
 ├── src/
 │   ├── FaiceyCore.js              # Main engine with d3.js oscilloscope
 │   ├── agents/

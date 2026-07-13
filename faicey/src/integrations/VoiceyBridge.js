@@ -8,10 +8,15 @@
  */
 
 import { EventEmitter } from 'events';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
 // Voice concerns now live in the agnostic `voaice` peer package (separated from faicey).
 // `system` = OS TTS binaries (espeak-ng/festival); `neural` = torch-free ONNX TTS + cloning.
 import { VoiceCreationEngine } from '../../../voaice/src/VoiceCreationEngine.js';
 import { NeuralVoiceEngine } from '../../../voaice/src/NeuralVoiceEngine.js';
+
+// Peer-module layout: faicey/ and facerig/ sit side by side; no absolute host paths.
+const _FAICEY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
 export class VoiceyBridge extends EventEmitter {
     constructor(options = {}) {
@@ -19,8 +24,9 @@ export class VoiceyBridge extends EventEmitter {
 
         // Configuration
         this.agentId = options.agentId || 'faicey-voicey-bridge';
-        this.voiceyPath = options.voiceyPath || '/home/hacker/mindX/facerig/voicey2';
-        this.faiceyPath = options.faiceyPath || '/home/hacker/mindX/faicey';
+        this.voiceyPath = options.voiceyPath || process.env.VOICEY_PATH
+            || resolve(_FAICEY_ROOT, '../facerig/voicey2');
+        this.faiceyPath = options.faiceyPath || process.env.FAICEY_PATH || _FAICEY_ROOT;
 
         // Voice creation engine — `system` (OS TTS, default, unchanged) or `neural`
         // (torch-free ONNX base voice + zero-shot cloning). Both expose init() and emit

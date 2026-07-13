@@ -160,7 +160,7 @@ const personas = {
 ### **Lightweight Demo (Recommended)**
 
 ```bash
-cd /home/hacker/mindX/faicey
+cd .
 node examples/lightweight-demo.js
 # Opens http://localhost:8080
 ```

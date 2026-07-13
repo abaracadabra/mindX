@@ -20,7 +20,11 @@ import * as THREE from '#three';
 import * as d3 from 'd3';
 import AudioMotionAnalyzer from 'audiomotion-analyzer';
 import Meyda from 'meyda';
-import { PitchDetector } from 'pitch-detector';
+// pitch-detector ships only a default export ({ Complex, FFT, Pitcher, Note });
+// Pitcher is the detector class — a named PitchDetector export does not exist,
+// and importing one crashes the whole module under Node ESM.
+import pitchDetectorPkg from 'pitch-detector';
+const PitchDetector = pitchDetectorPkg?.Pitcher || pitchDetectorPkg;
 import { EventEmitter } from 'events';
 
 export class FaiceyCore extends EventEmitter {

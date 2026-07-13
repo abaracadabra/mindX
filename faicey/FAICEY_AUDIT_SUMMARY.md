@@ -41,7 +41,7 @@ Successfully completed comprehensive audit and enhancement of faicey to maximum 
 ### **🚀 Enhanced Implementation**
 
 #### **Complete Faicey 2.0 System Created**
-**Location**: `/home/hacker/mindX/faicey/`
+**Location**: `./`
 
 **Core Architecture**:
 ```
@@ -481,7 +481,7 @@ const enhancedIDManager = {
 
 ### **Installation**
 ```bash
-cd /home/hacker/mindX/faicey
+cd .
 npm install
 ```
 
