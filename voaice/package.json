@@ -1,7 +1,7 @@
 {
   "name": "voaice",
   "version": "0.1.0",
-  "description": "voaice — the voice of an AI service. Spectrometer, frequency manipulation, oscilloscope and TTS as an agnostic, in-house Node.js + d3 module. Separated from faicey (the FACE) so voice and face are independent peers.",
+  "description": "voaice \u2014 the voice of an AI service. Spectrometer, frequency manipulation, oscilloscope and TTS as an agnostic, in-house Node.js + d3 module. Separated from faicey (the FACE) so voice and face are independent peers.",
   "type": "module",
   "main": "src/index.js",
   "exports": {
@@ -12,27 +12,37 @@
     "./neural": "./src/NeuralVoiceEngine.js",
     "./formant": "./src/tts/formant.js",
     "./wav": "./src/audio/wav.js",
-    "./fft": "./src/dsp/fft.js"
+    "./fft": "./src/dsp/fft.js",
+    "./forensic": "./src/Forensic.js",
+    "./editor": "./src/Editor.js",
+    "./exporter": "./src/Exporter.js"
   },
   "scripts": {
     "serve": "node server.js",
     "demo": "node examples/spectrometer-demo.js",
     "fetch-models": "node scripts/fetch-models.mjs",
-    "test": "node test/neural.test.js"
+    "test": "node test/voicey.test.js && node test/neural.test.js",
+    "test:fast": "node test/voicey.test.js"
   },
   "keywords": [
-    "voice",
-    "spectrometer",
-    "frequency-analysis",
-    "oscilloscope",
-    "fft",
-    "tts",
-    "d3",
     "agnostic-module",
+    "aivatar",
+    "audio-editor",
+    "d3",
+    "fft",
+    "forensic-voice",
+    "frequency-analysis",
     "mindx",
-    "voaice"
+    "ogg",
+    "oscilloscope",
+    "spectrometer",
+    "tts",
+    "voaice",
+    "voice",
+    "voice-cloning",
+    "wav"
   ],
-  "//deps": "Core DSP (FFT, spectrometer, frequency manipulation) is IN-HOUSE with zero external deps. d3 powers the oscilloscope. Optional analysers (meyda/audiomotion) and the neural engine's onnxruntime-node (CPU, torch-free) load lazily only when present — isolated builds stay minimal. NO torch, NO transformers, NO Python.",
+  "//deps": "Core DSP (FFT, spectrometer, frequency manipulation) is IN-HOUSE with zero external deps. d3 powers the oscilloscope. Optional analysers (meyda/audiomotion) and the neural engine's onnxruntime-node (CPU, torch-free) load lazily only when present \u2014 isolated builds stay minimal. NO torch, NO transformers, NO Python.",
   "dependencies": {
     "d3": "^7.9.0"
   },

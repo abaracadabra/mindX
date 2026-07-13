@@ -59,3 +59,25 @@ Voice concerns separated out of `faicey` (2026-06). Agnostic homes:
 github.com/javascriptit · github.com/interplanetaryfilesystem · github.com/mlodular.
 
 © Professor Codephreak — rage.pythai.net
+
+## Forensic · Editor · Exporter (aivatar voice tools)
+
+The aivatar service needs the voice to be **measurable, editable, and evidentiary** —
+these three modules complete that (2026-07-13):
+
+- **`voaice/forensic`** — `Forensic` class: aggregate `voiceprint()` identity (18-dp
+  registers, reproducible sha256), `Forensic.compare()` speaker similarity with verdict
+  bands (match / probable / inconclusive / different), `integrity()` tamper/splice
+  screening (discontinuity z-scores, clipping, DC offset), and `custody()` hash-linked
+  chain-of-custody records. Same measurement substrate as `Scientific` — evidence and
+  SoundWaveToken registration share one shape.
+- **`voaice/editor`** — non-destructive clip editing: `slice/cut/insert/concat/gain/
+  fadeIn/fadeOut/normalize (peak | LUFS)/reverse/resample/removeSilence`, plus the
+  chainable, undoable `AudioEditor` session.
+- **`voaice/exporter`** — quality-tiered export: `.wav` in-house (16/24/32-float) and
+  `.ogg` Vorbis via the system ffmpeg (`oggAvailable()` reports honestly). Tiers:
+  `low` 22.05k/16 · `medium` 44.1k/16 · `high` 48k/24 · `studio` 48k/32f — or pass
+  explicit `settings`. Cloning stays in `voaice/neural`; clone → edit → verify
+  (forensic) → export is the full aivatar voice pipeline.
+
+Fast suite: `npm run test:fast` (synthetic signals, no models, sub-second).

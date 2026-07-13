@@ -28,7 +28,32 @@ export {
 } from './dsp/fft.js';
 
 // WAV codec — zero-dep PCM encode/decode (output + reference-clip decode).
+// encodeWav takes { bitDepth: 16|24|32 } for quality-tiered output.
 export { encodeWav, decodeWav, frames } from './audio/wav.js';
+
+// Forensic voice analysis — voiceprint identity, speaker comparison,
+// tamper/splice screening, hash-linked chain-of-custody. Same 18-dp
+// substrate as Scientific, so evidence and measurement share one shape.
+export { Forensic } from './Forensic.js';
+
+// Non-destructive editing — pure clip operations + an undoable session.
+export {
+  AudioEditor,
+  slice,
+  cut,
+  insert,
+  concat,
+  gain,
+  fadeIn,
+  fadeOut,
+  normalize,
+  reverse,
+  resample,
+  removeSilence,
+} from './Editor.js';
+
+// Quality-tiered export — .wav in-house (16/24/32f), .ogg via system ffmpeg.
+export { exportClip, toWav, toOgg, QUALITY, resolveQuality, oggAvailable } from './Exporter.js';
 
 // Loudness (ITU-R BS.1770-4 LUFS) + VAD silence-trim — torch-free in-house DSP, used to
 // level output and clean reference clips before cloning.

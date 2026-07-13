@@ -14,14 +14,21 @@
 const clamp = (v) => (v > 1 ? 1 : v < -1 ? -1 : v);
 
 /**
- * Encode mono Float32 samples to a 16-bit PCM WAV buffer.
+ * Encode mono Float32 samples to a PCM WAV buffer.
+ * Default stays the canonical 16-bit PCM; quality-tier exports (Exporter.js)
+ * pass `bitDepth` 24 (int PCM) or 32 (IEEE float, fmt=3).
  * @param {Float32Array|number[]} samples values in [-1,1]
  * @param {number} [sampleRate=24000]
+ * @param {{bitDepth?: 16|24|32}} [opts]
  * @returns {Buffer}
  */
-export function encodeWav(samples, sampleRate = 24000) {
+export function encodeWav(samples, sampleRate = 24000, { bitDepth = 16 } = {}) {
+  if (![16, 24, 32].includes(bitDepth)) {
+    throw new Error(`encodeWav: unsupported bitDepth ${bitDepth} (16|24|32)`);
+  }
   const n = samples.length;
-  const bytesPerSample = 2;
+  const bytesPerSample = bitDepth >> 3;
+  const isFloat = bitDepth === 32; // 32-bit is written as IEEE float (fmt=3)
   const blockAlign = bytesPerSample; // mono
   const byteRate = sampleRate * blockAlign;
   const dataSize = n * bytesPerSample;
@@ -33,13 +40,13 @@ export function encodeWav(samples, sampleRate = 24000) {
   buf.write('WAVE', 8, 'ascii');
   // fmt chunk
   buf.write('fmt ', 12, 'ascii');
-  buf.writeUInt32LE(16, 16); // PCM fmt chunk size
-  buf.writeUInt16LE(1, 20); // audio format = PCM
+  buf.writeUInt32LE(16, 16); // fmt chunk size
+  buf.writeUInt16LE(isFloat ? 3 : 1, 20); // 1 = int PCM, 3 = IEEE float
   buf.writeUInt16LE(1, 22); // channels = mono
   buf.writeUInt32LE(sampleRate, 24);
   buf.writeUInt32LE(byteRate, 28);
   buf.writeUInt16LE(blockAlign, 32);
-  buf.writeUInt16LE(8 * bytesPerSample, 34); // bits per sample
+  buf.writeUInt16LE(bitDepth, 34);
   // data chunk
   buf.write('data', 36, 'ascii');
   buf.writeUInt32LE(dataSize, 40);
@@ -47,9 +54,18 @@ export function encodeWav(samples, sampleRate = 24000) {
   let off = 44;
   for (let i = 0; i < n; i++) {
     const s = clamp(samples[i]);
-    // symmetric quantisation to int16
-    buf.writeInt16LE(s < 0 ? Math.round(s * 0x8000) : Math.round(s * 0x7fff), off);
-    off += 2;
+    if (isFloat) {
+      buf.writeFloatLE(s, off);
+    } else if (bitDepth === 24) {
+      const v = s < 0 ? Math.round(s * 0x800000) : Math.round(s * 0x7fffff);
+      buf.writeUInt8(v & 0xff, off);
+      buf.writeUInt8((v >> 8) & 0xff, off + 1);
+      buf.writeUInt8((v >> 16) & 0xff, off + 2);
+    } else {
+      // symmetric quantisation to int16
+      buf.writeInt16LE(s < 0 ? Math.round(s * 0x8000) : Math.round(s * 0x7fff), off);
+    }
+    off += bytesPerSample;
   }
   return buf;
 }

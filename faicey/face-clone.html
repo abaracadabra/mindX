@@ -58,6 +58,7 @@
       <button class="shot" data-a="left" style="margin:0;padding:6px;font-size:11px">📷 left</button>
       <button class="shot" data-a="right" style="margin:0;padding:6px;font-size:11px">📷 right</button>
     </div>
+    <button id="autoCap" style="margin-top:5px">🤖 AUTO — face me, then turn your head; I do the rest</button>
     <div id="shots" style="display:flex;gap:4px;margin-top:6px"></div>
     <button id="cloneCam">⌖ CLONE FROM WEBCAM SHOTS</button>
 
@@ -129,6 +130,7 @@ import { personaPrint } from '/src/face_clone/persona.js';
 // in-house three.js point-cloud / wireframe renderer of the CLONED geometry (PCD + morphtargets-webcam)
 import { Face3D, FACE3D_THEMES } from '/src/face_clone/face3d.js';
 import { audioMouth, rms as frameRms, applyMouthOpen } from '/src/face_clone/animate.js';
+import { AutoCapture } from '/src/face_clone/autocapture.js';
 
 const eng = await new FaceCloneEngine().init();
 document.getElementById('cap').textContent = eng.capability.mediapipe ? 'mediapipe ✓' : 'no model — demo only';
@@ -308,6 +310,36 @@ function drawShots(){ const el=document.getElementById('shots'); el.innerHTML=''
 document.getElementById('cloneCam').onclick=async()=>{ if(!camShots.length) return setStatus('capture front/left/right first');
   try{ setStatus('detecting '+camShots.length+' webcam angles…'); showSource((camShots.find(s=>s.a==='front')||camShots[0]).canvas); render(await eng.cloneFromPerspectives(camShots.map(s=>s.canvas))); setStatus('cloned from webcam ✓ ('+camShots.map(s=>s.a).join('/')+')'); }
   catch(e){ setStatus('error: '+e.message); } };
+
+// ── AUTO capture: pose-guided, hands-free — turn your head, it snaps front/left/right and clones ──
+let autoRunning=false;
+document.getElementById('autoCap').onclick=async()=>{
+  const btn=document.getElementById('autoCap');
+  if(autoRunning){ autoRunning=false; btn.textContent='🤖 AUTO — face me, then turn your head; I do the rest'; return; }
+  if(!camStream && !(await openCam(camSel.value))) return setStatus('could not open webcam');
+  if(!(await eng.landmarker.available())) return setStatus('MediaPipe not vendored — AUTO needs static/vendor/mediapipe (npm run vendor:mediapipe)');
+  autoRunning=true; btn.textContent='■ stop AUTO';
+  camShots.length=0; drawShots();
+  const ac=new AutoCapture();
+  const bar=()=>'▰'.repeat(Math.round(ac._hold? (ac._hold/ac.holdFrames)*6 :0)).padEnd(6,'▱');
+  const loop=async()=>{
+    if(!autoRunning||!camStream) return;
+    let step;
+    try{ const f=await eng.landmarker.detectVideoFrame(camEl, performance.now()); step=ac.update(f?f.matrix:null); }
+    catch(e){ autoRunning=false; btn.textContent='🤖 AUTO — face me, then turn your head; I do the rest'; return setStatus('auto-capture error: '+e.message); }
+    if(step.capture){ camShots.push({a:step.capture, canvas:grab()}); drawShots(); }
+    setStatus('AUTO '+bar()+' '+step.instruction+(step.yaw!==null?'  (yaw '+(step.yaw*57.3).toFixed(0)+'°)':''));
+    if(step.done){
+      autoRunning=false; btn.textContent='🤖 AUTO — face me, then turn your head; I do the rest';
+      try{ setStatus('all angles captured — cloning…'); showSource((camShots.find(s=>s.a==='front')||camShots[0]).canvas);
+        render(await eng.cloneFromPerspectives(camShots.map(s=>s.canvas))); setStatus('AUTO clone complete ✓ (front/left/right, hands-free)'); }
+      catch(e){ setStatus('error: '+e.message); }
+      return;
+    }
+    requestAnimationFrame(loop);
+  };
+  loop();
+};
 
 // ── clone the whole PERSON from a video: face (with recognition) + voice (extracted audio) ──
 const VOAICE = location.protocol+'//'+location.hostname+':7350';   // the voaice peer

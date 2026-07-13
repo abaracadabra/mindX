@@ -8,6 +8,7 @@
 
 **© Professor Codephreak** - [rage.pythai.net](https://rage.pythai.net)
 **Organizations**: [github.com/agenticplace](https://github.com/agenticplace), [github.com/cryptoagi](https://github.com/cryptoagi), [github.com/Professor-Codephreak](https://github.com/Professor-Codephreak)
+**Lineage**: [github.com/Faicey](https://github.com/Faicey) is the original Face-for-AI development environment, kept as a **frozen template**; active code publishes under [Professor-Codephreak/faicey](https://github.com/Professor-Codephreak/faicey). Together with [`voaice`](../voaice) (the voice) and [`facerig`](../facerig) (the rig), faicey (the face) composes the **aivatar** service — a person's AI model that looks, speaks, and rigs.
 
 **Advanced 3D face rendering system with voice print analysis, frequency triggers, and inflection detection for mindX autonomous Augmented Intelligence agents**
 
