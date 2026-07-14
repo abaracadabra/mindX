@@ -54,7 +54,21 @@ export class Forensic {
     this.sampleRate = opts.sampleRate || 24000;
     this.frameSize = opts.frameSize || 2048;
     this.hop = opts.hop || this.frameSize / 2;
+    // A voiceprint is an AGGREGATE — a few hundred well-spread frames describe a
+    // speaker as well as every frame of a 10-minute clip, at a fraction of the
+    // cost. Frames are subsampled EVENLY (never truncated to the head), so the
+    // print stays representative of the whole clip. Set 0 to analyse every frame.
+    this.maxFrames = opts.maxFrames ?? 400;
     this.scientific = new Scientific({ sampleRate: this.sampleRate, frameSize: this.frameSize });
+  }
+
+  /** Evenly subsample a frame list down to `maxFrames` (identity if under). */
+  _subsample(list) {
+    if (!this.maxFrames || list.length <= this.maxFrames) return list;
+    const step = list.length / this.maxFrames;
+    const out = [];
+    for (let i = 0; i < this.maxFrames; i++) out.push(list[Math.floor(i * step)]);
+    return out;
   }
 
   /**
@@ -67,7 +81,7 @@ export class Forensic {
     // voicedFrames returns frame METADATA ({start, voiced}); extract the actual
     // sample windows for the voiced ones, falling back to all frames on thin input.
     const { frames: vmeta } = voicedFrames(samples, this.sampleRate);
-    const voicedStarts = (vmeta || []).filter((f) => f.voiced).map((f) => f.start);
+    const voicedStarts = this._subsample((vmeta || []).filter((f) => f.voiced).map((f) => f.start));
     let source;
     if (voicedStarts.length >= 4) {
       source = voicedStarts.map((start) => {
@@ -77,7 +91,7 @@ export class Forensic {
         return w;
       });
     } else {
-      source = frames(samples, this.frameSize, this.hop);
+      source = this._subsample(frames(samples, this.frameSize, this.hop));
     }
     const series = Object.fromEntries(FEATURE_KEYS.map((k) => [k, []]));
     const precisions = [];
@@ -151,18 +165,26 @@ export class Forensic {
       for (let i = s; i < s + fs; i++) acc += samples[i] * samples[i];
       rmsSeries.push(Math.sqrt(acc / fs));
     }
-    // first-difference z-scores → splice candidates
+    // First-difference z-scores → splice candidates. A splice must be BOTH a
+    // statistical outlier AND a materially large jump: in a near-stationary
+    // signal the diff stdev collapses toward zero, so a z-score alone would
+    // flag ordinary numerical wobble as tampering. The absolute floor (a jump
+    // worth ≥25% of the clip's mean level) is what keeps a clean recording clean.
     const diffs = rmsSeries.slice(1).map((v, i) => Math.abs(v - rmsSeries[i]));
     const dm = mean(diffs);
-    const ds = stdev(diffs) || 1e-9;
+    const ds = stdev(diffs);
+    const levelMean = mean(rmsSeries);
+    const absFloor = Math.max(1e-4, 0.25 * levelMean);
     const events = [];
     diffs.forEach((d, i) => {
-      const z = (d - dm) / ds;
+      if (d < absFloor) return; // too small to be a splice, whatever its z-score
+      const z = ds > 1e-9 ? (d - dm) / ds : Infinity;
       if (z >= 4) {
         events.push({
           type: 'discontinuity',
           atSec: ((i + 1) * hop) / this.sampleRate,
-          zScore: Number(z.toFixed(2)),
+          zScore: Number.isFinite(z) ? Number(z.toFixed(2)) : null,
+          jump: Number(d.toFixed(5)),
         });
       }
     });

@@ -1,0 +1,66 @@
+{
+  "name": "aivatar",
+  "version": "1.0.0",
+  "description": "aivatar — the definitive .persona creation tool. A person's AI model that looks (faicey), speaks (voaice), rigs (facerig) and thinks (cognitive persona). Earned fidelity tiers: basic, professional, scientific (realism / hyperrealism) — with forensic provenance, consent, and signed manifests above basic.",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "aivatar": "./cli.js"
+  },
+  "exports": {
+    ".": "./src/index.js",
+    "./studio": "./src/PersonaStudio.js",
+    "./modes": "./src/modes.js",
+    "./schema": "./src/schema.js",
+    "./measure": "./src/measure.js",
+    "./provenance": "./src/provenance.js"
+  },
+  "scripts": {
+    "test": "node test/aivatar.test.js",
+    "inspect": "node cli.js inspect",
+    "modes": "node cli.js modes"
+  },
+  "keywords": [
+    "aivatar",
+    "persona",
+    "avatar",
+    "face-clone",
+    "voice-clone",
+    "faceprint",
+    "voiceprint",
+    "forensic",
+    "provenance",
+    "c2pa",
+    "consent",
+    "hyperrealism",
+    "digital-human",
+    "aiml",
+    "faicey",
+    "voaice",
+    "facerig",
+    "mindx",
+    "professor-codephreak"
+  ],
+  "//peers": "faicey (FACE) and voaice (VOICE) load lazily from the sibling packages or node_modules; absent them the studio still builds/validates/grades personas from supplied prints. facerig is the canonical rig engine (browser-side).",
+  "peerDependencies": {
+    "faicey": "*",
+    "voaice": "*"
+  },
+  "peerDependenciesMeta": {
+    "faicey": { "optional": true },
+    "voaice": { "optional": true }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Professor Codephreak <rage.pythai.net>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Professor-Codephreak/aivatar.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Professor-Codephreak/aivatar/issues"
+  },
+  "homepage": "https://mindx.pythai.net"
+}
