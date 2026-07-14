@@ -81,3 +81,13 @@ these three modules complete that (2026-07-13):
   (forensic) → export is the full aivatar voice pipeline.
 
 Fast suite: `npm run test:fast` (synthetic signals, no models, sub-second).
+
+## aivatar — where the voice becomes a being
+
+voaice is the VOICE. Composed with [faicey](https://github.com/Professor-Codephreak/faicey)
+(the FACE), facerig (the RIG) and the cognitive `.persona` (the MIND), it becomes
+**[aivatar](https://github.com/Professor-Codephreak/aivatar)** — the definitive `.persona`
+creation tool. aivatar consumes `voaice/forensic` (voiceprint identity, similarity,
+integrity), `voaice/editor` and `voaice/exporter` to MEASURE what a clone actually
+achieved, and grades it into an earned fidelity tier (basic / professional /
+scientific → realism · hyperrealism) with consent, a custody chain and a signed manifest.
