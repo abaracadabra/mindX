@@ -43,32 +43,21 @@ reported honestly before it is relied on.
   human), RBJ-biquad `eq`, `compress`, `deEss`, `breath`. Chainable and undoable
   via `VoiceShaper`, matching the `AudioEditor` contract.
 
-### Fixed
+### Fixed — the forensic model
 
-- `Forensic.integrity()` no longer reports false splices on near-stationary
-  audio. The diff standard deviation collapses toward zero on stationary signal,
-  so ordinary numerical wobble scored as tampering; a splice must now be **both**
-  a statistical outlier **and** a materially large jump (≥25 % of mean level).
-- `Forensic.voiceprint()` evenly subsamples long clips (`maxFrames`, default 400)
-  instead of analysing every frame. A few hundred well-spread frames describe a
-  speaker as well as thousands, at a fraction of the cost.
-- `deEss()` rebuilt as a proper two-band crossover. Subtracting a highpassed copy
-  from the original does not work: the filter phase-shifts the extracted band, so
-  the subtraction fails to cancel and can *add* energy at the target frequency.
-- `noiseProfile()` uses a tighter gate than the speech VAD (15 dB, not 35 dB).
-  The speech VAD deliberately keeps quiet consonants; a noise profile that trains
-  on them subtracts the voice away.
-
-### Fixed (post-release hardening, same day)
+Building the v3 suites surfaced defects serious enough to be worth naming plainly.
+A forensic tool that cries wolf on honest evidence is not a conservative tool; it
+is a broken one.
 
 - **`Forensic.integrity()` no longer condemns an honest recording for having
   pauses.** Every real capture starts and stops speaking, and each onset is a
   large, abrupt rise in level — a naive amplitude-jump detector calls all of them
-  splices. The model is now forensically sound: speech↔silence transitions are
-  *ignored* (that is a person talking); a discontinuity is flagged only **inside a
-  run of speech** (a cut within a sentence); and a new **noise-floor shift**
-  detector catches the real signature of stitched material — two different rooms
-  in one file.
+  splices. The model is now sound: speech↔silence transitions are *ignored* (that
+  is a person talking); a discontinuity is flagged only **inside a run of speech**
+  (a cut within a sentence); and a **noise-floor shift** detector catches the real
+  signature of stitched material — two different rooms in one file. It also no
+  longer reports false splices on near-stationary audio, where the diff standard
+  deviation collapses and ordinary numerical wobble scored as tampering.
 - **`snr()` returns `null` with `verdict: 'unmeasurable'`** for a clip that
   contains no silence, instead of inventing a floor. Signal-to-noise is measured
   *against* a noise floor, and a clip with no pauses does not contain one. Supply
@@ -76,14 +65,20 @@ reported honestly before it is relied on.
   first — and it becomes measurable again. Unmeasured is never passed off as zero.
 - **`snr()` and `noiseProfile()` detect the floor with a tighter gate (15 dB)**
   than the speech VAD (35 dB). The speech VAD deliberately keeps quiet consonants;
-  a floor detector that generous classifies the room itself as speech and then
-  reports "unmeasurable" exactly when a clip is noisy enough to need the number.
+  a floor detector that generous classifies the room itself as speech, then reports
+  "unmeasurable" exactly when a clip is noisy enough to need the number.
+- **`deEss()` rebuilt as a proper two-band crossover.** Subtracting a highpassed
+  copy from the original does not work: the filter phase-shifts the extracted band,
+  so the subtraction fails to cancel and can *add* energy at the target frequency.
+- `Forensic.voiceprint()` evenly subsamples long clips (`maxFrames`, default 400)
+  instead of analysing every frame. A few hundred well-spread frames describe a
+  speaker as well as thousands, at a fraction of the cost.
 
 ### Changed
 
 - `encodeWav()` takes `{ bitDepth: 16 | 24 | 32 }` (32 = IEEE float). Default
   remains 16-bit — existing callers are unaffected.
-- Test suites split: `npm test` runs the fast, offline suites (25 checks, seconds).
+- Test suites split: `npm test` runs the fast, offline suites (27 checks, seconds).
   `npm run test:all` adds the neural suite, which loads real model weights when
   present.
 
@@ -91,6 +86,8 @@ reported honestly before it is relied on.
 
 `npm run capability` prints exactly what this host can synthesise and recognise.
 15 export paths; zero required dependencies beyond `d3` (oscilloscope only).
+Consumed by [aivatar](https://github.com/Professor-Codephreak/aivatar) ≥ 1.1.0, whose
+capture-intake stage grades the room a reference was recorded in.
 
 ---
 

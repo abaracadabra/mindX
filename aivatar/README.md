@@ -55,6 +55,39 @@ The scientific tier **refuses to stamp without a signing key**. That is not fric
 
 `verify()` recomputes every hash: one altered byte anywhere, and the manifest fails loudly.
 
+## The pipeline
+
+```
+  intake  →  clone  →  measure  →  grade  →  stamp  →  save
+    │          │          │          │         │
+    │          │          │          │         └── consent · custody · signed manifest
+    │          │          │          └── the tier the artifact EARNED (downgrades)
+    │          │          └── rmse · similarity · spectral · SNR · integrity
+    │          └── faicey (face) · voaice (voice) · facerig (rig)
+    └── judge the CAPTURE before you build on it
+```
+
+**Intake comes first, and it is not a formality.** You cannot out-model a noisy room:
+every artifact of the capture — the hum, the reflections, the clipping — is faithfully
+learned by the clone and then carried into every word it ever says. So the room is a
+graded axis (`referenceSnrDb`: ≥20 dB professional, ≥25 dB realism, ≥30 dB hyperrealism),
+and intake catches a bad capture while re-recording still costs nothing.
+
+```js
+const studio = new PersonaStudio({ mode: 'scientific', realism: 'hyperrealism', sign, signer });
+
+const report = await studio.intake(referenceClip, { denoise: true, roomTone });
+//   → { snr: { snrDb, verdict }, segments, seconds, voicedRatio,
+//       sufficientFor: ['basic', 'professional', 'scientific/realism'], denoised: true }
+```
+
+`sufficientFor` names the tiers this capture can still support — *before* you spend
+anything on it. Denoising and trimming are recorded as custody steps: an edited reference
+is a fact about the artifact, not a secret. And a clip with no silence in it reports its
+SNR as **unmeasurable** rather than perfect — signal-to-noise is measured against a noise
+floor, and a clip with no pauses does not contain one. Supply room tone, and it becomes
+measurable again.
+
 ## Usage
 
 ```js
@@ -109,8 +142,8 @@ The persona print is the on-chain anchor: `registerPersona(hash, uint256[], prec
 ## Install
 
 ```bash
-npm install            # zero required deps; faicey + voaice are optional peers
-npm test               # 16 checks, offline, ~10s — the doctrine under test
+npm install            # zero required deps; faicey + voaice ≥3 are optional peers
+npm test               # 19 checks, offline, ~10s — the doctrine under test
 ```
 
 With the sibling packages present (`../faicey`, `../voaice`) the studio captures, clones and measures. Without them it still builds, validates and grades personas from supplied prints — and `capability()` says so plainly.

@@ -4,7 +4,7 @@
 
 [![version](https://img.shields.io/badge/version-3.0.0-0a6?style=flat-square)](./CHANGELOG.md)
 [![license](https://img.shields.io/badge/license-MIT-0a6?style=flat-square)](./LICENSE)
-[![tests](https://img.shields.io/badge/tests-25%20offline-0a6?style=flat-square)](#testing)
+[![tests](https://img.shields.io/badge/tests-27%20offline-0a6?style=flat-square)](#testing)
 [![required deps](https://img.shields.io/badge/required%20deps-0-0a6?style=flat-square)](#design-principles)
 
 voaice is the **VOICE** peer of [faicey](https://github.com/Professor-Codephreak/faicey) (the FACE).
@@ -146,7 +146,7 @@ the dependency-free path and says so.
 ## Testing
 
 ```bash
-npm test          # 25 offline checks, seconds — no models, no network
+npm test          # 27 offline checks, seconds — no models, no network
 npm run test:all  # adds the neural suite (loads real weights when present)
 ```
 
