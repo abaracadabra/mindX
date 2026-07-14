@@ -9,3 +9,7 @@ static/vendor/mediapipe/*.task
 # clone scratch / showcases are generated
 /tmp/voaice-neural/
 data/persona-faces/
+
+# pnpm artifacts — this project uses npm (package-lock.json is the lockfile)
+pnpm-lock.yaml
+pnpm-workspace.yaml
