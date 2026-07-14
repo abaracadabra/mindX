@@ -74,15 +74,51 @@ await test('compare: same voice matches, different voice does not', () => {
   assert.ok(same.similarity >= 0.75, `same-ish verdict band (got ${same.similarity.toFixed(3)})`);
 });
 
-await test('integrity: clean tone is clean, spliced tone is flagged', () => {
+await test('integrity: clean is clean; a splice INSIDE speech is flagged', () => {
   const f = new Forensic({ sampleRate: SR });
-  const clean = f.integrity(voice(120));
-  assert.equal(clean.verdict, 'clean');
-  // splice: hard amplitude jump mid-signal
+  assert.equal(f.integrity(voice(120)).verdict, 'clean');
+
+  // A real splice: two takes at different levels stitched together — BOTH sides
+  // are clearly speech, so the jump cannot be explained by someone pausing.
   const spliced = voice(120);
-  for (let i = Math.floor(spliced.length / 2); i < spliced.length; i++) spliced[i] *= 0.05;
+  for (let i = Math.floor(spliced.length / 2); i < spliced.length; i++) spliced[i] *= 0.4;
   const rep = f.integrity(spliced);
-  assert.ok(rep.events.length >= 1, 'discontinuity event detected');
+  assert.ok(rep.events.length >= 1, 'discontinuity inside speech detected');
+  assert.equal(rep.verdict, 'review');
+});
+
+await test('integrity does NOT condemn an honest recording for having pauses', () => {
+  const f = new Forensic({ sampleRate: SR });
+  // speech · pause · speech — every real capture. The onsets are large abrupt
+  // level jumps; a naive detector calls them splices. They are a person talking.
+  const parts = [voice(120, 1.0), new Float32Array(Math.round(0.7 * SR)), voice(120, 1.0)];
+  const total = parts.reduce((n, p) => n + p.length, 0);
+  const clip = new Float32Array(total);
+  let o = 0;
+  for (const p of parts) { clip.set(p, o); o += p.length; }
+  for (let i = 0; i < clip.length; i++) clip[i] += 0.0008 * (Math.random() * 2 - 1); // room tone
+  const rep = f.integrity(clip);
+  assert.equal(rep.verdict, 'clean', `pauses are not tampering (events: ${JSON.stringify(rep.events)})`);
+});
+
+await test('integrity flags a NOISE-FLOOR shift — two rooms in one file', () => {
+  const f = new Forensic({ sampleRate: SR });
+  const seg = (floor) => {
+    const parts = [voice(120, 0.8), new Float32Array(Math.round(0.6 * SR))];
+    const n = parts.reduce((a, p) => a + p.length, 0);
+    const out = new Float32Array(n);
+    let o = 0;
+    for (const p of parts) { out.set(p, o); o += p.length; }
+    for (let i = 0; i < out.length; i++) out[i] += floor * (Math.random() * 2 - 1);
+    return out;
+  };
+  const a = seg(0.0005); // quiet room
+  const b = seg(0.02);   // a different, noisier room
+  const joined = new Float32Array(a.length * 2 + b.length * 2);
+  joined.set(a, 0); joined.set(a, a.length);
+  joined.set(b, a.length * 2); joined.set(b, a.length * 2 + b.length);
+  const rep = f.integrity(joined);
+  assert.ok(rep.events.some((e) => e.type === 'noise-floor-shift'), 'the room changes mid-file');
   assert.equal(rep.verdict, 'review');
 });
 

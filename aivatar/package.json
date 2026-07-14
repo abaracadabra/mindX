@@ -1,7 +1,7 @@
 {
   "name": "aivatar",
-  "version": "1.0.0",
-  "description": "aivatar — the definitive .persona creation tool. A person's AI model that looks (faicey), speaks (voaice), rigs (facerig) and thinks (cognitive persona). Earned fidelity tiers: basic, professional, scientific (realism / hyperrealism) — with forensic provenance, consent, and signed manifests above basic.",
+  "version": "1.1.0",
+  "description": "aivatar \u2014 the definitive .persona creation tool. A person's AI model that looks (faicey), speaks (voaice), rigs (facerig) and thinks. Earned fidelity tiers: basic / professional / scientific (realism + hyperrealism), with capture-quality intake, consent, custody chain and signed provenance.",
   "type": "module",
   "main": "src/index.js",
   "bin": {
@@ -44,11 +44,15 @@
   "//peers": "faicey (FACE) and voaice (VOICE) load lazily from the sibling packages or node_modules; absent them the studio still builds/validates/grades personas from supplied prints. facerig is the canonical rig engine (browser-side).",
   "peerDependencies": {
     "faicey": "*",
-    "voaice": "*"
+    "voaice": ">=3.0.0"
   },
   "peerDependenciesMeta": {
-    "faicey": { "optional": true },
-    "voaice": { "optional": true }
+    "faicey": {
+      "optional": true
+    },
+    "voaice": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=18.0.0"

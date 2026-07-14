@@ -29,13 +29,35 @@ const rms = (a, from = 0, to = a.length) => {
 
 /**
  * Split a clip into speech and noise by VAD, and report the ratio.
- * @returns {{snrDb:number, speechDb:number, noiseDb:number, speechRatio:number,
- *            noiseFloor:number, verdict:'clean'|'usable'|'noisy'|'unusable'}}
+ *
+ * THE FLOOR HAS TO COME FROM SOMEWHERE. Signal-to-noise is measured against a
+ * noise floor, and a clip with no silence in it does not contain one: there is
+ * no moment where you hear only the room. Rather than invent a floor (and grade
+ * a capture on a number we made up), `snr` returns `snrDb: null` with
+ * `verdict: 'unmeasurable'` and says why. Supply `opts.noiseClip` — a few
+ * seconds of room tone, which is what a studio records first — and it becomes
+ * measurable again.
+ *
+ * @param {{noiseClip?:{samples:Float32Array}}} [opts]
+ * @returns {{snrDb:number|null, speechDb:number, noiseDb:number, speechRatio:number,
+ *            noiseFloor:number, floorFrom:'silent-frames'|'room-tone'|null,
+ *            verdict:'clean'|'usable'|'noisy'|'unusable'|'unmeasurable', reason?:string}}
  */
 export function snr(samples, sampleRate, opts = {}) {
-  const { frames, frameLen, hop } = voicedFrames(samples, sampleRate, opts);
+  // The floor detector runs TIGHTER than the speech VAD. The speech VAD keeps
+  // frames within 35 dB of peak so quiet consonants survive; a floor detector
+  // that generous classifies the room itself as speech, and then reports the
+  // floor as unmeasurable exactly when a clip is noisy enough to need the
+  // number. 15 dB is the band where the room lives.
+  const { frames, frameLen, hop } = voicedFrames(samples, sampleRate, {
+    ...opts,
+    topDb: opts.topDb ?? 15,
+  });
   if (!frames.length) {
-    return { snrDb: 0, speechDb: -Infinity, noiseDb: -Infinity, speechRatio: 0, noiseFloor: 0, verdict: 'unusable' };
+    return {
+      snrDb: null, speechDb: -Infinity, noiseDb: -Infinity, speechRatio: 0,
+      noiseFloor: 0, floorFrom: null, verdict: 'unusable', reason: 'empty clip',
+    };
   }
   let sp = 0;
   let spN = 0;
@@ -46,20 +68,36 @@ export function snr(samples, sampleRate, opts = {}) {
     if (f.voiced) { sp += r * r; spN++; } else { no += r * r; noN++; }
   }
   const speech = spN ? Math.sqrt(sp / spN) : 0;
-  // No silent frame at all → the noise floor is unmeasurable from this clip;
-  // fall back to the quietest frame rather than pretending the floor is zero.
-  let noise;
-  if (noN) {
-    noise = Math.sqrt(no / noN);
-  } else {
-    let quietest = Infinity;
-    for (const f of frames) {
-      quietest = Math.min(quietest, rms(samples, f.start, Math.min(samples.length, f.start + frameLen)));
-    }
-    noise = Number.isFinite(quietest) ? quietest : EPS;
-  }
-  const snrDb = db(speech) - db(noise);
   const speechRatio = spN / frames.length;
+
+  let noise = null;
+  let floorFrom = null;
+  if (opts.noiseClip?.samples?.length) {
+    noise = rms(opts.noiseClip.samples); // room tone: the honest, direct measurement
+    floorFrom = 'room-tone';
+  } else if (noN) {
+    noise = Math.sqrt(no / noN);
+    floorFrom = 'silent-frames';
+  }
+
+  if (noise === null) {
+    return {
+      snrDb: null,
+      speechDb: db(speech),
+      noiseDb: -Infinity,
+      speechRatio,
+      noiseFloor: 0,
+      floorFrom: null,
+      verdict: 'unmeasurable',
+      reason:
+        'no silence in this clip, so it contains no noise floor to measure against — ' +
+        'supply a few seconds of room tone as opts.noiseClip, or capture without trimming the pauses',
+      frames: { total: frames.length, voiced: spN, silent: 0 },
+      hop,
+    };
+  }
+
+  const snrDb = db(speech) - db(noise);
   const verdict =
     snrDb >= 30 ? 'clean'
     : snrDb >= 20 ? 'usable'
@@ -71,6 +109,7 @@ export function snr(samples, sampleRate, opts = {}) {
     noiseDb: db(noise),
     speechRatio,
     noiseFloor: noise,
+    floorFrom,
     verdict,
     frames: { total: frames.length, voiced: spN, silent: noN },
     hop,

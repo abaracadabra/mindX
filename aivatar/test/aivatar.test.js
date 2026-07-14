@@ -60,6 +60,24 @@ const tone = (f0, sec = 40, a = 0.35, harm = 12) => {
   return s;
 };
 const clip = (f0, sec, harm) => ({ samples: tone(f0, sec, 0.35, harm), sampleRate: SR });
+
+/**
+ * A REAL capture: speech with pauses, over a low room floor. The pauses matter —
+ * they are the only place a noise floor can be measured, which is why a clip
+ * trimmed of all silence reports its SNR as *unmeasurable* rather than perfect.
+ */
+const capture = (f0, sec, { floor = 0.0008, harm = 12 } = {}) => {
+  const n = Math.round(sec * SR);
+  const s = new Float32Array(n);
+  const speech = tone(f0, sec, 0.35, harm);
+  const period = Math.round(3.2 * SR);   // ~2.4 s of speech, ~0.8 s of pause
+  const speakFor = Math.round(2.4 * SR);
+  for (let i = 0; i < n; i++) {
+    const inSpeech = i % period < speakFor;
+    s[i] = (inSpeech ? speech[i] : 0) + floor * (Math.random() * 2 - 1);
+  }
+  return { samples: s, sampleRate: SR };
+};
 const lms = (n = 478, jitter = 0) =>
   Array.from({ length: n }, (_, i) => ({
     x: Math.cos(i) * 0.3 + (jitter ? (Math.sin(i * 7.1) * jitter) : 0),
@@ -81,7 +99,8 @@ await test('modes resolve; scientific carries both realism levels', () => {
 await test('grade earns the tier — hyperreal measurements earn hyperrealism', () => {
   const g = grade({
     faceRmse: 0.003, faceFrames: 40, voiceSimilarity: 0.98, voicePrecision: 0.9,
-    voicedRatio: 0.7, referenceSeconds: 180, spectralDistance: 0.05, integrityClean: true,
+    voicedRatio: 0.7, referenceSeconds: 180, referenceSnrDb: 42,
+    spectralDistance: 0.05, integrityClean: true,
   });
   assert.equal(g.mode, 'scientific');
   assert.equal(g.realism, 'hyperrealism');
@@ -91,17 +110,18 @@ await test('grade earns the tier — hyperreal measurements earn hyperrealism', 
 await test('grade REFUSES to flatter — near-miss falls to the tier below', () => {
   const g = grade({
     faceRmse: 0.008, faceFrames: 20, voiceSimilarity: 0.94, voicePrecision: 0.8,
-    voicedRatio: 0.6, referenceSeconds: 60, spectralDistance: 0.15, integrityClean: true,
+    voicedRatio: 0.6, referenceSeconds: 60, referenceSnrDb: 27,
+    spectralDistance: 0.15, integrityClean: true,
   });
   assert.equal(g.realism, 'realism', 'misses hyperrealism gates → realism');
-  const weak = grade({ faceFrames: 3, voiceSimilarity: 0.86, voicePrecision: 0.65, voicedRatio: 0.5, referenceSeconds: 10, faceRmse: 0.015 });
+  const weak = grade({ faceFrames: 3, voiceSimilarity: 0.86, voicePrecision: 0.65, voicedRatio: 0.5, referenceSeconds: 10, referenceSnrDb: 22, faceRmse: 0.015 });
   assert.equal(weak.mode, 'professional');
   const nothing = grade({});
   assert.equal(nothing.mode, 'basic', 'unmeasured earns nothing');
 });
 
 await test('unmeasured ≠ passed', () => {
-  const g = grade({ faceFrames: 40, voiceSimilarity: 0.99, voicePrecision: 0.9, voicedRatio: 0.7, referenceSeconds: 200, spectralDistance: 0.05, integrityClean: true });
+  const g = grade({ faceFrames: 40, voiceSimilarity: 0.99, voicePrecision: 0.9, voicedRatio: 0.7, referenceSeconds: 200, referenceSnrDb: 40, spectralDistance: 0.05, integrityClean: true });
   assert.notEqual(g.realism, 'hyperrealism', 'missing faceRmse must not pass');
   assert.ok(g.failed.some((f) => f.includes('faceRmse')));
 });
@@ -217,7 +237,7 @@ await test('scientific tier without a signer is REFUSED, not silently downgraded
   s.identity({ name: 'Unsigned' })
     .consent({ kind: 'self', subject: 'codephreak' })
     .face({ faceprint: faceprint('0xf3'), landmarks: lms(), sourceLandmarks: lms(), frames: 40 });
-  const ref = clip(117.1875, 130); // rich voiced clip, long enough for hyperrealism
+  const ref = capture(117.1875, 200); // a real capture: pauses, quiet room, long enough
   await s.voice({ referenceClip: ref, clonedClip: ref });
   await assert.rejects(() => s.stamp(), /requires a SIGNED manifest/);
 });
@@ -230,8 +250,8 @@ await test('scientific tier: earned, signed, verifiable end-to-end', async () =>
   s.identity({ name: 'Codephreak', description: 'the architect' })
     .consent({ kind: 'self', subject: 'codephreak', subjectAddress: '0xbankon.eth' })
     .face({ faceprint: faceprint('0xf4'), landmarks: lms(), sourceLandmarks: lms(), frames: 40 });
-  const ref = clip(117.1875, 130);
-  await s.voice({ referenceClip: ref, clonedClip: ref }); // a perfect clone of a rich voice
+  const ref = capture(117.1875, 200);
+  await s.voice({ referenceClip: ref, clonedClip: ref }); // a perfect clone of a real capture
   s.rig();
   const { persona, graded, downgraded, validation } = await s.stamp();
   assert.equal(graded.mode, 'scientific');
@@ -267,6 +287,58 @@ await test('capability probe is honest about this host', async () => {
   const cap = await new PersonaStudio().capability();
   assert.equal(typeof cap.voice, 'boolean');
   assert.ok(['basic', 'professional', 'scientific'].includes(cap.maxHonestMode));
+});
+
+
+// ── intake (v3 signal/noise layer) ──────────────────────────────────────
+await test('intake grades the ROOM and names which tiers it can still support', async () => {
+  const s = new PersonaStudio({ mode: 'scientific', realism: 'hyperrealism' });
+  const clean = capture(117.1875, 200);
+  const good = await s.intake(clean);
+  assert.ok(good.snr.snrDb > 0, 'measures the capture SNR');
+  assert.ok(good.sufficientFor.includes('basic'));
+  assert.ok(good.seconds > 100, 'reports usable duration');
+
+  // a noisy room: the same voice, buried in hiss
+  const noisy = { samples: Float32Array.from(clean.samples, (v) => v * 0.2 + 0.05 * (Math.random() * 2 - 1)), sampleRate: SR };
+  const bad = await new PersonaStudio({ mode: 'scientific' }).intake(noisy);
+  assert.ok(bad.snr.snrDb < good.snr.snrDb, 'the noisy room measures worse');
+  assert.ok(!bad.sufficientFor.includes('scientific/hyperrealism'), 'and cannot support hyperrealism');
+});
+
+await test('a noisy reference CANNOT earn hyperrealism — you cannot out-model a room', async () => {
+  const s = new PersonaStudio({
+    mode: 'scientific', realism: 'hyperrealism',
+    sign: (h) => '0xsig', signer: '0xbankon',
+  });
+  const clean = capture(117.1875, 200);
+  const noisy = { samples: Float32Array.from(clean.samples, (v) => v + 0.06 * (Math.random() * 2 - 1)), sampleRate: SR };
+  s.identity({ name: 'NoisyRoom' })
+    .consent({ kind: 'self', subject: 'codephreak' })
+    .face({ faceprint: faceprint('0xf7'), landmarks: lms(), sourceLandmarks: lms(), frames: 40 });
+  await s.voice({ referenceClip: noisy, clonedClip: noisy });
+  const { graded, downgraded } = await s.stamp();
+  assert.ok(graded.failed.includes('referenceSnrDb'), 'the room is the gate that fails');
+  assert.notEqual(graded.realism, 'hyperrealism');
+  assert.equal(downgraded, true);
+});
+
+
+await test('a clip with NO silence reports SNR as unmeasurable, not as zero', async () => {
+  const s = new PersonaStudio({ mode: 'scientific', realism: 'realism' });
+  const noPauses = clip(117.1875, 20); // wall-to-wall speech — no room to hear
+  const r = await s.intake(noPauses);
+  assert.equal(r.snr.snrDb, null, 'no floor exists in this clip');
+  assert.equal(r.snr.verdict, 'unmeasurable');
+  assert.match(r.snr.reason, /room tone/, 'and it says how to fix that');
+  assert.ok(!r.sufficientFor.includes('scientific/realism'), 'unmeasured cannot pass a gate');
+
+  // Supply room tone — the floor becomes measurable, the capture becomes gradeable.
+  const roomTone = { samples: Float32Array.from({ length: SR * 2 }, () => 0.0008 * (Math.random() * 2 - 1)), sampleRate: SR };
+  const r2 = await new PersonaStudio({ mode: 'scientific' }).intake(noPauses, { roomTone });
+  assert.equal(typeof r2.snr.snrDb, 'number');
+  assert.equal(r2.snr.floorFrom, 'room-tone');
+  assert.ok(r2.snr.snrDb > 30, 'a quiet room against a strong voice is a clean capture');
 });
 
 console.log(`\naivatar: ${pass} passed, ${fail} failed`);

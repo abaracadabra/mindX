@@ -165,18 +165,39 @@ export class Forensic {
       for (let i = s; i < s + fs; i++) acc += samples[i] * samples[i];
       rmsSeries.push(Math.sqrt(acc / fs));
     }
-    // First-difference z-scores → splice candidates. A splice must be BOTH a
-    // statistical outlier AND a materially large jump: in a near-stationary
-    // signal the diff stdev collapses toward zero, so a z-score alone would
-    // flag ordinary numerical wobble as tampering. The absolute floor (a jump
-    // worth ≥25% of the clip's mean level) is what keeps a clean recording clean.
+
+    // A SPLICE IS NOT AN ONSET. Speech legitimately starts and stops: every
+    // pause in a real recording ends with a large, abrupt rise in level. An
+    // amplitude-jump detector alone therefore condemns every honest recording
+    // that contains a breath. What actually betrays an edit is a discontinuity
+    // *within continuous material* — a jump between two speaking frames, or a
+    // change in the room itself between two silences. So:
+    //   · classify each frame speech / silence,
+    //   · IGNORE speech↔silence transitions (that is a person talking),
+    //   · flag jumps between two SPEECH frames (a cut inside a sentence),
+    //   · flag a shift in the NOISE FLOOR between silences (two rooms, one file).
+    const peak = Math.max(...rmsSeries, 1e-9);
+    const speechThresh = peak * 0.1; // −20 dB from peak: clearly speaking
+    const isSpeech = rmsSeries.map((r) => r >= speechThresh);
+
     const diffs = rmsSeries.slice(1).map((v, i) => Math.abs(v - rmsSeries[i]));
     const dm = mean(diffs);
     const ds = stdev(diffs);
-    const levelMean = mean(rmsSeries);
+    const speechLevels = rmsSeries.filter((_, i) => isSpeech[i]);
+    const levelMean = speechLevels.length ? mean(speechLevels) : mean(rmsSeries);
     const absFloor = Math.max(1e-4, 0.25 * levelMean);
+
     const events = [];
     diffs.forEach((d, i) => {
+      // The jump must sit INSIDE a run of speech. A frame straddling the edge of
+      // a pause is half room, half voice — its level jump is the onset itself,
+      // not an edit. Requiring the neighbours to be speech too excludes those
+      // boundary frames.
+      const inSpeechRun =
+        isSpeech[i] && isSpeech[i + 1] &&
+        (i === 0 || isSpeech[i - 1]) &&
+        (i + 2 >= isSpeech.length || isSpeech[i + 2]);
+      if (!inSpeechRun) return; // onset/offset — a person, not an edit
       if (d < absFloor) return; // too small to be a splice, whatever its z-score
       const z = ds > 1e-9 ? (d - dm) / ds : Infinity;
       if (z >= 4) {
@@ -188,6 +209,24 @@ export class Forensic {
         });
       }
     });
+
+    // Noise-floor shift between silences — the signature of material recorded in
+    // two different rooms (or one room, two days) stitched into one file.
+    const silences = rmsSeries.filter((_, i) => !isSpeech[i]);
+    if (silences.length >= 8) {
+      const half = Math.floor(silences.length / 2);
+      const a = mean(silences.slice(0, half));
+      const b = mean(silences.slice(half));
+      const ratio = Math.max(a, b) / Math.max(1e-9, Math.min(a, b));
+      if (ratio > 3) {
+        events.push({
+          type: 'noise-floor-shift',
+          atSec: null,
+          ratio: Number(ratio.toFixed(2)),
+          note: 'the room changes across this file',
+        });
+      }
+    }
     let clipped = 0;
     let dc = 0;
     for (let i = 0; i < samples.length; i++) {

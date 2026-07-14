@@ -59,6 +59,26 @@ reported honestly before it is relied on.
   The speech VAD deliberately keeps quiet consonants; a noise profile that trains
   on them subtracts the voice away.
 
+### Fixed (post-release hardening, same day)
+
+- **`Forensic.integrity()` no longer condemns an honest recording for having
+  pauses.** Every real capture starts and stops speaking, and each onset is a
+  large, abrupt rise in level — a naive amplitude-jump detector calls all of them
+  splices. The model is now forensically sound: speech↔silence transitions are
+  *ignored* (that is a person talking); a discontinuity is flagged only **inside a
+  run of speech** (a cut within a sentence); and a new **noise-floor shift**
+  detector catches the real signature of stitched material — two different rooms
+  in one file.
+- **`snr()` returns `null` with `verdict: 'unmeasurable'`** for a clip that
+  contains no silence, instead of inventing a floor. Signal-to-noise is measured
+  *against* a noise floor, and a clip with no pauses does not contain one. Supply
+  `opts.noiseClip` — a few seconds of room tone, which is what a studio records
+  first — and it becomes measurable again. Unmeasured is never passed off as zero.
+- **`snr()` and `noiseProfile()` detect the floor with a tighter gate (15 dB)**
+  than the speech VAD (35 dB). The speech VAD deliberately keeps quiet consonants;
+  a floor detector that generous classifies the room itself as speech and then
+  reports "unmeasurable" exactly when a clip is noisy enough to need the number.
+
 ### Changed
 
 - `encodeWav()` takes `{ bitDepth: 16 | 24 | 32 }` (32 = IEEE float). Default

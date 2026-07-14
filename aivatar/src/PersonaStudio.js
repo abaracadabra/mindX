@@ -38,6 +38,8 @@ import {
 } from './provenance.js';
 
 const sha = (s) => '0x' + createHash('sha256').update(s).digest('hex');
+// SNR is null when a clip carries no measurable noise floor — never print that as a number.
+const fmtDb = (v) => (typeof v === 'number' && Number.isFinite(v) ? `${v.toFixed(1)}dB` : 'unmeasurable');
 
 /** Lazy peer resolution — absent peers degrade, they do not crash. */
 async function peers() {
@@ -142,6 +144,92 @@ export class PersonaStudio {
     return this;
   }
 
+  // ── intake ──────────────────────────────────────────────────────────────
+  /**
+   * INTAKE — judge a reference capture BEFORE cloning from it.
+   *
+   * You cannot out-model a noisy room. Every artifact of the capture — the
+   * hum, the reflections, the clipping — is faithfully learned by the clone and
+   * then carried into every word it ever says. So the room is a graded axis
+   * (`referenceSnrDb`), and this is where a bad capture is caught early, while
+   * re-recording still costs nothing.
+   *
+   * Optionally cleans the clip (voaice spectral subtraction) and records the
+   * cleaning as a custody step — an edited reference is a fact about the
+   * artifact, not a secret.
+   *
+   * @param {{samples:Float32Array, sampleRate:number}} clip
+   * @param {{denoise?:boolean, trim?:boolean}} [opts]
+   * @returns {Promise<{clip:object, snr:object, segments:object|null,
+   *                    verdict:string, sufficientFor:string[], denoised:boolean}>}
+   */
+  async intake(clip, opts = {}) {
+    const { voaice } = await this._p();
+    if (opts.roomTone) this._roomTone = opts.roomTone;
+    if (!voaice?.snr) {
+      throw new Error('aivatar: intake() needs voaice (the signal/noise layer) — install the peer');
+    }
+    let working = { samples: Float32Array.from(clip.samples), sampleRate: clip.sampleRate };
+    let denoised = false;
+
+    if (opts.denoise) {
+      const res = voaice.denoise(working.samples, working.sampleRate);
+      if (res.profileUsed) {
+        working = { samples: res.samples, sampleRate: working.sampleRate };
+        denoised = true;
+        this._custody = appendCustody(this._custody, {
+          action: 'denoise',
+          contentHash: null,
+          note: `SNR ${fmtDb(res.snrBefore.snrDb)} → ${fmtDb(res.snrAfter.snrDb)}`,
+        });
+      }
+    }
+    if (opts.trim && voaice.trimSilence) {
+      const t = voaice.trimSilence(working.samples, working.sampleRate);
+      if (t?.trimmed) {
+        working = { samples: Float32Array.from(t.samples), sampleRate: working.sampleRate };
+        this._custody = appendCustody(this._custody, { action: 'trim', contentHash: null, note: 'leading/trailing silence' });
+      }
+    }
+
+    const report = voaice.snr(working.samples, working.sampleRate, { noiseClip: this._roomTone });
+    const seconds = working.samples.length / working.sampleRate;
+    const voiced = voaice.voicedRatio ? voaice.voicedRatio(working.samples, working.sampleRate) : null;
+
+    // Which tiers could this capture still support? Named honestly, up front.
+    const sufficientFor = [];
+    for (const [name, gates] of [
+      ['professional', MODES.professional.gates],
+      ['scientific/realism', MODES.scientific.gates.realism],
+      ['scientific/hyperrealism', MODES.scientific.gates.hyperrealism],
+    ]) {
+      // An unmeasurable floor (null) cannot clear a floor gate — unmeasured is
+      // never passed. The intake report says exactly how to fix that.
+      const okSnr = typeof report.snrDb === 'number' && report.snrDb >= (gates.referenceSnrDb ?? -Infinity);
+      const okSec = seconds * (voiced ?? 1) >= (gates.referenceSeconds ?? 0);
+      const okVoiced = (voiced ?? 1) >= (gates.voicedRatio ?? 0);
+      if (okSnr && okSec && okVoiced) sufficientFor.push(name);
+    }
+    sufficientFor.unshift('basic');
+
+    this._custody = appendCustody(this._custody, {
+      action: 'intake',
+      contentHash: null,
+      note: `${seconds.toFixed(1)}s · SNR ${fmtDb(report.snrDb)} · ${report.verdict}`,
+    });
+
+    return {
+      clip: working,
+      snr: report,
+      seconds,
+      voicedRatio: voiced,
+      segments: voaice.STT ? new voaice.STT().segment(working) : null,
+      verdict: report.verdict,
+      sufficientFor,
+      denoised,
+    };
+  }
+
   // ── embodiment ──────────────────────────────────────────────────────────
   /**
    * Attach a FACE. Supply either a faicey clone profile (from
@@ -196,6 +284,9 @@ export class PersonaStudio {
     };
     this._refClip = v.referenceClip || null;
     this._clonedClip = v.clonedClip || null;
+    // Room tone (a few seconds of the empty room) makes SNR measurable even for
+    // a reference with no pauses in it.
+    if (v.roomTone) this._roomTone = v.roomTone;
     this._sources.push({ type: 'voice', hash: voiceprint.hash, note: v.engine || this.settings.voice.engine });
     this._custody = appendCustody(this._custody, { action: 'clone-voice', contentHash: voiceprint.hash });
     return this;
@@ -234,6 +325,8 @@ export class PersonaStudio {
       forensic,
       dsp: voaice ? { fft: voaice.fft, hann: voaice.hann, magnitudeSpectrum: voaice.magnitudeSpectrum } : null,
       voicedRatioFn: voaice?.voicedRatio,
+      snrFn: voaice?.snr,
+      roomTone: this._roomTone || null,
     });
 
     const source = { ...(this._measuredSource || {}) };

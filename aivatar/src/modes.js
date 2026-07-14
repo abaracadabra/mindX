@@ -85,6 +85,7 @@ export const MODES = {
       voicePrecision: 0.6,         // Scientific precision score (≥)
       voicedRatio: 0.4,            // reference clip must actually contain speech (≥)
       referenceSeconds: 6,         // usable reference audio (≥)
+      referenceSnrDb: 20,          // the ROOM the reference was captured in (≥)
     },
   },
 
@@ -135,6 +136,7 @@ export const MODES = {
         voicePrecision: 0.75,
         voicedRatio: 0.5,
         referenceSeconds: 30,
+        referenceSnrDb: 25,        // a quiet room, not a good microphone in a bad one
         spectralDistance: 0.20,    // cloned vs reference (≤), lower = closer
       },
       hyperrealism: {
@@ -144,6 +146,7 @@ export const MODES = {
         voicePrecision: 0.85,
         voicedRatio: 0.6,
         referenceSeconds: 120,
+        referenceSnrDb: 30,        // studio-clean intake — you cannot out-model a noisy room
         spectralDistance: 0.08,
         integrityClean: true,      // no splice/clipping artifacts in the output
       },
@@ -196,6 +199,8 @@ export function grade(measured = {}) {
       cmp('voicedRatio', (measured.voicedRatio ?? 0) >= gates.voicedRatio);
     if (gates.referenceSeconds !== undefined)
       cmp('referenceSeconds', (measured.referenceSeconds ?? 0) >= gates.referenceSeconds);
+    if (gates.referenceSnrDb !== undefined)
+      cmp('referenceSnrDb', (measured.referenceSnrDb ?? -Infinity) >= gates.referenceSnrDb);
     if (gates.spectralDistance !== undefined)
       cmp('spectralDistance', (measured.spectralDistance ?? 1) <= gates.spectralDistance);
     if (gates.integrityClean !== undefined)

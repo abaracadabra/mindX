@@ -99,6 +99,8 @@ export function measureAll({
   forensic, // voaice Forensic instance
   dsp, // voaice fft exports
   voicedRatioFn,
+  snrFn, // voaice snr() — the intake-quality axis
+  roomTone, // optional room-tone clip: the noise floor, measured directly
 } = {}) {
   const out = {};
   if (faceFrames !== undefined) out.faceFrames = faceFrames;
@@ -109,6 +111,17 @@ export function measureAll({
     const refPrint = forensic.voiceprint(referenceClip.samples);
     out.voicePrecision = refPrint.precision;
     out.referenceSeconds = referenceSeconds(referenceClip, voicedRatioFn);
+    // The ROOM the reference was captured in. You cannot out-model a noisy
+    // intake: every artifact of the room is faithfully learned by the clone.
+    if (typeof snrFn === 'function') {
+      try {
+        // null = the clip has no silence, so it carries no floor to measure
+        // against. That is UNMEASURED, not zero — it must not be recorded as a
+        // flatteringly-bad (or flatteringly-good) number.
+        const s = snrFn(referenceClip.samples, referenceClip.sampleRate, { noiseClip: roomTone });
+        if (typeof s.snrDb === 'number' && Number.isFinite(s.snrDb)) out.referenceSnrDb = s.snrDb;
+      } catch { /* unmeasured */ }
+    }
     if (typeof voicedRatioFn === 'function') {
       try {
         out.voicedRatio = voicedRatioFn(referenceClip.samples, referenceClip.sampleRate);
