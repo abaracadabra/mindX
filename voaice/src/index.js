@@ -88,6 +88,26 @@ export async function loadNeuralVoiceEngine() {
   return mod.NeuralVoiceEngine;
 }
 
-export const VERSION = '0.1.0';
+
+// ── v3: the complete voice stack ────────────────────────────────────────────
+// INPUT — speech to text + the signal/noise layer that decides if it's worth it.
+export { STT, ENGINES as STT_ENGINES } from './stt/STT.js';
+export { snr, noiseProfile, denoise, gate, spectralFlatness } from './dsp/noise.js';
+
+// OUTPUT — text to speech across every path this host has (neural → native →
+// in-house formant floor: there is ALWAYS a voice), and the shaping of it.
+export { TTS, NATIVE_ENGINES as TTS_NATIVE_ENGINES, nativeEngines, hasBinary } from './tts/TTS.js';
+export {
+  VoiceShaper,
+  pitchShift,
+  timeStretch,
+  formantShift,
+  eq,
+  compress,
+  deEss,
+  breath,
+} from './VoiceShaper.js';
+
+export const VERSION = '3.0.0';
 export const DESCRIPTION =
-  'voaice — voice (spectrometer, frequency, oscilloscope, TTS), separated from faicey (face).';
+  'voaice v3 — the complete voice stack: STT + signal/noise in, TTS + shaping out, forensic measurement, non-destructive editing, quality-tiered export. The VOICE peer of faicey (the FACE).';

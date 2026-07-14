@@ -1,7 +1,7 @@
 {
   "name": "voaice",
-  "version": "0.1.0",
-  "description": "voaice \u2014 the voice of an AI service. Spectrometer, frequency manipulation, oscilloscope and TTS as an agnostic, in-house Node.js + d3 module. Separated from faicey (the FACE) so voice and face are independent peers.",
+  "version": "3.0.0",
+  "description": "voaice v3 \u2014 the complete voice stack for AI: speech-to-text and signal/noise analysis in, text-to-speech and voice shaping out, forensic voiceprints, non-destructive editing, quality-tiered WAV/OGG export. Zero-dependency in-house DSP; native and neural engines load lazily and degrade honestly. The VOICE peer of faicey (the FACE).",
   "type": "module",
   "main": "src/index.js",
   "exports": {
@@ -15,32 +15,48 @@
     "./fft": "./src/dsp/fft.js",
     "./forensic": "./src/Forensic.js",
     "./editor": "./src/Editor.js",
-    "./exporter": "./src/Exporter.js"
+    "./exporter": "./src/Exporter.js",
+    "./tts": "./src/tts/TTS.js",
+    "./stt": "./src/stt/STT.js",
+    "./noise": "./src/dsp/noise.js",
+    "./shaper": "./src/VoiceShaper.js"
   },
   "scripts": {
+    "test": "node test/voicey.test.js && node test/v3.test.js",
+    "test:all": "node test/voicey.test.js && node test/v3.test.js && node test/neural.test.js",
+    "test:fast": "node test/voicey.test.js && node test/v3.test.js",
     "serve": "node server.js",
     "demo": "node examples/spectrometer-demo.js",
     "fetch-models": "node scripts/fetch-models.mjs",
-    "test": "node test/voicey.test.js && node test/neural.test.js",
-    "test:fast": "node test/voicey.test.js"
+    "capability": "node -e \"import('./src/index.js').then(async v=>{const t=await new v.TTS().capability(),s=await new v.STT().available();console.log('TTS',t);console.log('STT',s)})\""
   },
   "keywords": [
     "agnostic-module",
     "aivatar",
     "audio-editor",
     "d3",
+    "denoise",
+    "espeak",
     "fft",
     "forensic-voice",
+    "formant",
     "frequency-analysis",
     "mindx",
     "ogg",
     "oscilloscope",
+    "pitch-shift",
+    "snr",
     "spectrometer",
+    "speech-to-text",
+    "stt",
+    "text-to-speech",
     "tts",
     "voaice",
     "voice",
     "voice-cloning",
-    "wav"
+    "voice-shaping",
+    "wav",
+    "whisper"
   ],
   "//deps": "Core DSP (FFT, spectrometer, frequency manipulation) is IN-HOUSE with zero external deps. d3 powers the oscilloscope. Optional analysers (meyda/audiomotion) and the neural engine's onnxruntime-node (CPU, torch-free) load lazily only when present \u2014 isolated builds stay minimal. NO torch, NO transformers, NO Python.",
   "dependencies": {
