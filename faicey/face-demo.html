@@ -77,12 +77,15 @@
     <div class="sec">render</div>
     <select id="theme">
       <option value="wireframe">wireframe — the face, drawn</option>
+      <option value="surface">surface — shaded solid</option>
+      <option value="photoreal">photoreal — your captured skin</option>
       <option value="neon">neon</option>
       <option value="mesh">mesh</option>
       <option value="dots">dots</option>
       <option value="filled">filled</option>
       <option value="scan">scanline</option>
     </select>
+    <div class="hint" id="photorealHint" style="display:none">Photoreal maps <b>your captured frame</b> onto the measured mesh — capture your face (◉) first. Real texture on real geometry; it re-warps as the face expresses. It does <i>not</i> synthesise novel views or claim neural hyperrealism.</div>
 
     <div class="sec">voiceprint oscilloscope</div>
     <canvas id="scope"></canvas>
@@ -134,6 +137,7 @@ import { neutralFace } from '/src/face_clone/neutral_face.js';
 import { FaceCapture } from '/src/face_clone/capture.js';
 import { applyExpression, EXPRESSION_LABELS } from '/src/face_clone/expressions.js';
 import { drawFaceTheme, drawMouthScope } from '/src/face_clone/contours.js';
+import { triangulate } from '/src/face_clone/render_surface.js';
 import { LM, proportions } from '/src/face_clone/geometry.js';
 import { measureFaceprint } from '/src/face_clone/faceprint.js';
 import { personaPrint } from '/src/face_clone/persona.js';
@@ -153,6 +157,12 @@ let mouthOpen = 0;                  // 0..1 — inflection-driven mouth openness
 let lastLevel = 0;                  // previous frame RMS, for the inflection term
 let cycling = false, cycleT = 0;
 let theme = 'wireframe';
+let topology = null;                // cached triangle mesh (stable across expressions)
+let faceTexture = null;             // captured frame (photoreal texture)
+let texLandmarks = null;            // capture-time landmarks in texture pixel space
+// The mesh topology is triangulated ONCE from the current base geometry, so
+// expressions deform a stable mesh instead of re-triangulating (which flickers).
+function recomputeTopology() { try { topology = triangulate(base); } catch { topology = null; } }
 
 // ── the face renderer — real features via the contour loops ────────────────
 function resize() {
@@ -173,10 +183,21 @@ function currentLandmarks() {
   return { landmarks, hue };
 }
 
+// Photoreal texture source: a captured frame (static, expresses) if present,
+// else the live webcam frame itself (live photoreal reenactment).
+function surfaceTex() {
+  if (theme !== 'photoreal') return {};
+  if (faceTexture && texLandmarks) return { texture: faceTexture, texLandmarks };
+  if (camOn && live && camEl.videoWidth) {
+    return { texture: camEl, texLandmarks: live.map(p => ({ x: p.x * camEl.videoWidth, y: p.y * camEl.videoHeight })) };
+  }
+  return {}; // no texture yet → drawFaceSurface falls back to shaded surface
+}
+
 function renderFace() {
   const { landmarks, hue } = currentLandmarks();
   fctx.clearRect(0, 0, faceCv.width, faceCv.height);
-  drawFaceTheme(fctx, landmarks, { W: faceCv.width, H: faceCv.height, hue, theme });
+  drawFaceTheme(fctx, landmarks, { W: faceCv.width, H: faceCv.height, hue, theme, topology, ...surfaceTex() });
   // the voice, shown BETWEEN the lips — the mouth is its own oscilloscope
   if (speaking && speakData) drawMouthScope(fctx, landmarks, speakData, { W: faceCv.width, H: faceCv.height, hue, gain: 1.6 });
   else if (micOn && tdata) drawMouthScope(fctx, landmarks, tdata, { W: faceCv.width, H: faceCv.height, hue, gain: 1.6 });
@@ -195,7 +216,12 @@ function paint() { [...emos.children].forEach(b => b.classList.toggle('act', b.t
 document.getElementById('cycleBtn').onclick = e => {
   cycling = !cycling; e.target.classList.toggle('on', cycling);
 };
-document.getElementById('theme').onchange = e => { theme = e.target.value; };
+document.getElementById('theme').onchange = e => {
+  theme = e.target.value;
+  if ((theme === 'surface' || theme === 'photoreal') && !topology) recomputeTopology();
+  const hint = document.getElementById('photorealHint');
+  if (hint) hint.style.display = theme === 'photoreal' ? 'block' : 'none';
+};
 
 // ── mic ON/OFF → oscilloscope + mouth ──────────────────────────────────────
 const scope = document.getElementById('scope'), sctx = scope.getContext('2d');
@@ -472,6 +498,14 @@ async function captureFace() {
   capturedFace = r.landmarks;            // becomes the base face the demo renders
   capturedPrint = r.faceprint;           // the accuracy-weighted faceprint for the persona
   base = r.landmarks;                    // the avatar is now the person
+  recomputeTopology();                   // stable mesh for the shaded/photoreal surface
+  // snapshot the current frame as the photoreal texture (real skin on the mesh)
+  if (live && camEl.videoWidth) {
+    faceTexture = document.createElement('canvas');
+    faceTexture.width = camEl.videoWidth; faceTexture.height = camEl.videoHeight;
+    faceTexture.getContext('2d').drawImage(camEl, 0, 0);
+    texLandmarks = live.map(p => ({ x: p.x * faceTexture.width, y: p.y * faceTexture.height }));
+  }
   srcLabel.textContent = `— your captured face (${r.accuracy.verdict})`;
   const a = r.accuracy;
   setPState(`<b>FAICE bound:</b> ${a.verdict} · accuracy <b>${(a.score*100).toFixed(0)}%</b> · ${a.frames} frames · frontality ${(a.frontality*100).toFixed(0)}%`);
@@ -610,7 +644,7 @@ async function bind() {
     identity: { name, label: name, description: desc || null, agent_id: name.toLowerCase().replace(/\s+/g, '_') },
     cognition: { behavioral_traits: [], beliefs: {}, desires: {}, inference: {}, authority: {} },
     embodiment: {
-      face: face ? { faceprint: { hash: face.hash, measuresStr: face.measuresStr, precisionScore: face.precisionScore.toString() }, source: personaMode === 'clone' ? (capturedFace ? 'webcam-aggregated' : 'webcam') : 'procedural', render: 'wireframe' } : null,
+      face: face ? { faceprint: { hash: face.hash, measuresStr: face.measuresStr, precisionScore: face.precisionScore.toString() }, source: personaMode === 'clone' ? (capturedFace ? 'webcam-aggregated' : 'webcam') : 'procedural', render: theme, photoreal: !!(faceTexture && texLandmarks) } : null,
       voice: voice ? { voiceprint: { hash: voice.hash, measuresStr: voice.measuresStr, precisionScore: voice.precisionScore }, engine: 'captured', features: voice.features } : null,
       rig: { fps: 60, blendshapes: 52 },
     },
@@ -702,6 +736,7 @@ function loop() {
   drawScope();
   renderFace();
 }
+recomputeTopology();
 loop();
 </script>
 </body>

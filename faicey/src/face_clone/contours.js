@@ -7,6 +7,8 @@
  * or pose-normalised). Shared by the clone studio and the showcase renderer (no duplication).
  */
 
+import { buildSurface, affineFromTriangle, shadeColor, paintOrder, SKIN, DEFAULT_LIGHT } from './render_surface.js';
+
 export const CONTOURS = {
   faceOval: [10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109],
   rightEye: [33,7,163,144,145,153,154,155,133,173,157,158,159,160,161,246],
@@ -118,7 +120,81 @@ export function drawMouthScope(ctx, landmarks, wave, opts) {
   ctx.restore();
 }
 
-export const FACE_THEMES = ['wireframe', 'neon', 'dots', 'mesh', 'filled', 'scan'];
+/**
+ * drawFaceSurface — the photoreal renderer. Meshes the landmarks into shaded
+ * triangles and either (a) fills each with lit skin ('surface'), or (b) affine-
+ * maps the person's captured frame per triangle onto the mesh ('photoreal').
+ *
+ * In photoreal mode the texture is tied to landmark indices, so as the mesh
+ * deforms (an expression, or the cloned voice driving the mouth) the texture
+ * re-warps with it — the captured face emotes photoreally. This is real texture
+ * on real geometry; it is NOT neural view-synthesis and makes no claim to
+ * invent occluded views.
+ *
+ * @param {Array<{x,y,z?}|null>} landmarks  destination geometry (current pose)
+ * @param {{W,H,hue?,light?,skin?,topology?,
+ *          texture?:CanvasImageSource, texLandmarks?:Array<{x,y}|null>,
+ *          mode?:'surface'|'photoreal'}} opts
+ *   texture      — the captured frame (video/canvas/image) for photoreal
+ *   texLandmarks — the SAME landmarks in the texture's pixel space (source UVs)
+ */
+export function drawFaceSurface(ctx, landmarks, opts) {
+  const { W, H, hue = 150, light = DEFAULT_LIGHT, skin = SKIN, topology, texture, texLandmarks } = opts;
+  const mode = opts.mode || (texture && texLandmarks ? 'photoreal' : 'surface');
+  const T = fit(landmarks, W, H);
+  const dst = landmarks.map((lm) => (lm ? T(lm) : null));
+  const surf = buildSurface(landmarks, { topology, light });
+  const order = paintOrder(surf.depths); // back-to-front (painter's algorithm)
+
+  // grow a triangle slightly around its centroid — overlapping triangles hide seams
+  const dilate = (a, b, c, k = 1.03) => {
+    const cx = (a.x + b.x + c.x) / 3, cy = (a.y + b.y + c.y) / 3;
+    const g = (p) => ({ x: cx + (p.x - cx) * k, y: cy + (p.y - cy) * k });
+    return [g(a), g(b), g(c)];
+  };
+
+  ctx.save();
+  const photoreal = mode === 'photoreal' && texture && texLandmarks;
+  for (const t of order) {
+    const [i, j, k] = surf.triangles[t];
+    const a = dst[i], b = dst[j], c = dst[k];
+    if (!a || !b || !c) continue;
+    const [A, B, C] = dilate(a, b, c);
+
+    if (photoreal) {
+      const s0 = texLandmarks[i], s1 = texLandmarks[j], s2 = texLandmarks[k];
+      if (!s0 || !s1 || !s2) continue;
+      const m = affineFromTriangle([s0, s1, s2], [A, B, C]);
+      if (!m) continue;
+      ctx.save();
+      ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.lineTo(C.x, C.y); ctx.closePath(); ctx.clip();
+      ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+      ctx.drawImage(texture, 0, 0);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      // multiply the lit shade over the texture for relief (subtle)
+      const sh = surf.shades[t];
+      if (sh < 0.98) { ctx.fillStyle = `rgba(0,0,0,${(1 - sh) * 0.5})`; ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.lineTo(C.x, C.y); ctx.closePath(); ctx.fill(); }
+      ctx.restore();
+    } else {
+      const rgb = shadeColor(surf.shades[t], skin);
+      ctx.fillStyle = `rgb(${rgb.r},${rgb.g},${rgb.b})`;
+      ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.lineTo(C.x, C.y); ctx.closePath(); ctx.fill();
+    }
+  }
+  // a whisper of feature definition so eyes/lips read on the shaded surface
+  if (!photoreal) {
+    ctx.strokeStyle = `hsla(${hue},40%,20%,.55)`; ctx.lineWidth = 1;
+    for (const n of ['rightEye', 'leftEye', 'lipsOuter', 'lipsInner', 'rightBrow', 'leftBrow']) {
+      ctx.beginPath(); let started = false;
+      for (const i of CONTOURS[n]) { const lm = landmarks[i]; if (!lm) continue; const p = T(lm); started ? ctx.lineTo(p.x, p.y) : (ctx.moveTo(p.x, p.y), started = true); }
+      if (CLOSED.has(n)) ctx.closePath();
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+export const FACE_THEMES = ['wireframe', 'neon', 'dots', 'mesh', 'filled', 'scan', 'surface', 'photoreal'];
 
 /** Dispatch to a themed renderer. `wireframe` is the original simple face, unchanged. */
 export function drawFaceTheme(ctx, landmarks, opts) {
@@ -130,6 +206,10 @@ export function drawFaceTheme(ctx, landmarks, opts) {
     ctx.restore(); return;
   }
   if (theme === 'wireframe') { drawFaceWireframe(ctx, landmarks, { W, H, hue }); ctx.restore(); return; }
+  if (theme === 'surface' || theme === 'photoreal') {
+    drawFaceSurface(ctx, landmarks, { ...opts, mode: theme === 'photoreal' ? 'photoreal' : 'surface' });
+    ctx.restore(); return;
+  }
 
   const T = fit(landmarks, W, H);
   const accent = `hsl(${hue},90%,55%)`, dim = `hsl(${hue},70%,42%)`;

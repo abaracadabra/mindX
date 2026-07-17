@@ -76,6 +76,17 @@ vocabulary matches the voice side (`neutral, happy, excited, calm, sad, angry, s
 thinking`), so a persona's face and voice emote together. The studio has emotion buttons; showcase:
 `face-clone-emotes-showcase.png` (one cloned person across all emotions).
 
+## Rendering — wireframe, shaded surface, or photoreal
+
+The FACE renders three ways (`render_surface.js` + `drawFaceSurface`): the
+**wireframe** (contour loops), a **shaded surface** (the mesh lit as a solid),
+and **photoreal** — the person's captured frame affine-mapped per triangle onto
+the measured mesh. Because the texture is tied to landmark indices, the photoreal
+face re-warps as it expresses (the emotions above, and the mouth on the cloned
+voice) — real texture on real geometry. It is *not* neural view-synthesis and
+does not claim hyperrealism. Full detail + the honest fidelity boundary:
+[PHOTOREAL_RENDER.md](./PHOTOREAL_RENDER.md).
+
 ## Unified persona = FACE + VOICE
 
 `persona.js` — `personaPrint({ face, voice })` binds a faceprint and/or a voaice voiceprint into one

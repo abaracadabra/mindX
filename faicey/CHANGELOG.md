@@ -4,6 +4,45 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.6.0] — 2026-07-17
+
+### Added
+
+- **The photoreal renderer — the FACE is no longer only a wireframe**
+  (`src/face_clone/render_surface.js` + `drawFaceSurface` in `contours.js`). Two
+  honest render modes, both on one mesh:
+  - **surface** — the mesh shaded as a solid. Each triangle's real 3D normal (from
+    the landmark `z` relief) is lit (Lambert + ambient) and modulates the skin
+    base; triangles paint back-to-front. A rendered face, still synthetic geometry.
+  - **photoreal** — the person's **captured frame**, affine-mapped per triangle
+    onto the measured mesh. Real texture on real geometry, so it is genuine
+    *photographic* realism of the capture — and because the UVs are tied to
+    landmark indices, it **re-warps as the face expresses** (an emotion, or the
+    cloned voice driving the mouth): the cloned face emotes photoreally. With the
+    webcam live and no capture yet, the live frame textures itself — live
+    reenactment for free.
+- **`surface` / `photoreal`** in the demo's **render** dropdown, plus a live
+  photoreal hint. `◉ capture my face` now snapshots the frame as the photoreal
+  texture; the persona payload records the actual `render` mode + `photoreal` flag.
+- The mesh is a stable **Delaunay** topology (`triangulate`), cached from the base
+  geometry so expressions deform it instead of re-triangulating (no flicker).
+- **8 render_surface tests** — the Delaunay mesh is valid (empty-circumcircle, no
+  degenerate triangles); `affineFromTriangle` maps every source corner **exactly**
+  onto its destination and rejects a colinear source; shading normals are unit and
+  shades stay in `[ambient, 1]`; topology reuse keeps the mesh stable while an
+  expression deforms it; `shadeColor`/`paintOrder` behave. Suite green: 59 tests.
+
+### Honest boundary
+
+This is **not** neural view-synthesis. It cannot invent occluded or novel views,
+and it makes **no claim** to "hyperrealism indistinguishable from reality" — that
+tier needs a neural renderer (a labeled future). The renderer raises what the FACE
+can *present* (a captured FAICE reaches **realism**), not what faicey *measures*;
+the earned aivatar tier still rests on capture accuracy + signed provenance. Full
+detail: [docs/PHOTOREAL_RENDER.md](./docs/PHOTOREAL_RENDER.md).
+
+---
+
 ## [2.5.1] — 2026-07-17
 
 ### Docs
