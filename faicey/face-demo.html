@@ -65,6 +65,8 @@
       <button id="micBtn">🎙️ mic OFF</button>
     </div>
     <div class="stat" id="hw">camera + microphone are off</div>
+    <button id="capBtn" style="margin-top:6px">◉ capture my face → FAICE</button>
+    <div class="stat" id="capState" style="margin-top:5px"></div>
 
     <div class="sec">expression</div>
     <div class="emos" id="emos"></div>
@@ -110,12 +112,13 @@
     <div class="row" id="pActions" style="display:none;margin-top:6px">
       <button id="dlBtn">⭳ download .persona</button>
     </div>
-    <div class="hint">The face is a real procedural neutral — almond eyes with iris rings, angled brows, a nose with alar wings, inner + outer lips, and ears — at the canonical MediaPipe topology, so an expression or a live webcam clone drives the same face. Mic drives the mouth (which expands with vocal inflection) and paints the live waveform BETWEEN the lips — the mouth is its own oscilloscope. The side oscilloscope shows the same signal. A recording is measured — when the <b>voaice</b> peer is present — into the full <b>scientific</b> voiceprint (six 18-dp SoundWave measures + integrity); set one as a reference and <b>≈ match</b> compares them with voaice&rsquo;s Forensic (both traces overlaid on the scope). <b>Create</b> invents a synthetic persona; <b>Clone</b> binds your captured face + voice under consent — the browser form of aivatar&rsquo;s <code>.persona</code>.</div>
+    <div class="hint">The face is a real procedural neutral — almond eyes with iris rings, angled brows, a nose with alar wings, inner + outer lips, and ears — at the canonical MediaPipe topology, <b>◉ capture my face</b> aggregates a window of webcam frames into one stable, pose-normalised geometry — an accuracy-scored FAICE that becomes the avatar and then expresses. An expression or that captured face drives the same renderer. Mic drives the mouth (which expands with vocal inflection) and paints the live waveform BETWEEN the lips — the mouth is its own oscilloscope. The side oscilloscope shows the same signal. A recording is measured — when the <b>voaice</b> peer is present — into the full <b>scientific</b> voiceprint (six 18-dp SoundWave measures + integrity); set one as a reference and <b>≈ match</b> compares them with voaice&rsquo;s Forensic (both traces overlaid on the scope). <b>Create</b> invents a synthetic persona; <b>Clone</b> binds your captured face + voice under consent — the browser form of aivatar&rsquo;s <code>.persona</code>.</div>
   </div>
 </div>
 
 <script type="module">
 import { neutralFace } from '/src/face_clone/neutral_face.js';
+import { FaceCapture } from '/src/face_clone/capture.js';
 import { applyExpression, EXPRESSION_LABELS } from '/src/face_clone/expressions.js';
 import { drawFaceTheme, drawMouthScope } from '/src/face_clone/contours.js';
 import { LM, proportions } from '/src/face_clone/geometry.js';
@@ -409,6 +412,7 @@ async function camToggle() {
       landmarker = await vision.FaceLandmarker.createFromOptions(fileset, {
         baseOptions: { modelAssetPath: '/static/vendor/mediapipe/face_landmarker.task' },
         runningMode: 'VIDEO', numFaces: 1, outputFaceBlendshapes: false,
+        outputFacialTransformationMatrixes: true, // the pose matrix — needed for accurate capture
       });
       srcLabel.textContent = '— live webcam';
       trackFace();
@@ -422,10 +426,42 @@ function trackFace() {
   if (!camOn || !landmarker) return;
   try {
     const res = landmarker.detectForVideo(camEl, performance.now());
-    if (res?.faceLandmarks?.length) live = res.faceLandmarks[0].map(p => ({ x: p.x, y: p.y, z: p.z }));
+    if (res?.faceLandmarks?.length) {
+      live = res.faceLandmarks[0].map(p => ({ x: p.x, y: p.y, z: p.z }));
+      liveMatrix = res.facialTransformationMatrixes?.[0]?.data || null;
+      if (capturing) capturing.add({ landmarks: live, matrix: liveMatrix });
+    }
   } catch {}
   camRaf = requestAnimationFrame(trackFace);
 }
+let liveMatrix = null;
+let capturing = null; // a FaceCapture in progress
+
+// ── accurate webcam → FAICE ──────────────────────────────────────────────────
+// Aggregate a window of frames into ONE stable, pose-normalised face — the
+// person's actual geometry — measure how accurate it is, and BIND it as the
+// FAICE. The avatar becomes the person, and then expresses (mic + emotion drive
+// the captured face just like the neutral one).
+async function captureFace() {
+  if (!camOn || !landmarker) return setPState('turn the webcam on first', true);
+  const btn = document.getElementById('capBtn');
+  capturing = new FaceCapture();
+  btn.disabled = true;
+  for (let s = 3; s >= 1; s--) { btn.textContent = `◉ hold still… ${s}`; await sleep(900); }
+  const cap = capturing; capturing = null;
+  btn.textContent = '◉ capture my face → FAICE'; btn.disabled = false;
+  if (cap.count < 8) return setPState(`only ${cap.count} usable frames — face the camera and retry`, true);
+  const r = await cap.result();
+  capturedFace = r.landmarks;            // becomes the base face the demo renders
+  capturedPrint = r.faceprint;           // the accuracy-weighted faceprint for the persona
+  base = r.landmarks;                    // the avatar is now the person
+  srcLabel.textContent = `— your captured face (${r.accuracy.verdict})`;
+  const a = r.accuracy;
+  setPState(`<b>FAICE bound:</b> ${a.verdict} · accuracy <b>${(a.score*100).toFixed(0)}%</b> · ${a.frames} frames · frontality ${(a.frontality*100).toFixed(0)}%`);
+}
+function setPState(html, warn) { const el = document.getElementById('capState'); if (el) el.innerHTML = warn ? `<span style="color:#c86">${html}</span>` : html; }
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+let capturedFace = null, capturedPrint = null;
 function stopCam() {
   camOn = false; live = null; cancelAnimationFrame(camRaf);
   camStream?.getTracks().forEach(t => t.stop()); camStream = null;
@@ -435,6 +471,7 @@ function stopCam() {
   refreshPersonaState();
 }
 document.getElementById('camBtn').onclick = camToggle;
+document.getElementById('capBtn').onclick = captureFace;
 
 // ── persona: create / clone → .persona ──────────────────────────────────────
 // CREATE invents a synthetic persona from the current FACE (no real subject,
@@ -457,11 +494,11 @@ document.getElementById('mClone').onclick = () => setMode('clone');
 
 function refreshPersonaState() {
   const el = document.getElementById('pState'); if (!el) return;
-  const faceReady = personaMode === 'clone' ? !!live : true; // clone needs a real webcam face
+  const faceReady = personaMode === 'clone' ? !!(capturedFace || live) : true; // clone needs a real (captured or live) face
   const voiceReady = !!lastVoiceprint;
   const mark = (ok, on, off) => `<span class="${ok ? 'ok' : 'no'}">${ok ? '☑' : '☐'} ${ok ? on : off}</span>`;
   el.innerHTML = personaMode === 'clone'
-    ? `${mark(faceReady, 'webcam face', 'turn the webcam on')} · ${mark(voiceReady, 'voice', 'record a voiceprint')}`
+    ? `${mark(faceReady, capturedFace ? 'captured face' : 'webcam face', 'capture your face (◉)')} · ${mark(voiceReady, 'voice', 'record a voiceprint')}`
     : `${mark(true, 'procedural face', '')} · ${mark(voiceReady, 'voice (optional)', 'voice: none — face-only')}`
       + (personaMode === 'create' && live ? `<br><span class="no">create binds the procedural face — switch to clone to use your webcam</span>` : '');
 }
@@ -472,7 +509,10 @@ function refreshPersonaState() {
 // under that consent would be a provenance lie. Cloning a real face is exactly
 // what the clone path (consent 'self') exists for.
 async function faceprintNow() {
-  const src = personaMode === 'clone' ? live : base;
+  // clone prefers the ACCURATE aggregated capture (◉ capture my face) — a stable,
+  // accuracy-weighted print — over re-measuring a single jittery live frame.
+  if (personaMode === 'clone' && capturedPrint) return capturedPrint;
+  const src = personaMode === 'clone' ? (capturedFace || live) : base;
   if (!src) return null;
   const prop = proportions(src);
   return measureFaceprint(prop, { confidence: personaMode === 'clone' ? 0.9 : 1, symmetry: 1, frontality: 1 });
@@ -486,7 +526,7 @@ async function bind() {
   if (!name) { out.innerHTML = '<span style="color:#c86">name the persona first.</span>'; return; }
 
   if (personaMode === 'clone') {
-    if (!live) { out.innerHTML = '<span style="color:#c86">turn the webcam on to clone a real face.</span>'; return; }
+    if (!capturedFace && !live) { out.innerHTML = '<span style="color:#c86">capture your face (◉) to clone a real face.</span>'; return; }
     if (!lastVoiceprint) { out.innerHTML = '<span style="color:#c86">record a voiceprint to clone the voice.</span>'; return; }
     if (!document.getElementById('pConsent').checked) { out.innerHTML = '<span style="color:#c86">consent is required to clone a real subject.</span>'; return; }
   }
@@ -506,7 +546,7 @@ async function bind() {
     identity: { name, label: name, description: desc || null, agent_id: name.toLowerCase().replace(/\s+/g, '_') },
     cognition: { behavioral_traits: [], beliefs: {}, desires: {}, inference: {}, authority: {} },
     embodiment: {
-      face: face ? { faceprint: { hash: face.hash, measuresStr: face.measuresStr, precisionScore: face.precisionScore.toString() }, source: personaMode === 'clone' ? 'webcam' : 'procedural', render: 'wireframe' } : null,
+      face: face ? { faceprint: { hash: face.hash, measuresStr: face.measuresStr, precisionScore: face.precisionScore.toString() }, source: personaMode === 'clone' ? (capturedFace ? 'webcam-aggregated' : 'webcam') : 'procedural', render: 'wireframe' } : null,
       voice: voice ? { voiceprint: { hash: voice.hash, measuresStr: voice.measuresStr, precisionScore: voice.precisionScore }, engine: 'captured', features: voice.features } : null,
       rig: { fps: 60, blendshapes: 52 },
     },

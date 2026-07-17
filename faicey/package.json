@@ -1,6 +1,6 @@
 {
   "name": "@mindx/faicey",
-  "version": "2.1.2",
+  "version": "2.2.0",
   "description": "Advanced 3D face rendering system with voice print analysis, frequency triggers, and inflection detection for mindX autonomous agents",
   "main": "src/FaiceyCore.js",
   "type": "module",
@@ -14,7 +14,7 @@
     "sync-engine": "node scripts/sync-engine.mjs",
     "preserve": "node scripts/sync-engine.mjs",
     "prestart": "node scripts/sync-engine.mjs",
-    "test": "node test/test.js && node src/face_clone/face_clone.test.js && node src/face_clone/autocapture.test.js && node src/face_clone/neutral_face.test.js",
+    "test": "node test/test.js && node src/face_clone/face_clone.test.js && node src/face_clone/autocapture.test.js && node src/face_clone/neutral_face.test.js && node src/face_clone/capture.test.js",
     "demo": "node examples/jaimla-demo.js",
     "jaimla": "node examples/jaimla-demo.js",
     "oscilloscope": "node examples/oscilloscope-demo.js",

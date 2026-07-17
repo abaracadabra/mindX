@@ -4,6 +4,33 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.2.0] — 2026-07-17
+
+### Added
+
+- **Accurate webcam → FAICE mapping** (`src/face_clone/capture.js`). A single
+  webcam frame is noisy — the landmarks jitter, the head is rarely dead-on.
+  `FaceCapture` accumulates a window of frames, drops the ones too turned to
+  trust, and folds the rest into ONE stable, pose-normalised face (the person's
+  actual geometry) via frontality-weighted per-vertex averaging. Then it
+  **measures** how accurate that capture is — per-vertex spread across frames
+  (jitter), mean frontality, coverage → one 0..1 score with a verdict
+  (accurate / good / rough / insufficient). The accuracy becomes the faceprint's
+  precision, so a jittery capture grades to a lower tier in aivatar rather than
+  claiming a fidelity it doesn't have.
+- **`◉ capture my face → FAICE`** in the live demo. Holds a 3-second capture,
+  binds the aggregated face as the avatar (the FACE becomes the person), reports
+  the accuracy score, and drives the same expression + mouth-oscilloscope
+  pipeline — the captured face then emotes and lip-syncs. The persona *clone*
+  flow now binds this accurate aggregated print instead of re-measuring a single
+  live frame; the demo requests MediaPipe's transformation matrix (needed for
+  pose normalisation).
+- 6 capture tests: a stable/frontal capture measures accurate, a jittery/turned
+  one measures rough, accuracy rises with cleaner frames, and averaging is
+  provably tighter than any lone frame.
+
+---
+
 ## [2.1.2] — 2026-07-16
 
 ### Added
