@@ -4,6 +4,47 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.10.0] — 2026-07-17
+
+### Added — WebGL rendering, on the DeltaVerse substrate
+
+The 2D path paints triangles on the CPU with an affine texture warp — flat, with
+faint seams. WebGL draws the same mesh on the **GPU**: a perspective camera with
+real depth, and perspective-correct texture interpolation (seam-free).
+
+- **Aligned to the existing DeltaVerse substrate, reviewed first.** `dapp/deltaverse.js`
+  (the participant field the realm doorway uses) is deliberately **raw WebGL** —
+  inline shaders + a 2D-canvas fallback so it always shows, *not* three.js. The
+  faicey face renderer follows the same doctrine rather than pulling in three.js's
+  ~2 MB: a face is drawn with the same lightweight WebGL technology that draws its
+  participants.
+- **`src/face_clone/webgl_face.js`**:
+  - `buildFaceGeometry(landmarks, { topology, uvSource })` → the four GPU buffers
+    (positions centred/unit-scaled/**Y-flipped**/nose-forward, indices from the
+    Delaunay topology, uvs from the capture frame flipped for GL, smooth normals).
+  - a tiny tested **mat4** (`m4perspective` / `m4rotationY` / `m4translation` /
+    `m4multiply`) for the MVP.
+  - `WebGLFaceRenderer` — raw `getContext('webgl')`, inline GLSL (lit + optionally
+    textured mesh), `.ok=false` → the caller falls back to the 2D shaded surface.
+    16-bit indices when the mesh fits, so no `OES_element_index_uint` on WebGL1.
+- **`webgl` render mode** in the demo, on its own `#face3d` canvas: builds the
+  geometry each frame from the expressed landmarks + cached topology, textures it
+  with the captured frame (or the live video), and turns the head gently so the
+  depth reads. Falls back to the 2D shaded surface when WebGL is unavailable, and
+  says so. Persona payload records the `webgl-gpu` backend.
+- **10 webgl_face tests** (buffer sizes; centred + Y-flipped positions; UVs from
+  the source, flipped, in [0,1]; unit normals; null-landmark safe; the mat4
+  helpers). Suite green: 88.
+
+### What it earns
+
+WebGL is a better *rendering* of the same measured mesh — not neural synthesis. A
+GPU-textured capture still grades to **realism**; the fidelity gate treats
+`webgl-gpu` like the affine backend, and hyperreal stays reserved for a measured
+neural render. Detail: [docs/WEBGL_RENDER.md](./docs/WEBGL_RENDER.md).
+
+---
+
 ## [2.9.0] — 2026-07-17
 
 ### Changed — solid hardware handling: every camera + mic, and live facial recognition

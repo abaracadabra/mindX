@@ -19,6 +19,7 @@
   .wrap { display:grid; grid-template-columns:1fr 340px; height:100vh; }
   .stage { position:relative; background:radial-gradient(ellipse at 50% 42%, #0a1620 0%, #04070c 70%); }
   #face { width:100%; height:100%; display:block; }
+  #face3d { position:absolute; inset:0; width:100%; height:100%; display:none; }
   #cam { position:absolute; right:12px; bottom:12px; width:150px; border:1px solid var(--dim); border-radius:6px; transform:scaleX(-1); display:none; background:#000; }
   .badge { position:absolute; left:14px; top:12px; font-size:11px; color:var(--a); letter-spacing:.12em; }
   .badge small { color:#576; }
@@ -60,6 +61,7 @@
 <div class="wrap">
   <div class="stage">
     <canvas id="face"></canvas>
+    <canvas id="face3d"></canvas>
     <video id="cam" autoplay playsinline muted></video>
     <div class="badge">faicey · THE FACE, live <small id="src">— procedural neutral</small></div>
   </div>
@@ -93,6 +95,7 @@
       <option value="surface">surface — shaded solid</option>
       <option value="photoreal">photoreal — your captured skin</option>
       <option value="neural">neural — gated hyperrealism</option>
+      <option value="webgl">webgl 3D — real depth (DeltaVerse substrate)</option>
       <option value="neon">neon</option>
       <option value="mesh">mesh</option>
       <option value="dots">dots</option>
@@ -156,6 +159,7 @@ import { drawFaceTheme, drawMouthScope } from '/src/face_clone/contours.js';
 import { triangulate } from '/src/face_clone/render_surface.js';
 import { NeuralRenderer, gradeFidelity, identityConsistency } from '/src/face_clone/neural_render.js';
 import { ClassicalEnhancer } from '/src/face_clone/classical_enhance.js';
+import { buildFaceGeometry, WebGLFaceRenderer } from '/src/face_clone/webgl_face.js';
 import { LM, proportions } from '/src/face_clone/geometry.js';
 import { measureFaceprint } from '/src/face_clone/faceprint.js';
 import { personaPrint } from '/src/face_clone/persona.js';
@@ -233,12 +237,41 @@ function surfaceTex() {
   return {}; // no texture yet → drawFaceSurface falls back to shaded surface
 }
 
+// ── WebGL 3D path — the DeltaVerse substrate style (raw WebGL, 2D fallback) ──
+const face3dCv = document.getElementById('face3d');
+let webgl = null, webglTried = false, webglCapSet = false;
+function ensureWebGL() {
+  if (webglTried) return webgl;
+  webglTried = true;
+  try { const r = new WebGLFaceRenderer(face3dCv); webgl = r.ok ? r : null; } catch { webgl = null; }
+  return webgl;
+}
+function renderWebGL(landmarks) {
+  if (!topology) recomputeTopology();
+  // texture source + its normalized UVs: a captured frame (static) or the live video
+  let uvSource = null, textured = false;
+  if (faceTexture && texLandmarks) {
+    uvSource = texLandmarks.map(p => ({ x: p.x / faceTexture.width, y: p.y / faceTexture.height }));
+    if (!webglCapSet) { webgl.setTexture(faceTexture); webglCapSet = true; }
+    textured = true;
+  } else if (camOn && live && camEl.videoWidth) {
+    uvSource = live; webgl.setTexture(camEl); textured = true; // live frame re-uploaded each draw
+  }
+  webgl.setMode(textured ? 'photoreal' : 'surface');
+  webgl.setGeometry(buildFaceGeometry(landmarks, { topology, uvSource }));
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (face3dCv.width !== Math.round(face3dCv.clientWidth * dpr)) webgl.resize();
+  webgl.render({ rotY: Math.sin(Date.now() / 2400) * 0.5 }); // a gentle turn shows the real depth
+}
+
 function renderFace() {
   const { landmarks, hue } = currentLandmarks();
+  if (theme === 'webgl' && ensureWebGL()) { renderWebGL(landmarks); return; }
   fctx.clearRect(0, 0, faceCv.width, faceCv.height);
   // 'neural' draws the affine photoreal composite first (realism), then — only
   // if a neural model is actually loaded — refines it into a hyperreal frame.
-  const drawTheme = theme === 'neural' ? 'photoreal' : theme;
+  // 'webgl' with no GL context falls back here to the 2D shaded surface.
+  const drawTheme = theme === 'neural' ? 'photoreal' : theme === 'webgl' ? 'surface' : theme;
   drawFaceTheme(fctx, landmarks, { W: faceCv.width, H: faceCv.height, hue, theme: drawTheme, topology, ...surfaceTex() });
   if (theme === 'neural' && !neuralBusy) {
     // neural model if loaded (hyperreal-capable); else the classical fallback
@@ -280,6 +313,13 @@ document.getElementById('theme').onchange = e => {
   if (badge) { badge.style.display = theme === 'neural' ? 'block' : 'none'; badge.innerHTML = neuralBadgeText(); }
   const tog = document.getElementById('classicalToggle');
   if (tog) tog.style.display = (theme === 'neural' && !neural.describe().available) ? 'flex' : 'none';
+  // WebGL uses its own canvas; toggle visibility and note a fallback honestly
+  const gl = theme === 'webgl' ? ensureWebGL() : null;
+  const use3d = theme === 'webgl' && !!gl;
+  face3dCv.style.display = use3d ? 'block' : 'none';
+  faceCv.style.display = use3d ? 'none' : 'block';
+  if (use3d) { if (!topology) recomputeTopology(); gl.resize(); }
+  if (theme === 'webgl' && !gl) setHwCount('WebGL unavailable — falling back to the 2D shaded surface');
 };
 document.getElementById('classicalChk').onchange = e => {
   classicalOn = e.target.checked;
@@ -656,6 +696,7 @@ async function captureFace() {
     faceTexture.width = camEl.videoWidth; faceTexture.height = camEl.videoHeight;
     faceTexture.getContext('2d').drawImage(camEl, 0, 0);
     texLandmarks = live.map(p => ({ x: p.x * faceTexture.width, y: p.y * faceTexture.height }));
+    webglCapSet = false; // re-upload the new capture as the WebGL texture
   }
   srcLabel.textContent = `— your captured face (${r.accuracy.verdict})`;
   const a = r.accuracy;
@@ -806,6 +847,7 @@ async function bind() {
       const hasTexture = !!(faceTexture && texLandmarks);
       const backend = theme === 'neural' && neural.describe().available ? 'neural'
         : (theme === 'neural' && classicalOn) ? 'classical'
+        : (theme === 'webgl' && webgl) ? 'webgl-gpu'
         : (hasTexture && (theme === 'photoreal' || theme === 'neural') ? 'affine' : null);
       const g = gradeFidelity({ backend, hasTexture, identity: hasTexture ? 1 : 0, structural: 0, coverage: hasTexture ? 1 : 0 });
       return { mode: 'basic', renderVerdict: g.verdict, hyperreal: g.hyperreal, backend: g.backend, reasons: g.reasons,
