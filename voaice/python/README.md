@@ -5,10 +5,25 @@ Optional **Python** text-to-speech and speech-to-text backends for
 these reach richer Python stacks **when a host has them**, and degrade honestly
 when it doesn't — the same doctrine as the JS `voaice/tts` and `voaice/stt`.
 
+## Install (one command)
+
+```bash
+./install.sh                 # light — pyttsx3 + vosk (offline, torch-free)
+./install.sh --online        # + gTTS + SpeechRecognition (need network)
+./install.sh --full          # + Coqui TTS + openai-whisper (pull torch, heavy)
+```
+
+It creates a venv (`python/.venv`), installs the profile you choose, and prints
+what's available. The Node bridge (`voaice/python`) **auto-detects this venv** —
+after installing once, `PythonSpeech` just works, no config.
+
 ## Use
 
 ```bash
-python3 voaice_speech.py capability          # what's installed here (JSON)
+# with the venv (what install.sh sets up):
+.venv/bin/python voaice_speech.py capability   # what's installed here (JSON)
+# or your own python, if the libs are on it:
+python3 voaice_speech.py capability
 
 python3 voaice_speech.py tts --text "the machine speaks" --out out.wav
 python3 voaice_speech.py tts --text "..." --out out.wav --engine pyttsx3 --rate 165

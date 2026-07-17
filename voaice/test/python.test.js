@@ -57,5 +57,17 @@ await test('with no engine, tts/stt fail with an install hint — never fake out
   if (cap.tts.resolved || cap.stt.resolved) console.log(`   (an engine is installed: ${cap.tts.resolved || ''} ${cap.stt.resolved || ''})`);
 });
 
+await test('when a TTS engine IS installed, it synthesises a real wav', async () => {
+  if (!pythonPresent) { console.log('   (skipped: no python)'); return; }
+  const cap = await py.capability();
+  if (!cap.tts.resolved) { console.log('   (skipped: no TTS engine — run python/install.sh)'); return; }
+  const out = join(tmpdir(), `voaice-tts-${process.pid}.wav`);
+  const r = await py.tts('the machine speaks for itself', out);
+  assert.equal(r.engine, cap.tts.resolved, 'reports the engine used');
+  const { statSync } = await import('node:fs');
+  assert.ok(statSync(out).size > 1000, 'produced non-trivial audio');
+  await unlink(out).catch(() => {});
+});
+
 console.log(`\npython bridge: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

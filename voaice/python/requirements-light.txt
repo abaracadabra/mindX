@@ -1,0 +1,4 @@
+# voaice Python speech — LIGHT profile: offline + torch-free, matches the voaice
+# core doctrine (no torch, no heavy downloads). Installed by ./install.sh.
+pyttsx3>=2.90        # TTS — offline, uses the OS voices
+vosk>=0.3.44         # STT — offline, small models (download a model separately)

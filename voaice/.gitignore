@@ -6,3 +6,7 @@ models/
 # Neural engine scratch output
 /tmp/voaice-neural/
 *.wav
+
+# Python venv from python/install.sh
+python/.venv/
+python/__pycache__/

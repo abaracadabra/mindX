@@ -1,0 +1,3 @@
+# voaice Python speech — ONLINE profile: cloud engines, need network.
+gTTS>=2.5.0          # TTS via Google (mp3; needs ffmpeg for wav)
+SpeechRecognition>=3.10  # STT via the Google web API

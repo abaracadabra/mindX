@@ -1,0 +1,4 @@
+# voaice Python speech — FULL profile: highest quality, HEAVY (pulls torch and
+# large model downloads). Installed by ./install.sh --full (on top of light).
+TTS>=0.22.0          # Coqui TTS — best synthesis
+openai-whisper>=20231117  # Whisper STT — best transcription

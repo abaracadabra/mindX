@@ -4,6 +4,37 @@ All notable changes to **voaice**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [3.1.1] — 2026-07-16
+
+### Added
+
+- **`python/install.sh` — one-command venv install.** Creates a virtualenv
+  (`python/.venv`) and installs the speech backends you choose: `light` (pyttsx3
+  + vosk, offline, torch-free — the default), `--online` (gTTS +
+  SpeechRecognition), or `--full` (Coqui TTS + openai-whisper). Checks the Python
+  version, needs no root, and tells you the one apt package to install if
+  `python3 -m venv` isn't available rather than sudo'ing on your behalf. Grouped
+  `requirements-{light,online,full}.txt` back it (the old `requirements.txt` was
+  entirely commented and installed nothing).
+- **The Node bridge auto-detects the venv.** `PythonSpeech` now prefers
+  `python/.venv/bin/python` when present (then `VOAICE_PYTHON`, then PATH), so
+  after one `install.sh` it just works with no configuration.
+
+### Fixed
+
+- **`PythonSpeech.capability()` returned nothing.** The bridge parsed only the
+  last line of the tool's output, but `capability` pretty-prints multi-line JSON
+  — so it silently lost the report. It now parses the whole body first, falling
+  back to the last line. (`tts`/`stt` emit single-line JSON and were unaffected.)
+
+### Verified
+
+Real round-trip on this host: `install.sh` built the venv, pyttsx3 synthesised a
+90 KB WAV, vosk resolved as the STT engine; a new test covers the synthesis path
+when an engine is installed. Suite: voicey (11) + v3 (16) + python (5).
+
+---
+
 ## [3.1.0] — 2026-07-16
 
 ### Added
