@@ -79,6 +79,7 @@
       <option value="wireframe">wireframe — the face, drawn</option>
       <option value="surface">surface — shaded solid</option>
       <option value="photoreal">photoreal — your captured skin</option>
+      <option value="neural">neural — gated hyperrealism</option>
       <option value="neon">neon</option>
       <option value="mesh">mesh</option>
       <option value="dots">dots</option>
@@ -86,6 +87,7 @@
       <option value="scan">scanline</option>
     </select>
     <div class="hint" id="photorealHint" style="display:none">Photoreal maps <b>your captured frame</b> onto the measured mesh — capture your face (◉) first. Real texture on real geometry; it re-warps as the face expresses. It does <i>not</i> synthesise novel views or claim neural hyperrealism.</div>
+    <div class="hint" id="neuralBadge" style="display:none"></div>
 
     <div class="sec">voiceprint oscilloscope</div>
     <canvas id="scope"></canvas>
@@ -138,6 +140,7 @@ import { FaceCapture } from '/src/face_clone/capture.js';
 import { applyExpression, EXPRESSION_LABELS } from '/src/face_clone/expressions.js';
 import { drawFaceTheme, drawMouthScope } from '/src/face_clone/contours.js';
 import { triangulate } from '/src/face_clone/render_surface.js';
+import { NeuralRenderer, gradeFidelity, identityConsistency } from '/src/face_clone/neural_render.js';
 import { LM, proportions } from '/src/face_clone/geometry.js';
 import { measureFaceprint } from '/src/face_clone/faceprint.js';
 import { personaPrint } from '/src/face_clone/persona.js';
@@ -163,6 +166,19 @@ let texLandmarks = null;            // capture-time landmarks in texture pixel s
 // The mesh topology is triangulated ONCE from the current base geometry, so
 // expressions deform a stable mesh instead of re-triangulating (which flickers).
 function recomputeTopology() { try { topology = triangulate(base); } catch { topology = null; } }
+
+// The neural renderer — DORMANT by default (no weights shipped). An operator can
+// activate it from the console:  await window.faiceyNeural.load({ runtime: ort, modelPath: '…' })
+// or with a pre-built session. Until then it is an honest passthrough of the
+// affine photoreal composite, and the fidelity gate caps the verdict at realism.
+const neural = new NeuralRenderer();
+if (typeof window !== 'undefined') window.faiceyNeural = neural;
+let neuralBusy = false;
+function neuralBadgeText() {
+  const d = neural.describe();
+  if (!d.available) return `neural renderer <b>dormant</b> — realism via affine · load weights to earn <b>hyperreal</b> (measured, not asserted)`;
+  return `neural backend <b>active</b> (${d.modelPath || 'session'}) — renders are graded through the fidelity gate; hyperreal only if identity + structure + coverage pass`;
+}
 
 // ── the face renderer — real features via the contour loops ────────────────
 function resize() {
@@ -197,7 +213,18 @@ function surfaceTex() {
 function renderFace() {
   const { landmarks, hue } = currentLandmarks();
   fctx.clearRect(0, 0, faceCv.width, faceCv.height);
-  drawFaceTheme(fctx, landmarks, { W: faceCv.width, H: faceCv.height, hue, theme, topology, ...surfaceTex() });
+  // 'neural' draws the affine photoreal composite first (realism), then — only
+  // if a neural model is actually loaded — refines it into a hyperreal frame.
+  const drawTheme = theme === 'neural' ? 'photoreal' : theme;
+  drawFaceTheme(fctx, landmarks, { W: faceCv.width, H: faceCv.height, hue, theme: drawTheme, topology, ...surfaceTex() });
+  if (theme === 'neural' && neural.describe().available && !neuralBusy) {
+    neuralBusy = true;
+    const img = fctx.getImageData(0, 0, faceCv.width, faceCv.height);
+    neural.refine({ data: img.data, width: img.width, height: img.height })
+      .then(r => { if (r.neural) fctx.putImageData(new ImageData(r.image.data, r.image.width, r.image.height), 0, 0); })
+      .catch(() => {})
+      .finally(() => { neuralBusy = false; });
+  }
   // the voice, shown BETWEEN the lips — the mouth is its own oscilloscope
   if (speaking && speakData) drawMouthScope(fctx, landmarks, speakData, { W: faceCv.width, H: faceCv.height, hue, gain: 1.6 });
   else if (micOn && tdata) drawMouthScope(fctx, landmarks, tdata, { W: faceCv.width, H: faceCv.height, hue, gain: 1.6 });
@@ -218,9 +245,11 @@ document.getElementById('cycleBtn').onclick = e => {
 };
 document.getElementById('theme').onchange = e => {
   theme = e.target.value;
-  if ((theme === 'surface' || theme === 'photoreal') && !topology) recomputeTopology();
+  if ((theme === 'surface' || theme === 'photoreal' || theme === 'neural') && !topology) recomputeTopology();
   const hint = document.getElementById('photorealHint');
-  if (hint) hint.style.display = theme === 'photoreal' ? 'block' : 'none';
+  if (hint) hint.style.display = (theme === 'photoreal' || theme === 'neural') ? 'block' : 'none';
+  const badge = document.getElementById('neuralBadge');
+  if (badge) { badge.style.display = theme === 'neural' ? 'block' : 'none'; badge.innerHTML = neuralBadgeText(); }
 };
 
 // ── mic ON/OFF → oscilloscope + mouth ──────────────────────────────────────
@@ -648,7 +677,16 @@ async function bind() {
       voice: voice ? { voiceprint: { hash: voice.hash, measuresStr: voice.measuresStr, precisionScore: voice.precisionScore }, engine: 'captured', features: voice.features } : null,
       rig: { fps: 60, blendshapes: 52 },
     },
-    fidelity: { mode: 'basic', realism: null, measured: { faceFrames: personaMode === 'clone' ? 1 : 0, voicePrecision: voice ? Number(voice.precisionScore) / 1e18 : undefined }, note: 'browser capture — re-grade in aivatar for the earned tier + signed provenance' },
+    fidelity: (() => {
+      // the render's fidelity is GRADED, not asserted: hyperreal only if a neural
+      // backend measured through the gate; texture → realism; else surface.
+      const hasTexture = !!(faceTexture && texLandmarks);
+      const backend = theme === 'neural' && neural.describe().available ? 'neural' : (hasTexture && (theme === 'photoreal' || theme === 'neural') ? 'affine' : null);
+      const g = gradeFidelity({ backend, hasTexture, identity: hasTexture ? 1 : 0, structural: 0, coverage: hasTexture ? 1 : 0 });
+      return { mode: 'basic', renderVerdict: g.verdict, hyperreal: g.hyperreal, backend: g.backend, reasons: g.reasons,
+        measured: { faceFrames: personaMode === 'clone' ? 1 : 0, voicePrecision: voice ? Number(voice.precisionScore) / 1e18 : undefined },
+        note: 'browser capture — render verdict is measured; re-grade in aivatar for the earned TIER + signed provenance' };
+    })(),
     provenance: { consent: { ...consent, at: now }, custody: [{ action: 'bind', at: now, note: `${bound.modalities.join('+')} in the faicey demo` }], manifest: null },
     media: { formats: ['wav'] },
     aiml: { inft: { registerArgs: bound.registerArgs, modalities: bound.modalities } },

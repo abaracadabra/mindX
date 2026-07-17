@@ -87,6 +87,10 @@ voice) — real texture on real geometry. It is *not* neural view-synthesis and
 does not claim hyperrealism. Full detail + the honest fidelity boundary:
 [PHOTOREAL_RENDER.md](./PHOTOREAL_RENDER.md).
 
+A fourth **neural** mode adds *gated* hyperrealism: a pluggable ONNX backend
+(dormant, weights not shipped) plus a fidelity gate that only stamps `hyperreal`
+when a neural render measures through it — [NEURAL_RENDERER.md](./NEURAL_RENDERER.md).
+
 ## Unified persona = FACE + VOICE
 
 `persona.js` — `personaPrint({ face, voice })` binds a faceprint and/or a voaice voiceprint into one

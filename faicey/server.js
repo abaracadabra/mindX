@@ -265,6 +265,21 @@ class FaiceyServer {
                 res.json(payload);
             } catch (e) { res.status(500).json({ error: e.message }); }
         });
+        // Neural renderer capability — honest report. Dormant unless an operator has
+        // deposited an ONNX runtime + weights (none are shipped); the fidelity gate
+        // caps the verdict at realism until a neural render measures through it.
+        this.app.get('/api/render/neural/status', async (req, res) => {
+            try {
+                const { FIDELITY } = await import('./src/face_clone/neural_render.js');
+                res.json({
+                    backend: 'dormant',
+                    available: false,
+                    reason: 'no ONNX runtime or weights on this host — realism via affine; hyperreal is gated',
+                    gate: FIDELITY,
+                    note: 'hyperrealism is EARNED: a neural render must clear identity + structural + coverage. Activate by depositing weights + a runtime.',
+                });
+            } catch (e) { res.status(500).json({ error: e.message }); }
+        });
         // Give a cloned face to a .persona: store a face artifact AND, if the named .persona exists,
         // write embodiment.face (faceprint + cloneProportions) into it so the persona's faicey wears it.
         this.app.post('/api/persona/face', (req, res) => {

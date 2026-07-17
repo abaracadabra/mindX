@@ -50,8 +50,11 @@ mesh faicey measured. That is genuine **photographic realism of the capture**.
 It is **not** neural view-synthesis. It cannot invent occluded or novel views
 (turn the textured face far and the single frame's coverage runs out), and it
 makes **no claim** to "hyperrealism indistinguishable from reality." That tier
-needs a neural renderer (a Gaussian-splat / NeRF-class model) — an explicitly
-labeled future, not something affine warping can assert.
+needs a neural renderer (a Gaussian-splat / NeRF-class model). That renderer now
+has a **gated seam** — [NEURAL_RENDERER.md](./NEURAL_RENDERER.md): a pluggable
+ONNX backend (dormant, weights not shipped) plus a fidelity gate that only stamps
+`hyperreal` when a neural render actually measures through it. The affine renderer
+here caps at `realism` **by construction**.
 
 ### Fidelity, in aivatar's terms
 

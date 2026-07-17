@@ -4,6 +4,50 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.7.0] — 2026-07-17
+
+### Added — the neural renderer, gated
+
+The photoreal renderer reaches *realism*. Hyperrealism needs a neural renderer,
+and this ships that **capability behind a gate** — not a hyperrealism claim.
+(`src/face_clone/neural_render.js`.)
+
+- **`NeuralRenderer`** — a pluggable backend that runs a **real ONNX model** when
+  an operator provides a runtime + weights, and is **dormant** otherwise (an
+  honest passthrough of the affine composite). **No weights are committed** — the
+  same doctrine as voaice's ONNX voices and mindXtrain's dormant CPU bridge.
+  Inference contract: NCHW float32 RGB `[0,1]` in, same-shape out. Activatable
+  live via `window.faiceyNeural`.
+- **`gradeFidelity` — the fidelity gate (the doctrine, made mechanical).** A
+  render is **measured** — identity consistency (faceprint-vector), structural
+  similarity (SSIM), coverage — and `hyperreal` is stamped **only** when a
+  *neural* backend clears all three published thresholds (`FIDELITY`
+  0.85 / 0.90 / 0.80). By construction the affine/classical path caps at
+  `realism`, no-texture at `surface`, and a neural render that doesn't measure up
+  is capped too, with the failing measure named. Hyperrealism is **earned, never
+  asserted**.
+- Metrics: `identityConsistency`, `structuralSimilarity`, `renderCoverage` — real
+  and testable.
+- **`neural`** render mode in the demo: draws the affine composite (realism) and,
+  *only if a model is loaded*, refines it — with an honest badge ("neural renderer
+  dormant — realism via affine · load weights to earn hyperreal"). The persona
+  payload records the measured render verdict, not an asserted tier.
+- **`GET /api/render/neural/status`** — honest capability report + gate thresholds.
+- **12 neural_render tests**, incl. the boundary that *only* a neural render can
+  earn hyperreal and that the thresholds don't silently relax. Suite green: 71.
+
+### Honest status
+
+Hyperrealism is **not achieved** on this host — it is made *reachable and safe*:
+the seam runs a real model when one is provided, and the gate guarantees the
+"hyperreal" label can only ever be earned by measurement. The aivatar tier ladder
+is now complete in *mechanism* (basic → professional → scientific realism →
+scientific hyperrealism); the top rung exists but climbing it needs a loaded
+neural model + signed provenance. Full detail:
+[docs/NEURAL_RENDERER.md](./docs/NEURAL_RENDERER.md).
+
+---
+
 ## [2.6.0] — 2026-07-17
 
 ### Added
