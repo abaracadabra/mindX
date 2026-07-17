@@ -4,6 +4,31 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.5.0] — 2026-07-17
+
+### Added
+
+- **The mint payload is wired to the DeltaVerse minter** (`src/face_clone/minter.js`).
+  `toMintTx()` turns an iNFT payload into a ready-to-broadcast transaction — the
+  `to` (the deployed iNFT_7857 address), the ABI-encoded `data`, and the chain —
+  exactly what a wallet's `eth_sendTransaction` or viem's `sendTransaction` takes.
+  A minimal, self-contained ABI encoder handles the two calls (`mintAgent`,
+  `attachThotRoot`) with the selectors read from the compiled artifact, so no
+  keccak is needed in the browser. **The encoder was cross-checked byte-for-byte
+  against viem**, and an in-repo round-trip decode test locks it. A `thotRoot`
+  becomes a second `attachThotRoot(tokenId, …)` transaction to link mindX's
+  memory lineage after the mint.
+- **`⛓ mint`** in the demo — after `⬡ iNFT payload`, this connects the browser
+  wallet, builds the transaction, and submits it for the owner to **sign and
+  approve in their own wallet**. No keys are held and nothing is auto-submitted:
+  the tool builds the transaction, the mint is the wallet owner's action. The
+  deployed iNFT_7857 address is editable (defaults to the recognised contract).
+- **5 minter tests** — the calldata decodes back to the payload (a real, valid
+  transaction), the THOT root becomes a tokenId-parameterised follow-up, and the
+  owner defaults to the sender.
+
+---
+
 ## [2.4.0] — 2026-07-17
 
 ### Added

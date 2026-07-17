@@ -121,6 +121,10 @@
       <button id="dlBtn">⭳ .persona</button>
       <button id="inftBtn">⬡ iNFT payload</button>
     </div>
+    <div class="row" id="mintRow" style="display:none;margin-top:2px">
+      <input id="inftContract" type="text" value="0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9" title="deployed iNFT_7857 address" style="flex:2;font-size:10px" />
+      <button id="mintBtn" style="flex:1">⛓ mint</button>
+    </div>
     <div class="hint">The face is a real procedural neutral — almond eyes with iris rings, angled brows, a nose with alar wings, inner + outer lips, and ears — at the canonical MediaPipe topology, <b>◉ capture my face</b> aggregates a window of webcam frames into one stable, pose-normalised geometry — an accuracy-scored FAICE that becomes the avatar and then expresses. An expression or that captured face drives the same renderer. Mic drives the mouth (which expands with vocal inflection) and paints the live waveform BETWEEN the lips — the mouth is its own oscilloscope. The side oscilloscope shows the same signal. A recording is measured — when the <b>voaice</b> peer is present — into the full <b>scientific</b> voiceprint (six 18-dp SoundWave measures + integrity); set one as a reference and <b>≈ match</b> compares them with voaice&rsquo;s Forensic (both traces overlaid on the scope). <b>Create</b> invents a synthetic persona; <b>Clone</b> binds your captured face + voice under consent — the browser form of aivatar&rsquo;s <code>.persona</code>.</div>
   </div>
 </div>
@@ -134,6 +138,7 @@ import { LM, proportions } from '/src/face_clone/geometry.js';
 import { measureFaceprint } from '/src/face_clone/faceprint.js';
 import { personaPrint } from '/src/face_clone/persona.js';
 import { toInftMint } from '/src/face_clone/inft.js';
+import { toMintTx } from '/src/face_clone/minter.js';
 
 const faceCv = document.getElementById('face');
 const fctx = faceCv.getContext('2d');
@@ -660,7 +665,30 @@ document.getElementById('inftBtn').onclick = async () => {
   const safe = (lastPersona.identity.agent_id || 'persona').replace(/[^a-z0-9._-]/gi, '_').slice(0, 64) || 'persona';
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${safe}.inft.json`; a.click(); URL.revokeObjectURL(a.href);
-  document.getElementById('pOut').innerHTML = `<b>⬡ iNFT-7857 mint payload</b> — DeltaVerse Intelligent NFT · dim ${payload.mintAgent.dimensions} · content root ${payload.mintAgent.contentRoot.slice(0,14)}…<br><span style="color:#576">hand it to the DeltaVerse minter (set the owner + storage URI)</span>`;
+  lastInftPayload = payload;
+  document.getElementById('mintRow').style.display = 'flex';
+  document.getElementById('pOut').innerHTML = `<b>⬡ iNFT-7857 mint payload</b> — DeltaVerse Intelligent NFT · dim ${payload.mintAgent.dimensions} · content root ${payload.mintAgent.contentRoot.slice(0,14)}…<br><span style="color:#576">⛓ mint submits it through your wallet (you approve), or hand the JSON to the DeltaVerse minter</span>`;
+};
+let lastInftPayload = null;
+
+// ⛓ mint — wire the payload to the DeltaVerse minter. I BUILD the transaction;
+// the wallet owner SIGNS + BROADCASTS it (you approve in MetaMask). No keys held
+// here, nothing auto-submitted — the mint is your action.
+document.getElementById('mintBtn').onclick = async () => {
+  const out = document.getElementById('pOut');
+  if (!lastInftPayload) return;
+  if (!window.ethereum) return out.innerHTML = '<span style="color:#c86">no web3 wallet found — install MetaMask, or hand the JSON to the DeltaVerse minter.</span>';
+  const contract = document.getElementById('inftContract').value.trim();
+  try {
+    const [owner] = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const chainHex = await window.ethereum.request({ method: 'eth_chainId' });
+    const tx = toMintTx(lastInftPayload, { contract, from: owner, chainId: parseInt(chainHex, 16) });
+    out.innerHTML = `<span style="color:#8ab">approve the mint in your wallet…</span>`;
+    const hash = await window.ethereum.request({ method: 'eth_sendTransaction',
+      params: [{ from: owner, to: tx.mint.to, data: tx.mint.data, value: '0x0' }] });
+    out.innerHTML = `<b style="color:var(--a)">⛓ minted</b> — tx <b>${hash.slice(0,16)}…</b> on chain ${parseInt(chainHex,16)}` +
+      (tx.attachThot ? `<br><span style="color:#576">then attachThotRoot(tokenId) to link the lineage</span>` : '');
+  } catch (e) { out.innerHTML = `<span style="color:#c86">${(e.message||'mint cancelled').slice(0,80)}</span>`; }
 };
 setMode('create');
 
