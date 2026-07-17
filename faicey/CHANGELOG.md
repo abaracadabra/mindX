@@ -4,6 +4,30 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.12.0] — 2026-07-17
+
+### Added — the spectrogram waterfall
+
+A scrolling time–frequency history under the spectrum (`src/face_clone/spectrogram.js`).
+
+- **Waterfall (🌊)** — each FFT frame becomes the top row and the history flows
+  **downward**; the spatial axis is frequency, the **colour axis is intensity in
+  dB** on a perceptual **inferno** colormap (the spectrogram standard). Speech
+  harmonics draw bright rails that move with pitch; formants show as steady bands.
+- **dB scaling** (`dbNorm` / `magnitudesToDb`) against a smoothed running
+  reference (a gentle AGC) so quiet and loud passages both read; rendered by
+  scrolling the canvas one row and painting the newest spectrum on top — one FFT
+  per frame, shared with the spectrum bars.
+- Perceptual **`inferno` / `magma`** colormaps, log/linear axis mappers, and a
+  `Spectrogram` rolling frame buffer for the model — all pure + headless-tested.
+- **8 spectrogram tests** (dB mapping to the reference/floor, inferno dark→bright
+  monotone, axis monotonicity, the rolling buffer drops the oldest + copies).
+  Suite green: 108.
+
+Detail: [docs/OSCILLOSCOPE.md](./docs/OSCILLOSCOPE.md).
+
+---
+
 ## [2.11.0] — 2026-07-17
 
 ### Added — the scientific oscilloscope

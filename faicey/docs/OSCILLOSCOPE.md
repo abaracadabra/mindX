@@ -35,6 +35,24 @@ the timbre at a glance: where the energy sits and how the harmonics stack.
   the time base from 1× to 32×, showing fewer samples across the width so you can
   inspect a single glottal period. A calibrated 10 × 8 division grid frames it.
 
+## Spectrogram waterfall (🌊)
+
+A scrolling **time–frequency** history under the spectrum (`src/face_clone/spectrogram.js`).
+Each FFT frame becomes the top row and the history flows **downward** — a
+waterfall. The spatial axis is frequency, and the **colour axis is intensity in
+dB** on a perceptual **inferno** colormap (the de-facto spectrogram standard) —
+so the harmonics of speech draw bright rails you can watch move with pitch, and
+formants show as steady bands.
+
+- dB scaling (`dbNorm` / `magnitudesToDb`) against a smoothed running reference
+  (a gentle AGC), so quiet and loud passages both read;
+- rendered by scrolling the canvas one row and painting the newest spectrum on
+  top — cheap and smooth;
+- `inferno` / `magma` perceptual colormaps, and a `Spectrogram` rolling frame
+  buffer for the model (freeze/export), all pure + tested.
+
+Toggle with **🌊 waterfall**.
+
 ## Forensic measures (🔬)
 
 Computed **in-browser** (so they work standalone, without the voaice peer):
@@ -52,7 +70,8 @@ scientific layer on top.
 ## Verification
 
 ```
-node src/face_clone/oscilloscope.test.js   # 12 tests
+node src/face_clone/oscilloscope.test.js    # 12 tests
+node src/face_clone/spectrogram.test.js     # 8 tests (waterfall)
 ```
 
 - the FFT peaks at exactly the right bin; YIN measures 200/110/440 Hz within a

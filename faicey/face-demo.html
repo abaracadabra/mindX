@@ -46,8 +46,8 @@
   .track.miss .dot { background:#c86; box-shadow:0 0 6px 1px #c86; }
   .fr { font-size:10px; margin-top:5px; color:#576; }
   .fr.ready { color:#7c9; } .fr.warn { color:#c86; } .fr.load { color:#9a7; }
-  #scope, #spectrum { width:100%; display:block; background:#020604; border:1px solid var(--dim); border-radius:4px; }
-  #spectrum { margin-top:5px; }
+  #scope, #spectrum, #waterfall { width:100%; display:block; background:#020604; border:1px solid var(--dim); border-radius:4px; }
+  #spectrum, #waterfall { margin-top:5px; }
   .scopebar { display:flex; gap:5px; margin-top:5px; align-items:center; }
   .scopebar button { flex:1; font-size:11px; padding:5px 4px; }
   .scopebar .zl { font-size:10px; color:#8ab; min-width:34px; text-align:center; font-variant-numeric:tabular-nums; }
@@ -119,11 +119,13 @@
     <div class="sec">scientific oscilloscope</div>
     <canvas id="scope"></canvas>
     <canvas id="spectrum"></canvas>
+    <canvas id="waterfall"></canvas>
     <div class="scopebar">
       <button id="zoomOut" title="zoom out time base">－</button>
       <span id="zoomLbl" class="zl">1.0×</span>
       <button id="zoomIn" title="zoom in time base">＋</button>
       <button id="trigBtn" class="on" title="edge trigger — freeze the trace">⎍ trig</button>
+      <button id="wfBtn" class="on" title="spectrogram waterfall">🌊 waterfall</button>
       <button id="forBtn" title="forensic measures">🔬 forensic</button>
     </div>
     <div class="meas" id="meas">— feed the mic or record to measure —</div>
@@ -181,6 +183,7 @@ import { NeuralRenderer, gradeFidelity, identityConsistency } from '/src/face_cl
 import { ClassicalEnhancer } from '/src/face_clone/classical_enhance.js';
 import { buildFaceGeometry, WebGLFaceRenderer } from '/src/face_clone/webgl_face.js';
 import { yinPitch, spectrum, detectTrigger, measurements, freqColor } from '/src/face_clone/oscilloscope.js';
+import { inferno, dbNorm, linBinForX } from '/src/face_clone/spectrogram.js';
 import { LM, proportions } from '/src/face_clone/geometry.js';
 import { measureFaceprint } from '/src/face_clone/faceprint.js';
 import { personaPrint } from '/src/face_clone/persona.js';
@@ -393,7 +396,10 @@ scope.width = 308; scope.height = 88;
 // the colour-coded spectrum canvas + the scientific-scope controls/state
 const spec = document.getElementById('spectrum'), spx = spec.getContext('2d');
 spec.width = 308; spec.height = 70;
-let scopeZoom = 1, trigOn = true, forensicOn = false, lastMeasT = 0, lastMeas = null;
+// the spectrogram waterfall — time flows downward, colour = intensity (dB)
+const water = document.getElementById('waterfall'), wtx = water.getContext('2d');
+water.width = 308; water.height = 96;
+let scopeZoom = 1, trigOn = true, forensicOn = false, waterfallOn = true, waterMax = 1e-4, lastMeasT = 0, lastMeas = null;
 function scopeSR() { return (audioCtx && audioCtx.sampleRate) || 44100; }
 let audioCtx = null, micStream = null, analyser = null, tdata = null, micOn = false;
 
@@ -468,17 +474,18 @@ function traceZoom(data, start, span, color, lw) {
   sctx.stroke();
 }
 // the colour-coded spectrum: each bar hue = its frequency (low→red, high→violet)
-function drawSpectrum(data, sr) {
+const SPEC_FMAX = 8000;
+function drawSpectrum(sp) {
   spx.clearRect(0, 0, spec.width, spec.height);
   spx.fillStyle = '#020604'; spx.fillRect(0, 0, spec.width, spec.height);
-  const { freqs, mags } = spectrum(data, sr, 1024);
+  const { mags, binHz } = sp;
   if (!mags.length) return;
-  const fmax = 8000, W = spec.width, H = spec.height;
+  const fmax = SPEC_FMAX, W = spec.width, H = spec.height;
   let peak = 1; for (let i = 2; i < mags.length; i++) if (mags[i] > mags[peak]) peak = i;
   const maxMag = mags[peak] || 1e-6;
   for (let x = 0; x < W; x++) {
     const f = (x / W) * fmax;
-    const bin = Math.min(mags.length - 1, Math.round(f / (sr / 1024)));
+    const bin = Math.min(mags.length - 1, linBinForX(x, W, fmax, binHz));
     const mag = mags[bin] / maxMag;                       // 0..1
     const h = Math.min(H, Math.sqrt(mag) * H);            // sqrt → perceptual
     spx.fillStyle = `hsl(${freqColor(f, 60, fmax)},85%,${20 + mag * 45}%)`;
@@ -491,6 +498,25 @@ function drawSpectrum(data, sr) {
     spx.beginPath(); spx.moveTo(x, 0); spx.lineTo(x, H); spx.stroke();
   }
 }
+// the spectrogram WATERFALL: scroll the canvas down 1px and paint the newest
+// spectrum as the top row — colour = intensity in dB (inferno), so the
+// harmonics of speech draw bright rails flowing downward through time.
+function drawWaterfall(sp) {
+  const W = water.width, H = water.height;
+  const { mags, binHz } = sp;
+  wtx.drawImage(water, 0, 1);                 // shift the history down one row
+  if (!mags.length) return;
+  let mx = 1e-6; for (let i = 1; i < mags.length; i++) if (mags[i] > mx) mx = mags[i];
+  waterMax = Math.max(mx, waterMax * 0.96);   // smoothed running reference (AGC)
+  const row = wtx.createImageData(W, 1);
+  for (let x = 0; x < W; x++) {
+    const bin = Math.min(mags.length - 1, linBinForX(x, W, SPEC_FMAX, binHz));
+    const [r, g, b] = inferno(dbNorm(mags[bin], waterMax, -80));
+    const o = x * 4; row.data[o] = r; row.data[o + 1] = g; row.data[o + 2] = b; row.data[o + 3] = 255;
+  }
+  wtx.putImageData(row, 0, 0);
+}
+
 function updateReadout(data, sr) {
   const now = Date.now();
   if (now - lastMeasT < 140) return; // YIN is O(n²) — throttle to ~7 Hz
@@ -537,8 +563,12 @@ function drawScope() {
   if (trigOn) { const t = detectTrigger(data, { level: 0, edge: 'rising', holdoff: 2 }); start = Math.min(t, Math.max(0, data.length - span)); }
   const color = speaking ? '#0f8' : micOn ? '#0f8' : '#3af';
   traceZoom(data, start, span, color, 1.4);
-  drawSpectrum(data, scopeSR());
-  updateReadout(data, scopeSR());
+  // one FFT per frame, shared by the spectrum bars and the waterfall
+  const sr = scopeSR();
+  const sp = spectrum(data.length > 2048 ? data.subarray(0, 2048) : data, sr, 1024);
+  drawSpectrum(sp);
+  if (waterfallOn) drawWaterfall(sp);
+  updateReadout(data, sr);
 }
 
 // ── record → voiceprint ─────────────────────────────────────────────────────
@@ -573,6 +603,11 @@ document.getElementById('zoomIn').onclick = () => { scopeZoom = Math.min(32, sco
 document.getElementById('zoomOut').onclick = () => { scopeZoom = Math.max(1, scopeZoom / 1.5); setZoomLabel(); };
 scope.addEventListener('wheel', e => { e.preventDefault(); scopeZoom = Math.max(1, Math.min(32, scopeZoom * (e.deltaY < 0 ? 1.15 : 0.87))); setZoomLabel(); }, { passive: false });
 document.getElementById('trigBtn').onclick = e => { trigOn = !trigOn; e.target.classList.toggle('on', trigOn); };
+document.getElementById('wfBtn').onclick = e => {
+  waterfallOn = !waterfallOn; e.target.classList.toggle('on', waterfallOn);
+  water.style.display = waterfallOn ? 'block' : 'none';
+  if (!waterfallOn) wtx.clearRect(0, 0, water.width, water.height);
+};
 document.getElementById('forBtn').onclick = e => {
   forensicOn = !forensicOn; e.target.classList.toggle('on', forensicOn);
   document.getElementById('forensicPanel').style.display = forensicOn ? 'block' : 'none';
