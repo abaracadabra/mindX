@@ -4,6 +4,37 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.11.0] — 2026-07-17
+
+### Added — the scientific oscilloscope
+
+The scope became a real measurement instrument, built on the canonical
+open-source DSP after reviewing how scopes and pitch trackers actually work
+(`src/face_clone/oscilloscope.js`, pure + headless-tested).
+
+- **Accurate frequency measurement — YIN** (de Cheveigné & Kawahara, 2002): the
+  difference function → cumulative-mean normalisation → absolute threshold →
+  **parabolic interpolation** for sub-Hz accuracy (measures a 200 Hz tone within
+  1 Hz), with a clarity score. Returns `hz = 0` on noise/silence — never invents
+  a pitch. Readout: ƒ₀ (Hz), nearest **note + cents** (A4=440), period (ms), clarity.
+- **Colour-coded frequency view** — a Hann-windowed radix-2 FFT spectrum drawn
+  with **each column's hue = its frequency** (low→red, high→violet, log-scaled);
+  perceptual (√) bar height; the measured fundamental marked in its own colour.
+- **Edge triggering** (sigrok/PulseView-style) starts the trace at a rising
+  zero-crossing so the waveform stands still; a calibrated 10 × 8 division grid.
+- **Zoom** 1×–32× (＋/－ buttons or mouse-wheel over the trace) to inspect a
+  single glottal period.
+- **Forensic tools (🔬)** computed in-browser (standalone, no voaice peer needed):
+  spectral **centroid**, **rolloff**, **HNR** (Boersma/Praat autocorrelation, with
+  a voiced/mixed/noise reading), Vpp, Vrms, ZCR.
+- **12 oscilloscope tests** against synthetic signals with known answers (FFT bin,
+  YIN across the vocal range + noise rejection, trigger, Vpp/Vrms, centroid/rolloff,
+  HNR, notes, colour map). Suite green: 100.
+
+Detail: [docs/OSCILLOSCOPE.md](./docs/OSCILLOSCOPE.md).
+
+---
+
 ## [2.10.0] — 2026-07-17
 
 ### Added — WebGL rendering, on the DeltaVerse substrate
