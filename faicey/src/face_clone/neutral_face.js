@@ -149,6 +149,11 @@ export function neutralFace(opts = {}) {
   out[291] = { x: F.cx + F.mouthRx, y: F.mouthY, z: 0.01 }; // mouth left corner
   out[10] = { x: F.cx, y: F.cy - F.ry, z: -0.04 };         // forehead top
   out[152] = { x: F.cx, y: F.cy + F.ry, z: -0.02 };        // chin
+  // cheekbones (zygomatic) — narrower than the widest face point, at eye level;
+  // geometry.proportions() reads these (116/345) for cheekRatio, and they sit in
+  // no contour loop, so they must be placed explicitly or the faceprint degenerates.
+  out[116] = { x: F.cx - F.rx * 0.9, y: F.eyeY + 0.04, z: -0.02 };  // right cheekbone
+  out[345] = { x: F.cx + F.rx * 0.9, y: F.eyeY + 0.04, z: -0.02 };  // left cheekbone
 
   // — iris centres (478-model accents drawn by contours.js) —
   out[468] = { x: rEyeCx, y: F.eyeY, z: 0.02 };  // right iris
@@ -176,7 +181,7 @@ export function neutralFace(opts = {}) {
 export function placedIndices() {
   const s = new Set();
   for (const loop of Object.values(CONTOURS)) for (const i of loop) s.add(i);
-  for (const i of [1, 168, 2, 133, 362, 33, 263, 159, 386, 105, 334, 13, 14, 0, 61, 291, 10, 152, 468, 473]) s.add(i);
+  for (const i of [1, 168, 2, 133, 362, 33, 263, 159, 386, 105, 334, 13, 14, 0, 61, 291, 10, 152, 116, 345, 468, 473]) s.add(i);
   return s;
 }
 

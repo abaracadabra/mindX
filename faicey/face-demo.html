@@ -111,7 +111,7 @@
 
 <script type="module">
 import { neutralFace } from '/src/face_clone/neutral_face.js';
-import { applyExpression, EXPRESSION_LABELS, expressionHue } from '/src/face_clone/expressions.js';
+import { applyExpression, EXPRESSION_LABELS } from '/src/face_clone/expressions.js';
 import { drawFaceTheme } from '/src/face_clone/contours.js';
 import { LM, proportions } from '/src/face_clone/geometry.js';
 import { measureFaceprint } from '/src/face_clone/faceprint.js';
@@ -278,7 +278,9 @@ async function voiceprint(buf, sr) {
   lastVoiceprint = {
     hash,
     measuresStr: measures.map(v => v.toString()),
-    precisionScore: (Math.round(precision * 1e9) * 1e9).toString(),
+    // 18-dp fixed point via BigInt (exact) — same idiom faceprint/Scientific use,
+    // so the two prints combine without precision drift.
+    precisionScore: (BigInt(Math.round(precision * 1e9)) * 10n ** 9n).toString(),
     features: { pitch, rms: r, centroid, zcr },
   };
   document.getElementById('vp').innerHTML =

@@ -8,6 +8,7 @@
 
 **© Professor Codephreak** - [rage.pythai.net](https://rage.pythai.net)
 **Organizations**: [github.com/agenticplace](https://github.com/agenticplace), [github.com/cryptoagi](https://github.com/cryptoagi), [github.com/Professor-Codephreak](https://github.com/Professor-Codephreak)
+**Changelog**: [CHANGELOG.md](./CHANGELOG.md) — v2.1.0 is the live FACE demo + persona create/clone.
 **Lineage**: [github.com/Faicey](https://github.com/Faicey) is the original Face-for-AI development environment, kept as a **frozen template**; active code publishes under [Professor-Codephreak/faicey](https://github.com/Professor-Codephreak/faicey). Together with [`voaice`](https://github.com/Professor-Codephreak/voaice) (the voice) and `facerig` (the rig), faicey (the face) composes **[aivatar](https://github.com/Professor-Codephreak/aivatar)** — the definitive `.persona` creation tool: a person's AI model that looks, speaks, rigs and thinks, at an *earned* fidelity tier (basic / professional / scientific → realism · hyperrealism) with consent, custody and signed provenance.
 
 **Advanced 3D face rendering system with voice print analysis, frequency triggers, and inflection detection for mindX autonomous Augmented Intelligence agents**
