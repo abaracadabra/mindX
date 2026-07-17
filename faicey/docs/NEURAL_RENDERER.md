@@ -77,12 +77,37 @@ the faceprint ratio vector), `structuralSimilarity(a, b)` (global SSIM),
 
 ---
 
+## The classical enhancement fallback
+
+When no neural model is loaded, the affine composite still has two honest defects:
+**triangle seams** from the per-triangle warp, and **softness** where the texture
+stretched. Classical DSP fixes both — no weights, no ONNX, no GPU
+(`src/face_clone/classical_enhance.js`):
+
+```
+featherSeams (edge-softening blend) → unsharpMask (restore detail) → toneCurve
+```
+
+`ClassicalEnhancer` has the same shape as `NeuralRenderer` (`describe` / `refine`)
+but is **always available** and honestly labeled `classical`. It is a **real
+improvement** over the raw composite — and the gate caps it at `realism` **by
+construction**: `classical` is not `neural`, so it can never earn `hyperreal`.
+This is the middle rung — better than raw affine, still not synthesis.
+
+In the demo's **neural** mode the fallback runs whenever no model is loaded (a
+checkbox toggles it, to compare raw affine vs enhanced); the badge says which
+verdict applies. Each op is pure and headless-tested (`boxBlur` leaves a constant
+image unchanged and spreads an impulse; `unsharpMask` overshoots an edge and
+leaves a flat region; `toneCurve` pushes off mid-grey; `featherSeams` softens a
+step) — and one test locks that the gate refuses it `hyperreal` at any score.
+
 ## Status on this host
 
-**Dormant.** No ONNX runtime or weights are deposited here, so the neural mode is
-an honest passthrough of the affine composite and every render grades to
-**realism**. `GET /api/render/neural/status` reports this plainly, along with the
-gate thresholds.
+**Dormant** (neural). No ONNX runtime or weights are deposited here, so the
+neural mode falls back to the **classical enhancement** above — a real
+improvement on the affine composite — and every render grades to **realism**.
+`GET /api/render/neural/status` reports both the dormant neural backend and the
+available classical fallback, along with the gate thresholds.
 
 Hyperrealism is therefore **not achieved** in this release — it is made
 *reachable and safe*: the seam runs a real model when one is provided, and the

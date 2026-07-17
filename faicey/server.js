@@ -272,11 +272,10 @@ class FaiceyServer {
             try {
                 const { FIDELITY } = await import('./src/face_clone/neural_render.js');
                 res.json({
-                    backend: 'dormant',
-                    available: false,
-                    reason: 'no ONNX runtime or weights on this host — realism via affine; hyperreal is gated',
+                    neural: { backend: 'dormant', available: false, reason: 'no ONNX runtime or weights on this host — hyperreal is gated' },
+                    fallback: { backend: 'classical', available: true, ops: ['seam-feather', 'unsharp', 'tone'], verdict: 'realism' },
                     gate: FIDELITY,
-                    note: 'hyperrealism is EARNED: a neural render must clear identity + structural + coverage. Activate by depositing weights + a runtime.',
+                    note: 'Without a neural model the classical fallback improves the affine composite (caps at realism). Hyperrealism is EARNED: a neural render must clear identity + structural + coverage. Activate by depositing weights + a runtime.',
                 });
             } catch (e) { res.status(500).json({ error: e.message }); }
         });

@@ -4,6 +4,35 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.8.0] — 2026-07-17
+
+### Added — the classical enhancement fallback
+
+The gap between "neural dormant" (raw affine composite) and "neural loaded"
+(hyperreal-capable) had an honest, weight-free filler: classical DSP that fixes
+the affine composite's two real defects — triangle **seams** and **softness**.
+(`src/face_clone/classical_enhance.js`.)
+
+- **`enhanceClassical`** — `featherSeams` (edge-softening blend) → `unsharpMask`
+  (restore detail) → `toneCurve` (gentle contrast). All built on a separable
+  `boxBlur`; pure, deterministic, no weights / ONNX / GPU.
+- **`ClassicalEnhancer`** — the same shape as `NeuralRenderer` (`describe` /
+  `refine`), **always available**, honestly labeled `classical`. A **real
+  improvement** over the raw composite — and the fidelity gate caps it at
+  `realism` **by construction** (`classical` is not `neural`, so it can never
+  earn `hyperreal`). The middle rung: better than raw affine, still not synthesis.
+- In the demo's **neural** mode the fallback runs whenever no model is loaded,
+  with a checkbox to compare raw affine vs enhanced; the badge states the verdict.
+  The persona payload records `backend: 'classical'` accordingly.
+- **`GET /api/render/neural/status`** now reports both the dormant neural backend
+  and the available classical fallback.
+- **7 classical_enhance tests** — each DSP op proven (constant image unchanged,
+  impulse spread, edge overshoot, tone off-mid, seam softened) plus the doctrine
+  lock: the gate refuses `hyperreal` to the classical backend at any score. Suite
+  green: 78.
+
+---
+
 ## [2.7.0] — 2026-07-17
 
 ### Added — the neural renderer, gated

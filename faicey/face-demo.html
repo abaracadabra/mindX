@@ -88,6 +88,7 @@
     </select>
     <div class="hint" id="photorealHint" style="display:none">Photoreal maps <b>your captured frame</b> onto the measured mesh — capture your face (◉) first. Real texture on real geometry; it re-warps as the face expresses. It does <i>not</i> synthesise novel views or claim neural hyperrealism.</div>
     <div class="hint" id="neuralBadge" style="display:none"></div>
+    <label id="classicalToggle" style="display:none" class="row" style="gap:6px;align-items:center;margin-top:4px"><input type="checkbox" id="classicalChk" checked> classical enhancement (seam-feather · unsharp · tone)</label>
 
     <div class="sec">voiceprint oscilloscope</div>
     <canvas id="scope"></canvas>
@@ -141,6 +142,7 @@ import { applyExpression, EXPRESSION_LABELS } from '/src/face_clone/expressions.
 import { drawFaceTheme, drawMouthScope } from '/src/face_clone/contours.js';
 import { triangulate } from '/src/face_clone/render_surface.js';
 import { NeuralRenderer, gradeFidelity, identityConsistency } from '/src/face_clone/neural_render.js';
+import { ClassicalEnhancer } from '/src/face_clone/classical_enhance.js';
 import { LM, proportions } from '/src/face_clone/geometry.js';
 import { measureFaceprint } from '/src/face_clone/faceprint.js';
 import { personaPrint } from '/src/face_clone/persona.js';
@@ -172,12 +174,20 @@ function recomputeTopology() { try { topology = triangulate(base); } catch { top
 // or with a pre-built session. Until then it is an honest passthrough of the
 // affine photoreal composite, and the fidelity gate caps the verdict at realism.
 const neural = new NeuralRenderer();
-if (typeof window !== 'undefined') window.faiceyNeural = neural;
+// The classical enhancement fallback — weight-free, always available. When no
+// neural model is loaded it still fixes the affine composite's seams + softness
+// (feather → unsharp → tone). It is honestly `classical`, so the gate caps it at
+// realism; only a neural render can earn hyperreal.
+const classical = new ClassicalEnhancer();
+let classicalOn = true; // fallback enabled by default (toggle to compare raw affine)
+if (typeof window !== 'undefined') { window.faiceyNeural = neural; window.faiceyClassical = classical; }
 let neuralBusy = false;
 function neuralBadgeText() {
   const d = neural.describe();
-  if (!d.available) return `neural renderer <b>dormant</b> — realism via affine · load weights to earn <b>hyperreal</b> (measured, not asserted)`;
-  return `neural backend <b>active</b> (${d.modelPath || 'session'}) — renders are graded through the fidelity gate; hyperreal only if identity + structure + coverage pass`;
+  if (d.available) return `neural backend <b>active</b> (${d.modelPath || 'session'}) — renders are graded through the fidelity gate; hyperreal only if identity + structure + coverage pass`;
+  return classicalOn
+    ? `neural <b>dormant</b> → <b>classical enhancement</b> active (seam-feather + unsharp + tone) · verdict <b>realism</b> · load weights to earn hyperreal`
+    : `neural <b>dormant</b> · raw affine composite · verdict <b>realism</b> · load weights to earn hyperreal`;
 }
 
 // ── the face renderer — real features via the contour loops ────────────────
@@ -217,13 +227,18 @@ function renderFace() {
   // if a neural model is actually loaded — refines it into a hyperreal frame.
   const drawTheme = theme === 'neural' ? 'photoreal' : theme;
   drawFaceTheme(fctx, landmarks, { W: faceCv.width, H: faceCv.height, hue, theme: drawTheme, topology, ...surfaceTex() });
-  if (theme === 'neural' && neural.describe().available && !neuralBusy) {
-    neuralBusy = true;
-    const img = fctx.getImageData(0, 0, faceCv.width, faceCv.height);
-    neural.refine({ data: img.data, width: img.width, height: img.height })
-      .then(r => { if (r.neural) fctx.putImageData(new ImageData(r.image.data, r.image.width, r.image.height), 0, 0); })
-      .catch(() => {})
-      .finally(() => { neuralBusy = false; });
+  if (theme === 'neural' && !neuralBusy) {
+    // neural model if loaded (hyperreal-capable); else the classical fallback
+    // (realism); else nothing (raw affine composite).
+    const backend = neural.describe().available ? neural : (classicalOn ? classical : null);
+    if (backend) {
+      neuralBusy = true;
+      const img = fctx.getImageData(0, 0, faceCv.width, faceCv.height);
+      backend.refine({ data: img.data, width: img.width, height: img.height })
+        .then(r => { if (r.image && r.image.data) fctx.putImageData(new ImageData(r.image.data, r.image.width, r.image.height), 0, 0); })
+        .catch(() => {})
+        .finally(() => { neuralBusy = false; });
+    }
   }
   // the voice, shown BETWEEN the lips — the mouth is its own oscilloscope
   if (speaking && speakData) drawMouthScope(fctx, landmarks, speakData, { W: faceCv.width, H: faceCv.height, hue, gain: 1.6 });
@@ -250,6 +265,12 @@ document.getElementById('theme').onchange = e => {
   if (hint) hint.style.display = (theme === 'photoreal' || theme === 'neural') ? 'block' : 'none';
   const badge = document.getElementById('neuralBadge');
   if (badge) { badge.style.display = theme === 'neural' ? 'block' : 'none'; badge.innerHTML = neuralBadgeText(); }
+  const tog = document.getElementById('classicalToggle');
+  if (tog) tog.style.display = (theme === 'neural' && !neural.describe().available) ? 'flex' : 'none';
+};
+document.getElementById('classicalChk').onchange = e => {
+  classicalOn = e.target.checked;
+  const badge = document.getElementById('neuralBadge'); if (badge) badge.innerHTML = neuralBadgeText();
 };
 
 // ── mic ON/OFF → oscilloscope + mouth ──────────────────────────────────────
@@ -681,7 +702,9 @@ async function bind() {
       // the render's fidelity is GRADED, not asserted: hyperreal only if a neural
       // backend measured through the gate; texture → realism; else surface.
       const hasTexture = !!(faceTexture && texLandmarks);
-      const backend = theme === 'neural' && neural.describe().available ? 'neural' : (hasTexture && (theme === 'photoreal' || theme === 'neural') ? 'affine' : null);
+      const backend = theme === 'neural' && neural.describe().available ? 'neural'
+        : (theme === 'neural' && classicalOn) ? 'classical'
+        : (hasTexture && (theme === 'photoreal' || theme === 'neural') ? 'affine' : null);
       const g = gradeFidelity({ backend, hasTexture, identity: hasTexture ? 1 : 0, structural: 0, coverage: hasTexture ? 1 : 0 });
       return { mode: 'basic', renderVerdict: g.verdict, hyperreal: g.hyperreal, backend: g.backend, reasons: g.reasons,
         measured: { faceFrames: personaMode === 'clone' ? 1 : 0, voicePrecision: voice ? Number(voice.precisionScore) / 1e18 : undefined },
