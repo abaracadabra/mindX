@@ -156,6 +156,41 @@ class FaiceyServer {
         this.app.get('/api/persona/recent', (req, res) => {
             res.json({ personas: (this._personas || []).slice(-20) });
         });
+        // Scientific voiceprint — the REAL voaice measurement (18-dp Scientific
+        // measures + Forensic integrity), not the browser estimate. Lazy-imports
+        // the voaice peer; degrades honestly (501) when it is not a sibling (e.g.
+        // a standalone faicey clone) so the client falls back to its own estimate.
+        const _loadVoaice = async () => {
+            try { return await import('../voaice/src/index.js'); }
+            catch { try { return await import('voaice'); } catch { return null; } }
+        };
+        this.app.post('/api/voice/measure', async (req, res) => {
+            const { samples, sampleRate = 24000 } = req.body || {};
+            if (!Array.isArray(samples) || !samples.length) return res.status(400).json({ error: 'samples[] required' });
+            const voaice = await _loadVoaice();
+            if (!voaice?.Forensic) return res.status(501).json({ error: 'scientific measurement needs the voaice peer (not installed here)' });
+            try {
+                const buf = Float32Array.from(samples);
+                const f = new voaice.Forensic({ sampleRate });
+                const print = f.voiceprint(buf);
+                const integrity = f.integrity(buf).verdict;
+                // features/spread let the client run Forensic.compare for matching
+                res.json({
+                    features: print.features, spread: print.spread,
+                    measuresStr: print.measuresStr, precision: print.precision,
+                    hash: print.hash, framesUsed: print.framesUsed, integrity,
+                });
+            } catch (e) { res.status(500).json({ error: e.message }); }
+        });
+        // Oscilloscope matching — Forensic.compare of two scientific prints.
+        this.app.post('/api/voice/match', async (req, res) => {
+            const { a, b } = req.body || {};
+            if (!a?.features || !b?.features) return res.status(400).json({ error: 'two prints {features,spread} required' });
+            const voaice = await _loadVoaice();
+            if (!voaice?.Forensic) return res.status(501).json({ error: 'matching needs the voaice peer (not installed here)' });
+            try { res.json(voaice.Forensic.compare(a, b)); }
+            catch (e) { res.status(500).json({ error: e.message }); }
+        });
         // Give a cloned face to a .persona: store a face artifact AND, if the named .persona exists,
         // write embodiment.face (faceprint + cloneProportions) into it so the persona's faicey wears it.
         this.app.post('/api/persona/face', (req, res) => {

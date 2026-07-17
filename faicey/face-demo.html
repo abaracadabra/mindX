@@ -88,6 +88,11 @@
       <button id="recBtn">⏺ record 3s → voiceprint</button>
     </div>
     <div class="vp" id="vp">record a few seconds of speech to capture a voiceprint.</div>
+    <div class="row" style="margin-top:2px">
+      <button id="refBtn">◈ set as reference</button>
+      <button id="matchBtn">≈ match</button>
+    </div>
+    <div class="vp" id="match"></div>
 
     <div class="sec">persona</div>
     <div class="row">
@@ -105,7 +110,7 @@
     <div class="row" id="pActions" style="display:none;margin-top:6px">
       <button id="dlBtn">⭳ download .persona</button>
     </div>
-    <div class="hint">The face is a real procedural neutral — eyes, brows, nose, lips — rendered at the canonical MediaPipe topology, so an expression or a live webcam clone drives the same face. Mic drives the mouth and the oscilloscope; the recording is measured into an 18-dp voiceprint signature. <b>Create</b> invents a synthetic persona; <b>Clone</b> binds your captured face + voice under consent — the browser form of aivatar&rsquo;s <code>.persona</code>.</div>
+    <div class="hint">The face is a real procedural neutral — eyes, brows, nose, lips — rendered at the canonical MediaPipe topology, so an expression or a live webcam clone drives the same face. Mic drives the mouth and the oscilloscope. A recording is measured — when the <b>voaice</b> peer is present — into the full <b>scientific</b> voiceprint (six 18-dp SoundWave measures + integrity); set one as a reference and <b>≈ match</b> compares them with voaice&rsquo;s Forensic (both traces overlaid on the scope). <b>Create</b> invents a synthetic persona; <b>Clone</b> binds your captured face + voice under consent — the browser form of aivatar&rsquo;s <code>.persona</code>.</div>
   </div>
 </div>
 
@@ -198,9 +203,22 @@ document.getElementById('micBtn').onclick = micToggle;
 
 function rms(buf) { let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i]; return Math.sqrt(s / buf.length); }
 
+function traceScope(data, color, alpha, lw) {
+  if (!data || !data.length) return;
+  sctx.strokeStyle = color; sctx.globalAlpha = alpha; sctx.lineWidth = lw; sctx.beginPath();
+  const step = data.length / scope.width;
+  for (let x = 0; x < scope.width; x++) {
+    const v = data[Math.floor(x * step)] || 0;
+    const y = scope.height / 2 - v * scope.height * 0.9;
+    x ? sctx.lineTo(x, y) : sctx.moveTo(x, y);
+  }
+  sctx.stroke(); sctx.globalAlpha = 1;
+}
 function drawScope() {
   sctx.fillStyle = '#020604'; sctx.fillRect(0, 0, scope.width, scope.height);
   sctx.strokeStyle = '#0a3'; sctx.globalAlpha = 0.4; sctx.beginPath(); sctx.moveTo(0, scope.height/2); sctx.lineTo(scope.width, scope.height/2); sctx.stroke(); sctx.globalAlpha = 1;
+  // the reference trace, drawn faintly behind — the "oscilloscope matching" overlay
+  if (refBuf) traceScope(refBuf, '#f6a', 0.35, 1);
   if (micOn && analyser) {
     analyser.getFloatTimeDomainData(tdata);
     mouthOpen = Math.min(1, rms(tdata) * 8);
@@ -252,10 +270,75 @@ async function record() {
 }
 document.getElementById('recBtn').onclick = record;
 
-// In-browser voiceprint: dominant pitch (autocorrelation), RMS, spectral centroid,
-// zero-crossing rate — the same forensic measures voaice registers, at 18 dp,
-// hashed into a reproducible signature.
+// ── oscilloscope matching — set a reference, then compare (voaice Forensic) ──
+let refPrint = null, refBuf = null;
+document.getElementById('refBtn').onclick = () => {
+  if (!lastVoiceprint) { document.getElementById('match').innerHTML = '<span style="color:#c86">record a voiceprint first.</span>'; return; }
+  refPrint = lastVoiceprint; refBuf = recorded ? Float32Array.from(recorded) : null;
+  document.getElementById('match').innerHTML =
+    `<b>reference set</b> — F0 ${(refPrint.features.dominantFrequency ?? refPrint.features.pitch ?? 0).toFixed(1)} Hz. record again, then ≈ match.`;
+};
+document.getElementById('matchBtn').onclick = async () => {
+  const out = document.getElementById('match');
+  if (!refPrint) return out.innerHTML = '<span style="color:#c86">set a reference first.</span>';
+  if (!lastVoiceprint) return out.innerHTML = '<span style="color:#c86">record a voiceprint to match.</span>';
+  if (lastVoiceprint === refPrint) return out.innerHTML = '<span style="color:#c86">record a NEW clip, then match it to the reference.</span>';
+  let cmp = null;
+  try {
+    const r = await fetch('/api/voice/match', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ a: refPrint, b: lastVoiceprint }) });
+    if (r.ok) cmp = await r.json();
+  } catch {}
+  if (!cmp) cmp = localCompare(refPrint, lastVoiceprint); // estimate fallback
+  const col = { match: '#0f8', probable: '#3af', inconclusive: '#fb4', different: '#f66' }[cmp.verdict] || '#9fb';
+  out.innerHTML =
+    `<b style="color:${col}">${cmp.verdict.toUpperCase()}</b> · similarity <b>${(cmp.similarity * 100).toFixed(1)}%</b>` +
+    (refPrint.scientific ? '' : ' <span style="color:#846">(estimate)</span>') +
+    `<br><span style="color:#576">reference F0 ${(refPrint.features.dominantFrequency ?? 0).toFixed(0)} vs current ${(lastVoiceprint.features.dominantFrequency ?? 0).toFixed(0)} Hz — both waveforms overlaid on the scope</span>`;
+};
+// tolerant local compare (only used when the voaice peer is offline)
+function localCompare(a, b) {
+  const keys = ['dominantFrequency', 'amplitude', 'spectralCentroid', 'zeroCrossingRate'];
+  const scale = { dominantFrequency: 220, amplitude: 0.25, spectralCentroid: 1500, zeroCrossingRate: 0.15 };
+  let d = 0; for (const k of keys) d += Math.min(1, Math.abs((a.features[k] || 0) - (b.features[k] || 0)) / scale[k]);
+  const similarity = 1 - d / keys.length;
+  const verdict = similarity >= 0.9 ? 'match' : similarity >= 0.75 ? 'probable' : similarity >= 0.55 ? 'inconclusive' : 'different';
+  return { similarity, verdict };
+}
+
+// Prefer the SCIENTIFIC measurement — voaice's real Forensic.voiceprint (the six
+// SoundWaveToken measures at 18 dp + integrity), computed server-side. Fall back
+// to the in-browser estimate below when the voaice peer isn't available.
 async function voiceprint(buf, sr) {
+  try {
+    // cap to ~2.5s to keep the payload light; measure at the capture rate
+    const N = Math.min(buf.length, Math.floor(sr * 2.5));
+    const samples = Array.from(buf.subarray(0, N), v => Math.round(v * 1e5) / 1e5);
+    const r = await fetch('/api/voice/measure', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ samples, sampleRate: sr }) });
+    if (r.ok) {
+      const s = await r.json();
+      lastVoiceprint = { hash: s.hash, measuresStr: s.measuresStr,
+        precisionScore: (BigInt(Math.round(s.precision * 1e9)) * 10n ** 9n).toString(),
+        features: s.features, spread: s.spread, scientific: true };
+      const fx = s.features;
+      document.getElementById('vp').innerHTML =
+        `<b>scientific voiceprint</b> <span style="color:#576">· ${s.framesUsed} frames · ${s.integrity}</span><br>` +
+        `F0 <b>${fx.dominantFrequency.toFixed(1)} Hz</b> · amp <b>${fx.amplitude.toFixed(4)}</b><br>` +
+        `centroid <b>${fx.spectralCentroid.toFixed(0)}</b> · rolloff <b>${fx.spectralRolloff.toFixed(0)} Hz</b><br>` +
+        `zcr <b>${fx.zeroCrossingRate.toFixed(4)}</b> · HNR <b>${fx.harmonicNoiseRatio.toFixed(2)}</b><br>` +
+        `precision <b>${(s.precision * 100).toFixed(1)}%</b> · sig <b>${s.hash.slice(0, 16)}…</b>`;
+      refreshPersonaState();
+      base = neutralFace();
+      return;
+    }
+  } catch { /* fall through to the browser estimate */ }
+  await voiceprintEstimate(buf, sr);
+}
+
+// In-browser estimate — dominant pitch (autocorrelation), RMS, centroid, ZCR.
+// Used when the scientific (voaice) path is unavailable; labelled as an estimate.
+async function voiceprintEstimate(buf, sr) {
   // pitch via autocorrelation
   const N = Math.min(buf.length, 4096 * 8);
   let bestLag = 0, bestCorr = 0;
@@ -281,10 +364,12 @@ async function voiceprint(buf, sr) {
     // 18-dp fixed point via BigInt (exact) — same idiom faceprint/Scientific use,
     // so the two prints combine without precision drift.
     precisionScore: (BigInt(Math.round(precision * 1e9)) * 10n ** 9n).toString(),
-    features: { pitch, rms: r, centroid, zcr },
+    // shaped like a Forensic print so matching still works without the peer
+    features: { dominantFrequency: pitch, amplitude: r, spectralCentroid: centroid, spectralRolloff: centroid * 1.5, zeroCrossingRate: zcr, harmonicNoiseRatio: 1 },
+    spread: {}, scientific: false,
   };
   document.getElementById('vp').innerHTML =
-    `<b>voiceprint captured</b><br>` +
+    `<b>voiceprint</b> <span style="color:#846">· browser estimate (voaice offline)</span><br>` +
     `pitch <b>${pitch.toFixed(1)} Hz</b> · rms <b>${r.toFixed(4)}</b><br>` +
     `centroid <b>${centroid.toFixed(0)} Hz</b> · zcr <b>${zcr.toFixed(4)}</b><br>` +
     `sig <b>${hash.slice(0, 18)}…</b>`;
@@ -368,12 +453,17 @@ function refreshPersonaState() {
   const mark = (ok, on, off) => `<span class="${ok ? 'ok' : 'no'}">${ok ? '☑' : '☐'} ${ok ? on : off}</span>`;
   el.innerHTML = personaMode === 'clone'
     ? `${mark(faceReady, 'webcam face', 'turn the webcam on')} · ${mark(voiceReady, 'voice', 'record a voiceprint')}`
-    : `${mark(true, 'procedural face', '')} · ${mark(voiceReady, 'voice (optional)', 'voice: none — face-only')}`;
+    : `${mark(true, 'procedural face', '')} · ${mark(voiceReady, 'voice (optional)', 'voice: none — face-only')}`
+      + (personaMode === 'create' && live ? `<br><span class="no">create binds the procedural face — switch to clone to use your webcam</span>` : '');
 }
 
-// Build a faceprint from whatever face is on screen (webcam clone or neutral).
+// Build a faceprint from the RIGHT face for the mode. Create binds the
+// procedural face ONLY — never the live webcam, even when it is on — because a
+// create declares consent 'synthetic' ("no real subject"). Binding a real face
+// under that consent would be a provenance lie. Cloning a real face is exactly
+// what the clone path (consent 'self') exists for.
 async function faceprintNow() {
-  const src = personaMode === 'clone' ? live : (live || base);
+  const src = personaMode === 'clone' ? live : base;
   if (!src) return null;
   const prop = proportions(src);
   return measureFaceprint(prop, { confidence: personaMode === 'clone' ? 0.9 : 1, symmetry: 1, frontality: 1 });
@@ -440,7 +530,8 @@ document.getElementById('dlBtn').onclick = () => {
   const blob = new Blob([JSON.stringify(lastPersona, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `${lastPersona.identity.agent_id || 'persona'}.persona`;
+  const safe = (lastPersona.identity.agent_id || 'persona').replace(/[^a-z0-9._-]/gi, '_').slice(0, 64) || 'persona';
+  a.download = `${safe}.persona`;
   a.click(); URL.revokeObjectURL(a.href);
 };
 setMode('create');

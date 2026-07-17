@@ -4,6 +4,34 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.1.1] — 2026-07-16
+
+### Fixed
+
+- **Consent integrity in the persona create flow.** `Create` resolved its face
+  as `live || base` — so with the webcam on, inventing a "synthetic" persona
+  would bind your **real** face while stamping consent `synthetic` ("no real
+  subject") and `source: 'procedural'`. That is a provenance lie. Create now
+  binds the procedural face **only**; cloning a real face is what the clone path
+  (consent `self`) is for. The UI also says so when the webcam is on during a
+  create.
+
+### Added
+
+- **Scientific voiceprint measurement in the demo.** A recording is now measured
+  through the real **voaice** `Forensic.voiceprint` — the six SoundWave measures
+  (dominant frequency, amplitude, spectral centroid, spectral rolloff,
+  zero-crossing rate, harmonic-to-noise ratio) at 18 dp, plus an integrity
+  verdict — via `POST /api/voice/measure`. When the voaice peer isn't present
+  (e.g. a standalone clone) it degrades to the labelled browser estimate.
+- **Oscilloscope matching.** Set one voiceprint as a reference, record another,
+  and `≈ match` compares them with voaice's `Forensic.compare` (`POST
+  /api/voice/match`) — a match / probable / inconclusive / different verdict with
+  a similarity score — while both waveforms are overlaid on the oscilloscope.
+- Download filenames are sanitised.
+
+---
+
 ## [2.1.0] — 2026-07-16
 
 **The demo face became an actual face, and it can make a persona.** This release
