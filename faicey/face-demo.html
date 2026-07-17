@@ -118,7 +118,8 @@
     <button id="bindBtn">⟐ bind → .persona</button>
     <div class="vp" id="pOut">a persona binds this FACE (and voice) into one signed identity — the union of faceprint ⊕ voiceprint.</div>
     <div class="row" id="pActions" style="display:none;margin-top:6px">
-      <button id="dlBtn">⭳ download .persona</button>
+      <button id="dlBtn">⭳ .persona</button>
+      <button id="inftBtn">⬡ iNFT payload</button>
     </div>
     <div class="hint">The face is a real procedural neutral — almond eyes with iris rings, angled brows, a nose with alar wings, inner + outer lips, and ears — at the canonical MediaPipe topology, <b>◉ capture my face</b> aggregates a window of webcam frames into one stable, pose-normalised geometry — an accuracy-scored FAICE that becomes the avatar and then expresses. An expression or that captured face drives the same renderer. Mic drives the mouth (which expands with vocal inflection) and paints the live waveform BETWEEN the lips — the mouth is its own oscilloscope. The side oscilloscope shows the same signal. A recording is measured — when the <b>voaice</b> peer is present — into the full <b>scientific</b> voiceprint (six 18-dp SoundWave measures + integrity); set one as a reference and <b>≈ match</b> compares them with voaice&rsquo;s Forensic (both traces overlaid on the scope). <b>Create</b> invents a synthetic persona; <b>Clone</b> binds your captured face + voice under consent — the browser form of aivatar&rsquo;s <code>.persona</code>.</div>
   </div>
@@ -132,6 +133,7 @@ import { drawFaceTheme, drawMouthScope } from '/src/face_clone/contours.js';
 import { LM, proportions } from '/src/face_clone/geometry.js';
 import { measureFaceprint } from '/src/face_clone/faceprint.js';
 import { personaPrint } from '/src/face_clone/persona.js';
+import { toInftMint } from '/src/face_clone/inft.js';
 
 const faceCv = document.getElementById('face');
 const fctx = faceCv.getContext('2d');
@@ -639,6 +641,26 @@ document.getElementById('dlBtn').onclick = () => {
   const safe = (lastPersona.identity.agent_id || 'persona').replace(/[^a-z0-9._-]/gi, '_').slice(0, 64) || 'persona';
   a.download = `${safe}.persona`;
   a.click(); URL.revokeObjectURL(a.href);
+};
+
+// ⬡ mint payload — bind the persona as a DeltaVerse iNFT (ERC-7857). The persona
+// print's hash IS the iNFT content root; mintAgent(...) args fall straight out.
+document.getElementById('inftBtn').onclick = async () => {
+  if (!lastPersona?.hash) return;
+  const artifact = { hash: lastPersona.hash,
+    measuresStr: lastPersona.aiml?.inft?.registerArgs?.m || [],
+    modalities: lastPersona.aiml?.inft?.modalities || [],
+    kind: 'persona',
+    precisionScore: lastPersona.aiml?.inft?.registerArgs?.precisionScore || '0',
+    registerArgs: lastPersona.aiml?.inft?.registerArgs };
+  const payload = await toInftMint(artifact, {
+    name: lastPersona.identity.name, description: lastPersona.identity.description || undefined,
+    storageURI: `faicey:persona/${lastPersona.hash.slice(2,18)}`,
+  });
+  const safe = (lastPersona.identity.agent_id || 'persona').replace(/[^a-z0-9._-]/gi, '_').slice(0, 64) || 'persona';
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${safe}.inft.json`; a.click(); URL.revokeObjectURL(a.href);
+  document.getElementById('pOut').innerHTML = `<b>⬡ iNFT-7857 mint payload</b> — DeltaVerse Intelligent NFT · dim ${payload.mintAgent.dimensions} · content root ${payload.mintAgent.contentRoot.slice(0,14)}…<br><span style="color:#576">hand it to the DeltaVerse minter (set the owner + storage URI)</span>`;
 };
 setMode('create');
 

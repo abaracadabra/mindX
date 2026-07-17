@@ -250,6 +250,21 @@ class FaiceyServer {
             } catch (e) { res.status(500).json({ error: e.message }); }
             finally { if (tmp) try { const { unlinkSync } = await import('node:fs'); unlinkSync(tmp); } catch { /* */ } }
         });
+        // DeltaVerse iNFT-7857 mint payload — bind a faicey print/persona as an
+        // Intelligent NFT (ERC-7857). Returns the exact mintAgent(...) args.
+        this.app.post('/api/inft/mint-payload', async (req, res) => {
+            try {
+                const { toInftMint } = await import('./src/face_clone/inft.js');
+                const b = req.body || {};
+                const artifact = b.artifact || b.persona || b;
+                if (!artifact?.hash) return res.status(400).json({ error: 'a print/persona with a 0x hash is required' });
+                const payload = await toInftMint(artifact, {
+                    to: b.to, storageURI: b.storageURI, tokenURI: b.tokenURI, thotRoot: b.thotRoot,
+                    name: b.name, description: b.description, image: b.image, chainId: b.chainId,
+                });
+                res.json(payload);
+            } catch (e) { res.status(500).json({ error: e.message }); }
+        });
         // Give a cloned face to a .persona: store a face artifact AND, if the named .persona exists,
         // write embodiment.face (faceprint + cloneProportions) into it so the persona's faicey wears it.
         this.app.post('/api/persona/face', (req, res) => {

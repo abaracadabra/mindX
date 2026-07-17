@@ -4,6 +4,29 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.4.0] — 2026-07-17
+
+### Added
+
+- **DeltaVerse iNFT (ERC-7857) integration.** The NFT export was OpenSea metadata
+  and the `export:nft` script pointed at a file that didn't exist. `src/face_clone/inft.js`
+  now binds a faicey artifact — a faceprint, a voiceprint, or a bound persona — to
+  the DeltaVerse Intelligent-NFT contract (`daio/contracts/inft/iNFT_7857.sol`):
+  the print's reproducible hash IS the iNFT's `contentRoot`, and the exact
+  `mintAgent(to, contentRoot, storageURI, metadataRoot, dimensions, parallelUnits,
+  sealedKeyHash, tokenURI_)` argument set falls straight out — with a valid
+  ERC-7857 embedding dimension, an optional `attachThotRoot` for mindX's memory
+  lineage, and the measurement vector travelling in the tokenURI metadata.
+- **`⬡ iNFT payload`** in the demo (next to `⭳ .persona`) — binds the persona as
+  an ERC-7857 mint payload, client-side, and downloads it ready for the DeltaVerse
+  minter (set the owner + storage URI).
+- **`/api/inft/mint-payload`** on the faicey server — build the payload from a
+  posted print/persona (for the blockchain agent factory).
+- **`scripts/export-nft-metadata.js`** rebuilt — `npm run export:nft` now works:
+  reads a `.persona` (or a print) and writes the iNFT-7857 payload. 6 iNFT tests.
+
+---
+
 ## [2.3.0] — 2026-07-17
 
 ### Added
