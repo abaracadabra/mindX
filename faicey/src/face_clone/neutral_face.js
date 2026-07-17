@@ -32,10 +32,18 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const FACE = {
   cx: 0.5, cy: 0.52, rx: 0.26, ry: 0.36,   // face oval
   eyeY: 0.44, eyeDX: 0.13, eyeRx: 0.07, eyeRy: 0.032, // eyes (from centre)
+  irisR: 0.024,                            // iris radius
   browY: 0.38, browDX: 0.13, browRx: 0.085, browArch: 0.03,
-  noseTopY: 0.40, noseTipY: 0.545, noseW: 0.045,
-  mouthY: 0.66, mouthRx: 0.10, mouthRy: 0.035,
+  noseTopY: 0.40, noseTipY: 0.545, noseW: 0.045, alaR: 0.03,
+  mouthY: 0.66, mouthRx: 0.10, mouthRy: 0.035, lipInR: 0.075, lipInRy: 0.012,
+  earY: 0.50, earH: 0.11,                  // ears at eye/nose height, on the oval edge
 };
+
+// Ear helix indices live above the MediaPipe range (0..477): a synthetic face
+// carries them, a cloned MediaPipe face does not — so ears draw on the neutral
+// face and are silently absent (renderer skips nulls) on a real clone.
+const EAR_R = [478, 479, 480, 481, 482, 483];
+const EAR_L = [484, 485, 486, 487, 488, 489];
 
 /** Sample a closed ellipse-ish ring into `n` points, starting at angle a0. */
 function ring(cx, cy, rx, ry, n, a0 = -Math.PI / 2, z = 0, squash = null) {
@@ -56,22 +64,56 @@ function assign(out, indices, pts) {
   for (let i = 0; i < n; i++) out[indices[i]] = pts[i];
 }
 
-/** Almond eye: an ellipse pinched at the corners so it reads as an eye, not a circle. */
+/** Almond eye: pinched at the corners, with a taller UPPER lid than lower —
+ *  the asymmetry is what separates an open eye from a lens shape. */
 function almond(cx, cy, rx, ry, n, z) {
   return ring(cx, cy, rx, ry, n, Math.PI, z, (x, y, a) => {
-    // pinch vertical extent toward the corners (cos(a) near ±1)
-    const pinch = 0.35 + 0.65 * Math.abs(Math.sin(a));
-    return { x, y: cy + (y - cy) * pinch };
+    const pinch = 0.30 + 0.70 * Math.abs(Math.sin(a));  // corners pinch shut
+    const upper = Math.sin(a) < 0;                       // +y is down → upper lid
+    const lid = upper ? 1.18 : 0.72;                     // upper lid arches, lower flattens
+    return { x, y: cy + (y - cy) * pinch * lid };
   });
 }
 
-/** Brow arc: an open arch above the eye. */
-function browArc(cx, cy, rx, arch, n, z) {
+/** Iris ring — a small circle around the eye centre (MediaPipe 469-472/474-477). */
+function irisRing(cx, cy, r, n, z) {
+  return ring(cx, cy, r, r, n, -Math.PI / 2, z);
+}
+
+/** Brow: a natural arch that peaks over the inner third and tapers down the
+ *  outer tail — `innerFirst` flips for whichever end the index loop starts at. */
+function brow(cx, cy, rx, arch, n, z, innerFirst) {
   const pts = [];
   for (let i = 0; i < n; i++) {
-    const t = i / (n - 1);
+    let t = i / (n - 1);              // 0 → end A, 1 → end B along the brow
+    const inner = innerFirst ? 1 - t : t; // 0 at outer tail, 1 at inner head
     const x = cx - rx + t * 2 * rx;
-    const y = cy - Math.sin(t * Math.PI) * arch;
+    const peak = Math.sin(Math.pow(inner, 0.8) * Math.PI * 0.5 + Math.PI * 0.15);
+    const y = cy - peak * arch + (1 - inner) * arch * 0.45; // outer tail drops
+    pts.push({ x, y, z });
+  }
+  return pts;
+}
+
+/** Alar wing — the nostril curve flaring from the nose tip up to one ala. */
+function alarWing(alaX, tipY, r, n, side) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);                    // tip → ala
+    const a = Math.PI * (1 + t * 0.9);        // sweep up and out
+    pts.push({ x: alaX + side * (1 - Math.cos(a)) * r * 0.5, y: tipY + 0.014 + Math.sin(a) * r, z: 0.05 });
+  }
+  return pts;
+}
+
+/** Ear helix — an open C on the side of the face, tip up. */
+function earHelix(cx, cy, h, n, side, z) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);                 // top → bottom of the ear
+    const a = Math.PI * (0.35 + t * 1.15); // sweep the helix arc
+    const x = cx + side * Math.sin(a) * h * 0.5;
+    const y = cy - h * 0.5 + t * h;
     pts.push({ x, y, z });
   }
   return pts;
@@ -84,7 +126,7 @@ function browArc(cx, cy, rx, arch, n, z) {
  */
 export function neutralFace(opts = {}) {
   const F = { ...FACE };
-  const out = new Array(478).fill(null);
+  const out = new Array(490).fill(null); // 0..477 MediaPipe + 478..489 synthetic ears
 
   // — face oval — the ordered loop runs clockwise from the forehead (index 10) —
   assign(out, CONTOURS.faceOval,
@@ -94,10 +136,13 @@ export function neutralFace(opts = {}) {
   const rEyeCx = F.cx - F.eyeDX, lEyeCx = F.cx + F.eyeDX;
   assign(out, CONTOURS.rightEye, almond(rEyeCx, F.eyeY, F.eyeRx, F.eyeRy, CONTOURS.rightEye.length, 0.01));
   assign(out, CONTOURS.leftEye, almond(lEyeCx, F.eyeY, F.eyeRx, F.eyeRy, CONTOURS.leftEye.length, 0.01));
+  // — iris rings (a visible iris circle, not just a centre dot) —
+  assign(out, CONTOURS.rightIris, irisRing(rEyeCx, F.eyeY, F.irisR, CONTOURS.rightIris.length, 0.02));
+  assign(out, CONTOURS.leftIris, irisRing(lEyeCx, F.eyeY, F.irisR, CONTOURS.leftIris.length, 0.02));
 
-  // — brows —
-  assign(out, CONTOURS.rightBrow, browArc(rEyeCx, F.browY, F.browRx, F.browArch, CONTOURS.rightBrow.length, 0.0));
-  assign(out, CONTOURS.leftBrow, browArc(lEyeCx, F.browY, F.browRx, F.browArch, CONTOURS.leftBrow.length, 0.0));
+  // — brows — angled arches, peaked inner, tapering down the outer tail —
+  assign(out, CONTOURS.rightBrow, brow(rEyeCx, F.browY, F.browRx, F.browArch, CONTOURS.rightBrow.length, 0.0, false));
+  assign(out, CONTOURS.leftBrow, brow(lEyeCx, F.browY, F.browRx, F.browArch, CONTOURS.leftBrow.length, 0.0, true));
 
   // — nose — bridge (nasion → tip, coming forward in z) + the nostril base —
   const bridge = CONTOURS.noseBridge.map((_, i) => {
@@ -113,6 +158,9 @@ export function neutralFace(opts = {}) {
     return { x, y: F.noseTipY + 0.012 - dip * 0.006, z: 0.05 };
   });
   assign(out, CONTOURS.noseBottom, noseBottom);
+  // — alar wings — the nostril curves flaring up from the tip to each ala —
+  assign(out, CONTOURS.noseRightAla, alarWing(F.cx - F.noseW, F.noseTipY, F.alaR, CONTOURS.noseRightAla.length, -1));
+  assign(out, CONTOURS.noseLeftAla, alarWing(F.cx + F.noseW, F.noseTipY, F.alaR, CONTOURS.noseLeftAla.length, 1));
 
   // — lips — the cupid's bow: outer contour with a dip at the philtrum —
   const lo = CONTOURS.lipsOuter.length;
@@ -129,6 +177,13 @@ export function neutralFace(opts = {}) {
     return { x, y: yy };
   });
   assign(out, CONTOURS.lipsOuter, lips);
+  // — inner lip line — the mouth opening, so the lips read as two lips —
+  assign(out, CONTOURS.lipsInner,
+    ring(F.cx, F.mouthY, F.lipInR, F.lipInRy, CONTOURS.lipsInner.length, Math.PI, 0.025));
+
+  // — ears — a helix on each side at eye/nose height, on the face-oval edge —
+  assign(out, EAR_R, earHelix(F.cx - F.rx * 0.98, F.earY, F.earH, EAR_R.length, -1, -0.06));
+  assign(out, EAR_L, earHelix(F.cx + F.rx * 0.98, F.earY, F.earH, EAR_L.length, 1, -0.06));
 
   // — named singletons the expression/measurement code reads by index —
   out[1] = { x: F.cx, y: F.noseTipY, z: 0.13 };      // nose tip (furthest forward)

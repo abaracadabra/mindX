@@ -110,14 +110,14 @@
     <div class="row" id="pActions" style="display:none;margin-top:6px">
       <button id="dlBtn">⭳ download .persona</button>
     </div>
-    <div class="hint">The face is a real procedural neutral — eyes, brows, nose, lips — rendered at the canonical MediaPipe topology, so an expression or a live webcam clone drives the same face. Mic drives the mouth and the oscilloscope. A recording is measured — when the <b>voaice</b> peer is present — into the full <b>scientific</b> voiceprint (six 18-dp SoundWave measures + integrity); set one as a reference and <b>≈ match</b> compares them with voaice&rsquo;s Forensic (both traces overlaid on the scope). <b>Create</b> invents a synthetic persona; <b>Clone</b> binds your captured face + voice under consent — the browser form of aivatar&rsquo;s <code>.persona</code>.</div>
+    <div class="hint">The face is a real procedural neutral — almond eyes with iris rings, angled brows, a nose with alar wings, inner + outer lips, and ears — at the canonical MediaPipe topology, so an expression or a live webcam clone drives the same face. Mic drives the mouth (which expands with vocal inflection) and paints the live waveform BETWEEN the lips — the mouth is its own oscilloscope. The side oscilloscope shows the same signal. A recording is measured — when the <b>voaice</b> peer is present — into the full <b>scientific</b> voiceprint (six 18-dp SoundWave measures + integrity); set one as a reference and <b>≈ match</b> compares them with voaice&rsquo;s Forensic (both traces overlaid on the scope). <b>Create</b> invents a synthetic persona; <b>Clone</b> binds your captured face + voice under consent — the browser form of aivatar&rsquo;s <code>.persona</code>.</div>
   </div>
 </div>
 
 <script type="module">
 import { neutralFace } from '/src/face_clone/neutral_face.js';
 import { applyExpression, EXPRESSION_LABELS } from '/src/face_clone/expressions.js';
-import { drawFaceTheme } from '/src/face_clone/contours.js';
+import { drawFaceTheme, drawMouthScope } from '/src/face_clone/contours.js';
 import { LM, proportions } from '/src/face_clone/geometry.js';
 import { measureFaceprint } from '/src/face_clone/faceprint.js';
 import { personaPrint } from '/src/face_clone/persona.js';
@@ -130,7 +130,8 @@ const srcLabel = document.getElementById('src');
 let base = neutralFace();          // the neutral face (canonical topology)
 let live = null;                    // webcam landmarks when the camera is on
 let expression = 'neutral';
-let mouthOpen = 0;                  // 0..1 from mic amplitude
+let mouthOpen = 0;                  // 0..1 — inflection-driven mouth openness
+let lastLevel = 0;                  // previous frame RMS, for the inflection term
 let cycling = false, cycleT = 0;
 let theme = 'wireframe';
 
@@ -157,6 +158,8 @@ function renderFace() {
   const { landmarks, hue } = currentLandmarks();
   fctx.clearRect(0, 0, faceCv.width, faceCv.height);
   drawFaceTheme(fctx, landmarks, { W: faceCv.width, H: faceCv.height, hue, theme });
+  // the voice, shown BETWEEN the lips — the mouth is its own oscilloscope
+  if (micOn && tdata) drawMouthScope(fctx, landmarks, tdata, { W: faceCv.width, H: faceCv.height, hue, gain: 1.6 });
 }
 
 // ── expression buttons + auto-cycle ────────────────────────────────────────
@@ -221,7 +224,13 @@ function drawScope() {
   if (refBuf) traceScope(refBuf, '#f6a', 0.35, 1);
   if (micOn && analyser) {
     analyser.getFloatTimeDomainData(tdata);
-    mouthOpen = Math.min(1, rms(tdata) * 8);
+    // inflection-driven mouth: level opens it, but a sudden RISE (a syllable
+    // onset) opens it further and faster — the mouth pops on inflection, then
+    // eases shut. Fast attack, slow release.
+    const level = rms(tdata);
+    const inflection = Math.max(0, level - lastLevel); lastLevel = level;
+    const target = Math.min(1, level * 7 + inflection * 22);
+    mouthOpen += (target - mouthOpen) * (target > mouthOpen ? 0.55 : 0.14);
     sctx.strokeStyle = '#0f8'; sctx.lineWidth = 1.4; sctx.beginPath();
     const step = tdata.length / scope.width;
     for (let x = 0; x < scope.width; x++) {

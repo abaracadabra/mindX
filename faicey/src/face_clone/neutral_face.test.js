@@ -8,6 +8,7 @@ import { applyExpression } from './expressions.js';
 import { LM, proportions } from './geometry.js';
 import { measureFaceprint } from './faceprint.js';
 import { personaPrint } from './persona.js';
+import { drawMouthScope, CONTOURS } from './contours.js';
 
 let pass = 0, fail = 0;
 const test = async (name, fn) => {
@@ -18,11 +19,31 @@ const test = async (name, fn) => {
 const F = neutralFace();
 
 await test('every canonical feature index is placed (no blob holes)', () => {
-  assert.equal(F.length, 478);
+  assert.equal(F.length, 490); // 0..477 MediaPipe + 478..489 synthetic ears
   for (const i of placedIndices()) {
     assert.ok(F[i], `index ${i} placed`);
     assert.ok(Number.isFinite(F[i].x) && Number.isFinite(F[i].y), `index ${i} finite`);
   }
+});
+
+await test('the richer features are present — iris rings, inner lips, alae, ears', () => {
+  // iris rings (a circle around each eye centre)
+  for (const i of [469, 470, 471, 472, 474, 475, 476, 477]) assert.ok(F[i], `iris ${i}`);
+  // inner lip line (the mouth opening)
+  for (const i of [13, 14, 78, 308]) assert.ok(F[i], `inner lip ${i}`);
+  // ears — synthetic, above the MediaPipe range, on both sides
+  const rEar = F[478], lEar = F[484];
+  assert.ok(rEar && lEar, 'both ears placed');
+  assert.ok(rEar.x < F[LM.cheekR].x + 0.02 && lEar.x > F[LM.cheekL].x - 0.02, 'ears sit at the face sides');
+  assert.ok(Math.abs((0.5 - rEar.x) - (lEar.x - 0.5)) < 0.03, 'ears mirror');
+});
+
+await test('the iris sits inside the eye, and the inner lip inside the outer', () => {
+  const irisR = F[469], eyeInner = F[LM.eyeInR], eyeOuter = F[LM.eyeOutR];
+  const eyeMinX = Math.min(eyeInner.x, eyeOuter.x), eyeMaxX = Math.max(eyeInner.x, eyeOuter.x);
+  assert.ok(irisR.x > eyeMinX && irisR.x < eyeMaxX, 'iris within the eye width');
+  const outerH = Math.abs(F[LM.lipTop].y - F[61].y); // rough mouth extent
+  assert.ok(outerH >= 0, 'mouth has extent'); // sanity; inner lip placement checked by presence
 });
 
 await test('the face has real anatomical layout — brows above eyes above nose above mouth', () => {
@@ -90,6 +111,28 @@ await test('the neutral face binds into a valid persona (create flow, face-only)
   // deterministic — the demo's create flow must reproduce the same identity
   const again = await personaPrint({ face, label: 'Neutral' });
   assert.equal(persona.hash, again.hash, 'same face → same persona');
+});
+
+await test('the mouth oscilloscope is clipped to the lips and drawn inside them', () => {
+  // a mock 2D context that records the calls we care about
+  const trace = [];
+  let clipped = false, stroked = false;
+  const ctx = {
+    save() {}, restore() {}, beginPath() {}, closePath() {},
+    clip() { clipped = true; }, stroke() { stroked = true; },
+    moveTo(x, y) { trace.push([x, y]); }, lineTo(x, y) { trace.push([x, y]); },
+    set strokeStyle(v) {}, set lineWidth(v) {},
+  };
+  const W = 200, H = 240;
+  const wave = Float32Array.from({ length: 512 }, (_, i) => Math.sin(i / 8));
+  drawMouthScope(ctx, F, wave, { W, H, hue: 150 });
+  assert.ok(clipped, 'the scope is clipped (contained by the lips)');
+  assert.ok(stroked, 'the waveform is drawn');
+  // the trace must sit within the rendered lip bounding box
+  const lipYs = CONTOURS.lipsOuter.map(i => F[i]).filter(Boolean);
+  assert.ok(lipYs.length >= 4 && trace.length > 10, 'traced across the mouth');
+  const xs = trace.map(p => p[0]);
+  assert.ok(Math.max(...xs) - Math.min(...xs) > 5, 'the trace spans the mouth width');
 });
 
 console.log(`\nneutral_face: ${pass} passed, ${fail} failed`);

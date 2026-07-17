@@ -14,10 +14,20 @@ export const CONTOURS = {
   rightBrow: [70,63,105,66,107,55,65,52,53,46],
   leftBrow: [300,293,334,296,336,285,295,282,283,276],
   lipsOuter: [61,146,91,181,84,17,314,405,321,375,291,409,270,269,267,0,37,39,40,185],
+  lipsInner: [78,95,88,178,87,14,317,402,318,324,308,415,310,311,312,13,82,81,80,191],
   noseBridge: [168,6,197,195,5,4,1],
   noseBottom: [98,97,2,326,327],
+  noseRightAla: [98,64,240,75,60],   // right nostril wing (tip → ala)
+  noseLeftAla: [327,294,460,305,290], // left nostril wing
+  rightIris: [469,470,471,472],       // right iris ring (478-landmark models)
+  leftIris: [474,475,476,477],        // left iris ring
+  // synthetic ears — indices above the MediaPipe range; present only on the
+  // procedural neutral face (a real MediaPipe clone has no ear mesh, so these
+  // are absent and the renderer skips them).
+  rightEar: [478,479,480,481,482,483],
+  leftEar: [484,485,486,487,488,489],
 };
-const CLOSED = new Set(['faceOval', 'rightEye', 'leftEye', 'lipsOuter']);
+const CLOSED = new Set(['faceOval', 'rightEye', 'leftEye', 'lipsOuter', 'lipsInner', 'rightIris', 'leftIris']);
 
 /** Compute a fit transform mapping the landmarks' bbox into a padded canvas box. */
 function fit(landmarks, W, H, pad = 0.12) {
@@ -67,6 +77,47 @@ export function drawFaceWireframe(ctx, landmarks, opts) {
 }
 
 // ── face render THEMES — the simple wireframe is the default; the rest are alternate styles ──
+/**
+ * drawMouthScope — the live voice waveform, drawn INSIDE the lips.
+ *
+ * The mouth becomes a little oscilloscope: the waveform is clipped to the outer
+ * lip contour and scaled to the mouth's height, so the voice literally shows
+ * between the lips. Uses the SAME fit() transform as the face, so it lands
+ * exactly on the rendered mouth however the face is framed.
+ *
+ * @param {Array} landmarks   the same landmarks passed to drawFaceTheme
+ * @param {Float32Array} wave live time-domain samples (−1..1)
+ * @param {{W,H,hue,gain?}} opts
+ */
+export function drawMouthScope(ctx, landmarks, wave, opts) {
+  const { W, H, hue = 150, gain = 1.4 } = opts;
+  const loop = CONTOURS.lipsOuter.map((i) => landmarks[i]).filter(Boolean);
+  if (loop.length < 4 || !wave || !wave.length) return;
+  const T = fit(landmarks, W, H);
+  const pts = loop.map(T);
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const p of pts) { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); }
+  const midY = (minY + maxY) / 2, half = (maxY - minY) / 2;
+  ctx.save();
+  // clip to the lip polygon so the scope is CONTAINED by the lips
+  ctx.beginPath();
+  pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+  ctx.closePath();
+  ctx.clip();
+  // a faint inner glow, then the trace
+  ctx.strokeStyle = `hsl(${hue},95%,62%)`;
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  const w = maxX - minX;
+  for (let x = 0; x <= w; x++) {
+    const v = wave[Math.floor((x / w) * (wave.length - 1))] || 0;
+    const px = minX + x, py = midY - Math.max(-1, Math.min(1, v * gain)) * half * 0.9;
+    x ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
 export const FACE_THEMES = ['wireframe', 'neon', 'dots', 'mesh', 'filled', 'scan'];
 
 /** Dispatch to a themed renderer. `wireframe` is the original simple face, unchanged. */

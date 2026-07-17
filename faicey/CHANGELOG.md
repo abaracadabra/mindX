@@ -4,6 +4,37 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.1.2] — 2026-07-16
+
+### Added
+
+- **Richer facial features on the procedural face.** The neutral face gained
+  detail: almond eyes with a taller upper lid, **iris rings** (a visible iris,
+  not a dot), **angled brows** that peak inner and taper down the outer tail, a
+  nose with **alar wings**, an **inner lip line** (the mouth opening, so the lips
+  read as two lips), and **ears** — synthetic helices above the MediaPipe range,
+  present on the procedural face and silently absent on a real clone (which has
+  no ear mesh). Placed at the canonical topology, so expressions and webcam
+  clones drive them unchanged.
+- **The mouth is its own oscilloscope.** When the mic is on, the live voice
+  waveform is drawn **between the lips**, clipped to the outer lip contour
+  (`drawMouthScope`), using the same fit transform as the face — so it lands
+  exactly on the rendered mouth.
+- **Inflection-driven mouth.** The mouth opens on level but *pops* on a syllable
+  onset (a sudden rise in energy) and eases shut — fast attack, slow release —
+  so it expands with vocal inflection rather than tracking raw amplitude.
+
+### Fixed / hardened
+
+- **`/api/voice/measure` input validation.** The samples payload is now bounded
+  (≤ 30 s) and sanitised (non-finite values → 0, clamped to [-1, 1]), and the
+  sample rate is range-checked (8000–96000). A large or malformed body can no
+  longer allocate an unbounded buffer or measure garbage.
+- Persona download filenames are sanitised (already noted in 2.1.1; the code
+  landed here).
+
+---
+
 ## [2.1.1] — 2026-07-16
 
 ### Fixed

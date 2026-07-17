@@ -164,13 +164,31 @@ class FaiceyServer {
             try { return await import('../voaice/src/index.js'); }
             catch { try { return await import('voaice'); } catch { return null; } }
         };
+        // Bound + sanitise a samples payload before it becomes a Float32Array +
+        // an FFT: cap the length (≤30 s at 96 kHz) and reject a nonsense rate, so
+        // a large or malformed body can't allocate unbounded memory or measure
+        // garbage. Returns { buf, sampleRate } or throws a client-safe message.
+        const _MAX_SAMPLES = 96000 * 30;
+        const _prepSamples = (samples, sampleRate) => {
+            if (!Array.isArray(samples) || !samples.length) throw new Error('samples[] required');
+            if (samples.length > _MAX_SAMPLES) throw new Error(`too many samples (max ${_MAX_SAMPLES})`);
+            const sr = Number(sampleRate) || 24000;
+            if (!(sr >= 8000 && sr <= 96000)) throw new Error('sampleRate must be 8000–96000');
+            const buf = new Float32Array(samples.length);
+            for (let i = 0; i < samples.length; i++) {
+                const v = +samples[i];
+                buf[i] = Number.isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0; // clamp; NaN → 0
+            }
+            return { buf, sampleRate: sr };
+        };
         this.app.post('/api/voice/measure', async (req, res) => {
-            const { samples, sampleRate = 24000 } = req.body || {};
-            if (!Array.isArray(samples) || !samples.length) return res.status(400).json({ error: 'samples[] required' });
             const voaice = await _loadVoaice();
             if (!voaice?.Forensic) return res.status(501).json({ error: 'scientific measurement needs the voaice peer (not installed here)' });
+            let prep;
+            try { prep = _prepSamples((req.body || {}).samples, (req.body || {}).sampleRate); }
+            catch (e) { return res.status(400).json({ error: e.message }); }
             try {
-                const buf = Float32Array.from(samples);
+                const { buf, sampleRate } = prep;
                 const f = new voaice.Forensic({ sampleRate });
                 const print = f.voiceprint(buf);
                 const integrity = f.integrity(buf).verdict;
