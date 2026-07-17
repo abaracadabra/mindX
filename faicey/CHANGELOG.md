@@ -4,6 +4,41 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.13.0] — 2026-07-17
+
+### Added — quant-finance accuracy, a shared sci-fi substrate, waterfall interaction
+
+**Accuracy from a scientific-finance toolset** (`src/face_clone/finmeasure.js`).
+A voice signal is a time series, and quant finance measures noisy series with a
+stated uncertainty better than anything — so those tools sharpen the scope:
+
+- **Kalman filter** stabilises the per-frame YIN pitch into an optimal estimate;
+  the readout shows **ƒ₀ ± 95% confidence interval** (Hz). The smoothed track is
+  provably tighter than the raw estimates.
+- **Jitter / shimmer** — EWMA volatility (RiskMetrics σ) of the pitch track *is*
+  jitter, of the amplitude track *is* shimmer — real forensic voice measures.
+- moments (skew/kurtosis), Bollinger bands, z-score outliers (splice detection).
+- **Everything carried at conventional EVM 18-decimal precision** (`toFixed18Str`,
+  signed + carry-safe — the faceprint/voiceprint fixed-point scale). 14 tests.
+
+**The sci-fi HUD substrate (◈)** (`src/face_clone/scifi_substrate.js`) — **evolved
+from the DeltaVerse participant field** (`dapp/deltaverse.js`, the drifting "stars
+are people") fused with instrument chrome (corner brackets, reticle, grid, sweep).
+A **◈ HUD** toggle themes the measurement panel as a sci-fi instrument (cyan
+telemetry, glow) and mounts the live HUD. **Vendored into voaice too**
+(`voaice/src/scifi_substrate.js`) — faicey and voicey share one visual language.
+Dependency-free; layout geometry + drifting field pure + tested (4 tests).
+
+**Waterfall interaction** — hover to read the **frequency**, **time-ago**, and
+**intensity (dB)** at any point (from the `Spectrogram` model's history), with a
+cyan guide mirrored onto the spectrum; **click to freeze** for inspection; a
+0–8 kHz frequency axis.
+
+Suite green: **126** (14 finmeasure + 4 substrate + the rest). The shared modules
+also pass in the voaice tree (18 tests). Detail: [docs/OSCILLOSCOPE.md](./docs/OSCILLOSCOPE.md).
+
+---
+
 ## [2.12.0] — 2026-07-17
 
 ### Added — the spectrogram waterfall

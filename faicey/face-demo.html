@@ -56,6 +56,17 @@
   .meas .big { grid-column:1/3; font-size:14px; letter-spacing:.02em; }
   .forensic { margin-top:5px; font-size:10px; color:#8ab; border-top:1px solid var(--dim); padding-top:5px; }
   .forensic b { color:var(--a); font-variant-numeric:tabular-nums; }
+  #waterfall { cursor:crosshair; }
+  .wfaxis { display:flex; justify-content:space-between; font-size:8px; color:#576; margin-top:1px; padding:0 1px; font-variant-numeric:tabular-nums; }
+  .wfread { font-size:10px; color:#8ab; margin-top:2px; min-height:12px; font-variant-numeric:tabular-nums; }
+  .wfread b { color:#22e0ff; }
+  #hud { width:100%; height:34px; display:block; margin-top:6px; background:#02080c; border:1px solid #0a4b5c; border-radius:4px; }
+  /* sci-fi HUD theme — cyan telemetry, applied to the scope panel */
+  .panel.scifi .sec { color:#22e0ff; border-color:#0a4b5c; text-shadow:0 0 6px rgba(34,224,255,.5); }
+  .panel.scifi .meas, .panel.scifi .forensic, .panel.scifi .wfread { color:#8fd8e6; text-transform:uppercase; letter-spacing:.04em; }
+  .panel.scifi .meas b, .panel.scifi .forensic b { color:#22e0ff; text-shadow:0 0 5px rgba(34,224,255,.6); }
+  .panel.scifi #scope, .panel.scifi #spectrum, .panel.scifi #waterfall { border-color:#116; box-shadow:0 0 10px rgba(34,224,255,.15) inset; }
+  .panel.scifi .scopebar button.on { background:#22e0ff; color:#012; border-color:#22e0ff; }
   .hint { font-size:9.5px; color:#465; margin-top:5px; line-height:1.5; }
   select { width:100%; font-family:inherit; font-size:11px; background:#000; color:var(--a); border:1px solid var(--dim); border-radius:4px; padding:6px; }
   input[type=text], #pName, #pDesc { width:100%; font-family:inherit; font-size:11px; background:#000; color:var(--a); border:1px solid var(--dim); border-radius:4px; padding:7px; margin-bottom:6px; }
@@ -119,17 +130,21 @@
     <div class="sec">scientific oscilloscope</div>
     <canvas id="scope"></canvas>
     <canvas id="spectrum"></canvas>
-    <canvas id="waterfall"></canvas>
+    <canvas id="waterfall" title="hover to read frequency + time · click to freeze"></canvas>
+    <div class="wfaxis"><span>0</span><span>2k</span><span>4k</span><span>6k</span><span>8k Hz</span></div>
+    <div class="wfread" id="wfRead">hover the waterfall to read ƒ / time / intensity</div>
     <div class="scopebar">
       <button id="zoomOut" title="zoom out time base">－</button>
       <span id="zoomLbl" class="zl">1.0×</span>
       <button id="zoomIn" title="zoom in time base">＋</button>
       <button id="trigBtn" class="on" title="edge trigger — freeze the trace">⎍ trig</button>
-      <button id="wfBtn" class="on" title="spectrogram waterfall">🌊 waterfall</button>
+      <button id="wfBtn" class="on" title="spectrogram waterfall">🌊 wf</button>
       <button id="forBtn" title="forensic measures">🔬 forensic</button>
+      <button id="hudBtn" title="sci-fi HUD substrate">◈ HUD</button>
     </div>
     <div class="meas" id="meas">— feed the mic or record to measure —</div>
     <div class="forensic" id="forensicPanel" style="display:none"></div>
+    <canvas id="hud" style="display:none"></canvas>
     <div class="row" style="margin-top:6px">
       <button id="recBtn">⏺ record 3s → voiceprint</button>
     </div>
@@ -183,7 +198,9 @@ import { NeuralRenderer, gradeFidelity, identityConsistency } from '/src/face_cl
 import { ClassicalEnhancer } from '/src/face_clone/classical_enhance.js';
 import { buildFaceGeometry, WebGLFaceRenderer } from '/src/face_clone/webgl_face.js';
 import { yinPitch, spectrum, detectTrigger, measurements, freqColor } from '/src/face_clone/oscilloscope.js';
-import { inferno, dbNorm, linBinForX } from '/src/face_clone/spectrogram.js';
+import { inferno, dbNorm, linBinForX, Spectrogram } from '/src/face_clone/spectrogram.js';
+import { Kalman, confidenceInterval, jitter, shimmer, accuracy18 } from '/src/face_clone/finmeasure.js';
+import { SciFiHUD } from '/src/face_clone/scifi_substrate.js';
 import { LM, proportions } from '/src/face_clone/geometry.js';
 import { measureFaceprint } from '/src/face_clone/faceprint.js';
 import { personaPrint } from '/src/face_clone/persona.js';
@@ -400,6 +417,13 @@ spec.width = 308; spec.height = 70;
 const water = document.getElementById('waterfall'), wtx = water.getContext('2d');
 water.width = 308; water.height = 96;
 let scopeZoom = 1, trigOn = true, forensicOn = false, waterfallOn = true, waterMax = 1e-4, lastMeasT = 0, lastMeas = null;
+// quant-finance accuracy: Kalman-stabilised pitch ± confidence interval + jitter/shimmer
+const kalmanF0 = new Kalman({ q: 1e-3, r: 6 });
+const f0Hist = [], ampHist = [];
+let lastAccuracy = null;
+// spectrogram model (for hover readout) + waterfall interaction state
+const sgModel = new Spectrogram(96);
+let wfFrozen = false, wfHover = null, wfDt = 33, wfLastT = 0, scifiOn = false, hud = null;
 function scopeSR() { return (audioCtx && audioCtx.sampleRate) || 44100; }
 let audioCtx = null, micStream = null, analyser = null, tdata = null, micOn = false;
 
@@ -497,6 +521,12 @@ function drawSpectrum(sp) {
     spx.strokeStyle = `hsl(${freqColor(lastMeas.f0, 60, fmax)},95%,70%)`; spx.lineWidth = 1;
     spx.beginPath(); spx.moveTo(x, 0); spx.lineTo(x, H); spx.stroke();
   }
+  // the waterfall hover guide, mirrored onto the spectrum (cleared each frame, no trail)
+  if (wfHover) {
+    const gx = (wfHover.freq / fmax) * W;
+    spx.strokeStyle = 'rgba(34,224,255,.85)'; spx.lineWidth = 1;
+    spx.beginPath(); spx.moveTo(gx, 0); spx.lineTo(gx, H); spx.stroke();
+  }
 }
 // the spectrogram WATERFALL: scroll the canvas down 1px and paint the newest
 // spectrum as the top row — colour = intensity in dB (inferno), so the
@@ -504,17 +534,24 @@ function drawSpectrum(sp) {
 function drawWaterfall(sp) {
   const W = water.width, H = water.height;
   const { mags, binHz } = sp;
-  wtx.drawImage(water, 0, 1);                 // shift the history down one row
+  if (wfFrozen) return;                        // click-freeze: hold the image for inspection
+  const now = Date.now();
+  if (wfLastT) wfDt = wfDt * 0.9 + (now - wfLastT) * 0.1; // smoothed row interval (ms), for time-ago
+  wfLastT = now;
+  wtx.drawImage(water, 0, 1);                  // shift the history down one row
   if (!mags.length) return;
   let mx = 1e-6; for (let i = 1; i < mags.length; i++) if (mags[i] > mx) mx = mags[i];
-  waterMax = Math.max(mx, waterMax * 0.96);   // smoothed running reference (AGC)
+  waterMax = Math.max(mx, waterMax * 0.96);    // smoothed running reference (AGC)
   const row = wtx.createImageData(W, 1);
+  const norm = new Float32Array(W);            // the dbNorm row, kept for hover readout
   for (let x = 0; x < W; x++) {
     const bin = Math.min(mags.length - 1, linBinForX(x, W, SPEC_FMAX, binHz));
-    const [r, g, b] = inferno(dbNorm(mags[bin], waterMax, -80));
+    const v = dbNorm(mags[bin], waterMax, -80); norm[x] = v;
+    const [r, g, b] = inferno(v);
     const o = x * 4; row.data[o] = r; row.data[o + 1] = g; row.data[o + 2] = b; row.data[o + 3] = 255;
   }
   wtx.putImageData(row, 0, 0);
+  sgModel.push(norm);                          // history for the hover crosshair
 }
 
 function updateReadout(data, sr) {
@@ -523,18 +560,32 @@ function updateReadout(data, sr) {
   lastMeasT = now;
   lastMeas = measurements(data.length > 2048 ? data.subarray(0, 2048) : data, sr);
   const m = lastMeas, el = document.getElementById('meas');
-  const hz = m.f0 > 0 ? m.f0.toFixed(2) : '—';
+  // quant-finance ACCURACY: fold each clear reading into a Kalman filter → a
+  // stabilised ƒ₀ with a 95% confidence interval (± Hz), plus jitter/shimmer.
+  if (m.f0 > 0 && m.clarity > 0.5) {
+    const kf = kalmanF0.update(m.f0);
+    f0Hist.push(m.f0); if (f0Hist.length > 48) f0Hist.shift();
+    ampHist.push(m.vrms); if (ampHist.length > 48) ampHist.shift();
+    const ci = confidenceInterval(f0Hist.length > 3 ? f0Hist : [m.f0]);
+    lastAccuracy = { f0: kf.x, ci: ci.ci, jitter: jitter(f0Hist), shimmer: shimmer(ampHist), clarity: m.clarity };
+  }
+  const a = lastAccuracy;
+  const hue = freqColor(a ? a.f0 : m.f0, 60, 12000);
+  const f0Str = a ? `${a.f0.toFixed(2)} <span style="color:#576">± ${a.ci.toFixed(2)}</span>` : (m.f0 > 0 ? m.f0.toFixed(2) : '—');
   const noteStr = m.f0 > 0 ? `${m.note.name}${m.note.octave}${m.note.cents >= 0 ? '+' : ''}${m.note.cents}¢` : '';
-  const hue = freqColor(m.f0, 60, 12000);
   el.innerHTML =
-    `<div class="big">ƒ₀ <b style="color:hsl(${hue},90%,65%)">${hz} Hz</b> ${noteStr} <span style="color:#576">· clarity ${(m.clarity * 100).toFixed(0)}%</span></div>` +
-    `<div>period <b>${m.period ? m.period.toFixed(2) : '—'} ms</b></div><div>Vpp <b>${m.vpp.toFixed(3)}</b></div>` +
-    `<div>Vrms <b>${m.vrms.toFixed(3)}</b></div><div>ZCR <b>${m.zcr.toFixed(3)}</b></div>`;
+    `<div class="big">ƒ₀ <b style="color:hsl(${hue},90%,65%)">${f0Str} Hz</b> ${noteStr}</div>` +
+    `<div>period <b>${m.period ? m.period.toFixed(2) : '—'} ms</b></div><div>clarity <b>${(m.clarity * 100).toFixed(0)}%</b></div>` +
+    `<div>Vpp <b>${m.vpp.toFixed(3)}</b></div><div>Vrms <b>${m.vrms.toFixed(3)}</b></div>`;
   if (forensicOn) {
+    const jitPct = a ? (a.jitter * 100).toFixed(3) : '—', shimPct = a ? (a.shimmer * 100).toFixed(3) : '—';
+    const acc18 = a ? accuracy18(a) : null;
     document.getElementById('forensicPanel').innerHTML =
-      `🔬 <b>forensic</b> · centroid <b>${m.centroid.toFixed(0)} Hz</b> · rolloff <b>${m.rolloff.toFixed(0)} Hz</b>` +
-      `<br>HNR <b>${isFinite(m.hnr) ? m.hnr.toFixed(1) : '—'} dB</b> · harmonicity ${isFinite(m.hnr) ? (m.hnr > 7 ? 'voiced' : m.hnr > 0 ? 'mixed' : 'noise') : '—'}` +
-      `<br><span style="color:#576">YIN pitch · Hann-FFT spectrum · Praat-style HNR — measured in-browser${refBuf ? '' : ''}</span>`;
+      `🔬 <b>forensic</b> · centroid <b>${m.centroid.toFixed(0)} Hz</b> · rolloff <b>${m.rolloff.toFixed(0)} Hz</b> · ZCR <b>${m.zcr.toFixed(3)}</b>` +
+      `<br>HNR <b>${isFinite(m.hnr) ? m.hnr.toFixed(1) : '—'} dB</b> · <b>${isFinite(m.hnr) ? (m.hnr > 7 ? 'voiced' : m.hnr > 0 ? 'mixed' : 'noise') : '—'}</b>` +
+      `<br>jitter <b>${jitPct}%</b> · shimmer <b>${shimPct}%</b> <span style="color:#576">(Kalman + EWMA-σ)</span>` +
+      (acc18 ? `<br><span style="color:#576">EVM-18: ƒ₀ ${acc18.f0_hz} · ±${acc18.ci95_hz} Hz</span>` : '') +
+      `<br><span style="color:#576">YIN · Hann-FFT · Praat HNR · Kalman ± 95% CI — in-browser, 18-dp</span>`;
   }
 }
 
@@ -607,6 +658,31 @@ document.getElementById('wfBtn').onclick = e => {
   waterfallOn = !waterfallOn; e.target.classList.toggle('on', waterfallOn);
   water.style.display = waterfallOn ? 'block' : 'none';
   if (!waterfallOn) wtx.clearRect(0, 0, water.width, water.height);
+};
+// ── waterfall interaction: hover to read ƒ/time/intensity, click to freeze ──
+water.addEventListener('mousemove', e => {
+  const r = water.getBoundingClientRect();
+  const px = Math.floor((e.clientX - r.left) / r.width * water.width);
+  const py = Math.floor((e.clientY - r.top) / r.height * water.height);
+  const freq = (px / water.width) * SPEC_FMAX;
+  const frames = sgModel.frames();
+  const rowIdx = frames.length - 1 - py;               // y=0 is now, downward = older
+  const intensity = (rowIdx >= 0 && frames[rowIdx]) ? frames[rowIdx][Math.min(px, frames[rowIdx].length - 1)] : null;
+  const tAgo = (py * wfDt) / 1000;                       // seconds ago
+  wfHover = { freq, py };
+  const dB = intensity != null ? `${(-80 * (1 - intensity)).toFixed(0)} dB` : '—';
+  document.getElementById('wfRead').innerHTML = `ƒ <b>${freq.toFixed(0)} Hz</b> · t <b>−${tAgo.toFixed(2)} s</b> · <b>${dB}</b>${wfFrozen ? ' · <b>❄ frozen</b>' : ''}`;
+});
+water.addEventListener('mouseleave', () => { wfHover = null; document.getElementById('wfRead').textContent = wfFrozen ? '❄ frozen — click to resume' : 'hover the waterfall to read ƒ / time / intensity'; });
+water.addEventListener('click', () => { wfFrozen = !wfFrozen; document.getElementById('wfRead').textContent = wfFrozen ? '❄ frozen — click to resume' : 'live'; });
+// ── sci-fi HUD substrate toggle ─────────────────────────────────────────────
+const hudCv = document.getElementById('hud');
+document.getElementById('hudBtn').onclick = e => {
+  scifiOn = !scifiOn; e.target.classList.toggle('on', scifiOn);
+  document.querySelector('.panel').classList.toggle('scifi', scifiOn);
+  hudCv.style.display = scifiOn ? 'block' : 'none';
+  if (scifiOn && !hud) hud = new SciFiHUD(hudCv, { count: 60, seed: 7 });
+  if (scifiOn && hud) hud.resize();
 };
 document.getElementById('forBtn').onclick = e => {
   forensicOn = !forensicOn; e.target.classList.toggle('on', forensicOn);
@@ -1069,6 +1145,7 @@ function loop() {
     expression = EXPRESSION_LABELS[i]; paint();
   } }
   drawScope();
+  if (scifiOn && hud) hud.draw();
   renderFace();
 }
 recomputeTopology();
