@@ -56,6 +56,58 @@ def available(engines: dict) -> list[str]:
     return [name for name, (mod, _h, _q) in engines.items() if _have(mod)]
 
 
+def voices() -> dict:
+    """Enumerate every voice/model the installed engines expose — the raw
+    material a voice admin panel offers for selection."""
+    out = {"tts": {}, "stt": {}}
+    # pyttsx3: OS voices with their metadata + the settable ranges
+    if _have("pyttsx3"):
+        try:
+            import pyttsx3  # noqa
+            eng = pyttsx3.init()
+            vs = []
+            for v in eng.getProperty("voices"):
+                vs.append({
+                    "id": v.id,
+                    "name": getattr(v, "name", v.id),
+                    "languages": [l.decode() if isinstance(l, bytes) else str(l) for l in (getattr(v, "languages", []) or [])],
+                    "gender": getattr(v, "gender", None),
+                    "age": getattr(v, "age", None),
+                })
+            out["tts"]["pyttsx3"] = {
+                "voices": vs,
+                "settings": {
+                    "rate": {"default": eng.getProperty("rate"), "min": 50, "max": 400, "unit": "wpm"},
+                    "volume": {"default": eng.getProperty("volume"), "min": 0.0, "max": 1.0},
+                },
+            }
+        except Exception as e:
+            out["tts"]["pyttsx3"] = {"error": str(e)}
+    # Coqui: list model names (network/local catalogue)
+    if _have("TTS"):
+        try:
+            from TTS.api import TTS as CoquiTTS  # noqa
+            out["tts"]["coqui"] = {"models": list(CoquiTTS().list_models())[:200]}
+        except Exception as e:
+            out["tts"]["coqui"] = {"note": "install/catalogue unavailable", "error": str(e)}
+    # vosk: discover models on disk (VOSK_MODEL_PATH or common dirs)
+    if _have("vosk"):
+        import os
+        roots = [os.environ.get("VOSK_MODEL_PATH", ""), os.path.expanduser("~/vosk-models"),
+                 os.path.expanduser("~/.cache/vosk"), "/usr/share/vosk", "./models"]
+        found = []
+        for root in roots:
+            if root and os.path.isdir(root):
+                for name in sorted(os.listdir(root)):
+                    p = os.path.join(root, name)
+                    if os.path.isdir(p) and (os.path.isdir(os.path.join(p, "am")) or name.startswith("vosk")):
+                        found.append({"name": name, "path": p})
+        out["stt"]["vosk"] = {"models": found, "hint": "set VOSK_MODEL_PATH or drop a model in ~/vosk-models"}
+    if _have("whisper"):
+        out["stt"]["whisper"] = {"models": ["tiny", "base", "small", "medium", "large"]}
+    return out
+
+
 def capability() -> dict:
     tts = available(TTS_ENGINES)
     stt = available(STT_ENGINES)
@@ -69,17 +121,19 @@ def capability() -> dict:
 
 
 # ── TTS ─────────────────────────────────────────────────────────────────────
-def _tts_coqui(text, out, voice=None, rate=None):
+def _tts_coqui(text, out, voice=None, rate=None, volume=None):
     from TTS.api import TTS as CoquiTTS  # noqa
     model = voice or "tts_models/en/ljspeech/tacotron2-DDC"
     CoquiTTS(model_name=model, progress_bar=False).tts_to_file(text=text, file_path=out)
 
 
-def _tts_pyttsx3(text, out, voice=None, rate=None):
+def _tts_pyttsx3(text, out, voice=None, rate=None, volume=None):
     import pyttsx3  # noqa
     eng = pyttsx3.init()
     if rate:
         eng.setProperty("rate", int(rate))
+    if volume is not None:
+        eng.setProperty("volume", float(volume))
     if voice:
         for v in eng.getProperty("voices"):
             if voice.lower() in (v.id + " " + getattr(v, "name", "")).lower():
@@ -89,7 +143,7 @@ def _tts_pyttsx3(text, out, voice=None, rate=None):
     eng.runAndWait()
 
 
-def _tts_gtts(text, out, voice=None, rate=None):
+def _tts_gtts(text, out, voice=None, rate=None, volume=None):
     from gtts import gTTS  # noqa
     # gTTS writes mp3; convert to wav only if ffmpeg is present, else keep mp3 path honest
     tmp = out if out.endswith(".mp3") else out + ".mp3"
@@ -106,7 +160,7 @@ def _tts_gtts(text, out, voice=None, rate=None):
 _TTS_IMPL = {"coqui": _tts_coqui, "pyttsx3": _tts_pyttsx3, "gtts": _tts_gtts}
 
 
-def tts(text, out, engine=None, voice=None, rate=None) -> dict:
+def tts(text, out, engine=None, voice=None, rate=None, volume=None) -> dict:
     if not text or not text.strip():
         raise ValueError("nothing to speak")
     avail = available(TTS_ENGINES)
@@ -116,7 +170,7 @@ def tts(text, out, engine=None, voice=None, rate=None) -> dict:
     name = engine or avail[0]
     if name not in avail:
         raise RuntimeError(f"TTS engine '{name}' not available (have: {', '.join(avail) or 'none'})")
-    _TTS_IMPL[name](text, out, voice, rate)
+    _TTS_IMPL[name](text, out, voice, rate, volume)
     return {"engine": name, "out": out, "text": text}
 
 
@@ -180,9 +234,10 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="voaice_speech", description="voaice Python TTS/STT tools")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("capability")
+    sub.add_parser("voices")
     t = sub.add_parser("tts")
     t.add_argument("--text", required=True); t.add_argument("--out", required=True)
-    t.add_argument("--engine"); t.add_argument("--voice"); t.add_argument("--rate")
+    t.add_argument("--engine"); t.add_argument("--voice"); t.add_argument("--rate"); t.add_argument("--volume")
     s = sub.add_parser("stt")
     s.add_argument("--in", dest="inp", required=True); s.add_argument("--engine")
     s.add_argument("--model"); s.add_argument("--language")
@@ -190,8 +245,10 @@ def main(argv=None) -> int:
     try:
         if a.cmd == "capability":
             print(json.dumps(capability(), indent=2))
+        elif a.cmd == "voices":
+            print(json.dumps(voices(), indent=2))
         elif a.cmd == "tts":
-            print(json.dumps(tts(a.text, a.out, a.engine, a.voice, a.rate)))
+            print(json.dumps(tts(a.text, a.out, a.engine, a.voice, a.rate, a.volume)))
         elif a.cmd == "stt":
             print(json.dumps(stt(a.inp, a.engine, a.model, a.language)))
         return 0

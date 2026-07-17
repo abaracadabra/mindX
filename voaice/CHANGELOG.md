@@ -4,6 +4,32 @@ All notable changes to **voaice**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [3.2.0] — 2026-07-16
+
+### Added
+
+- **The forensic voice lab** — an elegant, corporate scientific admin panel at
+  `/voicelab` (also `/lab`, `/forensic`). Accordion sections (native
+  `<details>`): **Synthesis** (every installed voice — all ~100 pyttsx3 OS
+  voices — with rate and volume), **Voice modification** (pitch, formant, EQ,
+  compressor, de-esser via the in-house VoiceShaper), **Output quality** (format
+  and quality tier), **Input quality** (SNR, capture verdict, speech ratio,
+  integrity), and **Forensic voiceprint** (the six SoundWave measures at 18 dp,
+  a reproducible signature, and `set reference` / `match`). Sans-serif chrome
+  with monospace reserved for measured numbers — the way a lab read-out
+  separates labels from data — a restrained teal-green accent on graphite, and
+  both light and dark themes with a toggle.
+- **`voices` command** on the Python tool + `PythonSpeech.voices()` — enumerates
+  every voice/model the installed engines expose (pyttsx3 voices with their
+  languages/gender + settable rate/volume ranges, Coqui models, vosk models on
+  disk, whisper sizes). `--volume` added to `tts`.
+- **Panel endpoints** on the voaice server: `/api/py/voices`, `/api/py/tts`
+  (synthesise with settings, then measure — the forensic read-out travels with
+  the audio), `/api/measure` (scientific voiceprint + SNR + integrity),
+  `/api/shape` (apply a VoiceShaper chain).
+
+---
+
 ## [3.1.1] — 2026-07-16
 
 ### Added

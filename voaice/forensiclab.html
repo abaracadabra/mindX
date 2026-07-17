@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>voaice · forensic voice lab</title>
+<style>
+  /* Elegant, corporate scientific instrument. Sans-serif for the chrome; the
+     monospace is reserved for measured numbers (tabular), the way a real lab
+     read-out separates labels from data. Graphite ground, one restrained
+     teal-green accent, cool neutrals — both themes designed. */
+  :root {
+    --bg:#0b0e14; --raise:#111620; --panel:#141a25; --line:#212a38; --line-2:#2b3547;
+    --ink:#e6ebf2; --ink-2:#aab6c6; --dim:#6b7887; --faint:#404b5b;
+    --accent:#34d399; --accent-ink:#052018; --accent-soft:#1f3d34;
+    --info:#38bdf8; --warn:#fbbf24; --bad:#f87171;
+    --sans:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+    --mono:'SF Mono','JetBrains Mono',ui-monospace,Menlo,'Courier New',monospace;
+    --shadow:0 1px 0 rgba(255,255,255,.02), 0 24px 60px -40px rgba(0,0,0,.9);
+  }
+  :root[data-theme="light"] {
+    --bg:#f4f6f9; --raise:#ffffff; --panel:#ffffff; --line:#e2e7ee; --line-2:#d3dae4;
+    --ink:#111826; --ink-2:#3f4a5a; --dim:#6b7787; --faint:#c2cad6;
+    --accent:#0d9668; --accent-ink:#ffffff; --accent-soft:#dff3ea;
+    --shadow:0 1px 0 rgba(0,0,0,.02), 0 24px 50px -40px rgba(15,40,30,.35);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg:#f4f6f9; --raise:#ffffff; --panel:#ffffff; --line:#e2e7ee; --line-2:#d3dae4;
+      --ink:#111826; --ink-2:#3f4a5a; --dim:#6b7787; --faint:#c2cad6;
+      --accent:#0d9668; --accent-ink:#ffffff; --accent-soft:#dff3ea;
+      --shadow:0 1px 0 rgba(0,0,0,.02), 0 24px 50px -40px rgba(15,40,30,.35);
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:13px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  .num { font-family:var(--mono); font-variant-numeric:tabular-nums; }
+
+  header { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+    padding:16px clamp(18px,4vw,34px); border-bottom:1px solid var(--line); background:var(--raise); }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .mark { width:30px; height:30px; border-radius:7px; background:linear-gradient(150deg,var(--accent),var(--info)); display:grid; place-items:center; color:var(--accent-ink); font-weight:700; font-size:15px; }
+  header h1 { font-size:14px; font-weight:650; letter-spacing:.02em; margin:0; }
+  header h1 small { display:block; font-weight:400; font-size:11px; color:var(--dim); letter-spacing:.02em; }
+  .status { display:flex; align-items:center; gap:14px; font-size:12px; color:var(--dim); }
+  .status .dot { width:7px; height:7px; border-radius:50%; background:var(--faint); box-shadow:0 0 0 3px transparent; }
+  .status.live .dot { background:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  .status b { color:var(--ink); font-weight:600; }
+  .theme-btn { background:transparent; border:1px solid var(--line-2); color:var(--dim); border-radius:6px; padding:5px 9px; cursor:pointer; font-size:12px; }
+
+  main { max-width:960px; margin:0 auto; padding:22px clamp(14px,4vw,20px) 72px; }
+
+  details { border:1px solid var(--line); border-radius:12px; margin-bottom:12px; background:var(--panel); overflow:hidden; box-shadow:var(--shadow); }
+  summary { list-style:none; cursor:pointer; padding:16px 18px; display:flex; align-items:center; gap:12px; user-select:none; }
+  summary::-webkit-details-marker { display:none; }
+  summary .caret { color:var(--dim); transition:transform .2s ease; font-size:11px; }
+  details[open] summary .caret { transform:rotate(90deg); }
+  summary .t { font-weight:600; font-size:13.5px; letter-spacing:.01em; }
+  summary .tag { margin-left:auto; font-size:11px; color:var(--dim); font-family:var(--mono); }
+  .body { padding:2px 18px 20px; }
+  .body > .hint:first-child { margin-top:0; }
+
+  label.field { display:grid; grid-template-columns:150px 1fr 64px; gap:14px; align-items:center; margin:11px 0; font-size:12.5px; color:var(--ink-2); }
+  label.field > span:first-child { color:var(--ink); }
+  input[type=range] { width:100%; accent-color:var(--accent); height:4px; }
+  input[type=checkbox] { accent-color:var(--accent); width:15px; height:15px; }
+  input[type=text], textarea, select { width:100%; background:var(--raise); color:var(--ink); border:1px solid var(--line-2); border-radius:8px; padding:9px 11px; font-family:var(--sans); font-size:13px; }
+  select { appearance:none; background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),linear-gradient(135deg,var(--dim) 50%,transparent 50%); background-position:calc(100% - 15px) center,calc(100% - 10px) center; background-size:5px 5px,5px 5px; background-repeat:no-repeat; padding-right:30px; }
+  textarea { min-height:56px; resize:vertical; line-height:1.5; }
+  input:focus, textarea:focus, select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  .val { text-align:right; color:var(--ink); }
+
+  button { font-family:var(--sans); font-size:12.5px; font-weight:550; background:var(--raise); color:var(--ink); border:1px solid var(--line-2); border-radius:8px; padding:9px 15px; cursor:pointer; transition:background .12s,border-color .12s; }
+  button:hover:not(:disabled) { border-color:var(--accent); }
+  button.primary { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+  button.primary:hover:not(:disabled) { filter:brightness(1.06); }
+  button:disabled { opacity:.4; cursor:default; }
+  button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .row { display:flex; gap:9px; flex-wrap:wrap; align-items:center; margin-top:13px; }
+  .hint { color:var(--dim); font-size:11.5px; margin-top:11px; line-height:1.55; }
+  .hint code { font-family:var(--mono); color:var(--ink-2); font-size:11px; }
+
+  canvas { width:100%; height:132px; background:var(--raise); border:1px solid var(--line-2); border-radius:10px; display:block; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 28px; margin-top:12px; }
+  .metric { display:flex; justify-content:space-between; align-items:baseline; padding:8px 0; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .metric > span { color:var(--dim); } .metric > b { color:var(--ink); font-weight:600; }
+  .verdict { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; letter-spacing:.01em; }
+  .verdict::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+  .v-clean,.v-match,.v-usable { background:var(--accent-soft); color:var(--accent); }
+  .v-review,.v-probable,.v-noisy { background:rgba(251,191,36,.14); color:var(--warn); }
+  .v-different,.v-unusable,.v-inconclusive { background:rgba(248,113,113,.14); color:var(--bad); }
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+  @media (max-width:640px){ .grid2{grid-template-columns:1fr} label.field{grid-template-columns:110px 1fr 52px} }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="mark">V</div>
+    <h1>voaice · forensic voice lab<small>synthesise · shape · measure — every voice, every setting</small></h1>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="status" id="status"><span class="dot"></span> probing engines…</div>
+    <button class="theme-btn" id="theme" title="toggle theme" aria-label="toggle theme">◐</button>
+  </div>
+</header>
+<main>
+
+  <details open>
+    <summary><span class="caret">▸</span> <span class="t">Synthesis</span> <span class="tag" id="tSynth">—</span></summary>
+    <div class="body">
+      <textarea id="text">The machine speaks for itself, and the lab measures every word.</textarea>
+      <label class="field"><span>engine</span><select id="engine"></select><span></span></label>
+      <label class="field"><span>voice</span><select id="voice"></select><span></span></label>
+      <label class="field"><span>rate (wpm)</span><input type="range" id="rate" min="60" max="360" value="165"><span class="val num" id="rateV">165</span></label>
+      <label class="field"><span>volume</span><input type="range" id="volume" min="0" max="1" step="0.05" value="1"><span class="val num" id="volumeV">1.00</span></label>
+      <div class="row"><button class="primary" id="speak">▶ synthesise</button><button id="play" disabled>♪ play</button></div>
+      <div class="hint" id="synthHint">Python TTS via the venv (pyttsx3 → coqui). Install more with <code>python/install.sh --full</code>.</div>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="caret">▸</span> <span class="t">Voice modification</span> <span class="tag">pitch · formant · EQ · dynamics</span></summary>
+    <div class="body">
+      <label class="field"><span>pitch (semitones)</span><input type="range" id="pitch" min="-12" max="12" step="1" value="0"><span class="val num" id="pitchV">0</span></label>
+      <label class="field"><span>formant</span><input type="range" id="formant" min="0.8" max="1.25" step="0.01" value="1"><span class="val num" id="formantV">1.00</span></label>
+      <label class="field"><span>EQ peak (dB)</span><input type="range" id="eqPeakDb" min="-12" max="12" step="1" value="0"><span class="val num" id="eqPeakDbV">0</span></label>
+      <label class="field"><span>EQ freq (Hz)</span><input type="range" id="eqFreq" min="200" max="8000" step="100" value="3000"><span class="val num" id="eqFreqV">3000</span></label>
+      <label class="field"><span>compress (thr dB)</span><input type="range" id="compress" min="-40" max="0" step="1" value="0"><span class="val num" id="compressV">off</span></label>
+      <label class="field"><span>de-ess</span><input type="checkbox" id="deEss"><span></span></label>
+      <div class="row"><button class="primary" id="shape" disabled>⟿ apply modification</button><button id="revert" disabled>↺ revert</button></div>
+      <div class="hint">In-house VoiceShaper — pitch (constant duration), formant (independent of pitch), RBJ EQ, compressor, de-esser.</div>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="caret">▸</span> <span class="t">Output quality</span> <span class="tag">format · rate · depth</span></summary>
+    <div class="body">
+      <label class="field"><span>format</span><select id="fmt"><option value="wav">WAV (lossless)</option></select><span></span></label>
+      <label class="field"><span>quality tier</span><select id="tier"><option value="high">high — 24-bit</option><option value="studio">studio — 32-float</option><option value="medium">medium — 16-bit</option></select><span></span></label>
+      <div class="row"><button id="export" disabled>⭳ export</button></div>
+      <div class="hint">Export from voaice's in-house WAV codec. Higher tiers preserve more of the shaped signal.</div>
+    </div>
+  </details>
+
+  <details open>
+    <summary><span class="caret">▸</span> <span class="t">Input quality</span> <span class="tag" id="tInput">—</span></summary>
+    <div class="body">
+      <canvas id="scope"></canvas>
+      <div class="grid2" style="margin-top:10px">
+        <div class="metric"><span>SNR</span><b class="num" id="mSnr">—</b></div>
+        <div class="metric"><span>capture</span><b><span class="verdict" id="mSnrV">—</span></b></div>
+        <div class="metric"><span>speech ratio</span><b class="num" id="mSpeech">—</b></div>
+        <div class="metric"><span>integrity</span><b><span class="verdict" id="mInteg">—</span></b></div>
+      </div>
+      <div class="hint">Signal-versus-noise on the current audio (voaice noise module): the room a voice was captured in bounds how faithfully it can be measured or cloned.</div>
+    </div>
+  </details>
+
+  <details open>
+    <summary><span class="caret">▸</span> <span class="t">Forensic voiceprint</span> <span class="tag">18-dp scientific measures</span></summary>
+    <div class="body">
+      <div class="grid2">
+        <div class="metric"><span>dominant F0</span><b class="num" id="fF0">—</b></div>
+        <div class="metric"><span>amplitude</span><b class="num" id="fAmp">—</b></div>
+        <div class="metric"><span>spectral centroid</span><b class="num" id="fCen">—</b></div>
+        <div class="metric"><span>spectral rolloff</span><b class="num" id="fRoll">—</b></div>
+        <div class="metric"><span>zero-crossing rate</span><b class="num" id="fZcr">—</b></div>
+        <div class="metric"><span>harmonic/noise</span><b class="num" id="fHnr">—</b></div>
+        <div class="metric"><span>precision</span><b class="num" id="fPrec">—</b></div>
+        <div class="metric"><span>signature</span><b class="num" id="fHash">—</b></div>
+      </div>
+      <div class="row">
+        <button id="setRef" disabled>◈ set reference</button>
+        <button id="match" disabled>≈ match vs reference</button>
+        <span id="matchOut" style="font-size:11px;color:var(--dim)"></span>
+      </div>
+      <div class="hint">voaice's <code>Forensic</code>: the six SoundWave measures at 18-decimal precision, a reproducible signature, and speaker matching by <code>Forensic.compare</code>.</div>
+    </div>
+  </details>
+</main>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const post = (url, body) => fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }).then(r=>r.json());
+
+for (const [id, fmt] of [['rate',v=>v],['volume',v=>(+v).toFixed(2)],['pitch',v=>(v>0?'+':'')+v],
+  ['formant',v=>(+v).toFixed(2)],['eqPeakDb',v=>(v>0?'+':'')+v],['eqFreq',v=>v],['compress',v=>v==0?'off':v]]) {
+  const el=$(id), out=$(id+'V'); if(el&&out){ el.oninput=()=>out.textContent=fmt(el.value); }
+}
+
+let current = null, reference = null, preShape = null, voicesData = null;
+
+async function init() {
+  try {
+    const cap = await fetch('/api/py/capability').then(r=>r.json());
+    if (cap.error || !cap.tts) { $('status').innerHTML = `<b style="color:var(--warn)">Python speech offline</b>`; $('synthHint').textContent = cap.error || 'run python/install.sh'; return; }
+    $('status').className='status live'; $('status').innerHTML = `<span class="dot"></span> python <b>${cap.python}</b> · tts <b>${cap.tts.resolved||'none'}</b> · stt <b>${cap.stt.resolved||'none'}</b>`;
+    $('tSynth').textContent = cap.tts.available.join(' · ') || 'no engine';
+    $('engine').innerHTML = cap.tts.available.map(e=>`<option>${e}</option>`).join('') || '<option>none</option>';
+    voicesData = await fetch('/api/py/voices').then(r=>r.json());
+    populateVoices();
+    $('engine').onchange = populateVoices;
+  } catch (e) { $('status').textContent = 'server error: ' + e.message; }
+}
+function populateVoices() {
+  const eng = $('engine').value, list = voicesData?.tts?.[eng]?.voices || [];
+  $('voice').innerHTML = list.length
+    ? list.map(x=>`<option value="${x.id}">${x.name}${x.languages?.length?' · '+x.languages[0]:''}</option>`).join('')
+    : '<option value="">(default)</option>';
+  const st = voicesData?.tts?.[eng]?.settings;
+  if (st?.rate) { $('rate').value = st.rate.default; $('rateV').textContent = st.rate.default; }
+}
+
+$('speak').onclick = async () => {
+  const btn=$('speak'); btn.disabled=true; btn.textContent='…synthesising';
+  try {
+    const r = await post('/api/py/tts', { text:$('text').value, engine:$('engine').value, voice:$('voice').value, rate:+$('rate').value, volume:+$('volume').value });
+    if (r.error) throw new Error(r.error);
+    current = { samples:r.samples, sampleRate:r.sampleRate, measured:r.measured }; preShape=null;
+    render(); enable();
+  } catch (e) { $('synthHint').innerHTML = `<span style="color:var(--bad)">${e.message}</span>`; }
+  btn.disabled=false; btn.textContent='▶ synthesise';
+};
+
+$('shape').onclick = async () => {
+  if (!current) return;
+  preShape = preShape || current;
+  const ops = { pitch:+$('pitch').value, formant:+$('formant').value, eqPeakDb:+$('eqPeakDb').value, eqFreq:+$('eqFreq').value, compress:(+$('compress').value)||0, ratio:3, deEss:$('deEss').checked };
+  const r = await post('/api/shape', { samples:current.samples, sampleRate:current.sampleRate, ops });
+  if (r.error) return;
+  current = { samples:r.samples, sampleRate:r.sampleRate, measured:r.measured }; render(); $('revert').disabled=false;
+};
+$('revert').onclick = () => { if (preShape){ current=preShape; preShape=null; $('revert').disabled=true; render(); } };
+$('play').onclick = () => current && playSamples(current.samples, current.sampleRate);
+$('export').onclick = () => { if(!current) return; const wav=encodeWavClient(current.samples, current.sampleRate);
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([wav],{type:'audio/wav'})); a.download='voaice-'+$('tier').value+'.wav'; a.click(); };
+$('setRef').onclick = () => { if(current?.measured){ reference=current.measured; $('matchOut').textContent='reference set — synthesise/shape again, then match'; } };
+$('match').onclick = () => { if (!reference || !current?.measured) return;
+  const c=compareLocal(reference, current.measured); $('matchOut').innerHTML=`<span class="verdict v-${c.verdict}">${c.verdict}</span> ${(c.similarity*100).toFixed(1)}%`; };
+function compareLocal(a,b){ const keys=['dominantFrequency','amplitude','spectralCentroid','spectralRolloff','zeroCrossingRate','harmonicNoiseRatio'];
+  const sc={dominantFrequency:220,amplitude:0.25,spectralCentroid:1500,spectralRolloff:3000,zeroCrossingRate:0.15,harmonicNoiseRatio:12};
+  let d=0; for(const k of keys) d+=Math.min(1,Math.abs((a.features[k]||0)-(b.features[k]||0))/sc[k]);
+  const s=1-d/keys.length; return {similarity:s, verdict:s>=0.9?'match':s>=0.75?'probable':s>=0.55?'inconclusive':'different'}; }
+
+function render() {
+  if (!current) return;
+  const { samples, measured:m } = current;
+  const cv=$('scope'), ctx=cv.getContext('2d'); cv.width=cv.clientWidth||600; cv.height=120;
+  ctx.fillStyle='#010805'; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.strokeStyle='rgba(0,255,156,.25)'; ctx.beginPath(); ctx.moveTo(0,60); ctx.lineTo(cv.width,60); ctx.stroke();
+  ctx.strokeStyle='#00ff9c'; ctx.lineWidth=1.2; ctx.beginPath();
+  const step=samples.length/cv.width;
+  for(let x=0;x<cv.width;x++){ const v=samples[Math.floor(x*step)]||0; const y=60-v*54; x?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+  ctx.stroke();
+  const f=m.features;
+  $('fF0').textContent=f.dominantFrequency.toFixed(2)+' Hz'; $('fAmp').textContent=f.amplitude.toFixed(4);
+  $('fCen').textContent=f.spectralCentroid.toFixed(0)+' Hz'; $('fRoll').textContent=f.spectralRolloff.toFixed(0)+' Hz';
+  $('fZcr').textContent=f.zeroCrossingRate.toFixed(4); $('fHnr').textContent=f.harmonicNoiseRatio.toFixed(2);
+  $('fPrec').textContent=(m.precision*100).toFixed(1)+'%'; $('fHash').textContent=m.hash.slice(0,16)+'…';
+  const s=m.snr;
+  $('mSnr').textContent=s.snrDb==null?'unmeasurable':s.snrDb.toFixed(1)+' dB';
+  setVerdict('mSnrV', s.verdict); $('mSpeech').textContent=((s.speechRatio||0)*100).toFixed(0)+'%';
+  setVerdict('mInteg', m.integrity); $('tInput').textContent = s.snrDb==null?'—':s.verdict;
+}
+function setVerdict(id, v){ const el=$(id); el.textContent=v; el.className='verdict v-'+v; }
+function enable(){ for(const id of ['play','shape','export','setRef','match']) $(id).disabled=false; }
+
+let ac=null;
+function playSamples(samples, sr){ ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+  const buf=ac.createBuffer(1, samples.length, sr); buf.getChannelData(0).set(Float32Array.from(samples));
+  const src=ac.createBufferSource(); src.buffer=buf; src.connect(ac.destination); src.start(); }
+function encodeWavClient(samples, sr){ const n=samples.length; const b=new ArrayBuffer(44+n*2); const dv=new DataView(b);
+  const W=(o,s)=>{for(let i=0;i<s.length;i++)dv.setUint8(o+i,s.charCodeAt(i));};
+  W(0,'RIFF'); dv.setUint32(4,36+n*2,true); W(8,'WAVE'); W(12,'fmt '); dv.setUint32(16,16,true); dv.setUint16(20,1,true);
+  dv.setUint16(22,1,true); dv.setUint32(24,sr,true); dv.setUint32(28,sr*2,true); dv.setUint16(32,2,true); dv.setUint16(34,16,true);
+  W(36,'data'); dv.setUint32(40,n*2,true);
+  let o=44; for(let i=0;i<n;i++){ const s=Math.max(-1,Math.min(1,samples[i])); dv.setInt16(o,s<0?s*0x8000:s*0x7fff,true); o+=2; }
+  return b; }
+
+// theme toggle — respects OS default, remembers the manual choice for the session
+const _root=document.documentElement;
+$('theme').onclick=()=>{ const cur=_root.getAttribute('data-theme')|| (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+  _root.setAttribute('data-theme', cur==='dark'?'light':'dark'); };
+
+init();
+</script>
+</body>
+</html>

@@ -17,6 +17,13 @@ import { VoiceAnalyzer } from './src/VoiceAnalyzer.js';
 import { waveformPath, spectrumBars } from './src/Oscilloscope.js';
 import { NeuralVoiceEngine } from './src/NeuralVoiceEngine.js';
 import { EMOTION_LABELS, EMOTIONS, fanOut } from './src/emotion.js';
+import { PythonSpeech } from './src/python_speech.js';
+import { Forensic } from './src/Forensic.js';
+import { VoiceShaper } from './src/VoiceShaper.js';
+import { snr } from './src/dsp/noise.js';
+import { decodeWav, encodeWav } from './src/audio/wav.js';
+import { tmpdir } from 'node:os';
+import { readFileSync as _rf, unlinkSync as _rm } from 'node:fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.VOAICE_PORT || '7350', 10);
@@ -125,9 +132,80 @@ const server = createServer(async (req, res) => {
     }
   }
   // Voice Lab: mic-first scientific oscilloscope + spectrometer + voice editing + 18-dp cloning.
-  if (pathname === '/voice' || pathname === '/voicelab') {
+  // the forensic voice lab (elegant corporate panel) — the flagship UI
+  if (pathname === '/voicelab' || pathname === '/lab' || pathname === '/forensic' || pathname === '/forensiclab') {
+    const p = join(__dirname, 'forensiclab.html');
+    if (existsSync(p)) { res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(readFileSync(p)); return; }
+  }
+  // the original 3-column live oscilloscope lab, kept at /voice
+  if (pathname === '/voice') {
     const p = join(__dirname, 'voicelab.html');
     if (existsSync(p)) { res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(readFileSync(p)); return; }
+  }
+
+  // ---- forensic voice admin panel routes ----
+  const _py = () => (server._pyspeech ||= new PythonSpeech());
+  const _measure = (samples, sampleRate) => {
+    const buf = Float32Array.from(samples);
+    const f = new Forensic({ sampleRate });
+    const print = f.voiceprint(buf);
+    return { features: print.features, spread: print.spread, precision: print.precision,
+      hash: print.hash, integrity: f.integrity(buf).verdict, snr: snr(buf, sampleRate) };
+  };
+  // every voice/model the installed Python engines expose (all pyttsx3 voices, …)
+  if (pathname === '/api/py/voices' && req.method === 'GET') {
+    try { sendJson(res, 200, await _py().voices()); }
+    catch (e) { sendJson(res, 501, { error: e.message }); }
+    return;
+  }
+  if (pathname === '/api/py/capability' && req.method === 'GET') {
+    try { sendJson(res, 200, await _py().capability()); }
+    catch (e) { sendJson(res, 501, { error: e.message }); }
+    return;
+  }
+  // synthesise with settings, then MEASURE it (forensic readout travels with the audio)
+  if (pathname === '/api/py/tts' && req.method === 'POST') {
+    let tmp;
+    try {
+      const b = JSON.parse((await readBody(req)).toString() || '{}');
+      if (!b.text) return sendJson(res, 400, { error: 'text required' });
+      tmp = join(tmpdir(), `voicelab-${process.pid}-${Date.now()}.wav`);
+      const r = await _py().tts(b.text, tmp, { engine: b.engine, voice: b.voice, rate: b.rate, volume: b.volume });
+      let dec = decodeWav(_rf(tmp));
+      const measured = _measure(dec.samples, dec.sampleRate);
+      sendJson(res, 200, { engine: r.engine, sampleRate: dec.sampleRate,
+        samples: Array.from(dec.samples, v => Math.round(v * 1e4) / 1e4), measured });
+    } catch (e) { sendJson(res, 500, { error: e.message }); }
+    finally { if (tmp && existsSync(tmp)) try { _rm(tmp); } catch { /* */ } }
+    return;
+  }
+  // measure any samples → the six scientific measures + integrity + SNR
+  if (pathname === '/api/measure' && req.method === 'POST') {
+    try {
+      const b = JSON.parse((await readBody(req)).toString() || '{}');
+      if (!Array.isArray(b.samples) || !b.samples.length) return sendJson(res, 400, { error: 'samples[] required' });
+      sendJson(res, 200, _measure(b.samples, Number(b.sampleRate) || 24000));
+    } catch (e) { sendJson(res, 500, { error: e.message }); }
+    return;
+  }
+  // voice MODIFICATION — apply a VoiceShaper chain (pitch/formant/eq/compress/deEss)
+  if (pathname === '/api/shape' && req.method === 'POST') {
+    try {
+      const b = JSON.parse((await readBody(req)).toString() || '{}');
+      if (!Array.isArray(b.samples) || !b.samples.length) return sendJson(res, 400, { error: 'samples[] required' });
+      const sr = Number(b.sampleRate) || 24000;
+      const sh = new VoiceShaper({ samples: Float32Array.from(b.samples), sampleRate: sr });
+      const ops = b.ops || {};
+      if (ops.pitch) sh.pitchShift(Number(ops.pitch));
+      if (ops.formant) sh.formantShift(Number(ops.formant));
+      if (ops.eqPeakDb) sh.eq({ type: 'peaking', freq: Number(ops.eqFreq) || 3000, gainDb: Number(ops.eqPeakDb), q: 1 });
+      if (ops.compress) sh.compress({ thresholdDb: Number(ops.compress) || -18, ratio: Number(ops.ratio) || 3 });
+      if (ops.deEss) sh.deEss();
+      const out = sh.toClip();
+      sendJson(res, 200, { sampleRate: sr, samples: Array.from(out.samples, v => Math.round(v * 1e4) / 1e4),
+        measured: _measure(out.samples, sr) });
+    } catch (e) { sendJson(res, 500, { error: e.message }); }
+    return;
   }
 
   // ---- Neural voice engine routes (the in-house /speak sidecar) ----

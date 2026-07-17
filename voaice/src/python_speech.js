@@ -78,6 +78,11 @@ export class PythonSpeech {
     return this._cap;
   }
 
+  /** Every voice/model the installed engines expose (for a voice picker). */
+  async voices() {
+    return this._run(['voices']);
+  }
+
   /** True if any Python TTS (or STT) engine is installed. */
   async available() {
     const c = await this.capability().catch(() => null);
@@ -96,6 +101,7 @@ export class PythonSpeech {
     if (opts.engine) args.push('--engine', opts.engine);
     if (opts.voice) args.push('--voice', String(opts.voice));
     if (opts.rate) args.push('--rate', String(opts.rate));
+    if (opts.volume != null) args.push('--volume', String(opts.volume));
     return this._run(args);
   }
 

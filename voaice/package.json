@@ -1,7 +1,7 @@
 {
   "name": "voaice",
-  "version": "3.1.1",
-  "description": "voaice v3 \u2014 the complete voice stack for AI: speech-to-text and signal/noise analysis in, text-to-speech and voice shaping out, forensic voiceprints, non-destructive editing, quality-tiered WAV/OGG export. Zero-dependency in-house DSP; native and neural engines load lazily and degrade honestly. The VOICE peer of faicey (the FACE).",
+  "version": "3.2.0",
+  "description": "voaice v3 — the complete voice stack for AI: speech-to-text and signal/noise analysis in, text-to-speech and voice shaping out, forensic voiceprints, non-destructive editing, quality-tiered WAV/OGG export. Zero-dependency in-house DSP; native and neural engines load lazily and degrade honestly. The VOICE peer of faicey (the FACE).",
   "type": "module",
   "main": "src/index.js",
   "exports": {
@@ -59,7 +59,7 @@
     "wav",
     "whisper"
   ],
-  "//deps": "Core DSP (FFT, spectrometer, frequency manipulation) is IN-HOUSE with zero external deps. d3 powers the oscilloscope. Optional analysers (meyda/audiomotion) and the neural engine's onnxruntime-node (CPU, torch-free) load lazily only when present \u2014 isolated builds stay minimal. NO torch, NO transformers, NO Python.",
+  "//deps": "Core DSP (FFT, spectrometer, frequency manipulation) is IN-HOUSE with zero external deps. d3 powers the oscilloscope. Optional analysers (meyda/audiomotion) and the neural engine's onnxruntime-node (CPU, torch-free) load lazily only when present — isolated builds stay minimal. NO torch, NO transformers, NO Python.",
   "dependencies": {
     "d3": "^7.9.0"
   },
