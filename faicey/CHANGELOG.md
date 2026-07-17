@@ -4,6 +4,25 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.5.1] — 2026-07-17
+
+### Docs
+
+- **The iNFT minting path is documented end to end** — [docs/INFT_MINTING.md](./docs/INFT_MINTING.md):
+  the artifact → payload (`inft.js`) → transaction (`minter.js`) → wallet flow,
+  the two function selectors, the viem-verified ABI encoder, the `attachThotRoot`
+  lineage follow-up, and the doctrine boundary (faicey builds the transaction;
+  the wallet owner signs and broadcasts it). Deployment status noted: local anvil
+  only, mainnet awaits the OVERLORD ceremony.
+- **README changelog pointer refreshed** — it had frozen at v2.1.0; it now names
+  the arc through 2.5 (webcam→FAICE capture, the cloned face speaking in the
+  cloned voice, the ERC-7857 payload wired to a submittable mint) and links the
+  new iNFT doc.
+- **`docs/FACE_CLONE.md`** — the print pipeline now points at the on-chain path,
+  so the persona doc and the mint doc cross-reference.
+
+---
+
 ## [2.5.0] — 2026-07-17
 
 ### Added

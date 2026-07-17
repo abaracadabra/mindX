@@ -84,6 +84,15 @@ the union of `registerFacePrint` + `registerVoicePrint`. Either modality alone i
 together they bind one identity. `POST /api/persona` persists. This is the culmination of the
 FACE/VOICE duality — a person cloned across both modalities, emoting in sync.
 
+## On-chain — the persona becomes an Intelligent NFT
+
+The bound persona (or either print alone) mints as an ERC-7857 iNFT on the
+DeltaVerse `iNFT_7857` contract: the print's reproducible hash *is* the token's
+`contentRoot`. `inft.js` builds the mint payload; `minter.js` turns it into a
+ready-to-broadcast transaction — **faicey builds the tx, the wallet owner signs
+it**. The full path (payload → transaction → wallet flow, the two selectors, the
+viem-verified encoder) is documented in [INFT_MINTING.md](./INFT_MINTING.md).
+
 ## Verification
 
 `node src/face_clone/face_clone.test.js` — **8/8**: scale-invariant proportions, 18-dp deterministic
