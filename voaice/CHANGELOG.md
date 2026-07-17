@@ -4,6 +4,26 @@ All notable changes to **voaice**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [3.1.0] — 2026-07-16
+
+### Added
+
+- **Python TTS/STT bridge** (`voaice/python`). The voaice core stays torch-free
+  JS DSP; some speech stacks only live in Python (Coqui TTS, whisper, vosk…), so
+  this reaches them **when a host has them** and degrades honestly when it
+  doesn't — the same doctrine as the JS `voaice/tts` / `voaice/stt`.
+  - `python/voaice_speech.py` — a dependency-probing CLI: `capability`, `tts`
+    (Coqui → pyttsx3 → gTTS), `stt` (whisper → vosk → SpeechRecognition). JSON
+    on stdout; with no engine installed it exits non-zero with a structured
+    `{error}` + install hint, and `stt` **never invents a transcript**.
+  - `PythonSpeech` (`src/python_speech.js`) — the Node wrapper: `capability()`,
+    `available()`, `tts(text, out)`, `stt(wavPath)`. Probes first; a missing
+    engine or a missing Python is a clear error, not a fake result.
+  - `python/requirements.txt` + `python/README.md`: install only what you need;
+    nothing is required by the voaice core.
+
+---
+
 ## [3.0.0] — 2026-07-14
 
 **The complete voice stack.** v3 closes the loop: voice comes *in* (speech-to-text,

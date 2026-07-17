@@ -108,6 +108,10 @@ export {
   breath,
 } from './VoiceShaper.js';
 
-export const VERSION = '3.0.0';
+// Python TTS/STT bridge — reaches optional Python speech stacks (Coqui/whisper/
+// vosk…) through python/voaice_speech.py; probes capability, degrades honestly.
+export { PythonSpeech } from './python_speech.js';
+
+export const VERSION = '3.1.0';
 export const DESCRIPTION =
-  'voaice v3 — the complete voice stack: STT + signal/noise in, TTS + shaping out, forensic measurement, non-destructive editing, quality-tiered export. The VOICE peer of faicey (the FACE).';
+  'voaice v3.1 — the complete voice stack (+ optional Python TTS/STT bridge): STT + signal/noise in, TTS + shaping out, forensic measurement, non-destructive editing, quality-tiered export. The VOICE peer of faicey (the FACE).';

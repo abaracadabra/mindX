@@ -1,0 +1,13 @@
+# voaice Python speech tools — OPTIONAL backends. Install only what you want;
+# the tools probe for whatever is present and degrade honestly. None are
+# required by the voaice core (which is torch-free, zero-Python JS DSP).
+
+# ── text to speech (pick one or more) ──
+# pyttsx3        # offline, uses the OS voices — lightest
+# gTTS           # online, Google — needs network + ffmpeg for .wav
+# TTS            # Coqui — highest quality, heaviest (pulls torch)
+
+# ── speech to text (pick one or more) ──
+# openai-whisper # offline, best quality (pulls torch)
+# vosk           # offline, small models, no torch
+# SpeechRecognition  # online, Google web API — needs network
