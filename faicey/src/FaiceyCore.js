@@ -80,16 +80,45 @@ export class FaiceyCore extends EventEmitter {
         this.expressionWeight = 0.0;
         this.animationSpeed = 1.0;
 
-        // Initialize system
-        this.init();
+        // Kick off initialisation. The constructor cannot await, so the promise
+        // MUST carry its own catch — otherwise a failure here becomes an
+        // unhandled rejection and takes the whole process down with it (which is
+        // exactly what happened to the demo server under Node).
+        this.ready = this.init().catch((error) => {
+            console.error('❌ FaiceyCore initialization failed:', error.message);
+            this.emit('error', error);
+            return { ok: false, error };
+        });
     }
 
     /**
-     * Initialize the complete faicey system
+     * Is a browser present? Audio capture, WebGL and the DOM are browser
+     * concerns; under Node they do not exist, and pretending otherwise is what
+     * makes a headless run crash instead of degrade.
+     */
+    static get isBrowser() {
+        return typeof window !== 'undefined' && typeof navigator !== 'undefined';
+    }
+
+    /**
+     * Initialize the complete faicey system.
+     *
+     * Under Node there is no window, no AudioContext and no WebGL, so the
+     * browser subsystems are SKIPPED rather than attempted: the engine is
+     * rendered client-side (static/vendor/faicey-engine.js), and the server's
+     * job is only to serve it. `headless` is reported, never hidden.
      */
     async init() {
         console.log(`🎭 Initializing FaiceyCore v2.0.0 for ${this.agentId}`);
         console.log(`© Professor Codephreak - Augmented Intelligence Face System`);
+
+        if (!FaiceyCore.isBrowser) {
+            this.headless = true;
+            console.log('🖥️  headless (Node): audio, 3D and D3 are browser subsystems — skipping; rendering happens client-side');
+            await this.initFrequencyTriggers();
+            this.emit('initialized', { agentId: this.agentId, headless: true });
+            return { ok: true, headless: true };
+        }
 
         try {
             await this.initAudioAnalysis();
@@ -98,7 +127,8 @@ export class FaiceyCore extends EventEmitter {
             await this.initFrequencyTriggers();
 
             this.startAnalysis();
-            this.emit('initialized', { agentId: this.agentId });
+            this.emit('initialized', { agentId: this.agentId, headless: false });
+            return { ok: true, headless: false };
 
         } catch (error) {
             console.error('❌ FaiceyCore initialization failed:', error);
@@ -107,10 +137,14 @@ export class FaiceyCore extends EventEmitter {
     }
 
     /**
-     * Initialize audio analysis system
+     * Initialize audio analysis system (browser only — needs AudioContext + mic).
      */
     async initAudioAnalysis() {
         console.log('🔊 Initializing audio analysis...');
+
+        if (!FaiceyCore.isBrowser) {
+            throw new Error('initAudioAnalysis: no browser environment (AudioContext/getUserMedia are browser APIs)');
+        }
 
         try {
             // Create audio context
