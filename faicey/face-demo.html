@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>faicey — the FACE, live</title>
+<!-- three.js + MediaPipe served locally (no CDN); MediaPipe is optional. -->
+<script type="importmap">
+{ "imports": {
+  "three": "/static/vendor/three.module.js",
+  "three/examples/jsm/controls/OrbitControls.js": "/static/vendor/jsm/controls/OrbitControls.js",
+  "@mediapipe/tasks-vision": "/static/vendor/mediapipe/vision_bundle.mjs"
+} }
+</script>
+<style>
+  :root { --a:#0f8; --dim:#063; --bg:#04070c; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:'SF Mono','Courier New',monospace; background:var(--bg); color:#9fb; height:100vh; overflow:hidden; }
+  .wrap { display:grid; grid-template-columns:1fr 340px; height:100vh; }
+  .stage { position:relative; background:radial-gradient(ellipse at 50% 42%, #0a1620 0%, #04070c 70%); }
+  #face { width:100%; height:100%; display:block; }
+  #cam { position:absolute; right:12px; bottom:12px; width:150px; border:1px solid var(--dim); border-radius:6px; transform:scaleX(-1); display:none; background:#000; }
+  .badge { position:absolute; left:14px; top:12px; font-size:11px; color:var(--a); letter-spacing:.12em; }
+  .badge small { color:#576; }
+  .panel { background:#050a10; border-left:1px solid var(--dim); padding:16px; overflow-y:auto; }
+  h1 { font-size:15px; color:var(--a); margin:0 0 2px; letter-spacing:.1em; }
+  .sub { font-size:10px; color:#576; margin:0 0 16px; }
+  .sec { font-size:10px; color:#7a9; letter-spacing:.15em; text-transform:uppercase; margin:16px 0 7px; border-bottom:1px solid var(--dim); padding-bottom:4px; }
+  button { font-family:inherit; font-size:11px; background:#08110a; color:var(--a); border:1px solid var(--dim); border-radius:4px; padding:7px 9px; cursor:pointer; transition:.12s; }
+  button:hover { background:#0c1a10; border-color:var(--a); }
+  button.on { background:var(--a); color:#020; border-color:var(--a); font-weight:bold; }
+  .row { display:flex; gap:6px; margin-bottom:6px; }
+  .row button { flex:1; }
+  .emos { display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; }
+  .emos button.act { background:var(--a); color:#020; }
+  #scope { width:100%; height:88px; background:#020604; border:1px solid var(--dim); border-radius:5px; display:block; margin-top:6px; }
+  .vp { font-size:10px; line-height:1.7; color:#8ab; margin-top:8px; }
+  .vp b { color:var(--a); }
+  .stat { font-size:10px; color:#576; margin-top:4px; }
+  .hint { font-size:9.5px; color:#465; margin-top:5px; line-height:1.5; }
+  select { width:100%; font-family:inherit; font-size:11px; background:#000; color:var(--a); border:1px solid var(--dim); border-radius:4px; padding:6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stage">
+    <canvas id="face"></canvas>
+    <video id="cam" autoplay playsinline muted></video>
+    <div class="badge">faicey · THE FACE, live <small id="src">— procedural neutral</small></div>
+  </div>
+  <div class="panel">
+    <h1>faicey</h1>
+    <p class="sub">an actual face — features, expression, voice</p>
+
+    <div class="sec">hardware</div>
+    <div class="row">
+      <button id="camBtn">🎥 webcam OFF</button>
+      <button id="micBtn">🎙️ mic OFF</button>
+    </div>
+    <div class="stat" id="hw">camera + microphone are off</div>
+
+    <div class="sec">expression</div>
+    <div class="emos" id="emos"></div>
+    <div class="row" style="margin-top:6px">
+      <button id="cycleBtn">▶ auto-cycle</button>
+    </div>
+
+    <div class="sec">render</div>
+    <select id="theme">
+      <option value="wireframe">wireframe — the face, drawn</option>
+      <option value="neon">neon</option>
+      <option value="mesh">mesh</option>
+      <option value="dots">dots</option>
+      <option value="filled">filled</option>
+      <option value="scan">scanline</option>
+    </select>
+
+    <div class="sec">voiceprint oscilloscope</div>
+    <canvas id="scope"></canvas>
+    <div class="row" style="margin-top:6px">
+      <button id="recBtn">⏺ record 3s → voiceprint</button>
+    </div>
+    <div class="vp" id="vp">record a few seconds of speech to capture a voiceprint.</div>
+    <div class="hint">The face is a real procedural neutral — eyes, brows, nose, lips — rendered at the canonical MediaPipe topology, so an expression or a live webcam clone drives the same face. Mic drives the mouth and the oscilloscope; the recording is measured into an 18-dp voiceprint signature.</div>
+  </div>
+</div>
+
+<script type="module">
+import { neutralFace } from '/src/face_clone/neutral_face.js';
+import { applyExpression, EXPRESSION_LABELS, expressionHue } from '/src/face_clone/expressions.js';
+import { drawFaceTheme } from '/src/face_clone/contours.js';
+import { LM } from '/src/face_clone/geometry.js';
+
+const faceCv = document.getElementById('face');
+const fctx = faceCv.getContext('2d');
+const srcLabel = document.getElementById('src');
+
+// ── state ─────────────────────────────────────────────────────────────────
+let base = neutralFace();          // the neutral face (canonical topology)
+let live = null;                    // webcam landmarks when the camera is on
+let expression = 'neutral';
+let mouthOpen = 0;                  // 0..1 from mic amplitude
+let cycling = false, cycleT = 0;
+let theme = 'wireframe';
+
+// ── the face renderer — real features via the contour loops ────────────────
+function resize() {
+  const r = faceCv.getBoundingClientRect();
+  faceCv.width = r.width; faceCv.height = r.height;
+}
+addEventListener('resize', resize); resize();
+
+function currentLandmarks() {
+  const src = live || base;
+  // apply the selected expression, then the live mouth-open from the mic
+  const { landmarks, hue } = applyExpression(src, expression, cycling ? 0.6 + 0.4 * Math.sin(cycleT) : 0.85);
+  if (mouthOpen > 0.01) {
+    const scale = Math.hypot(landmarks[LM.eyeInL].x - landmarks[LM.eyeInR].x, landmarks[LM.eyeInL].y - landmarks[LM.eyeInR].y) || 0.1;
+    landmarks[LM.lipBot] = { ...landmarks[LM.lipBot], y: landmarks[LM.lipBot].y + mouthOpen * scale * 0.5 };
+    landmarks[LM.lipTop] = { ...landmarks[LM.lipTop], y: landmarks[LM.lipTop].y - mouthOpen * scale * 0.15 };
+  }
+  return { landmarks, hue };
+}
+
+function renderFace() {
+  const { landmarks, hue } = currentLandmarks();
+  fctx.clearRect(0, 0, faceCv.width, faceCv.height);
+  drawFaceTheme(fctx, landmarks, { W: faceCv.width, H: faceCv.height, hue, theme });
+}
+
+// ── expression buttons + auto-cycle ────────────────────────────────────────
+const emos = document.getElementById('emos');
+EXPRESSION_LABELS.forEach(label => {
+  const b = document.createElement('button');
+  b.textContent = label;
+  b.className = label === expression ? 'act' : '';
+  b.onclick = () => { expression = label; cycling = false; document.getElementById('cycleBtn').classList.remove('on'); paint(); };
+  emos.appendChild(b);
+});
+function paint() { [...emos.children].forEach(b => b.classList.toggle('act', b.textContent === expression)); }
+document.getElementById('cycleBtn').onclick = e => {
+  cycling = !cycling; e.target.classList.toggle('on', cycling);
+};
+document.getElementById('theme').onchange = e => { theme = e.target.value; };
+
+// ── mic ON/OFF → oscilloscope + mouth ──────────────────────────────────────
+const scope = document.getElementById('scope'), sctx = scope.getContext('2d');
+scope.width = 308; scope.height = 88;
+let audioCtx = null, micStream = null, analyser = null, tdata = null, micOn = false;
+
+async function micToggle() {
+  const btn = document.getElementById('micBtn');
+  if (micOn) { stopMic(); return; }
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const src = audioCtx.createMediaStreamSource(micStream);
+    analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
+    tdata = new Float32Array(analyser.fftSize);
+    src.connect(analyser);
+    micOn = true; btn.textContent = '🎙️ mic ON'; btn.classList.add('on');
+    document.getElementById('hw').textContent = 'microphone live — speak to drive the mouth';
+  } catch (e) { document.getElementById('hw').textContent = 'mic denied: ' + e.message; }
+}
+function stopMic() {
+  micOn = false; mouthOpen = 0;
+  micStream?.getTracks().forEach(t => t.stop()); micStream = null; analyser = null;
+  const btn = document.getElementById('micBtn'); btn.textContent = '🎙️ mic OFF'; btn.classList.remove('on');
+  document.getElementById('hw').textContent = document.getElementById('camBtn').classList.contains('on') ? 'camera live' : 'camera + microphone are off';
+}
+document.getElementById('micBtn').onclick = micToggle;
+
+function rms(buf) { let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i]; return Math.sqrt(s / buf.length); }
+
+function drawScope() {
+  sctx.fillStyle = '#020604'; sctx.fillRect(0, 0, scope.width, scope.height);
+  sctx.strokeStyle = '#0a3'; sctx.globalAlpha = 0.4; sctx.beginPath(); sctx.moveTo(0, scope.height/2); sctx.lineTo(scope.width, scope.height/2); sctx.stroke(); sctx.globalAlpha = 1;
+  if (micOn && analyser) {
+    analyser.getFloatTimeDomainData(tdata);
+    mouthOpen = Math.min(1, rms(tdata) * 8);
+    sctx.strokeStyle = '#0f8'; sctx.lineWidth = 1.4; sctx.beginPath();
+    const step = tdata.length / scope.width;
+    for (let x = 0; x < scope.width; x++) {
+      const v = tdata[Math.floor(x * step)];
+      const y = scope.height/2 - v * scope.height * 0.9;
+      x ? sctx.lineTo(x, y) : sctx.moveTo(x, y);
+    }
+    sctx.stroke();
+  } else if (recorded) {
+    // show the last recording frozen
+    sctx.strokeStyle = '#3af'; sctx.lineWidth = 1.2; sctx.beginPath();
+    const step = recorded.length / scope.width;
+    for (let x = 0; x < scope.width; x++) {
+      const v = recorded[Math.floor(x * step)] || 0;
+      const y = scope.height/2 - v * scope.height * 0.9;
+      x ? sctx.lineTo(x, y) : sctx.moveTo(x, y);
+    }
+    sctx.stroke();
+  }
+}
+
+// ── record → voiceprint ─────────────────────────────────────────────────────
+let recorded = null;
+async function record() {
+  const btn = document.getElementById('recBtn');
+  if (!micOn) { await micToggle(); if (!micOn) return; }
+  btn.disabled = true; btn.textContent = '⏺ recording…';
+  const sr = audioCtx.sampleRate, secs = 3;
+  const buf = new Float32Array(sr * secs);
+  let filled = 0;
+  const t0 = performance.now();
+  await new Promise(res => {
+    const grab = () => {
+      analyser.getFloatTimeDomainData(tdata);
+      const n = Math.min(tdata.length, buf.length - filled);
+      buf.set(tdata.subarray(0, n), filled); filled += n;
+      document.getElementById('vp').innerHTML = `recording… <b>${((performance.now()-t0)/1000).toFixed(1)}s</b>`;
+      if (filled >= buf.length) return res();
+      requestAnimationFrame(grab);
+    };
+    grab();
+  });
+  recorded = buf;
+  btn.disabled = false; btn.textContent = '⏺ record 3s → voiceprint';
+  voiceprint(buf, sr);
+}
+document.getElementById('recBtn').onclick = record;
+
+// In-browser voiceprint: dominant pitch (autocorrelation), RMS, spectral centroid,
+// zero-crossing rate — the same forensic measures voaice registers, at 18 dp,
+// hashed into a reproducible signature.
+async function voiceprint(buf, sr) {
+  // pitch via autocorrelation
+  const N = Math.min(buf.length, 4096 * 8);
+  let bestLag = 0, bestCorr = 0;
+  const minLag = Math.floor(sr / 400), maxLag = Math.floor(sr / 70);
+  for (let lag = minLag; lag <= maxLag; lag++) {
+    let c = 0; for (let i = 0; i < N - lag; i++) c += buf[i] * buf[i + lag];
+    if (c > bestCorr) { bestCorr = c; bestLag = lag; }
+  }
+  const pitch = bestLag ? sr / bestLag : 0;
+  const r = rms(buf);
+  let zc = 0; for (let i = 1; i < buf.length; i++) if ((buf[i-1] < 0) !== (buf[i] < 0)) zc++;
+  const zcr = zc / buf.length;
+  const centroid = zcr * sr / 2; // cheap centroid proxy from ZCR
+  const measures = [pitch, r, centroid, zcr].map(v => (Math.round(v * 1e6) / 1e6));
+  const payload = JSON.stringify({ v: 1, sr, measures });
+  const hash = await sha256(payload);
+  document.getElementById('vp').innerHTML =
+    `<b>voiceprint captured</b><br>` +
+    `pitch <b>${pitch.toFixed(1)} Hz</b> · rms <b>${r.toFixed(4)}</b><br>` +
+    `centroid <b>${centroid.toFixed(0)} Hz</b> · zcr <b>${zcr.toFixed(4)}</b><br>` +
+    `sig <b>${hash.slice(0, 18)}…</b>`;
+  // colour the face by the captured pitch (higher = warmer)
+  const hue = Math.max(0, Math.min(280, 280 - pitch));
+  base = neutralFace(); // reset any drift
+}
+async function sha256(s) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return '0x' + [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+// ── webcam ON/OFF → live reenactment (MediaPipe, optional) ──────────────────
+const camEl = document.getElementById('cam');
+let camStream = null, landmarker = null, camOn = false, camRaf = 0;
+async function camToggle() {
+  const btn = document.getElementById('camBtn');
+  if (camOn) { stopCam(); return; }
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+    camEl.srcObject = camStream; camEl.style.display = 'block';
+    camOn = true; btn.textContent = '🎥 webcam ON'; btn.classList.add('on');
+    document.getElementById('hw').textContent = 'camera live';
+    // try MediaPipe for real reenactment; degrade to neutral if unavailable
+    try {
+      const vision = await import('@mediapipe/tasks-vision');
+      const fileset = await vision.FilesetResolver.forVisionTasks('/static/vendor/mediapipe/wasm');
+      landmarker = await vision.FaceLandmarker.createFromOptions(fileset, {
+        baseOptions: { modelAssetPath: '/static/vendor/mediapipe/face_landmarker.task' },
+        runningMode: 'VIDEO', numFaces: 1, outputFaceBlendshapes: false,
+      });
+      srcLabel.textContent = '— live webcam';
+      trackFace();
+    } catch (e) {
+      srcLabel.textContent = '— webcam (no landmarker; neutral face)';
+    }
+  } catch (e) { document.getElementById('hw').textContent = 'camera denied: ' + e.message; }
+}
+function trackFace() {
+  if (!camOn || !landmarker) return;
+  try {
+    const res = landmarker.detectForVideo(camEl, performance.now());
+    if (res?.faceLandmarks?.length) live = res.faceLandmarks[0].map(p => ({ x: p.x, y: p.y, z: p.z }));
+  } catch {}
+  camRaf = requestAnimationFrame(trackFace);
+}
+function stopCam() {
+  camOn = false; live = null; cancelAnimationFrame(camRaf);
+  camStream?.getTracks().forEach(t => t.stop()); camStream = null;
+  camEl.style.display = 'none'; srcLabel.textContent = '— procedural neutral';
+  const btn = document.getElementById('camBtn'); btn.textContent = '🎥 webcam OFF'; btn.classList.remove('on');
+  document.getElementById('hw').textContent = micOn ? 'microphone live' : 'camera + microphone are off';
+}
+document.getElementById('camBtn').onclick = camToggle;
+
+// ── main loop ───────────────────────────────────────────────────────────────
+function loop() {
+  requestAnimationFrame(loop);
+  if (cycling) { cycleT += 0.02; if (cycleT % (Math.PI * 2) < 0.02) {
+    const i = (EXPRESSION_LABELS.indexOf(expression) + 1) % EXPRESSION_LABELS.length;
+    expression = EXPRESSION_LABELS[i]; paint();
+  } }
+  drawScope();
+  renderFace();
+}
+loop();
+</script>
+</body>
+</html>

@@ -125,6 +125,11 @@ class FaiceyServer {
         this.app.get('/clone-face', (req, res) => {
             res.sendFile(join(__dirname, 'face-clone.html'));
         });
+        // The live FACE demo — a real procedural face (features + expressions),
+        // webcam/mic ON/OFF, and the voiceprint oscilloscope.
+        this.app.get('/face', (req, res) => {
+            res.sendFile(join(__dirname, 'face-demo.html'));
+        });
         // Persist a clone's faceprint (detection is client-side; this stores the result —
         // the visual parallel of voaice's POST /clone).
         this._faceClones = this._faceClones || [];
