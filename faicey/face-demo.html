@@ -37,6 +37,14 @@
   .vp { font-size:10px; line-height:1.7; color:#8ab; margin-top:8px; }
   .vp b { color:var(--a); }
   .stat { font-size:10px; color:#576; margin-top:4px; }
+  select.dev { margin-top:5px; }
+  select:disabled { opacity:.45; cursor:not-allowed; }
+  .track { font-size:10px; margin-top:5px; display:flex; align-items:center; gap:6px; }
+  .track .dot { width:8px; height:8px; border-radius:50%; background:#453; box-shadow:0 0 0 0 rgba(0,0,0,0); transition:.2s; }
+  .track.live .dot { background:var(--a); box-shadow:0 0 8px 1px var(--a); }
+  .track.miss .dot { background:#c86; box-shadow:0 0 6px 1px #c86; }
+  .fr { font-size:10px; margin-top:5px; color:#576; }
+  .fr.ready { color:#7c9; } .fr.warn { color:#c86; } .fr.load { color:#9a7; }
   .hint { font-size:9.5px; color:#465; margin-top:5px; line-height:1.5; }
   select { width:100%; font-family:inherit; font-size:11px; background:#000; color:var(--a); border:1px solid var(--dim); border-radius:4px; padding:6px; }
   input[type=text], #pName, #pDesc { width:100%; font-family:inherit; font-size:11px; background:#000; color:var(--a); border:1px solid var(--dim); border-radius:4px; padding:7px; margin-bottom:6px; }
@@ -64,7 +72,12 @@
       <button id="camBtn">🎥 webcam OFF</button>
       <button id="micBtn">🎙️ mic OFF</button>
     </div>
+    <select id="camSelect" class="dev" title="camera" disabled></select>
+    <select id="micSelect" class="dev" title="microphone" disabled></select>
+    <div class="stat" id="hwCount">enumerating devices…</div>
     <div class="stat" id="hw">camera + microphone are off</div>
+    <div class="track" id="track"><span class="dot"></span><span id="trackText">facial recognition idle</span></div>
+    <div class="fr" id="fr">facial recognition: warming up…</div>
     <button id="capBtn" style="margin-top:6px">◉ capture my face → FAICE</button>
     <div class="stat" id="capState" style="margin-top:5px"></div>
 
@@ -273,6 +286,46 @@ document.getElementById('classicalChk').onchange = e => {
   const badge = document.getElementById('neuralBadge'); if (badge) badge.innerHTML = neuralBadgeText();
 };
 
+// ── device manager: recognise ALL cameras + microphones ────────────────────
+const hasMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+let devices = { cams: [], mics: [] };
+function fillDeviceSelect(id, devs, kind) {
+  const sel = document.getElementById(id); if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = devs.length
+    ? devs.map((d, i) => `<option value="${d.deviceId}">${(d.label || `${kind} ${i + 1}`).replace(/</g, '')}</option>`).join('')
+    : `<option value="">no ${kind} found</option>`;
+  if (prev && devs.some(d => d.deviceId === prev)) sel.value = prev;
+  sel.disabled = devs.length === 0;
+}
+async function enumerateDevices() {
+  if (!navigator.mediaDevices?.enumerateDevices) { setHwCount('device enumeration unsupported'); return; }
+  try {
+    const list = await navigator.mediaDevices.enumerateDevices();
+    devices.cams = list.filter(d => d.kind === 'videoinput');
+    devices.mics = list.filter(d => d.kind === 'audioinput');
+    fillDeviceSelect('camSelect', devices.cams, 'camera');
+    fillDeviceSelect('micSelect', devices.mics, 'microphone');
+    const c = devices.cams.length, m = devices.mics.length;
+    setHwCount(`${c} camera${c !== 1 ? 's' : ''} · ${m} mic${m !== 1 ? 's' : ''} recognised${c && !devices.cams[0].label ? ' (allow access for names)' : ''}`);
+  } catch (e) { setHwCount('device scan failed: ' + e.message); }
+}
+function setHwCount(t) { const el = document.getElementById('hwCount'); if (el) el.textContent = t; }
+const pickedCam = () => document.getElementById('camSelect')?.value || '';
+const pickedMic = () => document.getElementById('micSelect')?.value || '';
+if (navigator.mediaDevices) navigator.mediaDevices.addEventListener?.('devicechange', enumerateDevices);
+
+// ── facial-recognition status + live tracking indicator ─────────────────────
+function setFR(text, cls) { const el = document.getElementById('fr'); if (!el) return; el.textContent = 'facial recognition: ' + text; el.className = 'fr' + (cls ? ' ' + cls : ''); }
+let trackState = null;
+function setTrack(state, pts) {
+  const el = document.getElementById('track'), t = document.getElementById('trackText'); if (!el) return;
+  if (state === trackState && state !== 'live') return; // avoid per-frame churn
+  trackState = state;
+  el.classList.toggle('live', state === 'live'); el.classList.toggle('miss', state === 'miss');
+  if (t) t.textContent = state === 'live' ? `● face tracked · ${pts || 478} landmarks` : state === 'miss' ? '○ no face — centre in frame' : 'facial recognition idle';
+}
+
 // ── mic ON/OFF → oscilloscope + mouth ──────────────────────────────────────
 const scope = document.getElementById('scope'), sctx = scope.getContext('2d');
 scope.width = 308; scope.height = 88;
@@ -281,16 +334,22 @@ let audioCtx = null, micStream = null, analyser = null, tdata = null, micOn = fa
 async function micToggle() {
   const btn = document.getElementById('micBtn');
   if (micOn) { stopMic(); return; }
+  if (!hasMedia) return (document.getElementById('hw').textContent = 'this browser has no media devices API');
+  if (!window.isSecureContext) return (document.getElementById('hw').textContent = 'mic needs HTTPS or localhost (not a secure context)');
   try {
-    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    const id = pickedMic();
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, ...(id ? { deviceId: { exact: id } } : {}) } });
+    enumerateDevices(); // labels are available now that permission is granted
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') { try { await audioCtx.resume(); } catch {} }
     const src = audioCtx.createMediaStreamSource(micStream);
     analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
     tdata = new Float32Array(analyser.fftSize);
     src.connect(analyser);
+    const label = micStream.getAudioTracks()[0]?.label || 'microphone';
     micOn = true; btn.textContent = '🎙️ mic ON'; btn.classList.add('on');
-    document.getElementById('hw').textContent = 'microphone live — speak to drive the mouth';
-  } catch (e) { document.getElementById('hw').textContent = 'mic denied: ' + e.message; }
+    document.getElementById('hw').textContent = `live: ${label.slice(0, 40)} — speak to drive the mouth`;
+  } catch (e) { document.getElementById('hw').textContent = 'mic error — ' + mediaErr(e); }
 }
 function stopMic() {
   micOn = false; mouthOpen = 0;
@@ -299,6 +358,15 @@ function stopMic() {
   document.getElementById('hw').textContent = document.getElementById('camBtn').classList.contains('on') ? 'camera live' : 'camera + microphone are off';
 }
 document.getElementById('micBtn').onclick = micToggle;
+document.getElementById('micSelect').onchange = () => { if (micOn) { stopMic(); micToggle(); } };
+// human-readable getUserMedia errors
+function mediaErr(e) {
+  const n = e?.name || '';
+  if (n === 'NotAllowedError' || n === 'SecurityError') return 'permission denied (allow access in the browser)';
+  if (n === 'NotFoundError' || n === 'OverconstrainedError') return 'the selected device is unavailable';
+  if (n === 'NotReadableError') return 'the device is in use by another app';
+  return e?.message || 'unknown error';
+}
 
 function rms(buf) { let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i]; return Math.sqrt(s / buf.length); }
 
@@ -487,44 +555,77 @@ async function sha256(s) {
   return '0x' + [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
 }
 
-// ── webcam ON/OFF → live reenactment (MediaPipe, optional) ──────────────────
+// ── webcam ON/OFF → live reenactment (MediaPipe) ────────────────────────────
 const camEl = document.getElementById('cam');
-let camStream = null, landmarker = null, camOn = false, camRaf = 0;
+let camStream = null, landmarker = null, landmarkerPromise = null, frReady = false, camOn = false, camRaf = 0;
+
+// The facial recogniser is built ONCE and reused (was rebuilt on every toggle).
+// Warmed at startup so the first camera-on is instant and the UI can report it.
+async function ensureLandmarker() {
+  if (landmarker) return landmarker;
+  if (landmarkerPromise) return landmarkerPromise;
+  setFR('loading MediaPipe 478-landmark model…', 'load');
+  landmarkerPromise = (async () => {
+    const vision = await import('@mediapipe/tasks-vision');
+    const fileset = await vision.FilesetResolver.forVisionTasks('/static/vendor/mediapipe/wasm');
+    const lm = await vision.FaceLandmarker.createFromOptions(fileset, {
+      baseOptions: { modelAssetPath: '/static/vendor/mediapipe/face_landmarker.task' },
+      runningMode: 'VIDEO', numFaces: 1, outputFaceBlendshapes: false,
+      outputFacialTransformationMatrixes: true,
+    });
+    landmarker = lm; frReady = true;
+    setFR('ready — MediaPipe 478-landmark tracker', 'ready');
+    return lm;
+  })().catch(e => { landmarkerPromise = null; setFR('unavailable — falling back to the neutral face (' + (e?.message || e) + ')', 'warn'); return null; });
+  return landmarkerPromise;
+}
+
 async function camToggle() {
   const btn = document.getElementById('camBtn');
   if (camOn) { stopCam(); return; }
+  if (!hasMedia) return (document.getElementById('hw').textContent = 'this browser has no media devices API');
+  if (!window.isSecureContext) return (document.getElementById('hw').textContent = 'camera needs HTTPS or localhost (not a secure context)');
   try {
-    camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+    const id = pickedCam();
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, ...(id ? { deviceId: { exact: id } } : { facingMode: 'user' }) } });
     camEl.srcObject = camStream; camEl.style.display = 'block';
+    enumerateDevices(); // labels available now
+    const label = camStream.getVideoTracks()[0]?.label || 'camera';
     camOn = true; btn.textContent = '🎥 webcam ON'; btn.classList.add('on');
-    document.getElementById('hw').textContent = 'camera live';
-    // try MediaPipe for real reenactment; degrade to neutral if unavailable
-    try {
-      const vision = await import('@mediapipe/tasks-vision');
-      const fileset = await vision.FilesetResolver.forVisionTasks('/static/vendor/mediapipe/wasm');
-      landmarker = await vision.FaceLandmarker.createFromOptions(fileset, {
-        baseOptions: { modelAssetPath: '/static/vendor/mediapipe/face_landmarker.task' },
-        runningMode: 'VIDEO', numFaces: 1, outputFaceBlendshapes: false,
-        outputFacialTransformationMatrixes: true, // the pose matrix — needed for accurate capture
-      });
+    document.getElementById('hw').textContent = `live: ${label.slice(0, 40)}`;
+    setTrack('miss');
+    // build/reuse the recogniser, then track; degrade to neutral if it fails
+    const lm = await ensureLandmarker();
+    if (lm && camOn) {
       srcLabel.textContent = '— live webcam';
       trackFace();
       setTimeout(refreshPersonaState, 400);
-    } catch (e) {
-      srcLabel.textContent = '— webcam (no landmarker; neutral face)';
+    } else if (camOn) {
+      srcLabel.textContent = '— webcam (recogniser offline; neutral face)';
+      setTrack('idle');
     }
-  } catch (e) { document.getElementById('hw').textContent = 'camera denied: ' + e.message; }
+  } catch (e) { stopCam(); document.getElementById('hw').textContent = 'camera error — ' + mediaErr(e); }
 }
+document.getElementById('camSelect').onchange = () => { if (camOn) { stopCam(); camToggle(); } };
+
+let trackMiss = 0, trackErr = 0;
 function trackFace() {
   if (!camOn || !landmarker) return;
   try {
-    const res = landmarker.detectForVideo(camEl, performance.now());
-    if (res?.faceLandmarks?.length) {
-      live = res.faceLandmarks[0].map(p => ({ x: p.x, y: p.y, z: p.z }));
-      liveMatrix = res.facialTransformationMatrixes?.[0]?.data || null;
-      if (capturing) capturing.add({ landmarks: live, matrix: liveMatrix });
+    // guard: detectForVideo throws if the video has no frame yet
+    if (camEl.readyState >= 2 && camEl.videoWidth) {
+      const res = landmarker.detectForVideo(camEl, performance.now());
+      if (res?.faceLandmarks?.length) {
+        live = res.faceLandmarks[0].map(p => ({ x: p.x, y: p.y, z: p.z }));
+        liveMatrix = res.facialTransformationMatrixes?.[0]?.data || null;
+        if (capturing) capturing.add({ landmarks: live, matrix: liveMatrix });
+        trackMiss = 0; setTrack('live', live.length);
+      } else {
+        live = null; if (++trackMiss >= 5) setTrack('miss');
+      }
     }
-  } catch {}
+    trackErr = 0;
+  } catch (e) { if (++trackErr === 10) setFR('tracking error — ' + (e?.message || e), 'warn'); }
   camRaf = requestAnimationFrame(trackFace);
 }
 let liveMatrix = null;
@@ -564,11 +665,12 @@ function setPState(html, warn) { const el = document.getElementById('capState');
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 let capturedFace = null, capturedPrint = null;
 function stopCam() {
-  camOn = false; live = null; cancelAnimationFrame(camRaf);
+  camOn = false; live = null; trackMiss = 0; cancelAnimationFrame(camRaf);
   camStream?.getTracks().forEach(t => t.stop()); camStream = null;
   camEl.style.display = 'none'; srcLabel.textContent = '— procedural neutral';
   const btn = document.getElementById('camBtn'); btn.textContent = '🎥 webcam OFF'; btn.classList.remove('on');
   document.getElementById('hw').textContent = micOn ? 'microphone live' : 'camera + microphone are off';
+  setTrack('idle');
   refreshPersonaState();
 }
 document.getElementById('camBtn').onclick = camToggle;
@@ -799,6 +901,14 @@ function loop() {
 }
 recomputeTopology();
 loop();
+
+// ── startup: recognise devices, warm the recogniser, report readiness ───────
+(function initHardware() {
+  if (!hasMedia) { setHwCount('no camera/microphone API in this browser'); setFR('unavailable (no media API)', 'warn'); return; }
+  if (!window.isSecureContext) { setHwCount('insecure context — cameras/mics need HTTPS or localhost'); setFR('blocked until the page is served over HTTPS/localhost', 'warn'); }
+  enumerateDevices();               // list all cameras + mics (names appear after first grant)
+  ensureLandmarker();               // warm the 478-landmark model so the first capture is instant
+})();
 </script>
 </body>
 </html>

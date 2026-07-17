@@ -4,6 +4,38 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.9.0] — 2026-07-17
+
+### Changed — solid hardware handling: every camera + mic, and live facial recognition
+
+The demo's device and recogniser wiring was fragile — the landmarker was rebuilt
+on every toggle, errors were swallowed, there was no way to pick a device, and no
+feedback on whether a face was actually being tracked. Rebuilt end to end.
+
+- **Every camera and microphone is recognised.** `enumerateDevices()` lists all
+  video + audio inputs into two selectors, with a live count ("N cameras · M mics
+  recognised"). Labels populate after the first grant; the list re-scans on
+  `devicechange` (plug/unplug). Picking a device passes `deviceId: { exact }`, and
+  changing it while live restarts cleanly on the new device.
+- **Facial recognition is built once, warmed at startup, and reused** (it was
+  recreated on every camera-on). A status line reports its real state:
+  *warming up → loading the 478-landmark model → ready*, or *unavailable* with the
+  reason. The model + WASM are vendored and served locally (no CDN).
+- **Live tracking indicator** — a dot that goes green *"● face tracked · 478
+  landmarks"* when the recogniser has a face, amber *"○ no face — centre in frame"*
+  when it doesn't. `detectForVideo` is guarded on the video actually having a
+  frame, and a persistent tracking error surfaces instead of being swallowed.
+- **Honest, specific errors** — permission denied vs device-in-use vs unavailable
+  vs insecure context (cameras/mics need HTTPS or localhost), and the AudioContext
+  is resumed if the browser suspended it. Secure-context + no-media-API are
+  detected up front.
+- Docs: [docs/HARDWARE.md](./docs/HARDWARE.md).
+
+Served end-to-end at `/face`; the demo, the modules, the MediaPipe bundle, the
+model and the WASM all verified `200`. Suite unchanged and green: 78.
+
+---
+
 ## [2.8.0] — 2026-07-17
 
 ### Added — the classical enhancement fallback
