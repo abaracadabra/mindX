@@ -4,6 +4,31 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.3.0] — 2026-07-17
+
+### Added
+
+- **The avatar speaks — the cloned face expresses from the cloned voice.** A new
+  `/api/speak` endpoint synthesises text (voaice Python TTS), shapes the voice
+  toward the captured voiceprint's F0 (VoiceShaper pitch — so the avatar speaks
+  in ~its own voice, guarded to plausible speech fundamentals so a harmonic
+  misread can't over-shift), and returns the samples plus the utterance's
+  **emotion→FACE params** (voaice's `toFace` fan-out — the emotion vocabulary is
+  identical on both sides, so it maps cleanly).
+- **`🗣 speak`** in the live demo: the avatar synthesises the text, plays it
+  through a Web Audio analyser, and drives **lip-sync + expression from the
+  playing speech** — the mouth opens on the speech's inflection (the same
+  fast-attack envelope the mic uses), the face wears the utterance's emotion, and
+  the mouth oscilloscope shows the spoken waveform between the lips. The captured
+  face (from `◉ capture my face`) is the speaker: it looks like the person and
+  now speaks and emotes in the cloned voice. Falls back to the browser's
+  SpeechSynthesis when the voaice TTS peer is offline.
+
+This closes the aivatar next-release spec: accurate webcam→FAICE (2.2.0) + Python
+TTS/STT (voaice 3.1–3.2) + the cloned face expressing from the cloned voice.
+
+---
+
 ## [2.2.0] — 2026-07-17
 
 ### Added

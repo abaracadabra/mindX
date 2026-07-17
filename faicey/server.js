@@ -209,6 +209,47 @@ class FaiceyServer {
             try { res.json(voaice.Forensic.compare(a, b)); }
             catch (e) { res.status(500).json({ error: e.message }); }
         });
+        // THE AVATAR SPEAKS — synthesise text, shape the voice toward the cloned
+        // voiceprint, and return the samples + the emotion→FACE params. The demo
+        // plays the audio and drives lip-sync + expression from it: the cloned
+        // face expresses from the cloned voice.
+        this.app.post('/api/speak', async (req, res) => {
+            const { text, emotion = 'neutral', intensity = 0.8, targetF0 } = req.body || {};
+            if (!text || !String(text).trim()) return res.status(400).json({ error: 'text required' });
+            const voaice = await _loadVoaice();
+            if (!voaice?.PythonSpeech || !voaice?.Forensic) return res.status(501).json({ error: 'speaking needs the voaice peer (TTS + forensic)' });
+            let tmp;
+            try {
+                const py = new voaice.PythonSpeech();
+                const cap = await py.available().catch(() => ({ tts: false }));
+                if (!cap.tts) return res.status(501).json({ error: 'no Python TTS engine — run voaice/python/install.sh' });
+                const { tmpdir } = await import('node:os');
+                const { readFileSync, unlinkSync } = await import('node:fs');
+                tmp = join(dirname(fileURLToPath(import.meta.url)), '..', 'voaice', 'python', `speak-${process.pid}-${Date.now()}.wav`);
+                await py.tts(text, tmp, {});
+                let dec = voaice.decodeWav(readFileSync(tmp));
+                let clip = { samples: dec.samples, sampleRate: dec.sampleRate };
+                // shape toward the cloned voice: pitch-shift the TTS toward the
+                // captured voiceprint's F0 so the avatar speaks in ~its own voice.
+                let shiftedTo = null;
+                if (targetF0 && voaice.VoiceShaper) {
+                    const f = new voaice.Forensic({ sampleRate: clip.sampleRate });
+                    const f0 = f.voiceprint(clip.samples).features.dominantFrequency;
+                    // only shift when BOTH F0s are plausible speech fundamentals — a
+                    // harmonic misread (e.g. espeak measuring ~1.5 kHz) would over-shift.
+                    const ok = (x) => x >= 70 && x <= 350;
+                    if (ok(f0) && ok(targetF0)) {
+                        const semis = Math.max(-8, Math.min(8, 12 * Math.log2(targetF0 / f0)));
+                        if (Math.abs(semis) > 0.4) { clip = new voaice.VoiceShaper(clip).pitchShift(semis).toClip(); shiftedTo = targetF0; }
+                    }
+                }
+                // emotion → face params (voaice's fan-out — the shared vocabulary)
+                const face = voaice.toFace ? voaice.toFace({ label: emotion, intensity }) : { expression: emotion, weight: intensity, hue: 150 };
+                res.json({ sampleRate: clip.sampleRate, samples: Array.from(clip.samples, v => Math.round(v * 1e4) / 1e4),
+                    face, emotion, shiftedTo });
+            } catch (e) { res.status(500).json({ error: e.message }); }
+            finally { if (tmp) try { const { unlinkSync } = await import('node:fs'); unlinkSync(tmp); } catch { /* */ } }
+        });
         // Give a cloned face to a .persona: store a face artifact AND, if the named .persona exists,
         // write embodiment.face (faceprint + cloneProportions) into it so the persona's faicey wears it.
         this.app.post('/api/persona/face', (req, res) => {

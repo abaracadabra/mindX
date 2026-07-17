@@ -96,6 +96,14 @@
     </div>
     <div class="vp" id="match"></div>
 
+    <div class="sec">avatar speaks</div>
+    <input id="sayText" type="text" value="I am your avatar, and I speak for myself." />
+    <div class="row" style="margin-top:2px">
+      <select id="sayEmotion" style="flex:2"></select>
+      <button id="sayBtn" style="flex:1">🗣 speak</button>
+    </div>
+    <div class="vp" id="sayOut">the avatar synthesises the text, shapes it toward the cloned voice, and expresses it — lip-sync + emotion driven by the speech.</div>
+
     <div class="sec">persona</div>
     <div class="row">
       <button id="mCreate" class="on">✦ create</button>
@@ -128,6 +136,7 @@ import { personaPrint } from '/src/face_clone/persona.js';
 const faceCv = document.getElementById('face');
 const fctx = faceCv.getContext('2d');
 const srcLabel = document.getElementById('src');
+const post = (url, body) => fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }).then(r=>r.json());
 
 // ── state ─────────────────────────────────────────────────────────────────
 let base = neutralFace();          // the neutral face (canonical topology)
@@ -162,7 +171,8 @@ function renderFace() {
   fctx.clearRect(0, 0, faceCv.width, faceCv.height);
   drawFaceTheme(fctx, landmarks, { W: faceCv.width, H: faceCv.height, hue, theme });
   // the voice, shown BETWEEN the lips — the mouth is its own oscilloscope
-  if (micOn && tdata) drawMouthScope(fctx, landmarks, tdata, { W: faceCv.width, H: faceCv.height, hue, gain: 1.6 });
+  if (speaking && speakData) drawMouthScope(fctx, landmarks, speakData, { W: faceCv.width, H: faceCv.height, hue, gain: 1.6 });
+  else if (micOn && tdata) drawMouthScope(fctx, landmarks, tdata, { W: faceCv.width, H: faceCv.height, hue, gain: 1.6 });
 }
 
 // ── expression buttons + auto-cycle ────────────────────────────────────────
@@ -225,23 +235,23 @@ function drawScope() {
   sctx.strokeStyle = '#0a3'; sctx.globalAlpha = 0.4; sctx.beginPath(); sctx.moveTo(0, scope.height/2); sctx.lineTo(scope.width, scope.height/2); sctx.stroke(); sctx.globalAlpha = 1;
   // the reference trace, drawn faintly behind — the "oscilloscope matching" overlay
   if (refBuf) traceScope(refBuf, '#f6a', 0.35, 1);
-  if (micOn && analyser) {
-    analyser.getFloatTimeDomainData(tdata);
-    // inflection-driven mouth: level opens it, but a sudden RISE (a syllable
-    // onset) opens it further and faster — the mouth pops on inflection, then
-    // eases shut. Fast attack, slow release.
-    const level = rms(tdata);
+  // inflection-driven mouth: level opens it, a sudden RISE (a syllable onset)
+  // pops it open and it eases shut. Same envelope for the mic AND for the
+  // avatar's own speech — so the cloned face lip-syncs to the cloned voice.
+  const driveMouth = (data) => {
+    const level = rms(data);
     const inflection = Math.max(0, level - lastLevel); lastLevel = level;
     const target = Math.min(1, level * 7 + inflection * 22);
     mouthOpen += (target - mouthOpen) * (target > mouthOpen ? 0.55 : 0.14);
-    sctx.strokeStyle = '#0f8'; sctx.lineWidth = 1.4; sctx.beginPath();
-    const step = tdata.length / scope.width;
-    for (let x = 0; x < scope.width; x++) {
-      const v = tdata[Math.floor(x * step)];
-      const y = scope.height/2 - v * scope.height * 0.9;
-      x ? sctx.lineTo(x, y) : sctx.moveTo(x, y);
-    }
-    sctx.stroke();
+  };
+  const traceLive = (data) => { sctx.strokeStyle = '#0f8'; sctx.lineWidth = 1.4; sctx.beginPath();
+    const step = data.length / scope.width;
+    for (let x = 0; x < scope.width; x++) { const v = data[Math.floor(x * step)]; const y = scope.height/2 - v * scope.height * 0.9; x ? sctx.lineTo(x, y) : sctx.moveTo(x, y); }
+    sctx.stroke(); };
+  if (speaking && speakAnalyser) {                 // the avatar's own voice drives the face
+    speakAnalyser.getFloatTimeDomainData(speakData); driveMouth(speakData); traceLive(speakData);
+  } else if (micOn && analyser) {
+    analyser.getFloatTimeDomainData(tdata); driveMouth(tdata); traceLive(tdata);
   } else if (recorded) {
     // show the last recording frozen
     sctx.strokeStyle = '#3af'; sctx.lineWidth = 1.2; sctx.beginPath();
@@ -472,6 +482,53 @@ function stopCam() {
 }
 document.getElementById('camBtn').onclick = camToggle;
 document.getElementById('capBtn').onclick = captureFace;
+
+// ── the avatar speaks — the cloned face expresses from the cloned voice ──────
+// Synthesise the text (voaice TTS, shaped toward the captured voiceprint's F0 so
+// it speaks in ~its own voice), play it, and drive lip-sync + emotion FROM the
+// playing audio: mouth opens on the speech inflection, the face wears the
+// utterance's emotion. The captured face (if any) is the speaker.
+let speaking = false, speakAnalyser = null, speakData = null;
+(function fillSayEmotions(){ const sel=document.getElementById('sayEmotion');
+  sel.innerHTML = EXPRESSION_LABELS.map(e=>`<option${e==='happy'?' selected':''}>${e}</option>`).join(''); })();
+async function speak() {
+  const btn = document.getElementById('sayBtn'), out = document.getElementById('sayOut');
+  const text = document.getElementById('sayText').value.trim();
+  if (!text) return;
+  btn.disabled = true; btn.textContent = '…';
+  const emotion = document.getElementById('sayEmotion').value;
+  const targetF0 = lastVoiceprint?.features?.dominantFrequency || (capturedPrint ? undefined : undefined);
+  try {
+    const r = await post('/api/speak', { text, emotion, intensity: 0.85, targetF0 });
+    if (r.error) throw new Error(r.error);
+    // set the face's emotion for the duration of the utterance
+    expression = r.face?.expression && EXPRESSION_LABELS.includes(r.face.expression) ? r.face.expression : emotion;
+    cycling = false; document.getElementById('cycleBtn').classList.remove('on'); paint();
+    await playThroughAnalyser(r.samples, r.sampleRate);
+    out.innerHTML = `spoke <b>${emotion}</b>${r.shiftedTo?` · voice shaped to ${r.shiftedTo.toFixed(0)} Hz`:''} — lip-synced + expressed`;
+  } catch (e) {
+    // graceful fallback: browser SpeechSynthesis (no lip-analysis, but it speaks)
+    if (window.speechSynthesis) { speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+      out.innerHTML = `<span style="color:#a96">voaice TTS offline — spoke via the browser (${e.message.slice(0,40)})</span>`; }
+    else out.innerHTML = `<span style="color:#c86">${e.message}</span>`;
+  }
+  btn.disabled = false; btn.textContent = '🗣 speak';
+}
+function playThroughAnalyser(samples, sr) {
+  return new Promise((resolve) => {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const buf = audioCtx.createBuffer(1, samples.length, sr);
+    buf.getChannelData(0).set(Float32Array.from(samples));
+    const src = audioCtx.createBufferSource(); src.buffer = buf;
+    speakAnalyser = audioCtx.createAnalyser(); speakAnalyser.fftSize = 2048;
+    speakData = new Float32Array(speakAnalyser.fftSize);
+    src.connect(speakAnalyser); speakAnalyser.connect(audioCtx.destination);
+    speaking = true; lastLevel = 0;
+    src.onended = () => { speaking = false; speakAnalyser = null; mouthOpen = 0; resolve(); };
+    src.start();
+  });
+}
+document.getElementById('sayBtn').onclick = speak;
 
 // ── persona: create / clone → .persona ──────────────────────────────────────
 // CREATE invents a synthetic persona from the current FACE (no real subject,
