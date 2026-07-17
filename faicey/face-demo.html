@@ -39,6 +39,13 @@
   .stat { font-size:10px; color:#576; margin-top:4px; }
   .hint { font-size:9.5px; color:#465; margin-top:5px; line-height:1.5; }
   select { width:100%; font-family:inherit; font-size:11px; background:#000; color:var(--a); border:1px solid var(--dim); border-radius:4px; padding:6px; }
+  input[type=text], #pName, #pDesc { width:100%; font-family:inherit; font-size:11px; background:#000; color:var(--a); border:1px solid var(--dim); border-radius:4px; padding:7px; margin-bottom:6px; }
+  input::placeholder { color:#465; }
+  #bindBtn { width:100%; margin-top:2px; }
+  .chk { display:flex; gap:6px; align-items:flex-start; font-size:10px; color:#8ab; line-height:1.4; margin-bottom:7px; cursor:pointer; }
+  .chk input { margin-top:1px; accent-color:var(--a); }
+  .pstate { font-size:10px; color:#576; margin-bottom:7px; line-height:1.6; }
+  .pstate .ok { color:var(--a); } .pstate .no { color:#846; }
 </style>
 </head>
 <body>
@@ -81,7 +88,24 @@
       <button id="recBtn">⏺ record 3s → voiceprint</button>
     </div>
     <div class="vp" id="vp">record a few seconds of speech to capture a voiceprint.</div>
-    <div class="hint">The face is a real procedural neutral — eyes, brows, nose, lips — rendered at the canonical MediaPipe topology, so an expression or a live webcam clone drives the same face. Mic drives the mouth and the oscilloscope; the recording is measured into an 18-dp voiceprint signature.</div>
+
+    <div class="sec">persona</div>
+    <div class="row">
+      <button id="mCreate" class="on">✦ create</button>
+      <button id="mClone">⎘ clone</button>
+    </div>
+    <input id="pName" placeholder="name — e.g. Jaimla" />
+    <input id="pDesc" placeholder="description — 'I am the machine learning agent'" />
+    <div id="consentRow" style="display:none">
+      <label class="chk"><input type="checkbox" id="pConsent" /> I am the subject and consent to this synthetic likeness &amp; voice.</label>
+    </div>
+    <div class="pstate" id="pState"></div>
+    <button id="bindBtn">⟐ bind → .persona</button>
+    <div class="vp" id="pOut">a persona binds this FACE (and voice) into one signed identity — the union of faceprint ⊕ voiceprint.</div>
+    <div class="row" id="pActions" style="display:none;margin-top:6px">
+      <button id="dlBtn">⭳ download .persona</button>
+    </div>
+    <div class="hint">The face is a real procedural neutral — eyes, brows, nose, lips — rendered at the canonical MediaPipe topology, so an expression or a live webcam clone drives the same face. Mic drives the mouth and the oscilloscope; the recording is measured into an 18-dp voiceprint signature. <b>Create</b> invents a synthetic persona; <b>Clone</b> binds your captured face + voice under consent — the browser form of aivatar&rsquo;s <code>.persona</code>.</div>
   </div>
 </div>
 
@@ -89,7 +113,9 @@
 import { neutralFace } from '/src/face_clone/neutral_face.js';
 import { applyExpression, EXPRESSION_LABELS, expressionHue } from '/src/face_clone/expressions.js';
 import { drawFaceTheme } from '/src/face_clone/contours.js';
-import { LM } from '/src/face_clone/geometry.js';
+import { LM, proportions } from '/src/face_clone/geometry.js';
+import { measureFaceprint } from '/src/face_clone/faceprint.js';
+import { personaPrint } from '/src/face_clone/persona.js';
 
 const faceCv = document.getElementById('face');
 const fctx = faceCv.getContext('2d');
@@ -246,15 +272,24 @@ async function voiceprint(buf, sr) {
   const measures = [pitch, r, centroid, zcr].map(v => (Math.round(v * 1e6) / 1e6));
   const payload = JSON.stringify({ v: 1, sr, measures });
   const hash = await sha256(payload);
+  // shape it the way personaPrint() consumes a print: hash + measuresStr + precisionScore.
+  // precision is a confidence proxy — loud, clearly-pitched speech scores higher.
+  const precision = Math.max(0, Math.min(1, 0.5 * Math.min(1, r * 12) + 0.5 * (pitch > 70 && pitch < 400 ? 1 : 0.3)));
+  lastVoiceprint = {
+    hash,
+    measuresStr: measures.map(v => v.toString()),
+    precisionScore: (Math.round(precision * 1e9) * 1e9).toString(),
+    features: { pitch, rms: r, centroid, zcr },
+  };
   document.getElementById('vp').innerHTML =
     `<b>voiceprint captured</b><br>` +
     `pitch <b>${pitch.toFixed(1)} Hz</b> · rms <b>${r.toFixed(4)}</b><br>` +
     `centroid <b>${centroid.toFixed(0)} Hz</b> · zcr <b>${zcr.toFixed(4)}</b><br>` +
     `sig <b>${hash.slice(0, 18)}…</b>`;
-  // colour the face by the captured pitch (higher = warmer)
-  const hue = Math.max(0, Math.min(280, 280 - pitch));
+  refreshPersonaState();
   base = neutralFace(); // reset any drift
 }
+let lastVoiceprint = null;
 async function sha256(s) {
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
   return '0x' + [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
@@ -281,6 +316,7 @@ async function camToggle() {
       });
       srcLabel.textContent = '— live webcam';
       trackFace();
+      setTimeout(refreshPersonaState, 400);
     } catch (e) {
       srcLabel.textContent = '— webcam (no landmarker; neutral face)';
     }
@@ -300,8 +336,112 @@ function stopCam() {
   camEl.style.display = 'none'; srcLabel.textContent = '— procedural neutral';
   const btn = document.getElementById('camBtn'); btn.textContent = '🎥 webcam OFF'; btn.classList.remove('on');
   document.getElementById('hw').textContent = micOn ? 'microphone live' : 'camera + microphone are off';
+  refreshPersonaState();
 }
 document.getElementById('camBtn').onclick = camToggle;
+
+// ── persona: create / clone → .persona ──────────────────────────────────────
+// CREATE invents a synthetic persona from the current FACE (no real subject,
+// no consent needed). CLONE binds your captured face + voice under consent.
+// The binding (personaPrint) and the .persona shape mirror aivatar, so a file
+// made here loads and re-grades in aivatar with full provenance.
+let personaMode = 'create';
+let lastPersona = null;
+
+function setMode(m) {
+  personaMode = m;
+  document.getElementById('mCreate').classList.toggle('on', m === 'create');
+  document.getElementById('mClone').classList.toggle('on', m === 'clone');
+  document.getElementById('consentRow').style.display = m === 'clone' ? 'block' : 'none';
+  document.getElementById('bindBtn').textContent = m === 'clone' ? '⟐ clone → .persona' : '✦ create → .persona';
+  refreshPersonaState();
+}
+document.getElementById('mCreate').onclick = () => setMode('create');
+document.getElementById('mClone').onclick = () => setMode('clone');
+
+function refreshPersonaState() {
+  const el = document.getElementById('pState'); if (!el) return;
+  const faceReady = personaMode === 'clone' ? !!live : true; // clone needs a real webcam face
+  const voiceReady = !!lastVoiceprint;
+  const mark = (ok, on, off) => `<span class="${ok ? 'ok' : 'no'}">${ok ? '☑' : '☐'} ${ok ? on : off}</span>`;
+  el.innerHTML = personaMode === 'clone'
+    ? `${mark(faceReady, 'webcam face', 'turn the webcam on')} · ${mark(voiceReady, 'voice', 'record a voiceprint')}`
+    : `${mark(true, 'procedural face', '')} · ${mark(voiceReady, 'voice (optional)', 'voice: none — face-only')}`;
+}
+
+// Build a faceprint from whatever face is on screen (webcam clone or neutral).
+async function faceprintNow() {
+  const src = personaMode === 'clone' ? live : (live || base);
+  if (!src) return null;
+  const prop = proportions(src);
+  return measureFaceprint(prop, { confidence: personaMode === 'clone' ? 0.9 : 1, symmetry: 1, frontality: 1 });
+}
+
+async function bind() {
+  const btn = document.getElementById('bindBtn');
+  const out = document.getElementById('pOut');
+  const name = (document.getElementById('pName').value || '').trim();
+  const desc = (document.getElementById('pDesc').value || '').trim();
+  if (!name) { out.innerHTML = '<span style="color:#c86">name the persona first.</span>'; return; }
+
+  if (personaMode === 'clone') {
+    if (!live) { out.innerHTML = '<span style="color:#c86">turn the webcam on to clone a real face.</span>'; return; }
+    if (!lastVoiceprint) { out.innerHTML = '<span style="color:#c86">record a voiceprint to clone the voice.</span>'; return; }
+    if (!document.getElementById('pConsent').checked) { out.innerHTML = '<span style="color:#c86">consent is required to clone a real subject.</span>'; return; }
+  }
+  btn.disabled = true; btn.textContent = 'binding…';
+
+  const face = await faceprintNow();
+  const voice = lastVoiceprint; // may be null for a face-only create
+  const bound = await personaPrint({ face, voice, label: name });
+
+  // .persona (v2-shaped, aivatar-compatible subset) — built in the browser.
+  const consent = personaMode === 'clone'
+    ? { kind: 'self', subject: name, statement: 'The subject authorises this synthetic likeness and voice.' }
+    : { kind: 'synthetic', subject: null, statement: 'No real subject: this persona is invented.' };
+  const now = new Date().toISOString();
+  const persona = {
+    v: 2, kind: 'aivatar-persona',
+    identity: { name, label: name, description: desc || null, agent_id: name.toLowerCase().replace(/\s+/g, '_') },
+    cognition: { behavioral_traits: [], beliefs: {}, desires: {}, inference: {}, authority: {} },
+    embodiment: {
+      face: face ? { faceprint: { hash: face.hash, measuresStr: face.measuresStr, precisionScore: face.precisionScore.toString() }, source: personaMode === 'clone' ? 'webcam' : 'procedural', render: 'wireframe' } : null,
+      voice: voice ? { voiceprint: { hash: voice.hash, measuresStr: voice.measuresStr, precisionScore: voice.precisionScore }, engine: 'captured', features: voice.features } : null,
+      rig: { fps: 60, blendshapes: 52 },
+    },
+    fidelity: { mode: 'basic', realism: null, measured: { faceFrames: personaMode === 'clone' ? 1 : 0, voicePrecision: voice ? Number(voice.precisionScore) / 1e18 : undefined }, note: 'browser capture — re-grade in aivatar for the earned tier + signed provenance' },
+    provenance: { consent: { ...consent, at: now }, custody: [{ action: 'bind', at: now, note: `${bound.modalities.join('+')} in the faicey demo` }], manifest: null },
+    media: { formats: ['wav'] },
+    aiml: { inft: { registerArgs: bound.registerArgs, modalities: bound.modalities } },
+    hash: bound.hash,
+  };
+  lastPersona = persona;
+
+  // persist the print (not the whole file) to the running demo
+  try {
+    await fetch('/api/persona', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ persona: bound.hash, modalities: bound.modalities, faceHash: face?.hash, voiceHash: voice?.hash }) });
+  } catch {}
+
+  out.innerHTML =
+    `<b>${personaMode === 'clone' ? 'cloned' : 'created'}: ${name}</b><br>` +
+    `modalities <b>${bound.modalities.join(' ⊕ ') || 'face'}</b><br>` +
+    `persona <b>${bound.hash.slice(0, 20)}…</b><br>` +
+    `<span style="color:#576">tier basic — re-grade in aivatar for realism/hyperrealism + signed provenance</span>`;
+  document.getElementById('pActions').style.display = 'flex';
+  btn.disabled = false; setMode(personaMode);
+}
+document.getElementById('bindBtn').onclick = bind;
+
+document.getElementById('dlBtn').onclick = () => {
+  if (!lastPersona) return;
+  const blob = new Blob([JSON.stringify(lastPersona, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${lastPersona.identity.agent_id || 'persona'}.persona`;
+  a.click(); URL.revokeObjectURL(a.href);
+};
+setMode('create');
 
 // ── main loop ───────────────────────────────────────────────────────────────
 function loop() {
