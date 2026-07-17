@@ -1,6 +1,6 @@
 {
   "name": "voaice",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "voaice v3 — the complete voice stack for AI: speech-to-text and signal/noise analysis in, text-to-speech and voice shaping out, forensic voiceprints, non-destructive editing, quality-tiered WAV/OGG export. Zero-dependency in-house DSP; native and neural engines load lazily and degrade honestly. The VOICE peer of faicey (the FACE).",
   "type": "module",
   "main": "src/index.js",
@@ -23,7 +23,7 @@
     "./python": "./src/python_speech.js"
   },
   "scripts": {
-    "test": "node test/voicey.test.js && node test/v3.test.js && node test/python.test.js",
+    "test": "node test/voicey.test.js && node test/v3.test.js && node test/python.test.js && node src/finmeasure.test.js && node src/scifi_substrate.test.js",
     "test:all": "node test/voicey.test.js && node test/v3.test.js && node test/neural.test.js",
     "test:fast": "node test/voicey.test.js && node test/v3.test.js && node test/python.test.js",
     "serve": "node server.js",

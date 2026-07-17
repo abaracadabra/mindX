@@ -2,17 +2,22 @@
 
 **The complete voice stack for AI.** Speech in, speech out, measured throughout.
 
-[![version](https://img.shields.io/badge/version-3.0.0-0a6?style=flat-square)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-3.3.0-0a6?style=flat-square)](./CHANGELOG.md)
 [![license](https://img.shields.io/badge/license-MIT-0a6?style=flat-square)](./LICENSE)
-[![tests](https://img.shields.io/badge/tests-27%20offline-0a6?style=flat-square)](#testing)
+[![tests](https://img.shields.io/badge/tests-50%20offline-0a6?style=flat-square)](#testing)
 [![required deps](https://img.shields.io/badge/required%20deps-0-0a6?style=flat-square)](#design-principles)
 
-voaice is the **VOICE** peer of [faicey](https://github.com/Professor-Codephreak/faicey) (the FACE).
-With facerig (the RIG) and the cognitive `.persona` (the MIND) they compose
-**[aivatar](https://github.com/Professor-Codephreak/aivatar)** — a person's AI model that
-looks, speaks, rigs and thinks.
+voaice is the **VOICE** peer of [faicey](https://github.com/Professor-Codephreak/faicey) (the FACE)
+and [facerig](https://github.com/Professor-Codephreak/facerig) (the RIG). With the cognitive
+`.persona` (the MIND) they compose **[aivatar](https://github.com/Professor-Codephreak/aivatar)** —
+a person's AI model that looks, speaks, rigs and thinks.
 
-> Face and voice are peers. Either runs, ships and evolves without the other.
+From the high-end UI the whole suite is **ollywoo** — the Hollywood of AI avatars — staged inside
+**[DeltaVerse](https://deltaverse.pythai.net)**, where **irecto** (the director) deploys the finished
+personas into the realm.
+
+> Face and voice are peers. Either runs, ships and evolves without the other — and both light up
+> together under **irecto** in **ollywoo**.
 
 ---
 
@@ -49,6 +54,24 @@ looks, speaks, rigs and thinks.
 | **scientific** | `voaice` | measurement — 18-decimal fixed-point registers, reproducible hashes, on-chain ready |
 | **exporter** | `voaice/exporter` | delivery — `.wav` 16/24/32-float, `.ogg` Vorbis, quality tiers |
 | **oscilloscope** | `voaice/oscilloscope` | visualisation — d3 waveform and spectrum |
+| **accuracy** | `voaice/finmeasure` | quant-finance estimation — Kalman-stabilised ƒ₀ ± 95% CI, jitter/shimmer (EWMA σ), z-score splice detection, at EVM 18-dp |
+| **hud** | `voaice/scifi_substrate` | shared sci-fi HUD substrate — evolved from the DeltaVerse participant field, one visual language with [faicey](https://github.com/Professor-Codephreak/faicey) |
+
+---
+
+## The oscilloscope
+
+```
+  scope   ╱╲      ╱╲      ╱╲      ╱╲          ⎍ triggered · zoom 1–32×
+  ────────╲╱──────╲╱──────╲╱──────╲╱────────  ƒ₀ 220.14 ± 0.83 Hz · A3
+  spectrum ▁▂▅█▆▃▂▁ ▁▃▂▁  ▁▂▁   ▁ ▁          colour = frequency
+  waterfall ░▒▓█▓▒░░▒▓▒░░░▒▒░░░░░▒░░░  ▼ time  inferno · hover ƒ/t/dB
+```
+
+A scientific overlay oscilloscope: **YIN** frequency measurement, a colour-coded
+spectrum, an inferno **spectrogram waterfall** (hover to read ƒ / time / dB), edge
+triggering and zoom, forensic measures (centroid, rolloff, Praat HNR), and a
+Kalman-stabilised **ƒ₀ ± 95 % confidence interval** — every number at EVM 18-dp.
 
 ---
 
@@ -106,6 +129,21 @@ await exportClip(shaped, { format: 'ogg', quality: 'studio', path: 'out.ogg' });
 
 ---
 
+## Professional & scientific
+
+voaice earns fidelity — it never asserts it. The same stack runs at three tiers,
+and each higher tier is a *measured* step, not a label:
+
+| tier | voice | measurement | provenance |
+|---|---|---|---|
+| **basic** | native OS TTS (pyttsx3), the formant floor as a guaranteed audible fallback | browser-level estimate, clearly labelled | consent stamp |
+| **professional** | neural voices + the full **VoiceShaper** (pitch · formant · EQ · compress · de-ess) and the LUFS-normalising editor; `.wav` 16/24/32-float and `.ogg` quality tiers | the forensic **voiceprint** — the six SoundWave measures, integrity screening, speaker **compare**, custody chain | signed manifest |
+| **scientific** | cloned voice held to the captured voiceprint's F0 | **18-decimal fixed-point** registers + reproducible hashes (on-chain ready); **YIN** ƒ₀ with a Kalman-stabilised **± 95 % confidence interval**; **jitter / shimmer** (EWMA volatility), **HNR** (Praat), spectrogram waterfall — accuracy stated, not claimed | reproducible + registerable |
+
+The scientific tier is the point: a voice measurement you can **defend** — carried
+to conventional EVM 18 decimals, with its own confidence interval, reproducible
+byte-for-byte, and ready to travel on-chain or into a `.persona`.
+
 ## Design principles
 
 **Honest capability.** Every module probes the host and reports what it can do *before* you
@@ -146,7 +184,7 @@ the dependency-free path and says so.
 ## Testing
 
 ```bash
-npm test          # 27 offline checks, seconds — no models, no network
+npm test          # 50 offline checks, seconds — no models, no network
 npm run test:all  # adds the neural suite (loads real weights when present)
 ```
 
@@ -171,11 +209,19 @@ node server.js    # http://localhost:7350 — spectrometer + oscilloscope, d3 se
 - **[aivatar](https://github.com/Professor-Codephreak/aivatar)** — where the voice becomes a
   being: earned fidelity tiers (basic · professional · scientific → realism · hyperrealism),
   consent, custody chain, signed provenance
+- **[faicey](https://github.com/Professor-Codephreak/faicey)** (FACE) ·
+  **[facerig](https://github.com/Professor-Codephreak/facerig)** (RIG) — the peers voaice ships with
+- **ollywoo** — the whole suite from the high-end UI, staged in
+  **[DeltaVerse](https://deltaverse.pythai.net)**; **irecto** directs and deploys
 
 ## Lineage
 
 Voice concerns separated out of [faicey](https://github.com/Professor-Codephreak/faicey)
-(2026-06); the complete stack cut as v3 (2026-07).
+(2026-06); the complete stack cut as v3 (2026-07). The peers —
+[faicey](https://github.com/Professor-Codephreak/faicey) (FACE),
+[facerig](https://github.com/Professor-Codephreak/facerig) (RIG), voaice (VOICE) — compose the
+**aivatar** being, presented from the high-end UI as **ollywoo** and staged inside **DeltaVerse**,
+where **irecto** deploys.
 
 ---
 

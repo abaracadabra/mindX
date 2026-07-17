@@ -4,6 +4,33 @@ All notable changes to **voaice**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [3.3.0] — 2026-07-17
+
+### Added — the shared sci-fi substrate + a quant-finance accuracy toolset
+
+- **`scifi_substrate.js`** — a shared, dependency-free sci-fi HUD substrate,
+  **evolved from the DeltaVerse participant field** (the drifting "stars are
+  people") fused with instrument chrome (corner brackets, reticle, grid, sweep).
+  It is the **same module** [faicey](https://github.com/Professor-Codephreak/faicey)
+  ships, so faicey and voaice now share one visual language across the aivatar
+  constellation. Pure layout geometry + a seedable, deterministic particle field
+  (4 tests); the canvas draw is the browser layer.
+- **`finmeasure.js`** — quantitative-finance estimation applied to voice
+  measurement for **accuracy**: a **Kalman filter** stabilises the frequency track
+  into an optimal estimate with a **95 % confidence interval**; **jitter / shimmer**
+  fall straight out of EWMA volatility (RiskMetrics σ) of the pitch / amplitude
+  track — the real forensic voice measures; plus moments (skew/kurtosis),
+  Bollinger bands, and z-score **outlier / splice detection**. Everything is
+  carried at **conventional EVM 18-decimal precision** (`toFixed18Str`, signed +
+  carry-safe — the same fixed-point scale as the voiceprint). 14 tests.
+- **README** — a **Professional & scientific** tier table (earned, measured
+  fidelity), a minimal oscilloscope display, and the two new modules. The suite
+  is cross-linked — faicey (FACE) · facerig (RIG) · voaice (VOICE) — and framed as
+  **ollywoo**, the whole thing from the high-end UI, staged inside **DeltaVerse**
+  where **irecto** directs and deploys. 50 offline tests.
+
+---
+
 ## [3.2.0] — 2026-07-16
 
 ### Added
