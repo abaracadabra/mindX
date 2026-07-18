@@ -4,6 +4,19 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.17.0] — 2026-07-18
+
+### Changed — the mouth shows a real waveform when speaking
+
+The mouth oscilloscope (the voice drawn between the lips) went from a single thin
+trace to a proper scope: a faint **baseline**, a **filled waveform area** down to
+it, and the trace on top — and when the **avatar speaks** it is emphasised
+(brighter, thicker, and **glowing**), so you can read the spoken waveform in the
+mouth. Still clipped to the lip contour and driven by the same speech/mic samples.
+Mock-ctx test updated (fill + speaking path). Suite green: 152.
+
+---
+
 ## [2.16.1] — 2026-07-17
 
 ### Changed — the ears show a frequency response when they pulse

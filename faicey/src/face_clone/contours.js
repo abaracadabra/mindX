@@ -93,30 +93,35 @@ export function drawFaceWireframe(ctx, landmarks, opts) {
  * @param {{W,H,hue,gain?}} opts
  */
 export function drawMouthScope(ctx, landmarks, wave, opts) {
-  const { W, H, hue = 150, gain = 1.4 } = opts;
+  const { W, H, hue = 150, gain = 1.4, speaking = false } = opts;
   const loop = CONTOURS.lipsOuter.map((i) => landmarks[i]).filter(Boolean);
   if (loop.length < 4 || !wave || !wave.length) return;
   const T = fit(landmarks, W, H);
   const pts = loop.map(T);
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const p of pts) { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); }
-  const midY = (minY + maxY) / 2, half = (maxY - minY) / 2;
+  const midY = (minY + maxY) / 2, half = (maxY - minY) / 2, w = maxX - minX;
+  if (w < 2) return;
+  const yAt = (x) => { const v = wave[Math.floor((x / w) * (wave.length - 1))] || 0; return midY - Math.max(-1, Math.min(1, v * gain)) * half * 0.92; };
   ctx.save();
   // clip to the lip polygon so the scope is CONTAINED by the lips
   ctx.beginPath();
   pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
   ctx.closePath();
   ctx.clip();
-  // a faint inner glow, then the trace
-  ctx.strokeStyle = `hsl(${hue},95%,62%)`;
-  ctx.lineWidth = 1.3;
+  // baseline
+  ctx.strokeStyle = `hsla(${hue},80%,50%,.28)`; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(minX, midY); ctx.lineTo(maxX, midY); ctx.stroke();
+  // filled waveform area (down to the baseline) — reads as a real scope when speaking
+  ctx.beginPath(); ctx.moveTo(minX, midY);
+  for (let x = 0; x <= w; x++) ctx.lineTo(minX + x, yAt(x));
+  ctx.lineTo(maxX, midY); ctx.closePath();
+  ctx.fillStyle = `hsla(${hue},95%,60%,${speaking ? 0.3 : 0.16})`; ctx.fill();
+  // the trace — brighter, thicker, and glowing while the avatar speaks
+  if (speaking) { ctx.shadowColor = `hsl(${hue},95%,66%)`; ctx.shadowBlur = 7; }
+  ctx.strokeStyle = `hsl(${hue},95%,${speaking ? 72 : 62}%)`; ctx.lineWidth = speaking ? 1.9 : 1.3; ctx.lineJoin = 'round';
   ctx.beginPath();
-  const w = maxX - minX;
-  for (let x = 0; x <= w; x++) {
-    const v = wave[Math.floor((x / w) * (wave.length - 1))] || 0;
-    const px = minX + x, py = midY - Math.max(-1, Math.min(1, v * gain)) * half * 0.9;
-    x ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
-  }
+  for (let x = 0; x <= w; x++) { const px = minX + x, py = yAt(x); x ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
   ctx.stroke();
   ctx.restore();
 }

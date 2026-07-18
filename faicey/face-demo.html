@@ -360,7 +360,7 @@ function renderFace() {
     }
   }
   // the voice, shown BETWEEN the lips — the mouth is its own oscilloscope
-  if (speaking && speakData) drawMouthScope(fctx, landmarks, speakData, { W: faceCv.width, H: faceCv.height, hue, gain: 1.6 });
+  if (speaking && speakData) drawMouthScope(fctx, landmarks, speakData, { W: faceCv.width, H: faceCv.height, hue, gain: 1.6, speaking: true });
   else if (micOn && tdata) drawMouthScope(fctx, landmarks, tdata, { W: faceCv.width, H: faceCv.height, hue, gain: 1.6 });
   // anatomical overlays: eye-camera, ear-speakers, third eye, and the morph
   const Tc = computeFit(landmarks, faceCv.width, faceCv.height);

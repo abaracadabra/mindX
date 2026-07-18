@@ -117,17 +117,22 @@ await test('the mouth oscilloscope is clipped to the lips and drawn inside them'
   // a mock 2D context that records the calls we care about
   const trace = [];
   let clipped = false, stroked = false;
+  let filled = false;
   const ctx = {
     save() {}, restore() {}, beginPath() {}, closePath() {},
-    clip() { clipped = true; }, stroke() { stroked = true; },
+    clip() { clipped = true; }, stroke() { stroked = true; }, fill() { filled = true; },
     moveTo(x, y) { trace.push([x, y]); }, lineTo(x, y) { trace.push([x, y]); },
-    set strokeStyle(v) {}, set lineWidth(v) {},
+    set strokeStyle(v) {}, set lineWidth(v) {}, set fillStyle(v) {}, set lineJoin(v) {},
+    set shadowColor(v) {}, set shadowBlur(v) {},
   };
   const W = 200, H = 240;
   const wave = Float32Array.from({ length: 512 }, (_, i) => Math.sin(i / 8));
   drawMouthScope(ctx, F, wave, { W, H, hue: 150 });
   assert.ok(clipped, 'the scope is clipped (contained by the lips)');
   assert.ok(stroked, 'the waveform is drawn');
+  assert.ok(filled, 'the waveform area is filled (a real scope)');
+  // speaking emphasis draws too (glow/thicker) without error
+  drawMouthScope(ctx, F, wave, { W, H, hue: 150, speaking: true });
   // the trace must sit within the rendered lip bounding box
   const lipYs = CONTOURS.lipsOuter.map(i => F[i]).filter(Boolean);
   assert.ok(lipYs.length >= 4 && trace.length > 10, 'traced across the mouth');
