@@ -4,6 +4,20 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.19.1] — 2026-07-18
+
+### Docs
+
+- Brought the deep-dive docs current with the recent releases:
+  **WEBGL_RENDER.md** now covers the projected 2D overlays (`projectPoint` +
+  `lastMVP`) that make the mouth waveform + ear spectra track the 3D head;
+  **FACE_CONTROLS.md** documents the audio-reactive overlays (mouth waveform + ear
+  frequency response, in every mode) and the corrected ear/mouth roles;
+  **OSCILLOSCOPE.md** cross-links the on-face scopes; the **README** deep-dive list
+  adds FACE_CONTROLS.md + FACE_CLONE.md and extends the summary through 2.19.
+
+---
+
 ## [2.19.0] — 2026-07-18
 
 ### Changed — the ear frequency response now works in WebGL 3D too

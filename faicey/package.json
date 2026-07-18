@@ -1,6 +1,6 @@
 {
   "name": "@mindx/faicey",
-  "version": "2.19.0",
+  "version": "2.19.1",
   "description": "Advanced 3D face rendering system with voice print analysis, frequency triggers, and inflection detection for mindX autonomous agents",
   "main": "src/FaiceyCore.js",
   "type": "module",

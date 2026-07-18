@@ -6,6 +6,10 @@ forensic measures. The algorithms are the canonical open-source ones, chosen
 after reviewing how real scopes and pitch trackers work; nothing is a heuristic
 stand-in (`src/face_clone/oscilloscope.js`, pure + headless-tested).
 
+The same DSP also drives the **on-face** scopes — the mouth's waveform between the
+lips and the ears' colour-coded frequency response — which track the face in
+every render mode (see [FACE_CONTROLS.md](./FACE_CONTROLS.md)).
+
 ## Frequency measurement — YIN
 
 The fundamental is measured with **YIN** (de Cheveigné & Kawahara, 2002) — the

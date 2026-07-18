@@ -5,8 +5,8 @@ Each sense organ drives the hardware it represents — the interface *is* the fa
 | feature | drives | because |
 |---------|--------|---------|
 | 👁 **eye** | the **camera** (webcam on/off) | the eye is a camera — and a camera has an eye |
-| 👂 **ear** | the **microphone** input — and it **pulses like a speaker** with the audio | the ear hears |
-| 👄 **mouth** | the **output audio** (volume / mute) | the mouth speaks |
+| 👂 **ear** | the **microphone** input — and it **pulses like a speaker showing a live frequency response** | the ear hears |
+| 👄 **mouth** | the **output audio** (volume / mute) — and it **shows the voice as a waveform** | the mouth speaks |
 | 👃 **nose** | **networking diagnostics** (latency, jitter, connection) | the nose smells the network |
 | 🩸 right **nostril** | **blockchain scan** — the connected wallet's balance (18-dp), nonce, chain | one nostril sniffs the chain |
 | 🔎 left **nostril** | **RAGE search** — the knowledge index at rage.pythai.net | the other sniffs knowledge |
@@ -52,6 +52,23 @@ a distance.
 Clicking the mouth opens a small output panel — a **volume** slider and **mute** —
 that drives a Web Audio gain node on the avatar's speech, so the mouth literally
 governs what comes out.
+
+## Audio-reactive overlays (mouth + ears)
+
+The face is also a live instrument for the sound flowing through it:
+
+- **the mouth shows the voice as a waveform** — a filled, glowing oscilloscope
+  clipped to the lip contour, emphasised while the avatar speaks
+  (`drawMouthScope` / `drawMouthScopeAt`);
+- **the ears pulse like speakers, each showing a frequency response** — the
+  spectrum binned into 12 log-spaced bands, drawn as colour-coded radial bars
+  fanning from the ear (low→red, high→violet), longest where that band is loud
+  (`drawEarBandsAt`, fed by the same FFT as the scope).
+
+Both render in **every mode**. In the 2D modes they use the renderer's fit
+transform; in **webgl** they are projected through the 3D camera
+([WEBGL_RENDER.md](./WEBGL_RENDER.md)) so they track the mouth and ears as the
+head turns.
 
 ## Morph modes + age
 

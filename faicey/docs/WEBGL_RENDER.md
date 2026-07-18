@@ -44,6 +44,27 @@ drawn with the same lightweight WebGL technology that draws its participants.
   real depth reads. If WebGL is unavailable it falls back to the 2D shaded
   surface and says so.
 
+## Projected 2D overlays — the mouth waveform + ear spectra track the 3D head
+
+The audio-reactive overlays (the mouth oscilloscope and the ear frequency
+response) are 2D, but they must land on a face that turns in perspective. So they
+are **projected through the same camera the GPU used**:
+
+- the renderer exposes its **`lastMVP`** (the model-view-projection it drew with);
+- **`projectPoint(p, mvp, W, H)`** maps a mesh-space point to screen pixels
+  (returning `null` behind the camera) — tested: origin → screen centre, +X →
+  right, +Y → up, behind → null;
+- `drawWebglOverlays` projects the outer-lip landmarks and the ear centroids onto
+  a transparent overlay canvas over the WebGL view, then draws the mouth waveform
+  (`drawMouthScopeAt`) and each ear's colour-coded radial spectrum
+  (`drawEarBandsAt`) at the projected points.
+
+So the **speaking mouth waveform** and the **ear frequency response** track the
+mouth and ears even as the head rotates — the same overlays the 2D modes draw via
+the fit transform, here driven by the real 3D projection. The per-feature draws
+are shared between the 2D face canvas and the WebGL overlay, so there is one
+implementation, two coordinate sources.
+
 ## What it earns
 
 WebGL is a better *rendering* of the same measured mesh — real depth,
