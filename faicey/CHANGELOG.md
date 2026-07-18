@@ -4,6 +4,36 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.15.0] — 2026-07-17
+
+### Added — the full anatomical control surface + morph modes
+
+The face became a complete instrument. On top of eye/ear/mouth (2.14):
+
+- 👃 **the nose is networking diagnostics** — click it to ping (latency, jitter,
+  connection); 🩸 **right nostril → blockchain scan** (the connected wallet's
+  balance at **18-dp**, nonce, chain — read-only); 🔎 **left nostril → RAGE
+  search** (the rage.pythai.net index, proxied with a link fallback).
+  (`src/face_clone/nose_tools.js` — ping stats, JSON-RPC, wei→ETH 18-dp,
+  address validation, search ranking; 8 tests.)
+- 🧠 **left brain → analytical/math tools, right brain → creativity/expression.**
+- 👁 **third eye → the deep diagnostic matrix** — a semi-hidden easter egg that
+  **isn't always there** (it fades in intermittently); it aggregates every tool.
+- 👂 **the ears pulse like speakers** with the live audio level.
+- **Morph modes** (`morph.js`, `mech.js`): **human ↔ machine** slides one side
+  into a tough, detailed **endoskeleton** (a generic cyborg — not any one film's
+  character); plus **vampire / elf / dragon / pleiadian** archetypes, all
+  procedural and landmark-tracked, at a slider's intensity. 5 + 6 tests.
+- **Age slider** child → elder (recorded in the `.persona`), and **image upload**
+  as the morph basis (MediaPipe IMAGE-mode detection → geometry + texture).
+- Server: `/api/net/ping` + `/api/rage/search` (best-effort proxy). The persona
+  payload records `morph` + `age`.
+- Suite green: **152**.
+
+Detail: [docs/FACE_CONTROLS.md](./docs/FACE_CONTROLS.md).
+
+---
+
 ## [2.14.0] — 2026-07-17
 
 ### Added — the face is the control surface + a webcam range finder

@@ -265,6 +265,21 @@ class FaiceyServer {
                 res.json(payload);
             } catch (e) { res.status(500).json({ error: e.message }); }
         });
+        // Network diagnostics ping target (the nose) — a tiny same-origin endpoint.
+        this.app.get('/api/net/ping', (req, res) => { res.json({ ok: true, t: Date.now() }); });
+        // RAGE search proxy (the left nostril) — best-effort fetch of the WP search
+        // index; returns a link to fall back on when the fetch is blocked.
+        this.app.get('/api/rage/search', async (req, res) => {
+            const q = String(req.query.q || '').slice(0, 120);
+            const base = 'https://rage.pythai.net';
+            const link = `${base}/?s=${encodeURIComponent(q)}`;
+            try {
+                const r = await fetch(`${base}/wp-json/wp/v2/search?search=${encodeURIComponent(q)}&per_page=8`, { signal: AbortSignal.timeout(4000) });
+                if (!r.ok) throw new Error('status ' + r.status);
+                const items = (await r.json()).map((x) => ({ title: x.title, url: x.url }));
+                res.json({ ok: true, query: q, items, link });
+            } catch (e) { res.json({ ok: false, query: q, items: [], link, reason: e.message }); }
+        });
         // Neural renderer capability — honest report. Dormant unless an operator has
         // deposited an ONNX runtime + weights (none are shipped); the fidelity gate
         // caps the verdict at realism until a neural render measures through it.

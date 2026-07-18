@@ -81,6 +81,18 @@
   .ctlhint { position:absolute; left:12px; bottom:10px; font-size:9px; color:#576; letter-spacing:.03em; }
   .outpanel { display:none; gap:6px; align-items:center; margin-top:6px; font-size:10px; color:#8ab; }
   .outpanel input[type=range] { flex:1; accent-color:var(--a); }
+  .mrow { display:flex; align-items:center; gap:6px; font-size:10px; color:#8ab; margin-top:5px; }
+  .mrow span:first-child { min-width:62px; } .mrow span:last-child { min-width:34px; text-align:right; font-variant-numeric:tabular-nums; color:var(--a); }
+  .mrow input[type=range] { flex:1; accent-color:var(--a); }
+  .uprow { display:block; margin-top:6px; font-size:10px; color:#8ab; cursor:pointer; border:1px dashed var(--dim); border-radius:4px; padding:6px; text-align:center; }
+  .toolpanel { position:absolute; left:12px; right:12px; top:40px; max-height:70%; overflow:auto; background:rgba(2,10,14,.94); border:1px solid #22e0ff; border-radius:6px; padding:10px; display:none; z-index:5; box-shadow:0 0 20px rgba(34,224,255,.2); }
+  .toolpanel.open { display:block; }
+  .tphead { display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#22e0ff; letter-spacing:.1em; text-transform:uppercase; margin-bottom:8px; }
+  .tphead button { background:none; border:1px solid #22e0ff; color:#22e0ff; padding:2px 7px; }
+  #tpBody { font-size:11px; color:#bfe0e8; line-height:1.6; }
+  #tpBody b { color:#22e0ff; font-variant-numeric:tabular-nums; }
+  #tpBody .grid { display:grid; grid-template-columns:1fr 1fr; gap:3px 12px; }
+  #tpBody a { color:#7fd7ff; }
 </style>
 </head>
 <body>
@@ -91,7 +103,8 @@
     <video id="cam" autoplay playsinline muted></video>
     <div class="badge">faicey · THE FACE, live <small id="src">— procedural neutral</small></div>
     <div class="dist" id="dist"></div>
-    <div class="ctlhint" id="ctlhint">👁 eye = camera · 👂 ear = mic · 👄 mouth = output — click a feature</div>
+    <div class="ctlhint" id="ctlhint">👁 eye=camera · 👂 ear=mic · 👄 mouth=output · 👃 nose=network · 🧠 forehead=tools — click a feature</div>
+    <div class="toolpanel" id="toolPanel"><div class="tphead"><span id="tpTitle">tool</span><button id="tpClose">✕</button></div><div id="tpBody"></div></div>
   </div>
   <div class="panel">
     <h1>faicey</h1>
@@ -131,6 +144,12 @@
       <option value="scan">scanline</option>
     </select>
     <div class="hint" id="photorealHint" style="display:none">Photoreal maps <b>your captured frame</b> onto the measured mesh — capture your face (◉) first. Real texture on real geometry; it re-warps as the face expresses. It does <i>not</i> synthesise novel views or claim neural hyperrealism.</div>
+
+    <div class="sec">morph</div>
+    <select id="morphMode"></select>
+    <div class="mrow"><span>human ↔ morph</span><input id="morphInt" type="range" min="0" max="100" value="0"><span id="morphIntLbl">0%</span></div>
+    <div class="mrow"><span>age</span><input id="ageSlider" type="range" min="0" max="100" value="40"><span id="ageLbl">adult</span></div>
+    <label class="uprow" for="morphImg">⬆ upload image as morph basis<input id="morphImg" type="file" accept="image/*" style="display:none"></label>
     <div class="hint" id="neuralBadge" style="display:none"></div>
     <label id="classicalToggle" style="display:none" class="row" style="gap:6px;align-items:center;margin-top:4px"><input type="checkbox" id="classicalChk" checked> classical enhancement (seam-feather · unsharp · tone)</label>
 
@@ -203,6 +222,9 @@ import { applyExpression, EXPRESSION_LABELS } from '/src/face_clone/expressions.
 import { drawFaceTheme, drawMouthScope, computeFit, CONTOURS } from '/src/face_clone/contours.js';
 import { featureRegions, featureAtPoint } from '/src/face_clone/face_controls.js';
 import { rangeFind } from '/src/face_clone/distance.js';
+import { pingStats, connectionSummary, rpcPayload, weiToEth, formatScan, isAddress, rankResults } from '/src/face_clone/nose_tools.js';
+import { mechFactor, faceCenterX, MECH_PALETTE } from '/src/face_clone/mech.js';
+import { MORPH_MODES, morphMode, morphPalette, clampIntensity, ageBand, ageYears } from '/src/face_clone/morph.js';
 import { triangulate } from '/src/face_clone/render_surface.js';
 import { NeuralRenderer, gradeFidelity, identityConsistency } from '/src/face_clone/neural_render.js';
 import { ClassicalEnhancer } from '/src/face_clone/classical_enhance.js';
@@ -340,8 +362,12 @@ function renderFace() {
   // the voice, shown BETWEEN the lips — the mouth is its own oscilloscope
   if (speaking && speakData) drawMouthScope(fctx, landmarks, speakData, { W: faceCv.width, H: faceCv.height, hue, gain: 1.6 });
   else if (micOn && tdata) drawMouthScope(fctx, landmarks, tdata, { W: faceCv.width, H: faceCv.height, hue, gain: 1.6 });
-  // the eye is a camera — draw the lens aperture over each iris (not over the real photoreal eye)
-  if (drawTheme !== 'photoreal') drawEyeCameras(landmarks, computeFit(landmarks, faceCv.width, faceCv.height));
+  // anatomical overlays: eye-camera, ear-speakers, third eye, and the morph
+  const Tc = computeFit(landmarks, faceCv.width, faceCv.height);
+  drawMorph(landmarks, Tc);
+  if (drawTheme !== 'photoreal') drawEyeCameras(landmarks, Tc);
+  drawEarSpeakers(landmarks, Tc);
+  drawThirdEye(landmarks, Tc);
 }
 
 // ── expression buttons + auto-cycle ────────────────────────────────────────
@@ -624,17 +650,244 @@ function drawEyeCameras(landmarks, T) {
 }
 
 // ── click the face: eye→camera, ear→mic, mouth→output ───────────────────────
+// the third eye is a semi-hidden easter egg — it fades in intermittently
+function thirdEyeVisible() { return (Math.sin(Date.now() / 1700) > 0.72); }
+function activePoints() { const p = ['leftBrain', 'rightBrain']; if (thirdEyeVisible()) p.push('thirdEye'); return p; }
+
 faceCv.addEventListener('click', e => {
   const { landmarks } = currentLandmarks();
   const T = computeFit(landmarks, faceCv.width, faceCv.height);
   const r = faceCv.getBoundingClientRect();
   const x = (e.clientX - r.left) / r.width * faceCv.width, y = (e.clientY - r.top) / r.height * faceCv.height;
-  const hit = featureAtPoint(featureRegions(landmarks, T), x, y);
+  const hit = featureAtPoint(featureRegions(landmarks, T, { points: activePoints() }), x, y);
   if (!hit) return;
-  if (hit.control === 'camera') camToggle();
-  else if (hit.control === 'mic') micToggle();
-  else if (hit.control === 'output') toggleOutput();
+  const c = hit.control;
+  if (c === 'camera') camToggle();
+  else if (c === 'mic') micToggle();
+  else if (c === 'output') toggleOutput();
+  else if (c === 'network') runNetwork();
+  else if (c === 'blockchain') runBlockchain();
+  else if (c === 'rage') runRage();
+  else if (c === 'matrix') runMatrix();
+  else if (c === 'analytical') runAnalytical();
+  else if (c === 'creative') runCreative();
 });
+
+// ── the tool panel (opened by the anatomical controls) ──────────────────────
+function showTool(title, html) { document.getElementById('tpTitle').textContent = title; document.getElementById('tpBody').innerHTML = html; document.getElementById('toolPanel').classList.add('open'); }
+document.getElementById('tpClose').onclick = () => document.getElementById('toolPanel').classList.remove('open');
+
+// 👃 nose — networking diagnostics
+async function runNetwork() {
+  showTool('👃 network diagnostics', 'pinging…');
+  const samples = [];
+  for (let i = 0; i < 5; i++) { const t0 = performance.now(); try { await fetch('/api/net/ping', { cache: 'no-store' }); samples.push(performance.now() - t0); } catch { samples.push(-1); } }
+  const s = pingStats(samples), c = connectionSummary();
+  showTool('👃 network diagnostics',
+    `<div class="grid"><div>latency</div><div><b>${s.avg == null ? '—' : s.avg.toFixed(1)} ms</b> (${s.grade})</div>` +
+    `<div>min / max</div><div><b>${s.min?.toFixed(0) ?? '—'}</b> / <b>${s.max?.toFixed(0) ?? '—'} ms</b></div>` +
+    `<div>jitter</div><div><b>${s.jitter?.toFixed(2) ?? '—'} ms</b></div>` +
+    `<div>online</div><div><b>${c.online ? 'yes' : 'no'}</b></div>` +
+    `<div>link</div><div><b>${c.effectiveType}</b>${c.downlinkMbps ? ' · ' + c.downlinkMbps + ' Mbps' : ''}</div></div>`);
+}
+
+// 👃 right nostril — blockchain scan (read-only, via the connected wallet)
+async function runBlockchain() {
+  if (!window.ethereum) return showTool('🩸 blockchain scan', 'no wallet detected — install a browser wallet to scan.');
+  showTool('🩸 blockchain scan', 'requesting account…');
+  try {
+    const [addr] = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const [bal, nonce, chain] = await Promise.all([
+      window.ethereum.request({ method: 'eth_getBalance', params: [addr, 'latest'] }),
+      window.ethereum.request({ method: 'eth_getTransactionCount', params: [addr, 'latest'] }),
+      window.ethereum.request({ method: 'eth_chainId' }),
+    ]);
+    const scan = formatScan({ address: addr, balanceWei: bal, nonceHex: nonce, chainIdHex: chain });
+    lastScan = scan;
+    showTool('🩸 blockchain scan',
+      `<div class="grid"><div>address</div><div><b>${addr.slice(0, 8)}…${addr.slice(-4)}</b></div>` +
+      `<div>chain</div><div><b>${scan.chain}</b></div><div>balance</div><div><b>${scan.eth}</b> ETH</div>` +
+      `<div>nonce (tx)</div><div><b>${scan.nonce}</b></div></div>` +
+      `<div style="color:#576;margin-top:6px">read-only · balance at conventional EVM 18-dp</div>`);
+  } catch (e) { showTool('🩸 blockchain scan', 'scan cancelled — ' + (e.message || e)); }
+}
+
+// 👃 left nostril — RAGE search
+async function runRage() {
+  const q = prompt('🔎 search the RAGE knowledge index:'); if (q == null) return;
+  showTool('🔎 RAGE search', `searching “${q}”…`);
+  try {
+    const r = await fetch('/api/rage/search?q=' + encodeURIComponent(q)).then(x => x.json());
+    const items = rankResults(r.items || [], q).slice(0, 6);
+    if (items.length) showTool('🔎 RAGE search', items.map(i => `• <a href="${i.url}" target="_blank" rel="noopener">${(i.title || '').replace(/</g, '')}</a>`).join('<br>'));
+    else showTool('🔎 RAGE search', `no local results — <a href="${r.link}" target="_blank" rel="noopener">open on rage.pythai.net ↗</a>`);
+  } catch (e) { showTool('🔎 RAGE search', 'search unavailable — ' + (e.message || e)); }
+}
+
+// 👁 third eye — the deep diagnostic matrix (aggregates every tool)
+function runMatrix() {
+  const m = lastMeas, a = lastAccuracy;
+  showTool('👁 diagnostic matrix',
+    `<div class="grid">` +
+    `<div>ƒ₀</div><div><b>${a ? a.f0.toFixed(2) + ' ± ' + a.ci.toFixed(2) : '—'} Hz</b></div>` +
+    `<div>jitter / shimmer</div><div><b>${a ? (a.jitter * 100).toFixed(2) : '—'}%</b> / <b>${a ? (a.shimmer * 100).toFixed(2) : '—'}%</b></div>` +
+    `<div>HNR</div><div><b>${m && isFinite(m.hnr) ? m.hnr.toFixed(1) : '—'} dB</b></div>` +
+    `<div>distance</div><div><b>${lastDist != null ? lastDist.toFixed(0) + ' cm' : '—'}</b></div>` +
+    `<div>render</div><div><b>${theme}</b>${morphKey !== 'none' ? ' · ' + morphKey + ' ' + Math.round(morphInt * 100) + '%' : ''}</div>` +
+    `<div>wallet</div><div><b>${lastScan ? lastScan.eth + ' ETH · ' + lastScan.chain : '—'}</b></div>` +
+    `<div>face</div><div><b>${capturedFace ? 'captured' : 'procedural'}</b></div>` +
+    `<div>neural</div><div><b>${neural.describe().available ? 'active' : 'dormant'}</b></div>` +
+    `</div><div style="color:#576;margin-top:6px">the third eye — not always here</div>`);
+}
+
+// 🧠 left brain — analytical reasoning + math
+function runAnalytical() {
+  const m = lastMeas, a = lastAccuracy;
+  showTool('🧠 analytical · math',
+    `<div class="grid">` +
+    `<div>ƒ₀ (Kalman)</div><div><b>${a ? a.f0.toFixed(4) : '—'} Hz</b></div>` +
+    `<div>95% CI</div><div><b>± ${a ? a.ci.toFixed(4) : '—'} Hz</b></div>` +
+    `<div>Vrms</div><div><b>${m ? m.vrms.toFixed(4) : '—'}</b></div>` +
+    `<div>centroid</div><div><b>${m ? m.centroid.toFixed(0) : '—'} Hz</b></div>` +
+    `<div>ZCR</div><div><b>${m ? m.zcr.toFixed(4) : '—'}</b></div></div>` +
+    `<div style="color:#576;margin-top:6px">YIN · Kalman · EWMA-σ · FFT — 18-dp measured</div>`);
+}
+// 🧠 right brain — creativity + expression
+function runCreative() {
+  showTool('🧠 creative · expression',
+    `expression: <b>${expression}</b> · morph: <b>${morphKey}</b> · age: <b>${document.getElementById('ageLbl').textContent}</b><br>` +
+    `<div style="color:#576;margin-top:4px">drive expression with the emotion buttons, speak with 🗣, and morph with the slider above — the creative side of the face.</div>`);
+}
+let lastScan = null;
+
+// ── morph mode + age + image-upload basis ───────────────────────────────────
+let morphKey = 'none', morphInt = 0, ageVal = 0.4;
+(function fillMorph() {
+  const sel = document.getElementById('morphMode');
+  sel.innerHTML = MORPH_MODES.map(m => `<option value="${m.key}">${m.label}</option>`).join('');
+  sel.onchange = e => { morphKey = e.target.value; };
+})();
+document.getElementById('morphInt').oninput = e => { morphInt = clampIntensity(e.target.value / 100); document.getElementById('morphIntLbl').textContent = e.target.value + '%'; };
+document.getElementById('ageSlider').oninput = e => { ageVal = e.target.value / 100; document.getElementById('ageLbl').textContent = ageBand(ageVal); };
+
+let imgLandmarker = null;
+async function detectImageFace(img) {
+  try {
+    const vision = await import('@mediapipe/tasks-vision');
+    if (!imgLandmarker) {
+      const fileset = await vision.FilesetResolver.forVisionTasks('/static/vendor/mediapipe/wasm');
+      imgLandmarker = await vision.FaceLandmarker.createFromOptions(fileset, {
+        baseOptions: { modelAssetPath: '/static/vendor/mediapipe/face_landmarker.task' },
+        runningMode: 'IMAGE', numFaces: 1,
+      });
+    }
+    const res = imgLandmarker.detect(img);
+    return res?.faceLandmarks?.length ? res.faceLandmarks[0].map(p => ({ x: p.x, y: p.y, z: p.z })) : null;
+  } catch { return null; }
+}
+document.getElementById('morphImg').onchange = e => {
+  const file = e.target.files[0]; if (!file) return;
+  const img = new Image();
+  img.onload = async () => {
+    setPState('reading image…');
+    faceTexture = document.createElement('canvas'); faceTexture.width = img.naturalWidth; faceTexture.height = img.naturalHeight;
+    faceTexture.getContext('2d').drawImage(img, 0, 0);
+    const lm = await detectImageFace(img);
+    if (lm) {
+      base = lm; capturedFace = lm; recomputeTopology();
+      texLandmarks = lm.map(p => ({ x: p.x * faceTexture.width, y: p.y * faceTexture.height }));
+      webglCapSet = false; srcLabel.textContent = '— uploaded image';
+      setPState('image loaded as morph basis — geometry + texture from your photo');
+    } else {
+      texLandmarks = null; setPState('no face found — texture loaded on the neutral geometry', true);
+    }
+    URL.revokeObjectURL(img.src);
+  };
+  img.src = URL.createObjectURL(file);
+};
+
+// ── the ears pulse like speakers with the audio level ───────────────────────
+function drawEarSpeakers(landmarks, T) {
+  if (!(micOn || speaking)) return;
+  const level = Math.max(0, Math.min(1, mouthOpen));
+  for (const ring of [CONTOURS.rightEar, CONTOURS.leftEar]) {
+    const c = irisCentre(landmarks, ring); if (!c) continue; // reuse centroid helper
+    const p = T(c); const rr = faceCv.width * 0.02 * (1 + level * 1.4);
+    fctx.strokeStyle = `hsla(150,90%,60%,${0.3 + level * 0.6})`; fctx.lineWidth = 1 + level * 2;
+    fctx.beginPath(); fctx.arc(p.x, p.y, rr, 0, Math.PI * 2); fctx.stroke();
+    fctx.beginPath(); fctx.arc(p.x, p.y, rr * 0.55, 0, Math.PI * 2); fctx.stroke();
+  }
+}
+
+// ── the third eye — a faint glowing mark when it's here (easter egg) ─────────
+function drawThirdEye(landmarks, T) {
+  if (!thirdEyeVisible()) return;
+  const lm = landmarks[168]; if (!lm) return;
+  const p = T(lm), r = faceCv.width * 0.014;
+  const g = fctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.4);
+  g.addColorStop(0, 'rgba(160,120,255,.9)'); g.addColorStop(1, 'rgba(160,120,255,0)');
+  fctx.fillStyle = g; fctx.beginPath(); fctx.arc(p.x, p.y, r * 2.4, 0, Math.PI * 2); fctx.fill();
+  fctx.strokeStyle = '#c9a6ff'; fctx.lineWidth = 1.2; fctx.beginPath(); fctx.ellipse(p.x, p.y, r, r * 0.55, 0, 0, Math.PI * 2); fctx.stroke();
+  fctx.fillStyle = '#7a3cff'; fctx.beginPath(); fctx.arc(p.x, p.y, r * 0.32, 0, Math.PI * 2); fctx.fill();
+}
+
+// ── morph rendering: mech endoskeleton + archetypes + age ───────────────────
+function drawMorph(landmarks, T) {
+  if (ageVal > 0.55) drawAge(landmarks, T, (ageVal - 0.55) / 0.45);
+  if (morphKey === 'none' || morphInt <= 0) return;
+  if (morphKey === 'mech') drawEndoskeleton(landmarks, T, morphInt);
+  else drawArchetype(landmarks, T, morphKey, morphInt);
+}
+function ptRange(landmarks, T, idx) { const out = []; for (const i of idx) { const lm = landmarks[i]; if (lm) out.push(T(lm)); } return out; }
+function centroidOf(pts) { let x = 0, y = 0; for (const p of pts) { x += p.x; y += p.y; } return { x: x / pts.length, y: y / pts.length }; }
+
+function drawAge(landmarks, T, k) {
+  fctx.strokeStyle = `rgba(120,90,70,${0.25 * k})`; fctx.lineWidth = 1;
+  // forehead + nasolabial + under-eye lines
+  const brow = ptRange(landmarks, T, CONTOURS.rightBrow.concat(CONTOURS.leftBrow));
+  if (brow.length) { const c = centroidOf(brow); for (let i = 0; i < 3; i++) { const yy = c.y - 10 - i * 5; fctx.beginPath(); fctx.moveTo(c.x - 40, yy); fctx.bezierCurveTo(c.x - 10, yy - 3, c.x + 10, yy - 3, c.x + 40, yy); fctx.stroke(); } }
+  for (const ala of [CONTOURS.noseRightAla, CONTOURS.noseLeftAla]) { const pts = ptRange(landmarks, T, ala); if (pts.length) { const a = pts[pts.length - 1]; fctx.beginPath(); fctx.moveTo(a.x, a.y); fctx.quadraticCurveTo(a.x + (ala === CONTOURS.noseRightAla ? -8 : 8), a.y + 16, a.x + (ala === CONTOURS.noseRightAla ? -14 : 14), a.y + 30); fctx.stroke(); } }
+}
+
+function drawEndoskeleton(landmarks, T, level) {
+  const cx = faceCenterX(landmarks, T);
+  const pal = MECH_PALETTE;
+  fctx.save();
+  // clip to the mech (right) half past the seam
+  fctx.beginPath(); fctx.rect(cx, 0, faceCv.width - cx, faceCv.height); fctx.clip();
+  fctx.globalAlpha = Math.min(1, level);
+  // skull plating over the face oval
+  const oval = ptRange(landmarks, T, CONTOURS.faceOval);
+  if (oval.length) { fctx.fillStyle = pal.steelLo; fctx.beginPath(); oval.forEach((p, i) => i ? fctx.lineTo(p.x, p.y) : fctx.moveTo(p.x, p.y)); fctx.closePath(); fctx.fill(); }
+  // plates + rivets
+  fctx.strokeStyle = pal.steel; fctx.lineWidth = 1.4;
+  for (const grp of ['rightBrow', 'faceOval']) { const pts = ptRange(landmarks, T, CONTOURS[grp]); pts.forEach((p, i) => { if (i % 2) { fctx.beginPath(); fctx.arc(p.x, p.y, 1.6, 0, Math.PI * 2); fctx.fillStyle = pal.rivet; fctx.fill(); } }); }
+  // red optical sensor over the (right) eye
+  const eye = centroidOf(ptRange(landmarks, T, CONTOURS.rightEye));
+  if (eye) { const rr = faceCv.width * 0.03; const g = fctx.createRadialGradient(eye.x, eye.y, 0, eye.x, eye.y, rr); g.addColorStop(0, '#fff'); g.addColorStop(0.3, pal.optic); g.addColorStop(1, pal.opticGlow); fctx.fillStyle = g; fctx.beginPath(); fctx.arc(eye.x, eye.y, rr, 0, Math.PI * 2); fctx.fill(); fctx.strokeStyle = pal.steel; fctx.lineWidth = 2; fctx.beginPath(); fctx.arc(eye.x, eye.y, rr, 0, Math.PI * 2); fctx.stroke(); }
+  // servo jaw hinge + exposed teeth
+  const mouth = ptRange(landmarks, T, CONTOURS.lipsOuter);
+  if (mouth.length) { fctx.strokeStyle = pal.servo; fctx.lineWidth = 1.2; const m = centroidOf(mouth); for (let i = 0; i < 6; i++) { const xx = m.x + i * 4; fctx.beginPath(); fctx.moveTo(xx, m.y - 5); fctx.lineTo(xx, m.y + 5); fctx.stroke(); } }
+  fctx.restore();
+}
+
+function drawArchetype(landmarks, T, key, level) {
+  const pal = morphPalette(key); if (!pal) return;
+  fctx.save(); fctx.globalAlpha = Math.min(1, level);
+  // glowing eyes for all archetypes
+  for (const eg of ['rightEye', 'leftEye']) { const e = centroidOf(ptRange(landmarks, T, CONTOURS[eg])); if (!e) continue; const rr = faceCv.width * (key === 'pleiadian' ? 0.03 : 0.018); const g = fctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, rr); g.addColorStop(0, '#fff'); g.addColorStop(0.4, pal.eye); g.addColorStop(1, 'rgba(0,0,0,0)'); fctx.fillStyle = g; fctx.beginPath(); fctx.arc(e.x, e.y, rr, 0, Math.PI * 2); fctx.fill(); }
+  if (key === 'vampire') { // fangs from the upper lip
+    const lip = ptRange(landmarks, T, CONTOURS.lipsOuter); if (lip.length) { const m = centroidOf(lip); fctx.fillStyle = pal.fang; for (const dx of [-8, 8]) { fctx.beginPath(); fctx.moveTo(m.x + dx - 2, m.y); fctx.lineTo(m.x + dx + 2, m.y); fctx.lineTo(m.x + dx, m.y + 10); fctx.closePath(); fctx.fill(); } }
+  } else if (key === 'elf') { // pointed ears
+    for (const er of [CONTOURS.rightEar, CONTOURS.leftEar]) { const c = irisCentre(landmarks, er); if (!c) continue; const p = T(c); fctx.strokeStyle = pal.accent; fctx.lineWidth = 2; fctx.beginPath(); fctx.moveTo(p.x, p.y + 8); fctx.lineTo(p.x + (er === CONTOURS.rightEar ? -6 : 6), p.y - 18); fctx.lineTo(p.x + (er === CONTOURS.rightEar ? 6 : -6), p.y); fctx.stroke(); }
+  } else if (key === 'dragon') { // horns + scale ridge
+    const brow = centroidOf(ptRange(landmarks, T, CONTOURS.rightBrow.concat(CONTOURS.leftBrow)));
+    if (brow) { fctx.strokeStyle = pal.horn; fctx.lineWidth = 3; for (const dx of [-30, 30]) { fctx.beginPath(); fctx.moveTo(brow.x + dx, brow.y - 6); fctx.quadraticCurveTo(brow.x + dx * 1.3, brow.y - 34, brow.x + dx * 1.6, brow.y - 50); fctx.stroke(); } }
+    const bridge = ptRange(landmarks, T, CONTOURS.noseBridge); fctx.fillStyle = pal.scale; bridge.forEach(p => { fctx.beginPath(); fctx.arc(p.x, p.y, 2.4, 0, Math.PI * 2); fctx.fill(); });
+  } else if (key === 'pleiadian') { // ethereal glow halo
+    const oval = ptRange(landmarks, T, CONTOURS.faceOval); if (oval.length) { const c = centroidOf(oval); const g = fctx.createRadialGradient(c.x, c.y, faceCv.width * 0.12, c.x, c.y, faceCv.width * 0.3); g.addColorStop(0, 'rgba(150,190,255,0)'); g.addColorStop(1, pal.glow); fctx.fillStyle = g; fctx.beginPath(); fctx.arc(c.x, c.y, faceCv.width * 0.3, 0, Math.PI * 2); fctx.fill(); } }
+  fctx.restore();
+}
 
 // ── output-audio controls (the mouth speaks) ────────────────────────────────
 let outMuted = false, outVol = 0.8, speakGain = null;
@@ -1109,7 +1362,7 @@ async function bind() {
     identity: { name, label: name, description: desc || null, agent_id: name.toLowerCase().replace(/\s+/g, '_') },
     cognition: { behavioral_traits: [], beliefs: {}, desires: {}, inference: {}, authority: {} },
     embodiment: {
-      face: face ? { faceprint: { hash: face.hash, measuresStr: face.measuresStr, precisionScore: face.precisionScore.toString() }, source: personaMode === 'clone' ? (capturedFace ? 'webcam-aggregated' : 'webcam') : 'procedural', render: theme, photoreal: !!(faceTexture && texLandmarks) } : null,
+      face: face ? { faceprint: { hash: face.hash, measuresStr: face.measuresStr, precisionScore: face.precisionScore.toString() }, source: personaMode === 'clone' ? (capturedFace ? 'webcam-aggregated' : 'webcam') : 'procedural', render: theme, photoreal: !!(faceTexture && texLandmarks), morph: morphKey === 'none' ? null : { mode: morphKey, intensity: Number(morphInt.toFixed(3)) }, age: { value: Number(ageVal.toFixed(3)), band: ageBand(ageVal), years: ageYears(ageVal) } } : null,
       voice: voice ? { voiceprint: { hash: voice.hash, measuresStr: voice.measuresStr, precisionScore: voice.precisionScore }, engine: 'captured', features: voice.features } : null,
       rig: { fps: 60, blendshapes: 52 },
     },

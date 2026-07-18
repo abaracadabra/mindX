@@ -5,8 +5,19 @@ Each sense organ drives the hardware it represents — the interface *is* the fa
 | feature | drives | because |
 |---------|--------|---------|
 | 👁 **eye** | the **camera** (webcam on/off) | the eye is a camera — and a camera has an eye |
-| 👂 **ear** | the **microphone** input | the ear hears |
+| 👂 **ear** | the **microphone** input — and it **pulses like a speaker** with the audio | the ear hears |
 | 👄 **mouth** | the **output audio** (volume / mute) | the mouth speaks |
+| 👃 **nose** | **networking diagnostics** (latency, jitter, connection) | the nose smells the network |
+| 🩸 right **nostril** | **blockchain scan** — the connected wallet's balance (18-dp), nonce, chain | one nostril sniffs the chain |
+| 🔎 left **nostril** | **RAGE search** — the knowledge index at rage.pythai.net | the other sniffs knowledge |
+| 🧠 left **forehead** | **analytical** reasoning + math tools | left brain |
+| 🧠 right **forehead** | **creativity** + expression tools | right brain |
+| 👁 **third eye** | the **deep diagnostic matrix** — *a semi-hidden easter egg, not always there* | it sees everything |
+
+Click a feature to open its tool panel. The tools themselves are the tested cores
+in `nose_tools.js` (ping stats, JSON-RPC payloads, wei→ETH at 18-dp, address
+validation, search ranking). The blockchain scan is **read-only through the
+user's own wallet**; RAGE search proxies the public index and falls back to a link.
 
 Click a feature on the live face and it toggles its hardware. Hit-testing
 (`src/face_clone/face_controls.js`) maps a canvas click to the feature under it —
@@ -42,10 +53,32 @@ Clicking the mouth opens a small output panel — a **volume** slider and **mute
 that drives a Web Audio gain node on the avatar's speech, so the mouth literally
 governs what comes out.
 
+## Morph modes + age
+
+The face morphs on a sliding scale (`morph.js`, `mech.js`):
+
+- **human ↔ machine** — one side becomes a tough, detailed **endoskeleton**
+  (skull plating, rivets, a red optical sensor, a servo jaw), a generic cyborg
+  overlay driven procedurally by the landmarks, ramped over a soft centre seam.
+- **archetypes** — **vampire** (fangs, pallor), **elf** (pointed ears),
+  **dragon** (horns, scale ridge, gold eyes), **pleiadian** (large luminous eyes,
+  an ethereal halo) — stylised, generic, landmark-tracked, at the slider's intensity.
+- **age** — a slider from child → elder (procedural aging lines above ~55%),
+  recorded in the `.persona` (`age: { value, band, years }`).
+- **image upload** — drop in a photo and MediaPipe detects its landmarks (IMAGE
+  mode) to become the morph basis (geometry + texture); it degrades to texture on
+  the neutral geometry if no face is found.
+
+None of the archetypes reproduce a specific copyrighted character — they render
+the well-worn tropes procedurally from the mesh.
+
 ## Verification
 
 ```
-node src/face_clone/face_controls.test.js   # 8 tests
+node src/face_clone/face_controls.test.js   # 11 tests
+node src/face_clone/nose_tools.test.js      # 8 tests (nose · nostrils)
+node src/face_clone/mech.test.js            # 5 tests (human↔machine ramp)
+node src/face_clone/morph.test.js           # 6 tests (modes · age)
 ```
 
 - eyes map to the camera, ears to the mic, the mouth to output; a click in empty

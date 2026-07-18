@@ -28,6 +28,36 @@ test('a click on an eye maps to the camera; on an ear to the mic; on the mouth t
   assert.equal(hitOf('lipsOuter').control, 'output', 'mouth → output');
 });
 
+test('the nose maps to network diagnostics; the nostrils to blockchain + rage', () => {
+  const regions = featureRegions(face, fit);
+  const controls = new Set(regions.map((r) => r.control));
+  assert.ok(controls.has('network'), 'nose → network');
+  assert.ok(controls.has('blockchain'), 'right nostril → blockchain');
+  assert.ok(controls.has('rage'), 'left nostril → rage');
+  const hitOf = (name) => { const reg = regions.find((r) => r.name === name); return featureAtPoint(regions, reg.cx, reg.cy).control; };
+  assert.equal(hitOf('noseRightAla'), 'blockchain');
+  assert.equal(hitOf('noseLeftAla'), 'rage');
+});
+
+test('the third eye is NOT there by default, and opens the matrix when made visible', () => {
+  const hidden = featureRegions(face, fit); // no points → the third eye is absent
+  assert.ok(!hidden.some((r) => r.control === 'matrix'), 'third eye absent by default (not always there)');
+  const shown = featureRegions(face, fit, { points: ['thirdEye'] });
+  const eye = shown.find((r) => r.control === 'matrix');
+  assert.ok(eye, 'appears when the caller says it is visible');
+  assert.equal(featureAtPoint(shown, eye.cx, eye.cy).control, 'matrix', 'clicking it opens the matrix');
+});
+
+test('the brain hemispheres: left → analytical/math, right → creative/expression', () => {
+  const regions = featureRegions(face, fit, { points: ['leftBrain', 'rightBrain'] });
+  const controls = new Set(regions.map((r) => r.control));
+  assert.ok(controls.has('analytical'), 'left brain → analytical');
+  assert.ok(controls.has('creative'), 'right brain → creative');
+  const hitOf = (name) => { const reg = regions.find((r) => r.name === name); return featureAtPoint(regions, reg.cx, reg.cy).control; };
+  assert.equal(hitOf('leftBrain'), 'analytical');
+  assert.equal(hitOf('rightBrain'), 'creative');
+});
+
 test('a click far from every feature hits nothing', () => {
   const regions = featureRegions(face, fit);
   assert.equal(featureAtPoint(regions, -500, -500), null);
