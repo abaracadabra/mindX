@@ -835,7 +835,7 @@ function drawThirdEye(landmarks, T) {
 function drawMorph(landmarks, T) {
   if (ageVal > 0.55) drawAge(landmarks, T, (ageVal - 0.55) / 0.45);
   if (morphKey === 'none' || morphInt <= 0) return;
-  if (morphKey === 'mech') drawEndoskeleton(landmarks, T, morphInt);
+  if (morphKey === 'cyborgi') drawEndoskeleton(landmarks, T, morphInt);
   else drawArchetype(landmarks, T, morphKey, morphInt);
 }
 function ptRange(landmarks, T, idx) { const out = []; for (const i of idx) { const lm = landmarks[i]; if (lm) out.push(T(lm)); } return out; }
@@ -849,25 +849,83 @@ function drawAge(landmarks, T, k) {
   for (const ala of [CONTOURS.noseRightAla, CONTOURS.noseLeftAla]) { const pts = ptRange(landmarks, T, ala); if (pts.length) { const a = pts[pts.length - 1]; fctx.beginPath(); fctx.moveTo(a.x, a.y); fctx.quadraticCurveTo(a.x + (ala === CONTOURS.noseRightAla ? -8 : 8), a.y + 16, a.x + (ala === CONTOURS.noseRightAla ? -14 : 14), a.y + 30); fctx.stroke(); } }
 }
 
+// a polished-chrome plate: filled convex-ish hull of a landmark group with a
+// diagonal metal gradient (dark→bright→dark), a bright top edge, a seam, rivets.
+function chromePlate(pts, pal, opts = {}) {
+  if (pts.length < 3) return;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const p of pts) { if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x; if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y; }
+  const g = fctx.createLinearGradient(minX, minY, maxX, maxY);
+  g.addColorStop(0, pal.chromeLo); g.addColorStop(0.35, pal.chrome); g.addColorStop(0.5, opts.bright || pal.chromeHi);
+  g.addColorStop(0.62, pal.chrome); g.addColorStop(1, pal.chromeMid);
+  fctx.beginPath(); pts.forEach((p, i) => i ? fctx.lineTo(p.x, p.y) : fctx.moveTo(p.x, p.y)); fctx.closePath();
+  fctx.fillStyle = g; fctx.fill();
+  // bright bevel edge + dark seam underneath
+  fctx.lineWidth = 1.4; fctx.strokeStyle = pal.edge; fctx.stroke();
+  fctx.lineWidth = 0.8; fctx.strokeStyle = pal.seam; fctx.beginPath();
+  pts.forEach((p, i) => i ? fctx.lineTo(p.x + 1, p.y + 1.5) : fctx.moveTo(p.x + 1, p.y + 1.5)); fctx.stroke();
+  // rivets with a specular dot
+  if (opts.rivets !== false) pts.forEach((p, i) => { if (i % 3 === 0) { fctx.fillStyle = pal.chromeMid; fctx.beginPath(); fctx.arc(p.x, p.y, 1.7, 0, 7); fctx.fill(); fctx.fillStyle = pal.spec; fctx.beginPath(); fctx.arc(p.x - 0.5, p.y - 0.6, 0.7, 0, 7); fctx.fill(); } });
+}
+function hydraulic(x1, y1, x2, y2, w, pal) {
+  const a = Math.atan2(y2 - y1, x2 - x1), nx = Math.cos(a + Math.PI / 2), ny = Math.sin(a + Math.PI / 2);
+  const g = fctx.createLinearGradient(x1 + nx * w, y1 + ny * w, x1 - nx * w, y1 - ny * w);
+  g.addColorStop(0, pal.chromeLo); g.addColorStop(0.5, pal.chromeHi); g.addColorStop(1, pal.chromeMid);
+  fctx.strokeStyle = g; fctx.lineCap = 'round';
+  fctx.lineWidth = w * 2; fctx.beginPath(); fctx.moveTo(x1, y1); fctx.lineTo((x1 + x2) / 2, (y1 + y2) / 2); fctx.stroke(); // cylinder
+  fctx.lineWidth = w; fctx.strokeStyle = pal.chrome; fctx.beginPath(); fctx.moveTo((x1 + x2) / 2, (y1 + y2) / 2); fctx.lineTo(x2, y2); fctx.stroke(); // piston rod
+  fctx.strokeStyle = pal.spec; fctx.lineWidth = 0.8; fctx.beginPath(); fctx.moveTo(x1 + nx * w * 0.4, y1 + ny * w * 0.4); fctx.lineTo(x2 + nx * w * 0.4, y2 + ny * w * 0.4); fctx.stroke(); // highlight streak
+}
+// a detailed optical sensor: chrome housing, iris rings, hot core, lens flare, bloom
+function opticSensor(x, y, r, pal) {
+  const bloom = fctx.createRadialGradient(x, y, 0, x, y, r * 3);
+  bloom.addColorStop(0, pal.opticGlow); bloom.addColorStop(1, 'rgba(255,42,23,0)');
+  fctx.fillStyle = bloom; fctx.beginPath(); fctx.arc(x, y, r * 3, 0, 7); fctx.fill();
+  // chrome housing ring
+  const hg = fctx.createLinearGradient(x - r, y - r, x + r, y + r);
+  hg.addColorStop(0, pal.chromeLo); hg.addColorStop(0.5, pal.chromeHi); hg.addColorStop(1, pal.chromeMid);
+  fctx.strokeStyle = hg; fctx.lineWidth = r * 0.34; fctx.beginPath(); fctx.arc(x, y, r * 1.12, 0, 7); fctx.stroke();
+  // iris rings
+  for (let i = 3; i >= 1; i--) { fctx.strokeStyle = `rgba(255,${40 + i * 10},23,${0.5 + i * 0.12})`; fctx.lineWidth = 1.4; fctx.beginPath(); fctx.arc(x, y, r * (i / 3.2), 0, 7); fctx.stroke(); }
+  // hot core
+  const core = fctx.createRadialGradient(x, y, 0, x, y, r * 0.55);
+  core.addColorStop(0, pal.opticHot); core.addColorStop(0.5, pal.optic); core.addColorStop(1, 'rgba(180,10,0,0.9)');
+  fctx.fillStyle = core; fctx.beginPath(); fctx.arc(x, y, r * 0.55, 0, 7); fctx.fill();
+  // lens flare cross
+  fctx.strokeStyle = 'rgba(255,220,200,.8)'; fctx.lineWidth = 1; fctx.beginPath();
+  fctx.moveTo(x - r * 1.6, y); fctx.lineTo(x + r * 1.6, y); fctx.moveTo(x, y - r * 1.6); fctx.lineTo(x, y + r * 1.6); fctx.stroke();
+}
+
 function drawEndoskeleton(landmarks, T, level) {
   const cx = faceCenterX(landmarks, T);
   const pal = MECH_PALETTE;
   fctx.save();
-  // clip to the mech (right) half past the seam
-  fctx.beginPath(); fctx.rect(cx, 0, faceCv.width - cx, faceCv.height); fctx.clip();
+  fctx.beginPath(); fctx.rect(cx, 0, faceCv.width - cx, faceCv.height); fctx.clip(); // the cyborgi half
   fctx.globalAlpha = Math.min(1, level);
-  // skull plating over the face oval
+  fctx.lineJoin = 'round';
+  // dark endoskeleton base under the oval
   const oval = ptRange(landmarks, T, CONTOURS.faceOval);
-  if (oval.length) { fctx.fillStyle = pal.steelLo; fctx.beginPath(); oval.forEach((p, i) => i ? fctx.lineTo(p.x, p.y) : fctx.moveTo(p.x, p.y)); fctx.closePath(); fctx.fill(); }
-  // plates + rivets
-  fctx.strokeStyle = pal.steel; fctx.lineWidth = 1.4;
-  for (const grp of ['rightBrow', 'faceOval']) { const pts = ptRange(landmarks, T, CONTOURS[grp]); pts.forEach((p, i) => { if (i % 2) { fctx.beginPath(); fctx.arc(p.x, p.y, 1.6, 0, Math.PI * 2); fctx.fillStyle = pal.rivet; fctx.fill(); } }); }
-  // red optical sensor over the (right) eye
+  if (oval.length) { fctx.fillStyle = pal.chromeLo; fctx.beginPath(); oval.forEach((p, i) => i ? fctx.lineTo(p.x, p.y) : fctx.moveTo(p.x, p.y)); fctx.closePath(); fctx.fill(); }
+  // layered chrome plates: brow/temple, cheek, jaw — each polished + riveted
+  chromePlate(ptRange(landmarks, T, CONTOURS.rightBrow), pal, { bright: pal.spec });
+  chromePlate(ptRange(landmarks, T, [116, 123, 147, 213, 192, 214, 234, 93]).filter(Boolean), pal); // right cheek plate
+  chromePlate(ptRange(landmarks, T, [172, 136, 150, 149, 176, 148, 152, 377].filter((i) => landmarks[i])), pal); // right jaw plate
+  // temple/forehead reflective rim (cool + warm environment reflection)
+  if (oval.length) {
+    fctx.lineWidth = 2.5; fctx.strokeStyle = pal.coolRim; fctx.beginPath(); oval.slice(0, Math.ceil(oval.length / 3)).forEach((p, i) => i ? fctx.lineTo(p.x, p.y) : fctx.moveTo(p.x, p.y)); fctx.stroke();
+    fctx.strokeStyle = pal.warmRim; fctx.beginPath(); oval.slice(-Math.ceil(oval.length / 3)).forEach((p, i) => i ? fctx.lineTo(p.x, p.y) : fctx.moveTo(p.x, p.y)); fctx.stroke();
+  }
+  // the red optical sensor over the eye
   const eye = centroidOf(ptRange(landmarks, T, CONTOURS.rightEye));
-  if (eye) { const rr = faceCv.width * 0.03; const g = fctx.createRadialGradient(eye.x, eye.y, 0, eye.x, eye.y, rr); g.addColorStop(0, '#fff'); g.addColorStop(0.3, pal.optic); g.addColorStop(1, pal.opticGlow); fctx.fillStyle = g; fctx.beginPath(); fctx.arc(eye.x, eye.y, rr, 0, Math.PI * 2); fctx.fill(); fctx.strokeStyle = pal.steel; fctx.lineWidth = 2; fctx.beginPath(); fctx.arc(eye.x, eye.y, rr, 0, Math.PI * 2); fctx.stroke(); }
-  // servo jaw hinge + exposed teeth
-  const mouth = ptRange(landmarks, T, CONTOURS.lipsOuter);
-  if (mouth.length) { fctx.strokeStyle = pal.servo; fctx.lineWidth = 1.2; const m = centroidOf(mouth); for (let i = 0; i < 6; i++) { const xx = m.x + i * 4; fctx.beginPath(); fctx.moveTo(xx, m.y - 5); fctx.lineTo(xx, m.y + 5); fctx.stroke(); } }
+  if (eye) opticSensor(eye.x, eye.y, faceCv.width * 0.026, pal);
+  // hydraulic pistons at the jaw hinge + a servo at the temple
+  const jaw = ptRange(landmarks, T, CONTOURS.lipsOuter), tmp = ptRange(landmarks, T, CONTOURS.rightBrow);
+  if (jaw.length && tmp.length) { const m = centroidOf(jaw), t = centroidOf(tmp); hydraulic(t.x + 6, t.y + 8, m.x + 6, m.y - 6, faceCv.width * 0.008, pal); }
+  // exposed metal teeth (segmented chrome)
+  if (jaw.length) { const m = centroidOf(jaw); for (let i = 0; i < 6; i++) { const xx = m.x + i * 4.5; const tg = fctx.createLinearGradient(xx, m.y - 6, xx, m.y + 6); tg.addColorStop(0, pal.chromeHi); tg.addColorStop(1, pal.chromeMid); fctx.fillStyle = tg; fctx.fillRect(xx, m.y - 5, 3.4, 10); fctx.strokeStyle = pal.seam; fctx.lineWidth = 0.6; fctx.strokeRect(xx, m.y - 5, 3.4, 10); } }
+  // final specular streaks for the polished look
+  fctx.strokeStyle = 'rgba(255,255,255,.55)'; fctx.lineWidth = 1.5;
+  if (oval.length) { const q = oval[Math.floor(oval.length * 0.15)], q2 = oval[Math.floor(oval.length * 0.28)]; if (q && q2) { fctx.beginPath(); fctx.moveTo(q.x, q.y); fctx.lineTo(q2.x, q2.y); fctx.stroke(); } }
   fctx.restore();
 }
 

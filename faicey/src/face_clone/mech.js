@@ -17,6 +17,10 @@
 export const MECH_PALETTE = Object.freeze({
   steel: '#8b9199', steelDark: '#3a3f45', steelLo: '#20242a',
   rivet: '#c8ccd2', servo: '#5a6068', optic: '#ff2a17', opticGlow: 'rgba(255,42,23,0.55)',
+  // polished-chrome tones for the reflective, high-detail cyborgi endoskeleton
+  chromeHi: '#f2f6fa', chrome: '#aeb8c1', chromeMid: '#7c868f', chromeLo: '#242a30',
+  seam: '#0b0d10', edge: '#e6eef4', spec: '#ffffff',
+  coolRim: 'rgba(120,200,255,0.55)', warmRim: 'rgba(255,150,90,0.35)', opticHot: '#ffe9d8',
 });
 
 /**

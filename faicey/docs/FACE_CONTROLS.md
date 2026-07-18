@@ -57,9 +57,14 @@ governs what comes out.
 
 The face morphs on a sliding scale (`morph.js`, `mech.js`):
 
-- **human ↔ machine** — one side becomes a tough, detailed **endoskeleton**
-  (skull plating, rivets, a red optical sensor, a servo jaw), a generic cyborg
-  overlay driven procedurally by the landmarks, ramped over a soft centre seam.
+- **human ↔ cyborgi** — one side becomes a **polished, reflective chrome
+  endoskeleton** rendered in high detail: layered chrome plates with diagonal
+  metal gradients, bevel edges and dark seams, rivets with specular dots,
+  **hydraulic pistons** at the jaw hinge, exposed segmented metal teeth, a
+  detailed **red optical sensor** (chrome housing, iris rings, a hot core, a lens
+  flare and a red bloom), cool/warm environment-reflection rims, and specular
+  streaks. A generic cyborg — no specific copyrighted character — driven
+  procedurally by the landmarks and ramped over a soft centre seam.
 - **archetypes** — **vampire** (fangs, pallor), **elf** (pointed ears),
   **dragon** (horns, scale ridge, gold eyes), **pleiadian** (large luminous eyes,
   an ethereal halo) — stylised, generic, landmark-tracked, at the slider's intensity.

@@ -15,7 +15,7 @@
 
 export const MORPH_MODES = Object.freeze([
   { key: 'none', label: 'human', whole: false },
-  { key: 'mech', label: 'machine', whole: false, side: true },
+  { key: 'cyborgi', label: 'cyborgi', whole: false, side: true },
   { key: 'vampire', label: 'vampire', whole: true },
   { key: 'elf', label: 'elf', whole: true },
   { key: 'dragon', label: 'dragon', whole: true },

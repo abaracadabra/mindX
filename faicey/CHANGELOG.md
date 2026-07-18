@@ -4,6 +4,29 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.16.0] — 2026-07-17
+
+### Changed — **cyborgi**: the endoskeleton, polished and reflective, in high detail
+
+The human↔machine morph is now named **cyborgi**, and its endoskeleton was
+rebuilt to be genuinely high-quality — polished, reflective, and detailed:
+
+- **layered chrome plates** (brow/temple, cheek, jaw) with diagonal metal
+  gradients (dark→bright→dark), **bevel edges + dark seams**, and **rivets with
+  specular dots**;
+- a detailed **red optical sensor** — chrome housing ring, concentric iris rings,
+  a hot core, a lens-flare cross, and a red bloom;
+- **hydraulic pistons** at the jaw hinge (chrome cylinder + piston rod +
+  highlight streak), exposed **segmented metal teeth**;
+- **cool/warm environment-reflection rims** and specular streaks for the polished
+  look.
+
+Still a generic cyborg — procedural, landmark-tracked, no specific copyrighted
+character. Palette extended in `mech.js` (chrome/edge/seam/spec/rim tones). Suite
+green: 152.
+
+---
+
 ## [2.15.0] — 2026-07-17
 
 ### Added — the full anatomical control surface + morph modes

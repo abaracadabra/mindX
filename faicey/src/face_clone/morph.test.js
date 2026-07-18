@@ -10,7 +10,7 @@ const test = (name, fn) => { try { fn(); pass++; console.log(`✅ ${name}`); } c
 
 test('the registry has human, machine, and the four archetypes', () => {
   const keys = MORPH_MODES.map((m) => m.key);
-  for (const k of ['none', 'mech', 'vampire', 'elf', 'dragon', 'pleiadian']) assert.ok(keys.includes(k), `has ${k}`);
+  for (const k of ['none', 'cyborgi', 'vampire', 'elf', 'dragon', 'pleiadian']) assert.ok(keys.includes(k), `has ${k}`);
 });
 
 test('morphMode resolves a key and falls back to human', () => {
@@ -20,7 +20,7 @@ test('morphMode resolves a key and falls back to human', () => {
 
 test('whole-face vs sided modes', () => {
   assert.equal(isWholeFace('vampire'), true);
-  assert.equal(isWholeFace('mech'), false, 'mech is one-sided');
+  assert.equal(isWholeFace('cyborgi'), false, 'cyborgi is one-sided');
   assert.equal(isWholeFace('none'), false);
 });
 
@@ -34,7 +34,7 @@ test('clampIntensity keeps the slider in [0,1]', () => {
 test('each archetype has a palette; none/mech do not', () => {
   for (const k of ['vampire', 'elf', 'dragon', 'pleiadian']) { assert.ok(morphPalette(k), `${k} palette`); assert.ok(MORPH_PALETTE[k].eye, `${k}.eye`); }
   assert.equal(morphPalette('none'), null);
-  assert.equal(morphPalette('mech'), null, 'mech uses mech.js palette');
+  assert.equal(morphPalette('cyborgi'), null, 'cyborgi uses mech.js palette');
 });
 
 test('ageBand + ageYears span child → elder monotonically', () => {
