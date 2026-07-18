@@ -734,7 +734,35 @@ contract iNFT_7857_Test is Test {
             "ipfs://uri"
         );
     }
+
+    /// @notice REGRESSION (transfer-gate bypass): a malicious receiver, in its onERC721Received
+    ///         during a SECOND mint, calls the plain (non-nonReentrant) transferFrom to move a
+    ///         token it already holds — which must be BLOCKED by the gate (the fix keeps the gate
+    ///         closed around _safeMint). Before the fix this transfer slipped through gate-free.
+    function test_gate_blocks_plain_transferFrom_during_mint_callback() public {
+        GateBypassReceiver attacker = new GateBypassReceiver(nft);
+        uint256 id1 = _mint(address(attacker), ROOT_A);        // first legit mint (callback idle)
+        assertEq(nft.ownerOf(id1), address(attacker));
+        attacker.arm(id1, bob);                                // on the next callback, try to steal id1
+        vm.prank(minter);
+        vm.expectRevert();                                     // gate blocks the reentrant transfer → mint reverts
+        nft.mintAgent(address(attacker), ROOT_B, "0g://x", META_A, 2048, 8, SKEY_A, "https://x");
+        assertEq(nft.ownerOf(id1), address(attacker), "id1 must not have been stolen gate-free");
+    }
 }
+
+/// @notice Malicious receiver for the transfer-gate-bypass regression test: on a callback it tries
+///         a plain transferFrom of a token it already owns.
+contract GateBypassReceiver is IERC721Receiver {
+    iNFT_7857 internal target; uint256 internal armedId; address internal stealTo; bool internal armed;
+    constructor(iNFT_7857 t) { target = t; }
+    function arm(uint256 id, address to) external { armedId = id; stealTo = to; armed = true; }
+    function onERC721Received(address, address, uint256, bytes calldata) external returns (bytes4) {
+        if (armed) { armed = false; target.transferFrom(address(this), stealTo, armedId); }
+        return IERC721Receiver.onERC721Received.selector;
+    }
+}
+
 
 /// @notice Malicious ERC-721 receiver that re-enters mintAgent during
 ///         onERC721Received. Used by test_mintAgent_blocksReentrancyViaOnERC721Received.

@@ -356,9 +356,11 @@ contract iNFT_7857 is
         // in onERC721Received doesn't leave us with the payload but no token.
         _rootEverUsed[contentRoot] = true;
 
-        _gateOpen = true;
+        // NOTE: do NOT open the transfer gate around _safeMint. A mint is already exempt from the
+        // gate in _update (isMint == true), so no gate is needed here — and opening it would let a
+        // malicious recipient's onERC721Received callback slip a plain (ungated) transferFrom
+        // through while the gate is open (transferFrom is not nonReentrant). Keep the gate closed.
         _safeMint(to, tokenId);
-        _gateOpen = false;
 
         if (tokenURIlen > 0) {
             _setTokenURI(tokenId, tokenURI_);
@@ -483,9 +485,9 @@ contract iNFT_7857 is
             if (!ok) revert EthTransferFailed();
         }
 
-        _gateOpen = true;
+        // Gate stays closed: the mint of childId is exempt (isMint), and opening it would expose
+        // the same onERC721Received ungated-transfer bypass. See mintAgent.
         _safeMint(to, childId);
-        _gateOpen = false;
 
         emit AgentCloned(tokenId, childId, msg.sender);
     }
@@ -534,9 +536,8 @@ contract iNFT_7857 is
         if (tokenOwner == address(0)) revert TokenDoesNotExist(tokenId);
         if (!_isAuthorized(tokenOwner, msg.sender, tokenId)) revert NotAuthorized(msg.sender);
 
-        _gateOpen = true;
+        // Gate stays closed: a burn is exempt in _update (isBurn) and takes no receiver callback.
         super.burn(tokenId);
-        _gateOpen = false;
 
         // Cleanup intelligence payload + grants storage. Root remains in
         // _rootEverUsed to prevent silent re-mint with leaked content.
