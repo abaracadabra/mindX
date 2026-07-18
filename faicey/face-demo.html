@@ -338,21 +338,34 @@ function renderWebGL(landmarks) {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   if (face3dCv.width !== Math.round(face3dCv.clientWidth * dpr)) webgl.resize();
   webgl.render({ rotY: Math.sin(Date.now() / 2400) * 0.5 }); // a gentle turn shows the real depth
-  drawWebglMouth(g); // the speaking mouth waveform, projected through the 3D camera
+  drawWebglOverlays(g); // mouth waveform + ear frequency response, projected through the 3D camera
 }
 
-// project the outer-lip landmarks through the WebGL camera and draw the mouth
-// scope on the overlay — so the waveform tracks the mouth even as the head turns.
+// project anatomical overlays through the WebGL camera onto a 2D overlay, so the
+// mouth waveform and the ear spectra track the face even as the head turns.
 const face3dOverlay = document.getElementById('face3dOverlay'), ov = face3dOverlay.getContext('2d');
-function drawWebglMouth(g) {
+function meshCentroid(g, indices) {
+  let x = 0, y = 0, z = 0, n = 0;
+  for (const i of indices) { if (i * 3 + 2 < g.positions.length && (g.positions[i * 3] || g.positions[i * 3 + 1] || g.positions[i * 3 + 2])) { x += g.positions[i * 3]; y += g.positions[i * 3 + 1]; z += g.positions[i * 3 + 2]; n++; } }
+  return n ? [x / n, y / n, z / n] : null;
+}
+function drawWebglOverlays(g) {
   const W = face3dCv.width, H = face3dCv.height;
   if (face3dOverlay.width !== W || face3dOverlay.height !== H) { face3dOverlay.width = W; face3dOverlay.height = H; }
   ov.clearRect(0, 0, W, H);
+  if (!webgl.lastMVP) return;
   const wave = speaking && speakData ? speakData : (micOn && tdata ? tdata : null);
-  if (!wave || !webgl.lastMVP) return;
+  if (!wave) return;
+  // mouth waveform
   const lip = [];
   for (const i of CONTOURS.lipsOuter) { const p = projectPoint([g.positions[i * 3], g.positions[i * 3 + 1], g.positions[i * 3 + 2]], webgl.lastMVP, W, H); if (p) lip.push(p); }
   if (lip.length >= 4) drawMouthScopeAt(ov, lip, wave, { hue: 150, gain: 1.6, speaking: !!speaking });
+  // ear frequency response (present when the ears exist — the procedural face)
+  const level = Math.max(0, Math.min(1, mouthOpen));
+  for (const ring of [CONTOURS.rightEar, CONTOURS.leftEar]) {
+    const c = meshCentroid(g, ring); if (!c) continue;
+    const p = projectPoint(c, webgl.lastMVP, W, H); if (p) drawEarBandsAt(ov, p, W * 0.02, level);
+  }
 }
 
 function renderFace() {
@@ -841,34 +854,33 @@ document.getElementById('morphImg').onchange = e => {
 };
 
 // ── the ears pulse like speakers AND show the frequency response ────────────
+// draw one ear's speaker + radial frequency response at a screen point (works
+// on any 2D ctx — the face canvas, or the WebGL overlay after projection).
+function drawEarBandsAt(ctx, p, base, level) {
+  const N = earBands.length;
+  ctx.strokeStyle = `hsla(150,90%,60%,${0.25 + level * 0.5})`; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.arc(p.x, p.y, base * (1 + level * 0.6), 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(p.x, p.y, base * 0.5, 0, Math.PI * 2); ctx.stroke();
+  for (let b = 0; b < N; b++) {
+    const ang = Math.PI * 0.62 - (b / (N - 1)) * Math.PI * 1.24;      // fan up one side
+    const f = 120 * Math.pow(7000 / 120, b / N);
+    const len = base * (0.55 + earBands[b] * 2.1);
+    const x1 = p.x + Math.cos(ang) * base * 0.62, y1 = p.y + Math.sin(ang) * base * 0.62;
+    const x2 = p.x + Math.cos(ang) * len, y2 = p.y + Math.sin(ang) * len;
+    ctx.strokeStyle = `hsl(${freqColor(f, 80, 8000)},90%,${45 + earBands[b] * 30}%)`;
+    ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    if (earBands[b] > 0.5) { ctx.fillStyle = `hsl(${freqColor(f, 80, 8000)},95%,75%)`; ctx.beginPath(); ctx.arc(x2, y2, 1.4, 0, Math.PI * 2); ctx.fill(); }
+  }
+  ctx.lineCap = 'butt';
+}
 function drawEarSpeakers(landmarks, T) {
   if (!(micOn || speaking)) return;
   const level = Math.max(0, Math.min(1, mouthOpen));
-  const N = earBands.length, base = faceCv.width * 0.02;
   for (const ring of [CONTOURS.rightEar, CONTOURS.leftEar]) {
     const c = irisCentre(landmarks, ring); if (!c) continue;
-    const p = T(c);
-    // the speaker cone: two rings pulsing with the overall level
-    fctx.strokeStyle = `hsla(150,90%,60%,${0.25 + level * 0.5})`; fctx.lineWidth = 1.4;
-    fctx.beginPath(); fctx.arc(p.x, p.y, base * (1 + level * 0.6), 0, Math.PI * 2); fctx.stroke();
-    fctx.beginPath(); fctx.arc(p.x, p.y, base * 0.5, 0, Math.PI * 2); fctx.stroke();
-    // the frequency response: radial bars fanning around the cone, low freq at
-    // the bottom sweeping to high at the top, each coloured by its frequency and
-    // as long as that band is loud — a live spectrum blooming from the ear.
-    for (let b = 0; b < N; b++) {
-      const ang = Math.PI * 0.62 - (b / (N - 1)) * Math.PI * 1.24;      // fan up one side
-      const f = 120 * Math.pow(7000 / 120, b / N);
-      const len = base * (0.55 + earBands[b] * 2.1);
-      const x1 = p.x + Math.cos(ang) * base * 0.62, y1 = p.y + Math.sin(ang) * base * 0.62;
-      const x2 = p.x + Math.cos(ang) * len, y2 = p.y + Math.sin(ang) * len;
-      fctx.strokeStyle = `hsl(${freqColor(f, 80, 8000)},90%,${45 + earBands[b] * 30}%)`;
-      fctx.lineWidth = 2; fctx.lineCap = 'round';
-      fctx.beginPath(); fctx.moveTo(x1, y1); fctx.lineTo(x2, y2); fctx.stroke();
-      // a bright tip when the band is hot
-      if (earBands[b] > 0.5) { fctx.fillStyle = `hsl(${freqColor(f, 80, 8000)},95%,75%)`; fctx.beginPath(); fctx.arc(x2, y2, 1.4, 0, Math.PI * 2); fctx.fill(); }
-    }
+    drawEarBandsAt(fctx, T(c), faceCv.width * 0.02, level);
   }
-  fctx.lineCap = 'butt';
 }
 
 // ── the third eye — a faint glowing mark when it's here (easter egg) ─────────

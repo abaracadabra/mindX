@@ -4,6 +4,21 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.19.0] — 2026-07-18
+
+### Changed — the ear frequency response now works in WebGL 3D too
+
+Parity with the mouth (2.18): the **ear-speaker frequency response** rendered only
+in the 2D modes; it now works in **webgl** as well. The ear centroids are
+projected through the renderer's camera (`projectPoint` + `lastMVP`) onto the
+overlay, so each ear's colour-coded radial spectrum tracks the head as it turns.
+The per-ear draw was factored into `drawEarBandsAt(ctx, point, base, level)`,
+shared by the 2D face canvas and the WebGL overlay; `drawWebglMouth` became
+`drawWebglOverlays` (mouth waveform + both ears). The ears render when they exist
+(the procedural face). Suite green: 153.
+
+---
+
 ## [2.18.0] — 2026-07-18
 
 ### Added — the mouth waveform now works in WebGL 3D too
