@@ -4,6 +4,16 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.19.2] — 2026-07-18
+
+### Docs
+
+- **README: how to start the UI** — a ▶ Start the UI section (`node server.js` →
+  http://localhost:8080/face), the clickable-face controls, and the secure-context
+  note (localhost works; LAN needs HTTPS). All assets vendored — no CDN.
+
+---
+
 ## [2.19.1] — 2026-07-18
 
 ### Docs

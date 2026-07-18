@@ -13,6 +13,22 @@
 
 **Advanced 3D face rendering system with voice print analysis, frequency triggers, and inflection detection for mindX autonomous Augmented Intelligence agents**
 
+## ▶ Start the UI
+
+```bash
+npm install          # first time only
+node server.js       # serves on http://localhost:8080
+#   node server.js --port 3000     # pick another port
+#   npm run serve                  # same as node server.js
+```
+
+Then open **http://localhost:8080/face** — the live FACE demo (the control
+surface, the scientific oscilloscope, the morph modes, and persona create/clone).
+The face is clickable: 👁 eye = camera, 👂 ear = mic, 👄 mouth = output, 👃 nose =
+network. Cameras and mics need a **secure context** — `localhost` counts, so it
+works out of the box; on a LAN address serve it over HTTPS. All assets (MediaPipe,
+three.js) are vendored — no CDN, no network required.
+
 ## 🏆 **Implementation Status: COMPLETE**
 
 ✅ **All requested features implemented and working**
