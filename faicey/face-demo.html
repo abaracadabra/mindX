@@ -462,6 +462,20 @@ let lastAccuracy = null;
 // spectrogram model (for hover readout) + waterfall interaction state
 const sgModel = new Spectrogram(96);
 let wfFrozen = false, wfHover = null, wfDt = 33, wfLastT = 0, scifiOn = false, hud = null;
+// per-ear frequency-response bands (log-spaced), smoothed for a stable readout
+const earBands = new Float32Array(12);
+function computeEarBands(sp) {
+  const N = earBands.length, fmin = 120, fmax = 7000, mags = sp.mags, binHz = sp.binHz || 1;
+  if (!mags.length) { for (let b = 0; b < N; b++) earBands[b] *= 0.7; return; }
+  let mx = 1e-6; for (let i = 1; i < mags.length; i++) if (mags[i] > mx) mx = mags[i];
+  for (let b = 0; b < N; b++) {
+    const f0 = fmin * Math.pow(fmax / fmin, b / N), f1 = fmin * Math.pow(fmax / fmin, (b + 1) / N);
+    let sum = 0, n = 0;
+    for (let bin = Math.max(1, Math.floor(f0 / binHz)); bin <= Math.ceil(f1 / binHz) && bin < mags.length; bin++) { sum += mags[bin]; n++; }
+    const v = n ? Math.min(1, Math.sqrt(sum / n / mx)) : 0;
+    earBands[b] = earBands[b] * 0.55 + v * 0.45; // temporal smoothing
+  }
+}
 function scopeSR() { return (audioCtx && audioCtx.sampleRate) || 44100; }
 let audioCtx = null, micStream = null, analyser = null, tdata = null, micOn = false;
 
@@ -806,17 +820,35 @@ document.getElementById('morphImg').onchange = e => {
   img.src = URL.createObjectURL(file);
 };
 
-// ── the ears pulse like speakers with the audio level ───────────────────────
+// ── the ears pulse like speakers AND show the frequency response ────────────
 function drawEarSpeakers(landmarks, T) {
   if (!(micOn || speaking)) return;
   const level = Math.max(0, Math.min(1, mouthOpen));
+  const N = earBands.length, base = faceCv.width * 0.02;
   for (const ring of [CONTOURS.rightEar, CONTOURS.leftEar]) {
-    const c = irisCentre(landmarks, ring); if (!c) continue; // reuse centroid helper
-    const p = T(c); const rr = faceCv.width * 0.02 * (1 + level * 1.4);
-    fctx.strokeStyle = `hsla(150,90%,60%,${0.3 + level * 0.6})`; fctx.lineWidth = 1 + level * 2;
-    fctx.beginPath(); fctx.arc(p.x, p.y, rr, 0, Math.PI * 2); fctx.stroke();
-    fctx.beginPath(); fctx.arc(p.x, p.y, rr * 0.55, 0, Math.PI * 2); fctx.stroke();
+    const c = irisCentre(landmarks, ring); if (!c) continue;
+    const p = T(c);
+    // the speaker cone: two rings pulsing with the overall level
+    fctx.strokeStyle = `hsla(150,90%,60%,${0.25 + level * 0.5})`; fctx.lineWidth = 1.4;
+    fctx.beginPath(); fctx.arc(p.x, p.y, base * (1 + level * 0.6), 0, Math.PI * 2); fctx.stroke();
+    fctx.beginPath(); fctx.arc(p.x, p.y, base * 0.5, 0, Math.PI * 2); fctx.stroke();
+    // the frequency response: radial bars fanning around the cone, low freq at
+    // the bottom sweeping to high at the top, each coloured by its frequency and
+    // as long as that band is loud — a live spectrum blooming from the ear.
+    for (let b = 0; b < N; b++) {
+      const ang = Math.PI * 0.62 - (b / (N - 1)) * Math.PI * 1.24;      // fan up one side
+      const f = 120 * Math.pow(7000 / 120, b / N);
+      const len = base * (0.55 + earBands[b] * 2.1);
+      const x1 = p.x + Math.cos(ang) * base * 0.62, y1 = p.y + Math.sin(ang) * base * 0.62;
+      const x2 = p.x + Math.cos(ang) * len, y2 = p.y + Math.sin(ang) * len;
+      fctx.strokeStyle = `hsl(${freqColor(f, 80, 8000)},90%,${45 + earBands[b] * 30}%)`;
+      fctx.lineWidth = 2; fctx.lineCap = 'round';
+      fctx.beginPath(); fctx.moveTo(x1, y1); fctx.lineTo(x2, y2); fctx.stroke();
+      // a bright tip when the band is hot
+      if (earBands[b] > 0.5) { fctx.fillStyle = `hsl(${freqColor(f, 80, 8000)},95%,75%)`; fctx.beginPath(); fctx.arc(x2, y2, 1.4, 0, Math.PI * 2); fctx.fill(); }
+    }
   }
+  fctx.lineCap = 'butt';
 }
 
 // ── the third eye — a faint glowing mark when it's here (easter egg) ─────────
@@ -994,6 +1026,7 @@ function drawScope() {
   const sp = spectrum(data.length > 2048 ? data.subarray(0, 2048) : data, sr, 1024);
   drawSpectrum(sp);
   if (waterfallOn) drawWaterfall(sp);
+  computeEarBands(sp); // feed the ear-speaker frequency response
   updateReadout(data, sr);
 }
 

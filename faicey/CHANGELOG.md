@@ -4,6 +4,18 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.16.1] — 2026-07-17
+
+### Changed — the ears show a frequency response when they pulse
+
+The ear-speakers no longer just pulse with the level — each now blooms a **live
+frequency response**: the spectrum is binned into 12 log-spaced bands (smoothed),
+drawn as radial bars fanning around the speaker cone, **coloured by frequency**
+(low→red, high→violet) and as long as that band is loud, with a bright tip on hot
+bands. Reuses the already-tested `oscilloscope.spectrum()` — no new dependency.
+
+---
+
 ## [2.16.0] — 2026-07-17
 
 ### Changed — **cyborgi**: the endoskeleton, polished and reflective, in high detail
