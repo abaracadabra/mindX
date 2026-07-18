@@ -76,6 +76,11 @@
   .chk input { margin-top:1px; accent-color:var(--a); }
   .pstate { font-size:10px; color:#576; margin-bottom:7px; line-height:1.6; }
   .pstate .ok { color:var(--a); } .pstate .no { color:#846; }
+  #face { cursor:pointer; }
+  .dist { position:absolute; right:12px; top:12px; font-size:11px; color:#22e0ff; letter-spacing:.08em; text-shadow:0 0 6px rgba(34,224,255,.5); font-variant-numeric:tabular-nums; }
+  .ctlhint { position:absolute; left:12px; bottom:10px; font-size:9px; color:#576; letter-spacing:.03em; }
+  .outpanel { display:none; gap:6px; align-items:center; margin-top:6px; font-size:10px; color:#8ab; }
+  .outpanel input[type=range] { flex:1; accent-color:var(--a); }
 </style>
 </head>
 <body>
@@ -85,6 +90,8 @@
     <canvas id="face3d"></canvas>
     <video id="cam" autoplay playsinline muted></video>
     <div class="badge">faicey · THE FACE, live <small id="src">— procedural neutral</small></div>
+    <div class="dist" id="dist"></div>
+    <div class="ctlhint" id="ctlhint">👁 eye = camera · 👂 ear = mic · 👄 mouth = output — click a feature</div>
   </div>
   <div class="panel">
     <h1>faicey</h1>
@@ -161,6 +168,7 @@
       <select id="sayEmotion" style="flex:2"></select>
       <button id="sayBtn" style="flex:1">🗣 speak</button>
     </div>
+    <div class="outpanel" id="outPanel">👄 output <button id="muteBtn" style="flex:0 0 auto">🔊</button><input id="outVol" type="range" min="0" max="100" value="80"><span id="outVolLbl">80%</span></div>
     <div class="vp" id="sayOut">the avatar synthesises the text, shapes it toward the cloned voice, and expresses it — lip-sync + emotion driven by the speech.</div>
 
     <div class="sec">persona</div>
@@ -192,7 +200,9 @@
 import { neutralFace } from '/src/face_clone/neutral_face.js';
 import { FaceCapture } from '/src/face_clone/capture.js';
 import { applyExpression, EXPRESSION_LABELS } from '/src/face_clone/expressions.js';
-import { drawFaceTheme, drawMouthScope } from '/src/face_clone/contours.js';
+import { drawFaceTheme, drawMouthScope, computeFit, CONTOURS } from '/src/face_clone/contours.js';
+import { featureRegions, featureAtPoint } from '/src/face_clone/face_controls.js';
+import { rangeFind } from '/src/face_clone/distance.js';
 import { triangulate } from '/src/face_clone/render_surface.js';
 import { NeuralRenderer, gradeFidelity, identityConsistency } from '/src/face_clone/neural_render.js';
 import { ClassicalEnhancer } from '/src/face_clone/classical_enhance.js';
@@ -330,6 +340,8 @@ function renderFace() {
   // the voice, shown BETWEEN the lips — the mouth is its own oscilloscope
   if (speaking && speakData) drawMouthScope(fctx, landmarks, speakData, { W: faceCv.width, H: faceCv.height, hue, gain: 1.6 });
   else if (micOn && tdata) drawMouthScope(fctx, landmarks, tdata, { W: faceCv.width, H: faceCv.height, hue, gain: 1.6 });
+  // the eye is a camera — draw the lens aperture over each iris (not over the real photoreal eye)
+  if (drawTheme !== 'photoreal') drawEyeCameras(landmarks, computeFit(landmarks, faceCv.width, faceCv.height));
 }
 
 // ── expression buttons + auto-cycle ────────────────────────────────────────
@@ -587,6 +599,58 @@ function updateReadout(data, sr) {
       (acc18 ? `<br><span style="color:#576">EVM-18: ƒ₀ ${acc18.f0_hz} · ±${acc18.ci95_hz} Hz</span>` : '') +
       `<br><span style="color:#576">YIN · Hann-FFT · Praat HNR · Kalman ± 95% CI — in-browser, 18-dp</span>`;
   }
+}
+
+// ── the eye IS a camera: draw a lens aperture over each iris ─────────────────
+function irisCentre(landmarks, ring) {
+  let sx = 0, sy = 0, n = 0;
+  for (const i of ring) { const lm = landmarks[i]; if (!lm) continue; sx += lm.x; sy += lm.y; n++; }
+  return n ? { x: sx / n, y: sy / n } : null;
+}
+function drawEyeCameras(landmarks, T) {
+  for (const ring of [CONTOURS.rightIris, CONTOURS.leftIris]) {
+    const c = irisCentre(landmarks, ring); if (!c) continue;
+    const p = T(c);
+    const rr = Math.max(4, faceCv.width * 0.018);
+    // lens ring
+    fctx.strokeStyle = camOn ? '#22e0ff' : '#0a6'; fctx.lineWidth = 1.4;
+    fctx.beginPath(); fctx.arc(p.x, p.y, rr, 0, Math.PI * 2); fctx.stroke();
+    // aperture blades (a camera has an eye)
+    fctx.strokeStyle = camOn ? 'rgba(34,224,255,.7)' : 'rgba(0,180,90,.5)'; fctx.lineWidth = 1;
+    for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; fctx.beginPath(); fctx.moveTo(p.x + Math.cos(a) * rr * 0.35, p.y + Math.sin(a) * rr * 0.35); fctx.lineTo(p.x + Math.cos(a + 0.9) * rr, p.y + Math.sin(a + 0.9) * rr); fctx.stroke(); }
+    // recording dot when the camera is live
+    if (camOn) { fctx.fillStyle = '#f33'; fctx.beginPath(); fctx.arc(p.x, p.y, rr * 0.22, 0, Math.PI * 2); fctx.fill(); }
+  }
+}
+
+// ── click the face: eye→camera, ear→mic, mouth→output ───────────────────────
+faceCv.addEventListener('click', e => {
+  const { landmarks } = currentLandmarks();
+  const T = computeFit(landmarks, faceCv.width, faceCv.height);
+  const r = faceCv.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width * faceCv.width, y = (e.clientY - r.top) / r.height * faceCv.height;
+  const hit = featureAtPoint(featureRegions(landmarks, T), x, y);
+  if (!hit) return;
+  if (hit.control === 'camera') camToggle();
+  else if (hit.control === 'mic') micToggle();
+  else if (hit.control === 'output') toggleOutput();
+});
+
+// ── output-audio controls (the mouth speaks) ────────────────────────────────
+let outMuted = false, outVol = 0.8, speakGain = null;
+function toggleOutput() { const p = document.getElementById('outPanel'); p.style.display = p.style.display === 'flex' ? 'none' : 'flex'; }
+function applyOutput() { if (speakGain) speakGain.gain.value = outMuted ? 0 : outVol; }
+document.getElementById('muteBtn').onclick = e => { outMuted = !outMuted; e.target.textContent = outMuted ? '🔇' : '🔊'; applyOutput(); };
+document.getElementById('outVol').oninput = e => { outVol = e.target.value / 100; document.getElementById('outVolLbl').textContent = e.target.value + '%'; applyOutput(); };
+
+// ── the eye is a camera: range-find the subject from the live iris IPD ───────
+let lastDist = null, lastDistT = 0;
+function updateDistance() {
+  const el = document.getElementById('dist');
+  if (!(camOn && live && camEl.videoWidth)) { el.textContent = ''; return; }
+  const now = Date.now(); if (now - lastDistT < 250) return; lastDistT = now;
+  const rf = rangeFind(live, camEl.videoWidth, camEl.videoHeight);
+  if (rf) { lastDist = rf.cm; el.textContent = `⟠ ${rf.cm.toFixed(0)} cm`; }
 }
 
 function drawScope() {
@@ -962,7 +1026,9 @@ function playThroughAnalyser(samples, sr) {
     const src = audioCtx.createBufferSource(); src.buffer = buf;
     speakAnalyser = audioCtx.createAnalyser(); speakAnalyser.fftSize = 2048;
     speakData = new Float32Array(speakAnalyser.fftSize);
-    src.connect(speakAnalyser); speakAnalyser.connect(audioCtx.destination);
+    // the mouth's output-audio control: a gain node the volume/mute drives
+    speakGain = audioCtx.createGain(); speakGain.gain.value = outMuted ? 0 : outVol;
+    src.connect(speakAnalyser); speakAnalyser.connect(speakGain); speakGain.connect(audioCtx.destination);
     speaking = true; lastLevel = 0;
     src.onended = () => { speaking = false; speakAnalyser = null; mouthOpen = 0; resolve(); };
     src.start();
@@ -1147,6 +1213,7 @@ function loop() {
   drawScope();
   if (scifiOn && hud) hud.draw();
   renderFace();
+  updateDistance();
 }
 recomputeTopology();
 loop();

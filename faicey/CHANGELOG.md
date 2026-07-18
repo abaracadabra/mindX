@@ -4,6 +4,33 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.14.0] — 2026-07-17
+
+### Added — the face is the control surface + a webcam range finder
+
+Each sense organ now drives the hardware it represents
+(`src/face_clone/face_controls.js`, `distance.js`):
+
+- 👁 **the eye is a camera** — clicking an eye toggles the webcam; over each iris
+  the demo draws a **lens aperture** (ring + six aperture blades) that glows and
+  shows a red recording dot when the camera is live. A camera has an eye.
+- 👂 **the ear is the microphone** — clicking an ear controls mic input.
+- 👄 **the mouth is the output** — clicking the mouth opens a volume/mute panel
+  that drives a Web Audio gain on the avatar's speech.
+- **Range finder** — because the eye is a camera it can range-find: a pinhole
+  model (`D = f·S/s`) turns the measured inter-pupillary distance into a live
+  **⟠ N cm** distance to the subject, from the iris landmarks + the webcam FOV.
+  Returns `null` without the iris — it never guesses.
+- Hit-testing maps a canvas click to the feature under it (feature discs in the
+  renderer's own fit transform, nearest-hit); `CONTROL_MAP` names the wiring.
+- **8 tests** (eye→camera, ear→mic, mouth→output, nearest-hit, empty-space miss;
+  the range finder exact against the pinhole model, inverse in IPD px, ~1 m at the
+  calibrated IPD, null without the iris). Suite green: 130.
+
+Detail: [docs/FACE_CONTROLS.md](./docs/FACE_CONTROLS.md).
+
+---
+
 ## [2.13.0] — 2026-07-17
 
 ### Added — quant-finance accuracy, a shared sci-fi substrate, waterfall interaction

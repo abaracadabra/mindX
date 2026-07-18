@@ -32,6 +32,7 @@ export const CONTOURS = {
 const CLOSED = new Set(['faceOval', 'rightEye', 'leftEye', 'lipsOuter', 'lipsInner', 'rightIris', 'leftIris']);
 
 /** Compute a fit transform mapping the landmarks' bbox into a padded canvas box. */
+export function computeFit(landmarks, W, H, pad = 0.12) { return fit(landmarks, W, H, pad); }
 function fit(landmarks, W, H, pad = 0.12) {
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const p of landmarks) {
