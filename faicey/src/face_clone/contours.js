@@ -93,11 +93,23 @@ export function drawFaceWireframe(ctx, landmarks, opts) {
  * @param {{W,H,hue,gain?}} opts
  */
 export function drawMouthScope(ctx, landmarks, wave, opts) {
-  const { W, H, hue = 150, gain = 1.4, speaking = false } = opts;
+  const { W, H } = opts;
   const loop = CONTOURS.lipsOuter.map((i) => landmarks[i]).filter(Boolean);
   if (loop.length < 4 || !wave || !wave.length) return;
   const T = fit(landmarks, W, H);
-  const pts = loop.map(T);
+  drawMouthScopeAt(ctx, loop.map(T), wave, opts);
+}
+
+/**
+ * Draw the mouth oscilloscope from an ALREADY-PROJECTED outer-lip polygon —
+ * used by the WebGL path, which projects the lips through the 3D camera so the
+ * waveform lands on the mouth even as the head turns.
+ * @param {Array<{x,y}>} lipPts  projected outer-lip points in canvas coords
+ */
+export function drawMouthScopeAt(ctx, lipPts, wave, opts) {
+  const { hue = 150, gain = 1.4, speaking = false } = opts;
+  const pts = lipPts;
+  if (!pts || pts.length < 4 || !wave || !wave.length) return;
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const p of pts) { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); }
   const midY = (minY + maxY) / 2, half = (maxY - minY) / 2, w = maxX - minX;

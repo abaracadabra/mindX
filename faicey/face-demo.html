@@ -20,6 +20,7 @@
   .stage { position:relative; background:radial-gradient(ellipse at 50% 42%, #0a1620 0%, #04070c 70%); }
   #face { width:100%; height:100%; display:block; }
   #face3d { position:absolute; inset:0; width:100%; height:100%; display:none; }
+  #face3dOverlay { position:absolute; inset:0; width:100%; height:100%; display:none; pointer-events:none; }
   #cam { position:absolute; right:12px; bottom:12px; width:150px; border:1px solid var(--dim); border-radius:6px; transform:scaleX(-1); display:none; background:#000; }
   .badge { position:absolute; left:14px; top:12px; font-size:11px; color:var(--a); letter-spacing:.12em; }
   .badge small { color:#576; }
@@ -100,6 +101,7 @@
   <div class="stage">
     <canvas id="face"></canvas>
     <canvas id="face3d"></canvas>
+    <canvas id="face3dOverlay"></canvas>
     <video id="cam" autoplay playsinline muted></video>
     <div class="badge">faicey · THE FACE, live <small id="src">— procedural neutral</small></div>
     <div class="dist" id="dist"></div>
@@ -219,7 +221,7 @@
 import { neutralFace } from '/src/face_clone/neutral_face.js';
 import { FaceCapture } from '/src/face_clone/capture.js';
 import { applyExpression, EXPRESSION_LABELS } from '/src/face_clone/expressions.js';
-import { drawFaceTheme, drawMouthScope, computeFit, CONTOURS } from '/src/face_clone/contours.js';
+import { drawFaceTheme, drawMouthScope, drawMouthScopeAt, computeFit, CONTOURS } from '/src/face_clone/contours.js';
 import { featureRegions, featureAtPoint } from '/src/face_clone/face_controls.js';
 import { rangeFind } from '/src/face_clone/distance.js';
 import { pingStats, connectionSummary, rpcPayload, weiToEth, formatScan, isAddress, rankResults } from '/src/face_clone/nose_tools.js';
@@ -228,7 +230,7 @@ import { MORPH_MODES, morphMode, morphPalette, clampIntensity, ageBand, ageYears
 import { triangulate } from '/src/face_clone/render_surface.js';
 import { NeuralRenderer, gradeFidelity, identityConsistency } from '/src/face_clone/neural_render.js';
 import { ClassicalEnhancer } from '/src/face_clone/classical_enhance.js';
-import { buildFaceGeometry, WebGLFaceRenderer } from '/src/face_clone/webgl_face.js';
+import { buildFaceGeometry, WebGLFaceRenderer, projectPoint } from '/src/face_clone/webgl_face.js';
 import { yinPitch, spectrum, detectTrigger, measurements, freqColor } from '/src/face_clone/oscilloscope.js';
 import { inferno, dbNorm, linBinForX, Spectrogram } from '/src/face_clone/spectrogram.js';
 import { Kalman, confidenceInterval, jitter, shimmer, accuracy18 } from '/src/face_clone/finmeasure.js';
@@ -331,10 +333,26 @@ function renderWebGL(landmarks) {
     uvSource = live; webgl.setTexture(camEl); textured = true; // live frame re-uploaded each draw
   }
   webgl.setMode(textured ? 'photoreal' : 'surface');
-  webgl.setGeometry(buildFaceGeometry(landmarks, { topology, uvSource }));
+  const g = buildFaceGeometry(landmarks, { topology, uvSource });
+  webgl.setGeometry(g);
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   if (face3dCv.width !== Math.round(face3dCv.clientWidth * dpr)) webgl.resize();
   webgl.render({ rotY: Math.sin(Date.now() / 2400) * 0.5 }); // a gentle turn shows the real depth
+  drawWebglMouth(g); // the speaking mouth waveform, projected through the 3D camera
+}
+
+// project the outer-lip landmarks through the WebGL camera and draw the mouth
+// scope on the overlay — so the waveform tracks the mouth even as the head turns.
+const face3dOverlay = document.getElementById('face3dOverlay'), ov = face3dOverlay.getContext('2d');
+function drawWebglMouth(g) {
+  const W = face3dCv.width, H = face3dCv.height;
+  if (face3dOverlay.width !== W || face3dOverlay.height !== H) { face3dOverlay.width = W; face3dOverlay.height = H; }
+  ov.clearRect(0, 0, W, H);
+  const wave = speaking && speakData ? speakData : (micOn && tdata ? tdata : null);
+  if (!wave || !webgl.lastMVP) return;
+  const lip = [];
+  for (const i of CONTOURS.lipsOuter) { const p = projectPoint([g.positions[i * 3], g.positions[i * 3 + 1], g.positions[i * 3 + 2]], webgl.lastMVP, W, H); if (p) lip.push(p); }
+  if (lip.length >= 4) drawMouthScopeAt(ov, lip, wave, { hue: 150, gain: 1.6, speaking: !!speaking });
 }
 
 function renderFace() {
@@ -396,6 +414,8 @@ document.getElementById('theme').onchange = e => {
   const gl = theme === 'webgl' ? ensureWebGL() : null;
   const use3d = theme === 'webgl' && !!gl;
   face3dCv.style.display = use3d ? 'block' : 'none';
+  face3dOverlay.style.display = use3d ? 'block' : 'none';
+  if (!use3d) ov.clearRect(0, 0, face3dOverlay.width, face3dOverlay.height);
   faceCv.style.display = use3d ? 'none' : 'block';
   if (use3d) { if (!topology) recomputeTopology(); gl.resize(); }
   if (theme === 'webgl' && !gl) setHwCount('WebGL unavailable — falling back to the 2D shaded surface');

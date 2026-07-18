@@ -6,7 +6,7 @@
  */
 import { strict as assert } from 'assert';
 import {
-  buildFaceGeometry, computeSmoothNormals,
+  buildFaceGeometry, computeSmoothNormals, projectPoint,
   m4identity, m4perspective, m4rotationY, m4translation, m4multiply,
 } from './webgl_face.js';
 import { neutralFace } from './neutral_face.js';
@@ -94,6 +94,18 @@ test('perspective has the expected diagonal and w-clip term', () => {
 test('translation places the offset in the last column', () => {
   const t = m4translation(2, -3, 5);
   assert.equal(t[12], 2); assert.equal(t[13], -3); assert.equal(t[14], 5);
+});
+
+test('projectPoint puts the origin at the screen centre and returns null behind the camera', () => {
+  const W = 300, H = 200;
+  const mvp = m4multiply(m4perspective(0.8, W / H, 0.1, 100), m4translation(0, 0, -3)); // look down -Z at the origin
+  const c = projectPoint([0, 0, 0], mvp, W, H);
+  assert.ok(c && Math.abs(c.x - W / 2) < 1e-6 && Math.abs(c.y - H / 2) < 1e-6, 'origin → screen centre');
+  // a point to the right (+X) projects right of centre; up (+Y) projects above centre
+  assert.ok(projectPoint([0.3, 0, 0], mvp, W, H).x > W / 2, '+X → right');
+  assert.ok(projectPoint([0, 0.3, 0], mvp, W, H).y < H / 2, '+Y → up (smaller screen-y)');
+  // a point behind the camera (positive Z, past the eye at z=+3) → null
+  assert.equal(projectPoint([0, 0, 5], mvp, W, H), null, 'behind the camera → null');
 });
 
 function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }

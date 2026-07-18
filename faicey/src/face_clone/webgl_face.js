@@ -184,6 +184,7 @@ export class WebGLFaceRenderer {
     const aspect = this.canvas.width / (this.canvas.height || 1);
     const model = m4rotationY(rotY);
     const mvp = m4multiply(m4multiply(m4perspective(0.8, aspect, 0.1, 100), m4translation(0, 0, -dist)), model);
+    this.lastMVP = mvp; // exposed so overlays (the mouth scope) can project to screen
     gl.clearColor(0.02, 0.024, 0.04, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.uniformMatrix4fv(gl.getUniformLocation(this.prog, 'uMVP'), false, mvp);
     gl.uniformMatrix4fv(gl.getUniformLocation(this.prog, 'uModel'), false, model);
@@ -199,6 +200,22 @@ export class WebGLFaceRenderer {
   }
 
   dispose() { const gl = this.gl; if (!gl) return; [this.pos, this.nrm, this.uv, this.idx].forEach(b => gl.deleteBuffer(b)); if (this.tex) gl.deleteTexture(this.tex); }
+}
+
+/**
+ * Project a mesh-space point through an MVP to screen (canvas) pixels.
+ * @param {number[]} p    [x,y,z] in the same space as buildFaceGeometry positions
+ * @param {Float32Array} mvp  column-major MVP (e.g. renderer.lastMVP)
+ * @param {number} W, H   canvas size in device pixels
+ * @returns {{x,y,w}|null} null when the point is behind the camera (w ≤ 0)
+ */
+export function projectPoint(p, mvp, W, H) {
+  const [x, y, z] = p;
+  const cx = mvp[0] * x + mvp[4] * y + mvp[8] * z + mvp[12];
+  const cy = mvp[1] * x + mvp[5] * y + mvp[9] * z + mvp[13];
+  const cw = mvp[3] * x + mvp[7] * y + mvp[11] * z + mvp[15];
+  if (cw <= 1e-6) return null;
+  return { x: (cx / cw * 0.5 + 0.5) * W, y: (1 - (cy / cw * 0.5 + 0.5)) * H, w: cw };
 }
 
 export default buildFaceGeometry;

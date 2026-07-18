@@ -4,6 +4,23 @@ All notable changes to **faicey**. Versions follow [semver](https://semver.org).
 
 ---
 
+## [2.18.0] — 2026-07-18
+
+### Added — the mouth waveform now works in WebGL 3D too
+
+The speaking mouth waveform (2.17) rendered only in the 2D modes. It now works in
+**webgl** mode: the outer-lip landmarks are **projected through the same 3D
+camera** the renderer uses (`webgl_face.projectPoint` + the renderer's exposed
+`lastMVP`) onto a transparent overlay canvas, so the waveform lands on the mouth
+**even as the head turns**. `drawMouthScope` was split into a reusable
+`drawMouthScopeAt(ctx, projectedLipPoints, …)`.
+
+- `projectPoint(p, mvp, W, H)` — mesh-space → screen pixels, null behind the
+  camera; 1 test (origin → screen centre, +X→right, +Y→up, behind→null).
+- Suite green: 153.
+
+---
+
 ## [2.17.0] — 2026-07-18
 
 ### Changed — the mouth shows a real waveform when speaking
