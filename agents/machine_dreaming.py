@@ -1419,6 +1419,27 @@ class MachineDreamCycle:
         except Exception as cold_e:
             logger.debug(f"{self.log_prefix} cold-tier distribute failed: {cold_e}")
 
+        # Phase 8.5 — GitHub distribution leg (interim until iNFT/THOT anchor).
+        # Bundles aged STM/archive, pushes to the private archive repo, prunes
+        # only sha-verified, push-confirmed bundles. Best-effort.
+        try:
+            from agents.storage.github_offload import run_github_offload
+            gh = await run_github_offload(PROJECT_ROOT, min_age_days=14.0)
+            if gh:
+                report["github_offload"] = gh
+        except Exception as gh_e:
+            logger.debug(f"{self.log_prefix} github offload failed: {gh_e}")
+
+        # Phase 9 — substrate evolution: the public landing surface re-derives
+        # itself from what this cycle actually did (see agents/substrate_evolver).
+        try:
+            from agents.substrate_evolver import evolve_substrate
+            evo = await evolve_substrate(PROJECT_ROOT, dream_report=report)
+            if evo:
+                report["substrate_evolution"] = {"generation": evo.get("generation")}
+        except Exception as evo_e:
+            logger.debug(f"{self.log_prefix} substrate evolution failed: {evo_e}")
+
         return report
 
     # === PHASE 8 — COLD-TIER DISTRIBUTION (IPFS + on-chain anchor) ===

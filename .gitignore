@@ -121,6 +121,7 @@ data/mastermind_work/
 
 # Frontend Dependencies
 mindx_frontend_ui/node_modules/
+mindx_backend_service/rack/node_modules/
 data/godel/source_ledger.jsonl
 data/godel/certificates.jsonl
 data/godel/sensor_chain.jsonl

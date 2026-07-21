@@ -4286,6 +4286,33 @@ async def insight_memory_recent(request: Request, limit: int = 24):
     )
 
 
+@app.get("/insight/substrate/evolution", tags=["insight"], summary="Substrate evolution — the landing surface's self-derivation lineage")
+@_insight_safe
+async def insight_substrate_evolution(request: Request):
+    """The landing page's own evolution record.
+
+    Written by agents/substrate_evolver.py at the end of every dream cycle:
+    generation counter, one honest headline of what the cycle did, mesh
+    physics derived from live state (the visual substrate grows with the
+    mind), and the lineage of recent evolutions. The page renders this —
+    it is a projection, never hand-edited, never LLM-rewritten HTML.
+    """
+    from utils.config import PROJECT_ROOT
+    p = PROJECT_ROOT / "data" / "system_state" / "substrate_evolution.json"
+    data = None
+    if p.exists():
+        try:
+            data = json.loads(p.read_text())
+        except Exception as e:
+            data = {"generation": 0, "error": str(e)}
+    if not data:
+        data = {"generation": 0,
+                "headline": "the substrate has not yet evolved — first dream cycle pending",
+                "mesh": {"nodes": 90, "link_dist": 141, "energy": 0.55, "distributed": False},
+                "lineage": []}
+    return _maybe_h_text(request, data, route_path="/insight/substrate/evolution")
+
+
 @app.get("/insight/improvement/timeline", tags=["insight"])
 @_insight_safe
 async def insight_improvement_timeline(limit: int = 50):

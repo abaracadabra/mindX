@@ -68,6 +68,7 @@ EventKind = Literal[
     "deltaverse.gate.event",         # DeltaVerseGate — gate opened/opening/blocked/failed (wordpress.agent /gate)
     "deltaverse.room.created",       # DeltaVerseGate — BubbleRoomV4.mintRoom confirmed (roomId)
     "deltaverse.bubbleroom.spawned", # DeltaVerseGate — BubbleRoomSpawn.spawnFromRoom confirmed (emergenceId)
+    "substrate.evolved",             # substrate_evolver — public landing surface re-derived itself from the cycle
 ]
 
 EVENT_KINDS: tuple[str, ...] = tuple(EventKind.__args__)  # type: ignore[attr-defined]

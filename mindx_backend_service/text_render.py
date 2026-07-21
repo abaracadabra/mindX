@@ -290,6 +290,47 @@ def render_dreams_recent(d: dict) -> str:
     )
 
 
+def render_substrate_evolution(d: dict) -> str:
+    """Substrate evolution — the landing surface's self-derivation record."""
+    gen = d.get("generation") or 0
+    if not gen:
+        return (d.get("headline") or "the substrate has not yet evolved") + "\n"
+    out = [f"substrate evolution  ·  gen {gen}  ·  {human_rel_ts(d.get('ts'))}"]
+    out.append("─" * 80)
+    if d.get("headline"):
+        out.append(f"  {d['headline']}")
+        out.append("")
+    m = d.get("mesh") or {}
+    out.append(f"  {'mesh':<8} nodes {m.get('nodes','?')} · link reach {m.get('link_dist','?')}"
+               f" · energy {m.get('energy','?')} · distributed {'yes' if m.get('distributed') else 'no'}")
+    s = d.get("stats") or {}
+    dr = s.get("dream") or {}
+    if any(dr.get(k) for k in ("agents", "insights", "promoted")):
+        out.append(f"  {'dream':<8} agents {human_count(dr.get('agents') or 0)}"
+                   f" · insights {human_count(dr.get('insights') or 0)}"
+                   f" · promoted {human_count(dr.get('promoted') or 0)}")
+    a = s.get("ascent") or {}
+    if a:
+        who = (f"gen {a['generation']}" if isinstance(a.get("generation"), int)
+               else str(a.get("label") or "").replace("_", " ").strip() or a.get("model") or "—")
+        delta = a.get("delta")
+        dtxt = f" · Δ{delta:+.4f}" if isinstance(delta, (int, float)) else ""
+        out.append(f"  {'ascent':<8} imprinted {'yes' if a.get('imprinted') else 'no'}{dtxt} · {who}")
+    o = s.get("offload") or {}
+    if o.get("bundles"):
+        out.append(f"  {'offload':<8} bundles {human_count(o.get('bundles'))}"
+                   f" · files {human_count(o.get('files'))}"
+                   f" · {human_bytes(o.get('raw_bytes'))} → {human_bytes(o.get('gz_bytes'))}")
+    lineage = d.get("lineage") or []
+    if lineage:
+        out.append("")
+        out.append(f"lineage  ·  {len(lineage)} evolutions")
+        for e in reversed(lineage[-8:]):
+            hl = (e.get("headline") or "")[:58]
+            out.append(f"  gen {e.get('generation'):>3}  {human_rel_ts(e.get('ts')):>8}  {hl}")
+    return "\n".join(out) + "\n"
+
+
 def render_bdi_recent(d: dict) -> str:
     rows = d.get("events") or []
     out: list[str] = []
@@ -1732,6 +1773,7 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/cost/summary":        render_cost_summary,
     "/insight/cost/recent":         render_cost_recent,
     "/insight/dreams/recent":       render_dreams_recent,
+    "/insight/substrate/evolution": render_substrate_evolution,
     "/insight/memory/recent":       render_memory_recent,
     "/insight/bdi/recent":          render_bdi_recent,
     "/insight/cognition":           render_cognition,

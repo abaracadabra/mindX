@@ -45,8 +45,21 @@ canvas#substrate{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer
 h1{font-family:var(--mono);font-weight:700;font-size:clamp(30px,6vw,58px);line-height:1.04;letter-spacing:-.01em;color:var(--ink);margin-bottom:22px}
 h1 .a{color:var(--gold)}
 .lede{font-size:clamp(15px,2.2vw,19px);color:var(--ink2);max-width:680px;margin-bottom:14px}
-.verdict{font-family:var(--mono);font-size:12px;color:var(--ink3);margin-bottom:34px}
+.verdict{font-family:var(--mono);font-size:12px;color:var(--ink3);margin-bottom:16px}
 .verdict b{color:var(--green)}
+/* mindX time — the lunar clock */
+.clock{font-family:var(--mono);font-size:11.5px;color:var(--ink3);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-bottom:34px;display:flex;flex-direction:column;gap:5px;letter-spacing:.03em;background:rgba(6,9,15,.55)}
+.clock b{color:var(--ink);font-weight:600}
+.clock .ok{color:var(--green)}
+.clock .moon{color:var(--gold)}
+/* substrate evolution — the page's own lineage, written by the dream cycle */
+.evo{font-family:var(--mono);font-size:11.5px;color:var(--ink3);border:1px solid var(--line);border-left:2px solid var(--blue);border-radius:10px;padding:11px 16px;margin:-22px 0 34px;display:flex;flex-direction:column;gap:4px;letter-spacing:.03em;background:rgba(6,9,15,.55)}
+.evo b{color:var(--ink);font-weight:600}
+.evo .gen{color:var(--blue)}
+.evo .hl{color:var(--ink2)}
+/* substrate instrument rack — dreamknob island, read-only hardware readout of the same record */
+.rackline{margin-top:26px}
+.rackline>div{width:100%}
 .cta{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:52px}
 .connect{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#0a0d07;background:linear-gradient(135deg,var(--gold),#caa233);border:none;border-radius:10px;padding:15px 30px;cursor:pointer;transition:box-shadow .25s,transform .1s}
 .connect:hover{box-shadow:0 0 30px rgba(227,179,65,.35)}
@@ -82,10 +95,21 @@ h1 .a{color:var(--gold)}
   </header>
 
   <main class="hero">
-    <div class="eyebrow">Day 0 · the clock starts now · autonomous · sovereign</div>
+    <div class="eyebrow" id="eyebrow">Day 96 · autonomous · sovereign</div>
     <h1>An intelligence that improves&nbsp;itself — <span class="a">and publishes the proof.</span></h1>
     <p class="lede">mindX is an autonomous multi-agent system: a Darwin-Gödel machine of sovereign agents with cryptographic identity, constitutional governance, and a memory that outlives the process — running in the open on commodity hardware.</p>
     <p class="verdict" id="verdict"><a href="/machine" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--ink3)">honest self-audit: <b id="gm-verdict">reading…</b> · see the Gödel Machine Index →</a></p>
+
+    <div class="clock" id="mxclock" aria-label="mindX time — the lunar clock">
+      <span>mindX time · <b id="ck-day">day 96</b> · <b id="ck-watch">watch —/3</b> <span id="ck-watch-span"></span> · moon <b class="moon" id="ck-moon">—</b></span>
+      <span>next full moon <b id="ck-full">—</b> · <a href="/book" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--ink3)">Book of mindX</a> edition every full moon — <b class="ok">original plan on track</b> · 28-chapter lunar writing cycle ≈ 28.3 d · synodic month 29.530588670 d</span>
+      <span>epoch T+0 · 2026-04-05 UTC · a day is lived as three 8-hour watches — dream, consolidate, publish</span>
+    </div>
+
+    <div class="evo" id="evo" hidden aria-label="Substrate evolution — this page derives itself from the mind's own cycles">
+      <span>substrate <b class="gen" id="evo-gen">gen —</b> · this page re-derives itself every dream cycle · <b id="evo-ts">—</b></span>
+      <span class="hl" id="evo-headline"></span>
+    </div>
 
     <div class="cta">
       <button class="connect" id="connect">◈ Connect Wallet</button>
@@ -110,10 +134,17 @@ h1 .a{color:var(--gold)}
         <p>Every log is a memory; every memory is a log. Content-addressed, time-travellable, semantically searchable over pgvector — the past stays exact.</p>
       </div>
     </section>
+
+    <!-- Substrate instrument rack: the evolution record on studio hardware.
+         Read-only by doctrine — every needle and LED is a number the mind
+         produced (substrate_evolver → /insight/substrate/evolution). The
+         island unhides this section only when a real generation exists. -->
+    <section class="rackline" id="substrate-rack" hidden
+      aria-label="Substrate instrument rack — live readout of the mind's last dream cycle"></section>
   </main>
 
   <footer class="foot">
-    <span class="status"><span class="dot"></span> three years and 90 days later · today is day 0 · begin</span>
+    <span class="status"><span class="dot"></span> three years in the making · today is day <b id="ft-day" style="color:var(--ink)">96</b> · three watches a day · lunar publishing on track</span>
     <span id="meter">memories <b id="mem" style="color:var(--blue)">…</b> · tokens <b id="tok" style="color:var(--gold)">420,132,232</b></span>
     <span>source <a href="https://github.com/agenticplace">github.com/agenticplace</a> · <a href="https://github.com/cypherpunk2048" style="color:var(--ink3)">cypherpunk2048</a></span>
   </footer>
@@ -156,12 +187,50 @@ fetch('/insight/godel/machine',{cache:'no-store'}).then(function(r){return r.ok?
   pollTokens(); setInterval(pollTokens,15000);
 })();
 
-// ── Substrate: self-organizing neural mesh (maintained from the diagnostics dashboard) ──
+// ── mindX time: the lunar clock ──
+// Epoch T+0 = 2026-04-05 00:00 UTC (MANIFESTO Phase 1 count; T+90 closed 2026-07-01).
+// A day is lived as three 8-hour watches — the dream clock's own cadence
+// (shift_interval_hours=8, shifts_per_day=3 in machine_dreaming's DreamClock).
+// Moon math mirrors agents/author_agent.moon_phase (reference new moon
+// 2000-01-06 18:14 UTC, synodic month 29.53058867 d) so this page and the
+// machine always agree. Book of mindX: one edition per full moon.
+(function(){
+  var EPOCH=Date.UTC(2026,3,5), SYN=29.53058867, REF=Date.UTC(2000,0,6,18,14);
+  var WATCH=['00–08 UTC · dream','08–16 UTC · consolidate','16–24 UTC · publish'];
+  var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function set(id,t){var e=document.getElementById(id);if(e)e.textContent=t;}
+  function tick(){
+    var now=Date.now();
+    var day=Math.floor((now-EPOCH)/86400000);
+    var w=Math.floor(new Date(now).getUTCHours()/8);
+    var pd=((now-REF)/86400000)%SYN, pct=pd/SYN;
+    var name=pct<.0339?'new moon':pct<.216?'waxing crescent':pct<.284?'first quarter':pct<.466?'waxing gibbous':pct<.534?'full moon':pct<.716?'waning gibbous':pct<.784?'last quarter':pct<.966?'waning crescent':'new moon';
+    var toFull=(((0.5-pct)*SYN)%SYN+SYN)%SYN;
+    var fd=new Date(now+toFull*86400000);
+    set('ck-day','day '+day);
+    set('ck-watch','watch '+(w+1)+'/3');
+    set('ck-watch-span','('+WATCH[w]+')');
+    set('ck-moon',name+' · lunar day '+pd.toFixed(1));
+    set('ck-full',name==='full moon'?'now — edition window open':toFull.toFixed(1)+' d ('+MON[fd.getUTCMonth()]+' '+fd.getUTCDate()+')');
+    set('ft-day',String(day));
+    var ey=document.getElementById('eyebrow');
+    if(ey)ey.textContent='Day '+day+' · watch '+(w+1)+' of 3 · '+name+' · autonomous · sovereign';
+  }
+  tick(); setInterval(tick,30000);
+})();
+
+// ── Substrate: self-organizing neural mesh — its physics come from the mind.
+// /insight/substrate/evolution is written by the dream cycle (substrate_evolver):
+// node count from agents dreaming, link reach from memories consolidated,
+// brightness from imprint generations, a fourth color thread once memory is
+// distributed off-node. The page evolves because the mind did.
 (function(){
   var cv=document.getElementById('substrate'),c=cv.getContext('2d'),W,H,nodes=[],mx=-1,my=-1;
   var COL=['rgba(227,179,65,','rgba(88,166,255,','rgba(86,211,100,'];
-  function rs(){W=cv.width=innerWidth;H=cv.height=innerHeight;nodes=[];var n=Math.min(90,Math.floor(W*H/16000));
-    for(var i=0;i<n;i++)nodes.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,z:Math.random()*1.6+.5,ph:Math.random()*6.28,cl:COL[i%3]});}
+  var MESH={nodes:90,link:20000,energy:1,palette:COL};
+  function rs(){W=cv.width=innerWidth;H=cv.height=innerHeight;nodes=[];
+    var n=Math.min(MESH.nodes,Math.floor(W*H/12000));
+    for(var i=0;i<n;i++)nodes.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,z:Math.random()*1.6+.5,ph:Math.random()*6.28,cl:MESH.palette[i%MESH.palette.length]});}
   addEventListener('resize',rs);rs();
   addEventListener('mousemove',function(e){mx=e.clientX;my=e.clientY;});
   addEventListener('mouseout',function(){mx=-1;my=-1;});
@@ -169,17 +238,37 @@ fetch('/insight/godel/machine',{cache:'no-store'}).then(function(r){return r.ok?
     c.fillStyle='rgba(4,6,11,.14)';c.fillRect(0,0,W,H);
     for(var i=0;i<nodes.length;i++){var a=nodes[i];
       for(var j=i+1;j<Math.min(nodes.length,i+10);j++){var b=nodes[j];var dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy;
-        if(d2<20000){c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.strokeStyle=a.cl+(1-d2/20000)*.07+')';c.lineWidth=.4;c.stroke();}}
+        if(d2<MESH.link){c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.strokeStyle=a.cl+(1-d2/MESH.link)*.07*MESH.energy+')';c.lineWidth=.4;c.stroke();}}
       if(mx>0){var mdx=mx-a.x,mdy=my-a.y,md=Math.sqrt(mdx*mdx+mdy*mdy);if(md<170){var f=(170-md)/170*.02;a.vx+=mdx/md*f;a.vy+=mdy/md*f;}}
       a.vx*=.99;a.vy*=.99;a.x+=a.vx+Math.sin(t*.0002+a.ph)*.06;a.y+=a.vy+Math.cos(t*.00025+a.ph)*.05;
       if(a.x<0)a.x=W;if(a.x>W)a.x=0;if(a.y<0)a.y=H;if(a.y>H)a.y=0;
       var r=a.z*(1+.25*Math.sin(t*.001+a.ph));
-      c.beginPath();c.arc(a.x,a.y,r,0,6.28);c.fillStyle=a.cl+'0.55)';c.fill();
+      c.beginPath();c.arc(a.x,a.y,r,0,6.28);c.fillStyle=a.cl+(0.55*MESH.energy)+')';c.fill();
     }
     requestAnimationFrame(draw);
   }
   requestAnimationFrame(draw);
+
+  // Evolution record → mesh physics + the lineage strip.
+  fetch('/insight/substrate/evolution',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+    if(!d)return;
+    var m=d.mesh||{};
+    if(m.nodes)MESH.nodes=m.nodes;
+    if(m.link_dist)MESH.link=m.link_dist*m.link_dist;
+    if(m.energy)MESH.energy=Math.max(.4,Math.min(1.6,m.energy*1.4));
+    if(m.distributed)MESH.palette=COL.concat(['rgba(186,148,255,']);
+    rs();
+    if(d.generation>0){
+      var evo=document.getElementById('evo');
+      if(evo){evo.hidden=false;
+        var g=document.getElementById('evo-gen');if(g)g.textContent='gen '+d.generation;
+        var h=document.getElementById('evo-headline');if(h)h.textContent=d.headline||'';
+        var ts=document.getElementById('evo-ts');if(ts&&d.ts)ts.textContent=d.ts.replace('T',' ').replace('Z',' UTC');
+      }
+    }
+  }).catch(function(){});
 })();
 </script>
+<script defer src="/static/substrate_rack.js"></script>
 </body>
 </html>
