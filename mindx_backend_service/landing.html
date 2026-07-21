@@ -174,17 +174,29 @@ fetch('/insight/godel/machine',{cache:'no-store'}).then(function(r){return r.ok?
     var n=d&&(d.count||(d.memories&&d.memories.length)||(d.events&&d.events.length));
     if(memEl)memEl.textContent=n?fmt(n)+'+':'accumulating';
   }).catch(function(){if(memEl)memEl.textContent='accumulating';});
-  // tokens used — the honest running total: the 420,132,232 baseline PLUS every
-  // token the live inference ledger has counted. Polled so all current tokens
-  // keep accumulating onto the total (no cosmetic inflation — real numbers only).
+  // tokens ingested — the honest running total: the 420,132,232 page baseline
+  // PLUS every token actually measured since the 2026-07-21 anchor by the
+  // lifetime appetite counter (llm/token_appetite — persistent, monotonic,
+  // cloud + CPU, incremented only by real recorded calls). The display eases
+  // between consecutive readings, so it moves only through MEASURED increase
+  // (no cosmetic inflation — nothing projected, nothing fabricated).
+  var ANCHOR=369412766; // token_appetite.total at the moment this display shipped
+  var shown=null,target=null;
+  function setTok(n){if(tokEl)tokEl.textContent=fmt(n);}
   function pollTokens(){
-    fetch('/insight/inference/ledger',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
-      var used=(d&&d.totals&&Number(d.totals.total_tokens))||0;
-      tok=TOK_BASE+used;
-      if(tokEl)tokEl.textContent=fmt(tok);
-    }).catch(function(){if(tokEl)tokEl.textContent=fmt(tok);});
+    fetch('/insight/inference/appetite',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+      var t=d&&d.lifetime_tokens&&Number(d.lifetime_tokens.total);
+      if(!t)return;
+      target=TOK_BASE+Math.max(0,t-ANCHOR);
+      if(shown===null){shown=target;setTok(shown);}
+    }).catch(function(){});
   }
-  pollTokens(); setInterval(pollTokens,15000);
+  setInterval(function(){ // once a second, step toward the latest measured total
+    if(shown===null||target===null||shown>=target)return;
+    shown=Math.min(target,shown+Math.max(1,Math.ceil((target-shown)/12)));
+    setTok(shown);
+  },1000);
+  pollTokens(); setInterval(pollTokens,12000);
 })();
 
 // ── mindX time: the lunar clock ──

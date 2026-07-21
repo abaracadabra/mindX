@@ -66,7 +66,15 @@ function Strip({ caption, children }) {
   )
 }
 
-const RACK_STYLE = { flexWrap: 'wrap', justifyContent: 'center', width: '100%' }
+const ROW_STYLE = {
+  display: 'flex', flexWrap: 'wrap', gap: 22,
+  justifyContent: 'center', alignItems: 'center',
+}
+const TICKER_STYLE = {
+  display: 'flex', justifyContent: 'center',
+  marginTop: 14, paddingTop: 12,
+  borderTop: '1px solid rgba(120,132,148,.14)',
+}
 
 function SubstrateRack({ evo }) {
   const mesh = evo.mesh || {}
@@ -85,14 +93,14 @@ function SubstrateRack({ evo }) {
   return (
     <Rack
       title="SUBSTRATE INSTRUMENTS · LIVE"
-      orientation="row"
-      gap={22}
+      orientation="column"
+      gap={0}
       padding={18}
-      align="center"
       accentColor={GOLD}
-      style={RACK_STYLE}
+      style={{ width: '100%' }}
       aria-label="Substrate instrument rack — read-only gauges of the mind's last dream cycle"
     >
+      <div style={ROW_STYLE}>
       <Strip caption="GENERATION">
         <SegmentDisplay value={evo.generation} digits={3} height={30} color={GREEN} />
       </Strip>
@@ -149,10 +157,13 @@ function SubstrateRack({ evo }) {
           { label: 'DISTRIBUTED', on: !!mesh.distributed, color: PURPLE },
         ]}
       />
+      </div>
 
-      <Strip caption="LAST CYCLE">
-        <Ticker text={evo.headline} />
-      </Strip>
+      <div style={TICKER_STYLE}>
+        <Strip caption="LAST CYCLE">
+          <Ticker text={evo.headline} chars={44} />
+        </Strip>
+      </div>
     </Rack>
   )
 }
@@ -197,14 +208,14 @@ function GodelRack({ events }) {
   return (
     <Rack
       title="GODEL CHOICES · LAST 50 · SELF-REFERENCE AUDIT"
-      orientation="row"
-      gap={22}
+      orientation="column"
+      gap={0}
       padding={18}
-      align="center"
       accentColor={BLUE}
-      style={RACK_STYLE}
+      style={{ width: '100%' }}
       aria-label="Gödel choice rack — read-only instruments over the machine's recent decisions"
     >
+      <div style={ROW_STYLE}>
       <Strip caption="CHOICES">
         <SegmentDisplay value={m.total} digits={3} height={30} color={BLUE} />
       </Strip>
@@ -258,10 +269,13 @@ function GodelRack({ events }) {
           { label: 'DEGRADED', on: m.degraded > 0, color: '#e0654a' },
         ]}
       />
+      </div>
 
-      <Strip caption="LATEST">
-        <Ticker text={ticker} />
-      </Strip>
+      <div style={TICKER_STYLE}>
+        <Strip caption="LATEST">
+          <Ticker text={ticker} chars={44} />
+        </Strip>
+      </div>
     </Rack>
   )
 }
