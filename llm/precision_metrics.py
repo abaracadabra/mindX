@@ -21,6 +21,7 @@ Usage:
 
 import time
 import json
+import threading
 from decimal import Decimal, getcontext, ROUND_HALF_UP
 from dataclasses import dataclass, field, asdict
 from typing import Optional, Any
@@ -353,7 +354,26 @@ class PrecisionMetricsTracker:
         - Timing: time.time_ns() for wall-clock (nanosecond resolution)
     """
 
-    def __init__(self, persistence_path: str = "data/metrics/precision_metrics.json"):
+    # Process-wide singleton — per-call instances lose increments between the
+    # periodic saves (each fresh instance re-loads the last persisted state).
+    _instance: Optional["PrecisionMetricsTracker"] = None
+    _instance_lock = threading.Lock()
+
+    @classmethod
+    def instance(cls) -> "PrecisionMetricsTracker":
+        """The shared tracker. All recording call sites must use this — a
+        constructed-per-call tracker re-loads the file and discards any
+        increment that doesn't land exactly on a save boundary."""
+        if cls._instance is None:
+            with cls._instance_lock:
+                if cls._instance is None:
+                    cls._instance = cls()
+        return cls._instance
+
+    # Default path is the ledger the anchor chain + /insight/inference/ledger
+    # read (agents/monitoring/inference_ledger.PRECISION_METRICS_PATH). The old
+    # default "precision_metrics.json" dead-ended the whole chain.
+    def __init__(self, persistence_path: str = "data/metrics/cloud_precision_metrics.json"):
         self.models: dict[str, ModelPrecisionMetrics] = {}
         self.persistence_path = Path(persistence_path)
 
@@ -388,9 +408,11 @@ class PrecisionMetricsTracker:
         if response.has_actual_counts:
             self.global_requests_with_actuals += 1
 
-        # Auto-save periodically (every 50 requests)
-        if self.global_total_requests % 50 == 0:
-            self._save()
+        # Persist every record — the file is tiny and inference is minutes
+        # apart; the old every-50 policy silently froze the ledger when
+        # combined with per-call instances (increments 1..49 were re-loaded
+        # away before ever reaching a save boundary).
+        self._save()
 
     @property
     def global_total_tokens(self) -> int:
@@ -546,11 +568,18 @@ class PrecisionMetricsTracker:
             logger.debug(f"Failed to save precision metrics: {e}")
 
     def _load(self):
-        """Load persisted metrics."""
-        if not self.persistence_path.exists():
-            return
+        """Load persisted metrics. One-time migration: if the cloud ledger
+        doesn't exist yet but the legacy default file does, absorb it so the
+        history recorded under the old path is not lost."""
+        path = self.persistence_path
+        if not path.exists():
+            legacy = Path("data/metrics/precision_metrics.json")
+            if path.name == "cloud_precision_metrics.json" and legacy.exists():
+                path = legacy
+            else:
+                return
         try:
-            data = json.loads(self.persistence_path.read_text())
+            data = json.loads(path.read_text())
             self.global_total_requests = data.get("global_total_requests", 0)
             self.global_total_eval_tokens = data.get("global_total_eval_tokens", 0)
             self.global_total_prompt_tokens = data.get("global_total_prompt_tokens", 0)

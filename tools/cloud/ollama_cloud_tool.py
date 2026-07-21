@@ -221,9 +221,7 @@ class OllamaCloudTool(BaseTool):
         self._precision_tracker = None
         if PRECISION_AVAILABLE:
             try:
-                self._precision_tracker = PrecisionMetricsTracker(
-                    persistence_path="data/metrics/cloud_precision_metrics.json"
-                )
+                self._precision_tracker = PrecisionMetricsTracker.instance()
             except Exception:
                 pass
 

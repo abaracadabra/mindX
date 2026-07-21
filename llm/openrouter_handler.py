@@ -266,6 +266,22 @@ class OpenRouterHandler(LLMHandlerInterface):
                                    provider=f"openrouter/{actual_provider}")
                 except Exception:
                     pass
+                # Precision-metrics ledger — the source of truth behind
+                # /insight/inference/ledger and its hash-linked anchor chain.
+                # ACTUAL cloud token counts from the API's usage block.
+                try:
+                    from llm.precision_metrics import OllamaResponseMetrics, PrecisionMetricsTracker
+                    PrecisionMetricsTracker.instance().record_with_cost(
+                        OllamaResponseMetrics(
+                            eval_count=int(usage.get("completion_tokens", 0) or 0),
+                            prompt_eval_count=int(usage.get("prompt_tokens", 0) or 0),
+                            total_duration_ns=int(latency_ms) * 1_000_000,
+                            model=str(actual_model),
+                        ),
+                        provider=f"openrouter/{actual_provider}",
+                    )
+                except Exception:
+                    pass
 
                 # Best-effort cost ledger — never blocks inference.
                 try:

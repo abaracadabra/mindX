@@ -290,8 +290,7 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
                     try:
                         from llm.precision_metrics import OllamaResponseMetrics, PrecisionMetricsTracker
                         metrics = OllamaResponseMetrics.from_api_response(response_data, model=model)
-                        tracker = PrecisionMetricsTracker()
-                        tracker.record_with_cost(metrics, provider=_ledger_provider)
+                        PrecisionMetricsTracker.instance().record_with_cost(metrics, provider=_ledger_provider)
                     except Exception:
                         pass  # Metrics are observational — never block inference
 

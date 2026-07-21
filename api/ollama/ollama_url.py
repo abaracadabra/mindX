@@ -108,7 +108,7 @@ class OllamaAPI:
         self.precision_tracker = None
         if PRECISION_METRICS_AVAILABLE:
             try:
-                self.precision_tracker = PrecisionMetricsTracker()
+                self.precision_tracker = PrecisionMetricsTracker.instance()
                 logger.info("Precision metrics tracker initialized (18dp, actual token counts)")
             except Exception as e:
                 logger.debug(f"Precision metrics not available: {e}")
