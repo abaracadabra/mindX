@@ -30,7 +30,7 @@ import {ITHOTCommitmentRegistry} from "../THOT/interfaces/ITHOTCommitmentRegistr
 ///         in the same directory.
 interface IERC7857 {
     /* ───── Events ─────────────────────────────────────────────────── */
-    event AgentMinted(uint256 indexed tokenId, bytes32 indexed contentRoot, uint32 dimensions, address indexed owner);
+    event AgentMinted(uint256 indexed tokenId, bytes32 indexed contentRoot, uint256 dimensions, address indexed owner);
     event MetadataUpdated(uint256 indexed tokenId, bytes32 newRoot, string newURI);
     event SealedKeyRotated(uint256 indexed tokenId, address indexed newOwner, bytes32 newSealedKeyHash);
     event UsageAuthorized(uint256 indexed tokenId, address indexed executor, uint256 permissions, uint64 expiresAt, address indexed grantor);
@@ -86,7 +86,7 @@ contract iNFT_7857 is
 
     /* ───── Errors ────────────────────────────────────────────────── */
     error TransferRequiresSealedKey();   // standard transfer attempted; must use transferWithSealedKey
-    error InvalidDimension(uint32 d);
+    error InvalidDimension(uint256 d);
     error ZeroAddress();
     error ZeroBytes32();
     error EmptyString();
@@ -112,7 +112,8 @@ contract iNFT_7857 is
         bytes32 contentRoot;       // 0G Storage merkle root or IPFS-CID-as-bytes32
         string  storageURI;        // gateway hint, e.g. "0g://galileo/<root>" or "ipfs://<cid>"
         bytes32 metadataRoot;      // unencrypted metadata root (separate manifest)
-        uint32  dimensions;        // THOT dimension — one of the 11 supported
+        uint256 dimensions;        // THOT dimension — a whitelisted value up to type(uint256).max
+                                   // (the ceiling = 2^256-1 = SCIEN·TIFIC total supply — the scientific maximum)
         uint8   parallelUnits;
         uint40  mintedAt;
         bytes32 sealedKeyHash;     // hash of the AES-256 key sealed for the current owner
@@ -136,7 +137,7 @@ contract iNFT_7857 is
     uint256 public constant MAX_URI_LENGTH      = 2048;
     uint256 public constant MAX_AGENTID_LENGTH  = 64;
     uint96  public constant MAX_ROYALTY_BPS     = 2500;   // 25% hard cap
-    uint16  public constant MAX_THOT_DIMENSIONS = 11;     // for off-chain enumeration
+    uint16  public constant MAX_THOT_DIMENSIONS = 12;     // for off-chain enumeration (incl. 384 pgvector)
 
     address public oracle;             // ECDSA signer trusted to authorize re-encryption
     address public treasury;           // receives clone fees
@@ -211,19 +212,26 @@ contract iNFT_7857 is
         emit CloneFeeUpdated(0, cloneFeeWei_);
     }
 
-    /* ───── Dimension whitelist (mirrors iNFT.sol prior art) ──────── */
-    function _isValidDimension(uint32 d) internal pure returns (bool) {
+    /* ───── Dimension whitelist (mirrors iNFT.sol prior art) ──────────
+       384 = pgvector-compatible, the headline THOT dimension on the
+       agenticplace.pythai.net/register minter — added so the EVM iNFT
+       accepts every dimension the register (Algorand ARC-69) mint offers
+       {384, 64, 512, 768} plus the full mindX tensor ladder. ──────── */
+    function _isValidDimension(uint256 d) internal pure returns (bool) {
         return (
             d == 8       || d == 64      || d == 256     ||
-            d == 512     || d == 768     || d == 1024    ||
-            d == 2048    || d == 4096    || d == 8192    ||
-            d == 65536   || d == 1048576
+            d == 384     || d == 512     || d == 768     ||
+            d == 1024    || d == 2048    || d == 4096    ||
+            d == 8192    || d == 65536   || d == 1048576
         );
     }
 
-    function validDimensions() external pure returns (uint32[11] memory dims) {
+    // The whitelist is expandable without limit up to type(uint256).max — the same 2^256-1
+    // ceiling that is SCIEN·TIFIC's total supply (the scientific maximum). New rungs beyond
+    // THOT2048 (4096/8192/65536/1048576 … up to 2^256-1) are added here + in the AVM twin.
+    function validDimensions() external pure returns (uint256[12] memory dims) {
         dims = [
-            uint32(8), 64, 256, 512, 768, 1024, 2048, 4096, 8192, 65536, 1048576
+            uint256(8), 64, 256, 384, 512, 768, 1024, 2048, 4096, 8192, 65536, 1048576
         ];
     }
 
@@ -316,7 +324,7 @@ contract iNFT_7857 is
         bytes32 contentRoot,
         string calldata storageURI,
         bytes32 metadataRoot,
-        uint32  dimensions,
+        uint256 dimensions,
         uint8   parallelUnits,
         bytes32 sealedKeyHash,
         string  calldata tokenURI_
@@ -330,7 +338,7 @@ contract iNFT_7857 is
         if (to == address(0))                         revert ZeroAddress();
         if (contentRoot == bytes32(0))                revert ZeroBytes32();
         if (sealedKeyHash == bytes32(0))              revert ZeroBytes32();
-        if (parallelUnits == 0)                       revert InvalidDimension(uint32(parallelUnits));
+        if (parallelUnits == 0)                       revert InvalidDimension(uint256(parallelUnits));
         if (!_isValidDimension(dimensions))           revert InvalidDimension(dimensions);
         if (_rootEverUsed[contentRoot])               revert ContentRootAlreadyMinted(contentRoot);
         uint256 storageURIlen = bytes(storageURI).length;
@@ -613,6 +621,20 @@ contract iNFT_7857 is
     function getPayload(uint256 tokenId) external view returns (IntelligencePayload memory) {
         if (_ownerOf(tokenId) == address(0)) revert TokenDoesNotExist(tokenId);
         return _payload[tokenId];
+    }
+
+    /// @notice Dimension as a NOW-efficient uint64 (every real THOT dimension — up to 2^20
+    ///         and far beyond — fits in 64 bits). The stored field is uint256 so the whitelist
+    ///         can expand for the quantum future all the way to type(uint256).max (= 2^256-1,
+    ///         SCIEN·TIFIC's total supply — the scientific maximum); this accessor gives indexers
+    ///         and clients a cheap 64-bit read for today's values. Reverts only if a dimension
+    ///         ever exceeds uint64 — a deliberate 100+ year signal to widen the reader, not a
+    ///         cost paid now.
+    function dimensions64(uint256 tokenId) external view returns (uint64) {
+        if (_ownerOf(tokenId) == address(0)) revert TokenDoesNotExist(tokenId);
+        uint256 d = _payload[tokenId].dimensions;
+        require(d <= type(uint64).max, "dimension exceeds uint64: read getPayload().dimensions");
+        return uint64(d);
     }
 
     function totalMinted() external view returns (uint256) {

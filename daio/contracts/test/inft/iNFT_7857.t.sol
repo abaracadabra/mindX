@@ -167,13 +167,13 @@ contract iNFT_7857_Test is Test {
 
     function test_Mint_revertsOnInvalidDimension() public {
         vm.prank(minter);
-        vm.expectRevert(abi.encodeWithSelector(iNFT_7857.InvalidDimension.selector, uint32(123)));
+        vm.expectRevert(abi.encodeWithSelector(iNFT_7857.InvalidDimension.selector, uint256(123)));
         nft.mintAgent(alice, ROOT_A, "0g://x", META_A, 123, 8, SKEY_A, "");
     }
 
     function test_Mint_revertsOnZeroParallelUnits() public {
         vm.prank(minter);
-        vm.expectRevert(abi.encodeWithSelector(iNFT_7857.InvalidDimension.selector, uint32(0)));
+        vm.expectRevert(abi.encodeWithSelector(iNFT_7857.InvalidDimension.selector, uint256(0)));
         nft.mintAgent(alice, ROOT_A, "0g://x", META_A, 2048, 0, SKEY_A, "");
     }
 
@@ -202,7 +202,7 @@ contract iNFT_7857_Test is Test {
     }
 
     function test_Mint_acceptsAllValidDimensions() public {
-        uint32[11] memory dims = nft.validDimensions();
+        uint256[12] memory dims = nft.validDimensions();  // dims now uint256 (ceiling 2^256-1)   // incl. 384 pgvector (register-compat)
         for (uint256 i = 0; i < dims.length; i++) {
             bytes32 r = bytes32(uint256(0xDEAD000) + i);
             vm.prank(minter);
@@ -688,12 +688,12 @@ contract iNFT_7857_Test is Test {
 
     function testFuzz_Mint_invalidDimensionAlwaysReverts(uint32 d) public {
         vm.assume(
-            d != 8 && d != 64 && d != 256 && d != 512 && d != 768 &&
+            d != 8 && d != 64 && d != 256 && d != 384 && d != 512 && d != 768 &&
             d != 1024 && d != 2048 && d != 4096 && d != 8192 &&
             d != 65536 && d != 1048576
         );
         vm.prank(minter);
-        vm.expectRevert(abi.encodeWithSelector(iNFT_7857.InvalidDimension.selector, d));
+        vm.expectRevert(abi.encodeWithSelector(iNFT_7857.InvalidDimension.selector, uint256(d)));
         nft.mintAgent(alice, ROOT_A, "0g://x", META_A, d, 1, SKEY_A, "");
     }
 

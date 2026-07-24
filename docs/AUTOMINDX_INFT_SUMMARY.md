@@ -66,6 +66,7 @@ struct ThotData {
 | 8 | THOT8 | Root of THOT — the seed dimension |
 | 64 | THOT64 | Lightweight vectors |
 | 256 | THOT256 | Wallet key dimension (32-byte key × 8 bits) |
+| 384 | THOT384 | **pgvector-compatible** — the agenticplace.pythai.net/register headline dimension (all-MiniLM-L6 / bge-small class) |
 | 512 | THOT512 | Standard 8×8×8 3D knowledge clusters |
 | 768 | THOT768 | High-fidelity optimized tensors |
 | 1024 | THOT1024 | Embedding-native ([mxbai-embed-large](../agents/memory_pgvector.py), 1024-dim) |
@@ -75,7 +76,39 @@ struct ThotData {
 | 65536 | THOT65536 | Theoretical quantum-resistant (2^16) |
 | 1048576 | THOT1048576 | post-quantum (2^20) |
 
-`uint32 dimensions` — supports up to 4,294,967,295. New dimensions added by extending `_isValidDimension()` only.
+> **Dimension width — the prior-art `iNFT.sol` uses `uint32`; the production `iNFT_7857.sol` widens
+> it to `uint256`.** See "Dimension type: quantum-future ceiling + NOW-efficient reader" below.
+
+New dimensions are added by extending `_isValidDimension()` only — the sanctioned, additive way; no rung
+is ever removed.
+
+#### Dimension type: quantum-future ceiling + NOW-efficient reader
+
+The production `iNFT_7857.sol` stores `uint256 dimensions`. This is deliberate future-proofing, not an
+operational default:
+
+- **Ceiling = `type(uint256).max` = 2²⁵⁶ − 1** — the Solidity maximum, and *exactly* **SCIEN·TIFIC's total
+  supply** (the "scientific maximum"). The whitelist can grow to *any* value up to that ceiling with **no
+  ABI or type rewrite, ever** — headroom for a quantum future measured in a century or more.
+- **Not a default.** `2²⁵⁶−1` is never an accepted dimension. `_isValidDimension()` gates only the real
+  THOT ladder above (8 … 1 048 576); the `uint256` type is pure future ceiling.
+- **`uint64` included as well — for NOW.** Every real THOT dimension fits in 64 bits, so `iNFT_7857`
+  exposes `dimensions64(tokenId) → uint64`, a cheap 64-bit read for indexers and clients today. The AVM
+  twin (`InftAsa`) stores `uint64` natively for box-MBR efficiency; `2⁶⁴` is itself >100-year sufficient
+  for any tensor, widenable to `biguint` only if ever exhausted.
+- **Gas stays lean.** `_isValidDimension()` is a pure comparison chain (zero storage reads), so widening
+  the field to `uint256` costs one extra struct slot and nothing on the hot path — negligible beside the
+  four `bytes32` roots and the ECDSA verification each mint/transfer already performs (median mint on the
+  dimension path ≈ 34k gas). Read `dimensions64()` for the 64-bit value now; the full `uint256` waits for
+  the quantum future.
+- **Expandable to THOT2048 and beyond.** 2048 (cypherpunk2048) and every higher rung — 4096, 8192, 65536
+  (2¹⁶), 1 048 576 (2²⁰) — are already whitelisted; the next is a one-line addition on **both** chains,
+  EVM (`_isValidDimension`) and AVM (`validDimension`), kept in lockstep.
+- **The ceiling is live and multichain — SCIEN·TIFIC.** `2²⁵⁶−1` is proven on mainnet: the DeltaVerse
+  token **SCIEN·TIFIC** mints exactly `type(uint256).max` at one CREATE2 address on every chain
+  (`0x99999923…Bea79`, live on Ethereum · Optimism · Base · Arbitrum, named `scientific.bankon.eth`). Its
+  `totalSupply()` *is* the dimension ceiling, and its one-address-every-chain deployment is the same
+  EVM⟷AVM lockstep this standard keeps — see **[scientific.pythai.net](https://scientific.pythai.net)**.
 
 ---
 
