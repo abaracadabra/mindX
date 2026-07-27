@@ -231,6 +231,7 @@
 2. **Rail activation**: iNFT BUILDER funnel, `/reference` pay-to-read, pay2play completion (Step 11)
 3. **Revenue ledger**: settlements → catalogue → `/insight/economy` → self-eval verdict (Step 12)
 4. **Knowledge Graph Expansion**: Comprehensive computational wisdom database
+5. **Governance authority completion** (added 2026-07-26): mindX is run by the **Boardroom and the Dojo** — complete that authority in deployment. Autonomous campaigns and directives resolve through Boardroom t1 → Dojo Arbiter t2 (→ War Council t3) with hash-linked VotingBooth decisions as the operating record, and the on-chain constitution lands with the day-1 deployment (`daio/governance/{boardroom,dojo_arbiter,dojo}.py` run locally today; production wiring is the gap)
 
 ### Step 13: Establish Economic Sovereignty
 - [ ] Generate consistent revenue exceeding operational costs
