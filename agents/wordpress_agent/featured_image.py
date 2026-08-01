@@ -184,8 +184,62 @@ class FeaturedImagePicker:
                 if p is not None:
                     return p
 
+        # Mode 2.5: SUBFOLDER topical match — the gfx tree is organized into
+        # themed subfolders (bankoneth/, codephreak/, rage/, web/, …). When a
+        # folder name matches the topic/title/tags, choose from that folder's
+        # images deterministically (seeded by title, so the same article keeps
+        # the same art across retries while different articles rotate).
+        folder = self._match_subfolder(topic, haystack)
+        if folder is not None:
+            p = self._pick_from_folder(folder, seed=(title or topic or ""))
+            if p is not None:
+                return p
+
         # Mode 3: default fallback.
         return self._resolve(self.topic_map["default"]) or self._first_doorway()
+
+    _IMG_EXTS = (".webp", ".png", ".jpg", ".jpeg")
+    _SKIP_DIRS = {"jpg"}   # jpg/ holds CDN variants of root assets, not a topic
+
+    def _match_subfolder(self, topic: Optional[str], haystack: str) -> Optional[Path]:
+        """Return the first gfx subfolder whose name matches the topic or
+        appears in the title/tags haystack (both directions: 'bankon' matches
+        bankoneth/, folder 'rage' matches a title containing rage). Folders
+        are scanned in sorted order for determinism. Never raises."""
+        try:
+            dirs = sorted(
+                d for d in self.gfx_root.iterdir()
+                if d.is_dir() and d.name.lower() not in self._SKIP_DIRS
+                and not d.name.startswith(".")
+            )
+        except OSError:
+            return None
+        key = (topic or "").strip().lower()
+        for d in dirs:
+            name = d.name.lower()
+            if key and (key in name or name in key):
+                return d
+            if name in haystack or any(w and w in name for w in haystack.split()):
+                return d
+        return None
+
+    def _pick_from_folder(self, folder: Path, *, seed: str) -> Optional[Path]:
+        """Deterministic choice from a subfolder (recursive): stable across
+        retries of the same article, rotating across different articles.
+        Prefers CDN-safe sizes implicitly by sorting on (suffix-pref, name)."""
+        try:
+            imgs = sorted(
+                p for p in folder.rglob("*")
+                if p.is_file() and p.suffix.lower() in self._IMG_EXTS
+            )
+        except OSError:
+            return None
+        if not imgs:
+            return None
+        h = 0
+        for ch in seed:
+            h = (h * 31 + ord(ch)) & 0xFFFFFFFF
+        return imgs[h % len(imgs)]
 
     def _resolve(self, filename: str) -> Optional[Path]:
         """Return the Path under ``gfx_root`` for ``filename``, preferring the
@@ -204,7 +258,22 @@ class FeaturedImagePicker:
         if jpg_variant.exists():
             return jpg_variant
         p = self.gfx_root / filename
-        return p if p.exists() else None
+        if p.exists():
+            return p
+        # Recursive fallback: the asset may live in a SUBFOLDER of gfx/
+        # (the tree is organized topically). Exact filename first, then any
+        # extension variant of the same stem. Sorted for determinism.
+        try:
+            hit = sorted(self.gfx_root.rglob(filename))
+            if hit:
+                return hit[0]
+            for ext in (".jpg", ".webp", ".png", ".jpeg"):
+                hit = sorted(self.gfx_root.rglob(f"{stem}{ext}"))
+                if hit:
+                    return hit[0]
+        except OSError:
+            pass
+        return None
 
     def _first_doorway(self) -> Path:
         """Hard fallback: the first doorway* asset that exists, regardless
