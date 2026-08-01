@@ -68,3 +68,37 @@ selectable theme (Personas tab → editable per persona; ollywoo `?theme=` overr
 In the ollywoo AR set, `gltf` renders the morph head; the base layers (`dojo`,
 `primitive`) render the primitive head. New layers append to `THEMES` as the
 protocol evolves.
+
+4. **wire** — the live face CLONE (2026-08-01): the participant's 478 MediaPipe
+   landmarks rendered through the FaceLandmarker tesselation topology — one line
+   segment per canonical mesh connection, mirrored, rebuilt per frame. Actual
+   measured geometry, not blendshape puppetry. Offered in the theme cycle when
+   the camera is on; the primitive head covers face-absence (never headless);
+   the clone tears down with the camera. Precedence: the director's face
+   outranks the actor's autopilot.
+
+## Code mapping (doc → repo)
+
+The device is implemented in the **DeltaVerse repo** (dev: `AgenticPlace/DeltaVerse`,
+production home `deltav-deltaverse/DeltaVerse` at graduation). Layer by layer:
+
+| layer / concept | code | notes |
+|---|---|---|
+| the set (ovie) | `DeltaVerse/ollywoo.html` | three.js r184 vendored (`/vendor/three`), importmap, UnrealBloom composer (bypassed in WebXR), scope ring, subtitles, glass HUD, clip recorder |
+| faicey (face sense) | `DeltaVerse/ollywoo/faicey.js` | MediaPipe FaceLandmarker (vendored `/vendor/mediapipe`, WASM): 478 landmarks + `points`, ARKit blendshapes, pose from the facial transformation matrix, IOD distance finder, new-frame gating, `topology()` = tesselation for the wire clone, `derive()` = shared expression vocabulary |
+| voicey (voice) | `DeltaVerse/ollywoo/voicey.js` | tiered TTS: voaice endpoint (real AnalyserNode envelope, clip-capturable track) → speechSynthesis (deterministic voice/pitch/rate per persona id; envelope approximated, HUD-labeled `browser·approx`); `linesFor()` speaks the persona recall corpus |
+| pitch / oscilloscope | `detectPitch()` in `ollywoo.html` | McLeod NSDF + first-peak (MPM), parabolic refinement, temporal smoothing — measured 0.0-cent error 82.4–987.8 Hz, 1.1 ms/frame; level = time-domain RMS; hue = pitch-class; 256-tap waveform ring |
+| morph head | `DeltaVerse/ollywoo/facecap.glb` | ARKit morph dictionary (jawOpen verified present) |
+| persona roster | `DeltaVerse/ollywoo/personas.json` | CEO + seven soldiers + draiml + savante; `voice_examples` = the imprint recall corpus (draiml + savante carry theirs) |
+| the Director's senses | `DeltaVerse/engine/ngn/director.js` | absorbs the same mic + faicey reads (clean-room), `{level, peak, bands}` + `{present, proximity, head, blendshapes}` |
+| persona source | `mindX/mindx/godel/mindxtrain/personas/*.persona` | `.persona` v1 — imprint fields `name/system_prompt/voice_examples/exchanges` |
+
+**Lineage repos:** [jaimla](https://github.com/jaimla) ("I am the machine
+learning agent" — foundational for faicey + voicey) ·
+[faicey](https://github.com/faicey) (face-of-AI template line) ·
+[mlodular](https://github.com/mlodular) (modular ML tooling tradition — every
+module an agnostic composable peer).
+
+Published: [Inside ollywoo: Where Your Face Is the Wireframe and the Actor
+Speaks](https://rage.pythai.net/inside-ollywoo-faicey-voicey/) (post 1163,
+2026-08-01, AuthorAgent).
