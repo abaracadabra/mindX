@@ -64,6 +64,51 @@ The runtime lives at `agents/chronos_agent.py`. HTTP surface:
 spec file) declares the signal classes; chronos.agent (this file)
 declares the *behaviour*: chronos speaks, agents listen.
 
+---
+
+## SKILL: time.derivative (from chronos.oracle)
+
+Source: chronos.oracle v1.1 — BLOCKTIME DERIVATIVES. Live public
+codebase: **github.com/cypherpunk2048/chronos.oracle** (cypherpunk2048
+standard: measured claims, honest resolution labels, 18dp only on
+derived quantities). Both implementations (zero-dep JS + zero-dep
+Python) verified live against Ethereum mainnet and agreeing to 18dp.
+
+What the skill provides — block-denominated derivative clocking:
+
+```yaml
+skill_time_derivative:
+  clock: blocktime            # block height — the only clock every
+                              # participant verifiably shares
+  normalizer: avg-blocktime   # MEASURED seconds-per-block over a stated
+                              # span; never an assumed constant
+  instruments:
+    sentiment.shift:          # d(indicator)/d(block), per normalized second
+      role: "level locates, shift orients — the temporal derivative of
+             any indicator vector (LUV sentiment instruments clock here)"
+    return-from-ping:         # outreach block → first-reply block
+      role: "attention latency: how quickly the community answers when
+             addressed; ping-return bounds responsiveness"
+  precision: "18dp Decimal/BigInt on DERIVED values; source resolution
+              honestly labeled 1s (chain timestamp granularity)"
+  consumers:
+    - LUV indicators (luv.pythai.net — sentiment.shift, LUVchart clock)
+    - SENTIMENT.md §IV.2 native instruments (SHAMBA-LUV/LUV)
+    - SCIEN·TIFIC time-truth leg (accuracy · attention · time)
+  delegation: "Chronos SPEAKS these readings; acting on them (alerts,
+               campaigns, rebalancing) is delegated to Kairos"
+```
+
+Usage (Python, mindX side):
+
+```python
+import sys; sys.path.insert(0, "vendor/chronos.oracle/src")  # or pip-less vendor
+import blocktime as bt
+avg = bt.avg_blocktime(RPC, span=100)          # measured, 18dp, labeled
+shift = bt.sentiment_shift(prev, curr, avg["seconds_per_block"])
+latency = bt.return_from_ping(ping_block, reply_block, avg["seconds_per_block"])
+```
+
 FORBIDDEN in artefact paths: raw `time.time()`, `datetime.utcnow()`,
 `time.time_ns()`. Allowed: `await chronos.now()`. The contract is
 enforced by code review, not the type checker.

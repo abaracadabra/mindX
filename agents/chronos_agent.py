@@ -53,6 +53,12 @@ from typing import Any
 # cypherpunk2048 invariant — Chronos.agent declares 18dp Decimal precision.
 getcontext().prec = 40
 
+# The 18dp quantum — every promised time is expressed at exactly 18 decimal
+# places (cypherpunk2048 fixed-point denomination). Source resolution is
+# declared separately so padding is never mistaken for measurement.
+_Q18 = Decimal(1).scaleb(-18)
+_SOURCE_RESOLUTION_DP = 9   # time.time_ns() → nanoseconds
+
 logger = logging.getLogger("mindx.chronos_agent")
 
 _SCHEMA = """
@@ -161,13 +167,17 @@ class PromisedTime:
     """The time mindX commits to. Every agent quotes this when stamping
     its outputs; raw `time.time()` is forbidden in artefact paths."""
 
-    unix_18dp: str               # Decimal serialised to string (preserves precision)
+    unix_18dp: str               # exactly 18 dp — the denomination (see below)
     utc: str                     # ISO-8601 with nanoseconds
     consensus: str               # correlated | degraded | drifted | offline
     confidence_ms: float
     sources: dict[str, Any]      # time_oracle.get_time() output (or {} when offline)
     anchor_count_24h: int
     promised_by: str = "chronos.agent"
+    # How many of the 18 places are MEASURED rather than denominational padding.
+    # 9 = nanosecond source (time.time_ns). Consumers that need to know how far
+    # to trust the digits read this, not the field name.
+    source_resolution_dp: int = _SOURCE_RESOLUTION_DP
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -178,6 +188,7 @@ class PromisedTime:
             "sources": self.sources,
             "anchor_count_24h": self.anchor_count_24h,
             "promised_by": self.promised_by,
+            "source_resolution_dp": self.source_resolution_dp,
         }
 
 
@@ -447,14 +458,21 @@ class ChronosAgent:
         )
 
         ts_ns = time.time_ns()
-        ts_dec = Decimal(ts_ns) / Decimal(1_000_000_000)
+        # 18 decimal places, always — the cypherpunk2048 fixed-point denomination
+        # (1 second = 10^18 attoseconds, as 1 ETH = 10^18 wei). The SOURCE resolves
+        # to nanoseconds (9 dp), so places 10–18 are structural zeros, never
+        # invented digits: the denomination is 18dp, the measured resolution is
+        # 1 ns, and `source_resolution_dp` states which is which. Padding a
+        # denomination is honest; fabricating precision is not.
+        ts_dec = (Decimal(ts_ns) / Decimal(1_000_000_000)).quantize(_Q18)
         dt = datetime.fromtimestamp(ts_ns / 1_000_000_000, tz=timezone.utc)
-        utc_str = dt.isoformat().replace(
-            "+00:00",
-            f".{ts_ns % 1_000_000_000:09d}+00:00".replace(
-                f".{(ts_ns % 1_000_000_000):09d}",
-                f".{(ts_ns % 1_000_000_000):09d}",
-            ),
+        # ns-precision ISO-8601: datetime.isoformat() already carries µs, so the
+        # µs must be dropped before the 9-digit ns fraction is appended — else the
+        # stamp reads 21:37:03.958876.958876088+00:00 and parses nowhere.
+        utc_str = (
+            dt.replace(microsecond=0).isoformat().replace(
+                "+00:00", f".{ts_ns % 1_000_000_000:09d}+00:00"
+            )
         )
 
         return PromisedTime(

@@ -33,6 +33,29 @@ Signal classes (in increasing strength):
   blocktime  — passive peer chain read, network-verified
   transaction-anchor — chain confirmed OUR event; strongest binding
 
+BLOCKTIME DERIVATIVES (v1.1, 2026-08-03 — the sentiment.shift clock)
+The blocktime class extends into derivative instruments, denominating
+time in BLOCKS and normalizing by MEASURED average blocktime (never an
+assumed constant):
+  avg-blocktime      — seconds-per-block measured over a stated span,
+                       18dp on the derived value, source resolution
+                       honestly labeled 1s (chain timestamp granularity)
+  sentiment.shift    — first difference of any indicator vector per
+                       block, normalized per measured second; the clock
+                       of the LUV sentiment instruments (level locates,
+                       shift orients)
+  return-from-ping   — blocks between an outreach event and the first
+                       returned gesture; attention latency, bounded
+                       (ping-return bounds responsiveness)
+
+CODEBASE (live, public — cypherpunk2048 standard)
+  github.com/cypherpunk2048/chronos.oracle
+    src/blocktime.js  — zero-dep ES module (Node ≥18 / browser),
+                        BigInt-scaled 18dp arithmetic
+    src/blocktime.py  — zero-dep stdlib (Decimal 18dp)
+  Both verified live against Ethereum mainnet; both agree to 18dp.
+  This .oracle file is mirrored there as the canonical spec.
+
 INHERITANCE
   TimeOracle.get_time()   → consensus time from 4 sources
   TimeOracle.get_lunar()  → moon phase, day, cycle percentage
