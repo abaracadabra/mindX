@@ -32,7 +32,7 @@ class TreeAgent(BaseTool):
 ### Basic Directory Listing
 
 ```python
-from agents.tree_agent import TreeAgent
+from tools.tree_agent import TreeAgent
 
 agent = TreeAgent(root_path="/home/user/project")
 
