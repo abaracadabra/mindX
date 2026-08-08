@@ -357,13 +357,14 @@ OVERSEER identity (`mindx.algo`) and BONA FIDE reputation live: those reads go t
 [AlgoKit / the Algorand indexer](https://developer.algorand.org/), and Arweave permanence through
 [AR.IO](https://ar.io/). Never let a Blockscout-shaped answer imply coverage it does not have.
 
-> **The Algorand half now exists separately.** [Algorandscout](algorandscout.md)
-> ([`OpenBDK/algorandscout`](https://github.com/openbdk/algorandscout), BANKON-licensed, built
-> 2026-08-08) serves Algorand through the *same Blockscout-shaped route names* while declaring
-> every place the EVM model does not apply. It is a **standalone service, not a Blockscout chain
-> type** — required both by Blockscout's post-2026-04-22 licence (which permits separable works
-> but forbids distributing Derivative Works) and by the schema mismatch. Capability only: nothing
-> in mindX calls it yet.
+> **Algorand is covered separately.** [Algorandscout](algorandscout.md)
+> ([`OpenBDK/algorandscout`](https://github.com/openbdk/algorandscout)) is an **independent,
+> BANKON-licensed explorer API for Algorand**, built 2026-08-08 as part of OpenBDK. It reads
+> algod + indexer directly and preserves Algorand's own model — ASA clawback roles,
+> close-remainder, inner transactions, finality — declaring at `/api/v2/capabilities` every
+> place a generic explorer model does not apply. Its REST layout follows common explorer
+> conventions so tooling interoperates, which is compatibility, not lineage. Capability only:
+> nothing in mindX calls it yet.
 
 ---
 

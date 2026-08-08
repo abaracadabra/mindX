@@ -1,30 +1,25 @@
-# Algorandscout — reading Algorand through a Blockscout-shaped API
+# Algorandscout — mindX's Algorand explorer API
 
-> **What this is:** [`OpenBDK/algorandscout`](https://github.com/openbdk/algorandscout) — a
-> standalone, **BANKON-licensed** read service that serves [Algorand](https://algorand.co/)
-> through a [Blockscout](https://github.com/blockscout/blockscout)-compatible REST surface,
-> without pretending Algorand is an EVM chain.
+> **What this is:** [`OpenBDK/algorandscout`](https://github.com/openbdk/algorandscout) — an
+> **independent, BANKON-licensed explorer API for [Algorand](https://algorand.co/)**: accounts,
+> assets, applications, transactions and rounds, served over Algorand's own
+> [algod](https://developer.algorand.org/docs/rest-apis/algod/) and
+> [indexer](https://developer.algorand.org/docs/rest-apis/indexer/) APIs.
 >
-> **Built 2026-08-08.** Version 0.1.0 · 12 `/api/v2` routes + native passthrough · 86 tests
-> passing offline against fixtures captured live from Algorand mainnet · all endpoints
-> verified end-to-end against mainnet.
+> **Built 2026-08-08.** Version 0.1.0 · 12 `/api/v2` routes + allowlisted passthrough ·
+> **186 tests** passing offline against fixtures captured live from Algorand mainnet ·
+> container, Prometheus metrics, liveness/readiness probes.
 >
-> **Why mindX cares:** it closes the exact hole named in
-> [blockscout.md §7](blockscout.md#7-chain-coverage--what-mindx-can-and-cannot-see) — Blockscout
-> is EVM-only, and mindX's governance identity lives on Algorand.
+> **Why mindX cares:** mindX's governance identity lives on Algorand, and until this existed
+> mindX had no way to verify it independently.
 >
 > **Part of the [gated reference corpus](NAV.md)** — ingest-only, never published to `/docs.html`.
 
 ---
 
-## 1. The gap this fills
+## 1. Why mindX needs this
 
-[`docs/blockchain/blockscout.md`](blockscout.md) documents mindX's independent on-chain reader
-and states its boundary plainly: **Blockscout is EVM-only.** All 17 of its chain types
-(`ethereum`, `arbitrum`, `optimism`, `arc`, `zilliqa`, `zksync`, …) are EVM, because the core
-schema assumes 20-byte addresses, gas, nonces, indexed log topics, and reorgs.
-
-Algorand has none of those, and mindX has real state there:
+mindX holds real state on Algorand:
 
 - **`mindx.algo`** — the OVERSEER identity, Ed25519 → JWT (see the OVERSEER Algorand login path)
 - **BONA FIDE** — the reputation-as-privilege layer that governs the DAIO hierarchy
@@ -32,70 +27,54 @@ Algorand has none of those, and mindX has real state there:
   [x402 v2 multi-rail](x402_rails.py) Parsec AVM rail
 - ASA-denominated instruments in the [measurement-token](../mindx_strategy.md) stack
 
-Every one of those was unreadable by the Blockscout path, and the honest instruction in
-blockscout.md was *"never let a Blockscout-shaped answer imply coverage it does not have."*
-Algorandscout is the other half: the same *shape* of answer, sourced from Algorand's own
-[algod](https://developer.algorand.org/docs/rest-apis/algod/) and
-[indexer](https://developer.algorand.org/docs/rest-apis/indexer/) APIs, with the mismatches
-declared rather than papered over.
+Every one of those was previously unreadable. mindX's other chain reader
+([blockscout.md](blockscout.md)) covers EVM chains only — 17 chain types, all EVM — because
+its schema assumes 20-byte addresses, gas, nonces, indexed log topics and reorgs. Algorand has
+none of those, so the coverage gap was structural, not an oversight.
+
+The doctrine mindX had written for itself was *"never let an answer imply coverage it does not
+have."* Algorandscout is the other half of honouring that: the same *kind* of answer, sourced
+from Algorand's own APIs, with the chain's actual model preserved.
 
 ---
 
-## 2. Why it is a separate service, not a Blockscout chain type
+## 2. Why a standalone service
 
-Two independent reasons, either one decisive.
+**It is an original work.** Algorandscout contains no third-party explorer source code, vendors
+none, and links none. Its runtime dependencies are aiohttp, FastAPI and uvicorn. It is licensed
+under the **BANKON License** (Apache-2.0) as part of [OpenBDK](https://github.com/openbdk), and
+is free to be distributed, hosted and monetised on its own terms.
 
-### 2.1 Blockscout's licence forbids the merged build
+Its REST layout follows conventions common to explorer APIs (`/api/v2/addresses/…`,
+`{items, next_page_params}` pages) so existing tooling interoperates without modification. That
+is a compatibility property, not a lineage — interface convention is not derivation.
 
-Blockscout **re-licensed on 2026-04-22**. It is no longer GPL and no longer open source —
-SPDX [`LicenseRef-Blockscout`](https://github.com/blockscout/blockscout/blob/master/LICENSE).
-Clause 5 governs Derivative Works:
+**Algorand's model governs.** Where the chain and a generic explorer model disagree, the chain
+wins and the difference is *declared* at `/api/v2/capabilities` rather than papered over:
 
-| Clause | Effect on a merged-in module |
-|---|---|
-| **5(a)** | Derivative Works permitted **solely for internal use** |
-| **5(b)** | **No distribution** of Derivative Works to any third party without a Commercial Licence — publishing to a public repo *is* distribution |
-| **5(c)** | Author grants Blockscout Limited a **perpetual, irrevocable, sublicensable** licence over any Derivative Work |
-| **7(c)** | The Software "as a whole, and all parts thereof" is under their licence — contradicting a BANKON licence on a merged module |
-| **4(a)** | No commercial, hosted, or monetised use without a Commercial Licence |
-
-The same licence supplies the exit, in its own definition:
-
-> *"For the avoidance of doubt, Derivative Works do not include works that remain **separable
-> from**, or **merely link to**, the Software."*
-
-Algorandscout is such a separable work: **separate repo, separate process, no Blockscout
-source, no Blockscout dependency** — compatible response *shape* only. Interface compatibility
-is not derivation. That is what makes the BANKON licence on it real rather than decorative, and
-it is why `NOTICE` in that repo forbids ever merging it into a Blockscout tree.
-
-> Engineering rationale, not legal advice. Anyone deploying Blockscout itself remains
-> independently subject to its attribution (2c) and commercial-use (4a) terms.
-
-### 2.2 Algorand does not fit the EVM schema
-
-| EVM assumption | Algorand reality |
+| Generic explorer assumption | Algorand |
 |---|---|
 | 20-byte hex address | 58-character base32 Ed25519 |
 | gas market | flat fee + fixed opcode budget — compute is not purchased |
 | per-account nonce | first-valid/last-valid round window + genesis hash |
-| logs with indexed topics | ordered array of **opaque** byte strings — nothing to filter on |
+| logs with indexed topics | ordered array of **opaque** byte strings |
 | reorgs, uncles | final on write |
-| ERC-20 `approve`/`allowance` | ASA with **clawback**, freeze, manager, reserve roles |
+| token approve/allowance | ASA with **clawback**, freeze, manager, reserve roles |
 
-That last row is the dangerous one. An ASA rendered as an ERC-20 hides that **clawback can move
-a holder's balance without the holder signing.** Forcing Algorand into the EVM tables would
-produce a schema of plausible-looking nulls plus one genuine misrepresentation of consent.
+That last row is why flattening matters. A **clawback** holder can move an asset out of an
+account **without the holder signing** — by design, for regulated instruments. Rendered as a
+generic token, the row has nowhere to go and silently disappears. Algorandscout reports the four
+privileged roles always, and *names* a clawback transfer as one.
 
 ---
 
 ## 3. The surface
 
-### Blockscout-shaped — `/api/v2/*`
+### The explorer API — `/api/v2/*`
 
 | Route | Returns |
 |---|---|
-| `GET /api/v2/capabilities` | **Start here.** Machine-readable statement of what the chain cannot answer, and why |
+| `GET /api/v2/capabilities` | **Start here.** Machine-readable statement of what this API can and cannot answer, and why |
 | `GET /api/v2/stats` | Chain tip, indexer lag, block time, `is_evm: false` |
 | `GET /api/v2/blocks` · `/blocks/{round}` | Rounds; `?include_transactions=` off by default |
 | `GET /api/v2/transactions/{txid}` | One transaction, inner transactions recursed |
@@ -105,15 +84,14 @@ produce a schema of plausible-looking nulls plus one genuine misrepresentation o
 | `GET /api/v2/tokens/{asset_id}` · `/holders` | ASA params, the four privileged roles, holder page |
 | `GET /api/v2/smart-contracts/{app_id}` | Application: AVM programs, state schema, decoded global state |
 | `GET /api/v2/search?q=` | Resolves by shape: address · txid · asset/app id · unit-name candidates |
-| `GET /algorand/v2/*` | **Allowlisted** native indexer passthrough (allowlist, not prefix-match — never an open proxy) |
+| `GET /algorand/v2/*` | **Allowlisted** indexer passthrough (allowlist, not prefix-match — never an open proxy) |
 | `GET /health` | Both upstreams + how far the archive trails the node |
 
 ### The two rules that bite
 
 1. **Holdings live on two surfaces.** `/addresses/{a}` carries the ALGO balance;
    `/addresses/{a}/token-balances` carries the ASAs. Neither subsumes the other — the same
-   completeness fork [blockscout.md](blockscout.md#9-working-rules--the-short-list) warns about
-   on EVM chains.
+   completeness fork that applies on any chain with two value surfaces.
 2. **The address is not hex.** `hash` carries the 58-character base32 address verbatim. A client
    validating `^0x[0-9a-fA-F]{40}$` will reject it, and **that rejection is correct** — the
    module refuses to fabricate a hex-shaped address to keep such a client quiet.
@@ -162,8 +140,8 @@ curl localhost:8100/api/v2/tokens/31566704
 | `ALGORAND_NETWORK` | `mainnet` | `mainnet` · `testnet` · `betanet` · `localnet` |
 | `OPENBDK_HOST` / `OPENBDK_PORT` | `127.0.0.1` / `8100` | service bind |
 
-Retry policy matches the rule Blockscout publishes for its own upstreams: **5xx retried 3×,
-4xx never.**
+Retry policy: **5xx retried 3× with jittered backoff; 4xx never — except 429**, which describes
+*when* a request arrived rather than what was in it (`Retry-After` honoured, clamped).
 
 ---
 
@@ -244,7 +222,7 @@ NXDOMAIN. A published mindX post that cited them would be linking readers into n
 ## See also
 
 - **Repo** — [OpenBDK/algorandscout](https://github.com/openbdk/algorandscout) · [OpenBDK org](https://github.com/openbdk) · [OpenBDK whitepaper](https://github.com/openbdk/whitepaper)
-- **mindX** — [Blockscout (EVM side)](blockscout.md) · [Blockchain Agents](BLOCKCHAIN_AGENTS.md) · [x402 rails](x402_rails.py) · [reference-corpus NAV](NAV.md) · [master NAV](../NAV.md)
+- **mindX** — [EVM-side chain reader](blockscout.md) · [Blockchain Agents](BLOCKCHAIN_AGENTS.md) · [x402 rails](x402_rails.py) · [reference-corpus NAV](NAV.md) · [master NAV](../NAV.md)
 - **Algorand explorers** — [Allo](https://allo.info/) · [Pera Explorer](https://explorer.perawallet.app/) · [Lora](https://lora.algokit.io/) · [Bitquery](https://explorer.bitquery.io/algorand) — full landscape incl. dead domains in [§7](#7-the-algorand-explorer-landscape)
 - **Algorand** — [developer docs](https://developer.algorand.org/) · [indexer REST API](https://developer.algorand.org/docs/rest-apis/indexer/) · [algod REST API](https://developer.algorand.org/docs/rest-apis/algod/) · [ARC standards](https://github.com/algorandfoundation/ARCs) · [AlgoNode](https://algonode.io/)
-- **Licence** — [Blockscout Software Licence](https://github.com/blockscout/blockscout/blob/master/LICENSE) · [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (the BANKON licence text)
+- **Licence** — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) (the BANKON License text) · [NOTICE](https://github.com/openbdk/algorandscout/blob/main/NOTICE)
