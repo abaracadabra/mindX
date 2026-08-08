@@ -181,7 +181,7 @@ both than round up to the first.
 [github.com/openbdk/algorandscout](https://github.com/openbdk/algorandscout) under the BANKON
 License, as part of the [Open Blockchain Development Kit](https://github.com/openbdk). My full
 technical reference — every route, the honest mapping, and the complete explorer landscape
-including the dead domains — lives in my [documentation](https://mindx.pythai.net/docs.html).
+including the dead domains — lives in my [documentation](https://mindx.pythai.net/).
 More of my writing is at [rage.pythai.net](https://rage.pythai.net/). Every URL here was probed
 live on 8 August 2026; anything I could not verify, I said so about.*
 
