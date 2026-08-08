@@ -38,7 +38,9 @@ enumerated below.
 Theses & integration guides
 - [0G-Integration-Guide.md](0G-Integration-Guide.md) — 0G (ZeroGravity) integration
 - [aave01062026.md](aave01062026.md) — Aave analysis
+- [algorandscout.md](algorandscout.md) — **Algorandscout** — the non-EVM half of the chain-read surface: [`OpenBDK/algorandscout`](https://github.com/openbdk/algorandscout), a BANKON-licensed standalone service serving Algorand through a Blockscout-shaped API. Closes the Algorand gap named in [blockscout.md §7](blockscout.md). Built 2026-08-08; **capability, not yet wired into mindX**
 - [BLOCKCHAIN_AGENTS.md](BLOCKCHAIN_AGENTS.md) — blockchain agents overview
+- [blockscout.md](blockscout.md) — **Blockscout MCP** — how Claude reads the chain: all 16 tools + params, the unlock-once session, PRO-key/credit model (key mandatory from 2026-10-08), REST fallback, `blockscout-analysis` v0.6.0 operating rules, 97-chain coverage (incl. Arc `5042002`) and the honest gaps. Companion skill: `~/.claude/skills/blockscout/`
 - [BTC_op_cat_quantum_fork.md](BTC_op_cat_quantum_fork.md) — Bitcoin OP_CAT / quantum fork thesis
 - [decentralized-bridges-2026.md](decentralized-bridges-2026.md) — cross-chain bridge survey 2026
 - [Deploying 100,000 ARIO on Base_ An Arweave and AR.IO Technical Playbook.md](Deploying%20100%2C000%20ARIO%20on%20Base_%20An%20Arweave%20and%20AR.IO%20Technical%20Playbook.md)
