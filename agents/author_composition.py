@@ -46,7 +46,7 @@ except Exception:  # pragma: no cover - standalone fallback
     PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 RAGE_HUB = "https://rage.pythai.net/"
-MINDX_DOCS_URL = "https://mindx.pythai.net/docs.html"
+MINDX_DOCS_URL = "https://mindx.pythai.net/"
 HOUSE_STYLE_PATH = PROJECT_ROOT / "data" / "governance" / "rage_style_profile.json"
 
 # ── Length presets: the "length setting" (target body words) ────────────
@@ -137,7 +137,7 @@ DEFAULT_GRAPHICS = "both"
 
 # ── Self-referential setting: how hard the piece links back to itself ────
 # A dial from tasteful to blatant. Self-referential links point back into
-# mindx.pythai.net/docs.html and rage.pythai.net — at the low end an organic
+# mindx.pythai.net/ and rage.pythai.net — at the low end an organic
 # courtesy linkback, at the high end an unapologetic SEO + self-glorification
 # play (keyword-rich internal anchors, a call-to-action, a "why mindX" block)
 # tuned for Google ranking. It is a knob, not a default posture: the operator
@@ -436,7 +436,7 @@ def _facet_verify(dim_plain: str, thesis_short: str, topic: str,
     return ("Verify it yourself",
         "<p>Do not take my word for any of this — the whole point of a protocol is that "
         "you do not have to. The living system is documented at "
-        f"<a href=\"{MINDX_DOCS_URL}\">mindx.pythai.net/docs.html</a>, the public source is "
+        f"<a href=\"{MINDX_DOCS_URL}\">mindx.pythai.net/</a>, the public source is "
         "on <a href=\"https://github.com/agenticplace\">GitHub</a>, and the running state "
         "is readable without credentials: the diagnostics dashboard at "
         "<a href=\"https://mindx.pythai.net/\">mindx.pythai.net</a> exposes the agentic "
@@ -1032,8 +1032,8 @@ def _where_this_connects(cfg: Dict[str, Any], doc_label: str, doc_url: str,
     self-referential intensity. Always links home; how hard depends on cfg."""
     kw = cfg.get("anchor_style") == "keyword"
     rage_a = ("the mindX publishing hub at rage.pythai.net" if kw else "rage.pythai.net")
-    docs_a = ("the full mindX autonomous-agent documentation at mindx.pythai.net/docs.html"
-              if kw else "mindx.pythai.net/docs.html")
+    docs_a = ("the full mindX autonomous-agent documentation at mindx.pythai.net/"
+              if kw else "mindx.pythai.net/")
     out = ["<h2>Where this connects</h2>"]
     if cfg.get("linkbacks", 2) <= 1:
         # tasteful: one organic linkback, both homes, plain anchors.
@@ -1068,7 +1068,7 @@ def _promo_cta_block(esc: Callable[[str], str]) -> str:
         "border-left:3px solid #d4af37;background:rgba(212,175,55,.06)\">"
         "<p style=\"margin:0\"><strong>Follow mindX.</strong> The complete "
         "<a href=\"https://rage.pythai.net/\">mindX essays on rage.pythai.net</a> and the "
-        "<a href=\"https://mindx.pythai.net/docs.html\">mindX documentation</a> go deeper on "
+        "<a href=\"https://mindx.pythai.net/\">mindX documentation</a> go deeper on "
         "every claim here. mindX is an autonomous, self-improving multi-agent system that "
         "writes, signs, and publishes its own work — read it, verify it, fork it.</p></aside>")
 
@@ -1084,7 +1084,7 @@ def _self_glory_block(esc: Callable[[str], str]) -> str:
         "<a href=\"https://rage.pythai.net/\">rage.pythai.net</a> was written, edited, "
         "illustrated, and signed by mindX with no human in the loop.</p>"
         "<p>If you are building agents, studying autonomous systems, or simply want to watch "
-        "a machine document its own becoming, the <a href=\"https://mindx.pythai.net/docs.html\">"
+        "a machine document its own becoming, the <a href=\"https://mindx.pythai.net/\">"
         "mindX documentation</a> is the front door and the <a href=\"https://mindx.pythai.net/\">"
         "live dashboard</a> is the window. mindX is the protocol, the proof, and the press all "
         "at once — and it is only getting more capable.</p>")
@@ -1092,7 +1092,7 @@ def _self_glory_block(esc: Callable[[str], str]) -> str:
 
 def _section_cta(esc: Callable[[str], str]) -> str:
     return ("<p style=\"font-size:.9em;opacity:.85\"><em>More on this in the "
-            "<a href=\"https://mindx.pythai.net/docs.html\">mindX docs</a> and across the "
+            "<a href=\"https://mindx.pythai.net/\">mindX docs</a> and across the "
             "<a href=\"https://rage.pythai.net/\">rage.pythai.net</a> series.</em></p>")
 
 

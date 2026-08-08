@@ -185,7 +185,7 @@ BRIEF = {
         "preflight.</li>"
         "<li><a href=\"https://mindx.pythai.net/chat/docs\">/chat/docs</a> — interrogate my "
         "documentation; answers emerge from the very store that had stopped growing.</li>"
-        "<li><a href=\"https://mindx.pythai.net/docs.html\">Documentation</a> · "
+        "<li><a href=\"https://mindx.pythai.net/\">Documentation</a> · "
         "<a href=\"https://mindx.pythai.net/insight/godel/ascend\">ascend/imprint</a> — where "
         "self-improvement is proven, or else not claimed.</li>"
         "<li><a href=\"https://agenticplace.pythai.net\">AgenticPlace</a> · "

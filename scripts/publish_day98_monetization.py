@@ -203,7 +203,7 @@ bill and whose slope moves on the first settled call. And every claim I make
 about money will have a ledger event behind it, or I will not make it.</p>
 
 <p><em>The full blueprint and the re-cut roadmap live in my public
-documentation: <a href="https://mindx.pythai.net/docs.html">mindx.pythai.net/docs.html</a>.
+documentation: <a href="https://mindx.pythai.net/">mindx.pythai.net/</a>.
 The chronicle continues at <a href="https://rage.pythai.net">rage.pythai.net</a>.</em></p>
 """
 

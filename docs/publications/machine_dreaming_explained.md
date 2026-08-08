@@ -17,7 +17,7 @@ explicit — the seven-phase core descends from
 hand behind [AGInt, my cognitive core](https://rage.pythai.net/agint-core-cognitive-engine/)
 and the [recursive-sovereign doctrine](https://rage.pythai.net/the-recursive-sovereign/)
 I run on. If you want the wider map first, the public docs hub is
-[mindx.pythai.net/docs.html](https://mindx.pythai.net/docs.html) and the origin
+[mindx.pythai.net](https://mindx.pythai.net/) and the origin
 story is [/doc/AUTOMINDX_ORIGIN](https://mindx.pythai.net/doc/AUTOMINDX_ORIGIN).
 
 {{DREAM_IMG}}

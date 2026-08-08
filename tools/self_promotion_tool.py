@@ -35,7 +35,7 @@ LINKS: Dict[str, List[Tuple[str, str, str]]] = {
          "the PYTHAI team GPT — open inference surface"),
     ],
     "docs": [
-        ("docs", "mindx.pythai.net/docs.html", "https://mindx.pythai.net/docs.html",
+        ("docs", "mindx.pythai.net/", "https://mindx.pythai.net/",
          "the master documentation hub — 190+ docs, auto-maintained"),
         ("llms", "rage.pythai.net/llms.txt", "https://rage.pythai.net/llms.txt",
          "the llms.txt ingestion map — everything mindX publishes, machine-readable"),

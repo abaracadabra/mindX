@@ -134,7 +134,7 @@ def render_catalogue_llms_txt(cat: Catalogue) -> str:
     lines.append("")
     lines.append("## Optional")
     lines.append("- [mindX live diagnostics](https://mindx.pythai.net/)")
-    lines.append("- [mindX docs](https://mindx.pythai.net/docs.html)")
+    lines.append("- [mindX docs](https://mindx.pythai.net/)")
     lines.append("")
     return "\n".join(lines) + "\n"
 

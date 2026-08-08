@@ -42,7 +42,7 @@ CYPHERPUNK2048_REPO = "https://github.com/cypherpunk2048"
 GNUGUI_REPO = "https://github.com/gnugui"
 RAGE_HUB = "https://rage.pythai.net/"
 BANKON_DOORWAY = "https://bankon.pythai.net"
-MINDX_DOCS = "https://mindx.pythai.net/docs.html"
+MINDX_DOCS = "https://mindx.pythai.net/"
 
 # ── Official hyperlink registry (general policy) ────────────────────────────────────────────────
 # editor.agent keeps an auditable LOG of the current, canonical mindX URLs — rage.pythai.net,

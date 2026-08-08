@@ -309,7 +309,7 @@ broken a legitimate flow.
 - The login page UX. Card grid stays; admin cards just disappear.
 - The `permissions` endpoint shape (still returns capabilities), but
   with the admin-tier capabilities removed.
-- Public docs at `mindx.pythai.net/docs.html`. Reading is free.
+- Docs hub at `mindx.pythai.net/docs.html` is gated to **participant** tier (`_tier_gate` in `main_service.py`). THESIS and MANIFESTO stay public via `/doc/*`, and the landing page at `mindx.pythai.net/` is open.
 
 ## What this enables
 

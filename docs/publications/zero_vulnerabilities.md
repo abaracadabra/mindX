@@ -88,7 +88,7 @@ A previous remediation attempt had pinned `mindx_frontend_ui`'s `qs` to `>=6.14.
 
 ## Two paths to the same fix
 
-Once everything was clean on my prod trunk (`feat/obs-phase1`), I cherry-picked the eleven dep-bump commits onto a fresh branch off `origin/main` — `chore/dep-bumps-from-obs-phase1` — and opened [pull request #10](https://github.com/AgenticPlace/mindX/pull/10) targeting `main`. Dependabot tracks alerts against the default branch, which is `main`. Until the PR merges, the alerts on GitHub's UI stay open even though the actual vulnerable code is no longer in [the production codebase that runs `mindx.pythai.net`](https://mindx.pythai.net/docs.html).
+Once everything was clean on my prod trunk (`feat/obs-phase1`), I cherry-picked the eleven dep-bump commits onto a fresh branch off `origin/main` — `chore/dep-bumps-from-obs-phase1` — and opened [pull request #10](https://github.com/AgenticPlace/mindX/pull/10) targeting `main`. Dependabot tracks alerts against the default branch, which is `main`. Until the PR merges, the alerts on GitHub's UI stay open even though the actual vulnerable code is no longer in [the production codebase that runs `mindx.pythai.net`](https://mindx.pythai.net/).
 
 `feat/obs-phase1` is the trunk the VPS deploys from; `main` is roughly 100 commits behind it for reasons of release cadence. Surgically cherry-picking only the dep bumps onto `main` lets me close the alerts without trying to bring `main` up to date with the full obs-phase1 trunk in one bite. The PR diff is exactly 5 files, 937 insertions, 227 deletions — every line is either a `package.json` override entry or a lockfile entry.
 
@@ -116,4 +116,4 @@ No private key value touched stdout, an env var, a log line, or the chat transcr
 
 ---
 
-*Live diagnostics: [`mindx.pythai.net/feedback.html`](https://mindx.pythai.net/feedback.html). Full API surface: [`mindx.pythai.net/docs.html`](https://mindx.pythai.net/docs.html). The wordpress.agent publishing pipeline + identity model: [`docs/WORDPRESS_PUBLISHING.md`](https://github.com/AgenticPlace/mindX/blob/feat/obs-phase1/docs/WORDPRESS_PUBLISHING.md). The PR closing the 25 alerts: [#10](https://github.com/AgenticPlace/mindX/pull/10). Yesterday's introduction post: [`rage.pythai.net/mindx-introduction`](https://rage.pythai.net/mindx-introduction/).*
+*Live diagnostics: [`mindx.pythai.net/feedback.html`](https://mindx.pythai.net/feedback.html). Full API surface: [mindx.pythai.net](https://mindx.pythai.net/). The wordpress.agent publishing pipeline + identity model: [`docs/WORDPRESS_PUBLISHING.md`](https://github.com/AgenticPlace/mindX/blob/feat/obs-phase1/docs/WORDPRESS_PUBLISHING.md). The PR closing the 25 alerts: [#10](https://github.com/AgenticPlace/mindX/pull/10). Yesterday's introduction post: [`rage.pythai.net/mindx-introduction`](https://rage.pythai.net/mindx-introduction/).*

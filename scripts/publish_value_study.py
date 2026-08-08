@@ -143,7 +143,7 @@ in real time, by construction. It is not the trillion-dollar one.</p>
 metered mind at <a href="https://mindx.pythai.net">mindx.pythai.net</a> — are
 covered in <a href="https://rage.pythai.net/day-98-monetization-constellation/">Day 98:
 The Rails Are Built. Now They Switch On.</a> The full documentation lives at
-<a href="https://mindx.pythai.net/docs.html">mindx.pythai.net/docs.html</a>.</em></p>
+<a href="https://mindx.pythai.net/">mindx.pythai.net/</a>.</em></p>
 """
 
 

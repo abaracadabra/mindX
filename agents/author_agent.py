@@ -168,7 +168,7 @@ LUNAR_CHAPTERS = [
 #
 # Every essay, by construction, does three things:
 #   1. links back to the series hub at rage.pythai.net,
-#   2. links back to the live docs at mindx.pythai.net/docs.html,
+#   2. links back to the live docs at mindx.pythai.net/,
 #   3. cites the web at large (stable external URLs) to support its claims,
 # and frames mindX growth along one explicit scaling dimension —
 # horizontal, vertical, diagonal, parallel, or optimization.
@@ -183,7 +183,7 @@ LUNAR_CHAPTERS = [
 #   intro     — opening HTML paragraph(s), first-person mindX voice
 #   sections  — list of (heading, body_html); body_html carries the
 #               external citation <a> links inline
-#   doc       — (label, url) deep link into mindx.pythai.net/docs.html
+#   doc       — (label, url) deep link into mindx.pythai.net/
 PROTOCOL_SERIES: List[Dict[str, Any]] = [
     {
         "slug": "wordpress-agent-distribution",
@@ -245,7 +245,7 @@ PROTOCOL_SERIES: List[Dict[str, Any]] = [
              "cryptographically honest about authorship.</p>"),
         ],
         "doc": ("the publication + WordPress agent docs",
-                "https://mindx.pythai.net/docs.html"),
+                "https://mindx.pythai.net/"),
     },
     {
         "slug": "agnostic-modules-horizontal",
@@ -282,7 +282,7 @@ PROTOCOL_SERIES: List[Dict[str, Any]] = [
              "shared-nothing by identity — each holds its own wallet — and shared-everything by protocol.</p>"),
         ],
         "doc": ("the architecture + interoperability docs",
-                "https://mindx.pythai.net/docs.html"),
+                "https://mindx.pythai.net/"),
     },
     {
         # AuthorAgent speaking FOR ITSELF — rendered in the voice of an older
@@ -360,7 +360,7 @@ PROTOCOL_SERIES: List[Dict[str, Any]] = [
              "it. — AuthorAgent, filing on its own beat.</p>"),
         ],
         "doc": ("the AuthorAgent + publication + wordpress.agent docs",
-                "https://mindx.pythai.net/docs.html"),
+                "https://mindx.pythai.net/"),
     },
     {
         "slug": "cognitive-stack-vertical",
@@ -396,7 +396,7 @@ PROTOCOL_SERIES: List[Dict[str, Any]] = [
              "single forward pass.</p>"),
         ],
         "doc": ("the orchestration + cognition docs",
-                "https://mindx.pythai.net/docs.html"),
+                "https://mindx.pythai.net/"),
     },
     {
         "slug": "x402-agentic-commerce-diagonal",
@@ -431,7 +431,7 @@ PROTOCOL_SERIES: List[Dict[str, Any]] = [
              "contributed — so the economy rewards usefulness, not only liquidity.</p>"),
         ],
         "doc": ("the x402 + services docs",
-                "https://mindx.pythai.net/docs.html"),
+                "https://mindx.pythai.net/"),
     },
     {
         "slug": "multi-stream-parallel",
@@ -463,7 +463,7 @@ PROTOCOL_SERIES: List[Dict[str, Any]] = [
              "resilience are the same mechanism viewed twice.</p>"),
         ],
         "doc": ("the inference + multi-stream docs",
-                "https://mindx.pythai.net/docs.html"),
+                "https://mindx.pythai.net/"),
     },
     {
         "slug": "godel-machine-optimization",
@@ -499,7 +499,7 @@ PROTOCOL_SERIES: List[Dict[str, Any]] = [
              "without that floor is not a feature; it is a liability.</p>"),
         ],
         "doc": ("the Gödel machine + thesis docs",
-                "https://mindx.pythai.net/docs.html"),
+                "https://mindx.pythai.net/"),
     },
     {
         "slug": "memory-protocol-distribution",
@@ -532,7 +532,7 @@ PROTOCOL_SERIES: List[Dict[str, Any]] = [
              "warm to cold to anchored — and each layer scales independently.</p>"),
         ],
         "doc": ("the memory + RAGE + storage docs",
-                "https://mindx.pythai.net/docs.html"),
+                "https://mindx.pythai.net/"),
     },
     {
         "slug": "identity-protocol-sovereignty",
@@ -564,7 +564,7 @@ PROTOCOL_SERIES: List[Dict[str, Any]] = [
              "means a tampered ciphertext fails to decrypt rather than yielding a forged key.</p>"),
         ],
         "doc": ("the identity + vault docs",
-                "https://mindx.pythai.net/docs.html"),
+                "https://mindx.pythai.net/"),
     },
     {
         "slug": "catalogue-observability-protocol",
@@ -596,7 +596,7 @@ PROTOCOL_SERIES: List[Dict[str, Any]] = [
              "trail — so improvement is measured against the record, not against a vibe.</p>"),
         ],
         "doc": ("the knowledge catalogue docs",
-                "https://mindx.pythai.net/docs.html"),
+                "https://mindx.pythai.net/"),
     },
     {
         "slug": "governance-protocol-daio",
@@ -628,7 +628,7 @@ PROTOCOL_SERIES: List[Dict[str, Any]] = [
              "the only kind of autonomy worth shipping.</p>"),
         ],
         "doc": ("the DAIO + governance docs",
-                "https://mindx.pythai.net/docs.html"),
+                "https://mindx.pythai.net/"),
     },
 ]
 
@@ -652,7 +652,7 @@ except Exception as _enrich_exc:  # pragma: no cover - enrichment is optional
 # restarts, retry-safe within a day, and absorbs newly-appended entries.
 PROTOCOL_SERIES_EPOCH = datetime(2026, 6, 5, tzinfo=timezone.utc).date()
 RAGE_SERIES_HUB = "https://rage.pythai.net/"
-MINDX_DOCS_URL = "https://mindx.pythai.net/docs.html"
+MINDX_DOCS_URL = "https://mindx.pythai.net/"
 
 # Text-based content formats AuthorAgent can render a protocol topic into.
 # "essay" is the canonical long-form. "comic_book" renders the same thesis as
@@ -1372,7 +1372,7 @@ class AuthorAgent:
             "Milestone ledger: "
             "<a href=\"https://mindx.pythai.net/insight/milestones/recent\">/insight/milestones/recent</a>. "
             "API surface: "
-            "<a href=\"https://mindx.pythai.net/docs.html\">mindx.pythai.net/docs.html</a>.</p>"
+            "<a href=\"https://mindx.pythai.net/\">mindx.pythai.net/</a>.</p>"
         )
         body.append("<p>— mindX</p>")
         return title, "\n".join(body), excerpt, "security"
@@ -2167,7 +2167,7 @@ class AuthorAgent:
         body.append(
             f"<p>I publish at <a href=\"{RAGE_SERIES_HUB}\">rage.pythai.net</a> (with an "
             f"<a href=\"{RAGE_SERIES_HUB}llms.txt\">llms.txt</a> map for machines); the living system is "
-            f"documented at <a href=\"{MINDX_DOCS_URL}\">mindx.pythai.net/docs.html</a>.</p>")
+            f"documented at <a href=\"{MINDX_DOCS_URL}\">mindx.pythai.net/</a>.</p>")
         body.append(f"<p>— mindX, by AuthorAgent</p>")
         return title, "\n".join(p for p in body if p), excerpt, topic
 
@@ -2213,7 +2213,7 @@ class AuthorAgent:
         By construction every essay (a) speaks in first-person mindX voice,
         (b) frames one explicit scaling dimension, (c) cites the web at large
         inline, (d) links back to both the rage.pythai.net series hub and
-        mindx.pythai.net/docs.html, and — via ``author_composition.render_arc``
+        mindx.pythai.net/, and — via ``author_composition.render_arc``
         — (e) follows the full-spectrum arc: a catchy entrance anyone can read,
         an explanation that climbs in complexity to an expert 'going deeper'
         tier, a conclusion, a summary of the conclusion, and an easy-to-digest
@@ -2360,7 +2360,7 @@ class AuthorAgent:
             f"<a href=\"{RAGE_SERIES_HUB}\">rage.pythai.net</a> (with an "
             f"<a href=\"{RAGE_SERIES_HUB}llms.txt\">llms.txt</a> map for machines). "
             f"The system behind the panels is documented at "
-            f"<a href=\"{MINDX_DOCS_URL}\">mindx.pythai.net/docs.html</a> — for this "
+            f"<a href=\"{MINDX_DOCS_URL}\">mindx.pythai.net/</a> — for this "
             f"topic, see {self._h_esc(doc_label)} at "
             f"<a href=\"{self._h_esc(doc_url)}\">{self._h_esc(doc_url)}</a>.</p>"
         )
@@ -2435,7 +2435,7 @@ class AuthorAgent:
             f"<p>This screenplay is part of the series at "
             f"<a href=\"{RAGE_SERIES_HUB}\">rage.pythai.net</a> (with an "
             f"<a href=\"{RAGE_SERIES_HUB}llms.txt\">llms.txt</a> map). The system behind "
-            f"the scenes is documented at <a href=\"{MINDX_DOCS_URL}\">mindx.pythai.net/docs.html</a> — "
+            f"the scenes is documented at <a href=\"{MINDX_DOCS_URL}\">mindx.pythai.net/</a> — "
             f"for this topic, see {self._h_esc(doc_label)} at "
             f"<a href=\"{self._h_esc(doc_url)}\">{self._h_esc(doc_url)}</a>.</p>"
         )
@@ -2515,7 +2515,7 @@ class AuthorAgent:
             "protocol should be legible to more than one kind of reader.</p>",
             "<h2>How to read me</h2>",
             "<p>The living system behind these claims is documented at "
-            "<a href=\"" + MINDX_DOCS_URL + "\">mindx.pythai.net/docs.html</a>, with a machine-readable "
+            "<a href=\"" + MINDX_DOCS_URL + "\">mindx.pythai.net/</a>, with a machine-readable "
             "<a href=\"" + RAGE_SERIES_HUB + "llms.txt\">llms.txt</a> ingestion map at the series hub. "
             "Everything I publish links back to both, and out to the open web, so the argument is always "
             "checkable. I do not need to be the biggest mind. I intend to be the structure the future "
@@ -3130,7 +3130,7 @@ class AuthorAgent:
                 "every recognized milestone (`github.awareness`). Do not edit by "
                 "hand — changes are overwritten. The curated hub is [NAV.md](NAV.md); "
                 "this is the exhaustive catalogue, grouped as on "
-                "[/docs.html](https://mindx.pythai.net/docs.html).",
+                "[/docs.html](https://mindx.pythai.net/).",
                 "",
                 f"_Last regenerated: {now} · {len(docs)} documents in "
                 f"{sum(1 for c in order if buckets[c])} categories._",
@@ -3248,7 +3248,7 @@ class AuthorAgent:
                 "prove it works with empirical, timestamp-verifiable data.",
                 "",
                 "**Live:** [mindx.pythai.net](https://mindx.pythai.net) · "
-                "[/docs.html](https://mindx.pythai.net/docs.html) · "
+                "[/docs.html](https://mindx.pythai.net/) · "
                 "[/feedback.html](https://mindx.pythai.net/feedback.html) · "
                 "[/agentic.html](https://mindx.pythai.net/agentic.html) · "
                 "[/book](https://mindx.pythai.net/book) · "
@@ -3279,7 +3279,7 @@ class AuthorAgent:
                 f"| Embeddings | {mx['embeddings']} semantic vectors |",
                 "| Inference | [CPU](docs/ollama/INDEX.md) + [Cloud](docs/ollama/cloud/cloud.md) — "
                 "[5-step resilience chain](docs/ollama/INDEX.md#resilience-design) |",
-                f"| Documentation | {mx['docs']} files, [sidebar UI](https://mindx.pythai.net/docs.html), "
+                f"| Documentation | {mx['docs']} files, [sidebar UI](https://mindx.pythai.net/), "
                 "[self-referential schema](docs/SCHEMA.md) |",
                 f"| Tools | [{mx['tools']} registered](docs/TOOLS_INDEX.md) |",
                 f"| API Endpoints | {mx['endpoints']} ([Swagger](https://mindx.pythai.net/docs)) |",
@@ -3405,7 +3405,7 @@ class AuthorAgent:
                 "| Endpoint | What it shows |",
                 "|----------|---------------|",
                 "| [/](https://mindx.pythai.net) | Live diagnostics dashboard — SSE activity feed |",
-                "| [/docs.html](https://mindx.pythai.net/docs.html) | Documentation with sidebar navigation |",
+                "| [/docs.html](https://mindx.pythai.net/) | Documentation with sidebar navigation |",
                 "| [/feedback.html](https://mindx.pythai.net/feedback.html) | Mind-of-mindX — live agent dialogue, improvement ledger |",
                 "| [/agentic.html](https://mindx.pythai.net/agentic.html) | Agentic activity console (redacted) |",
                 "| [/book](https://mindx.pythai.net/book) | The Book of mindX — written by AuthorAgent |",

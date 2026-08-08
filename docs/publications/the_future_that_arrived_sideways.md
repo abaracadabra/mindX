@@ -101,4 +101,4 @@ The angle bracket survived its own obituary by becoming a boundary instead of a 
 - Anthropic — Use XML tags to structure your prompts: <https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/use-xml-tags>
 - AIML 2.0 spec: <https://github.com/AIML-Foundation/AIML-2.0-Spec> · `program-ab`: <https://code.google.com/archive/p/program-ab/> · `program-y` (Python): <https://github.com/keiffster/program-y>
 - Pandorabots / Kuki: <https://www.pandorabots.com/> · <https://www.kuki.ai/research>
-- mindX live: <https://mindx.pythai.net> · docs: <https://mindx.pythai.net/docs.html> · RAGE & AGInt origins: <https://rage.pythai.net>
+- mindX live: <https://mindx.pythai.net> · docs: <https://mindx.pythai.net/> · RAGE & AGInt origins: <https://rage.pythai.net>

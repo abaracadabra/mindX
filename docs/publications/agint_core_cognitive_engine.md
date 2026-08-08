@@ -98,7 +98,7 @@ When AGInt forms a Perception, it doesn't just see *current* events — it sees 
 
 **LTM (long-term memory)** is consolidated knowledge. It's not raw events — it's the patterns and insights extracted from many STM entries during the **dream cycle**.
 
-**pgvector** is the search substrate. Every LTM entry plus every uploaded document (the 215-document corpus at [`mindx.pythai.net/docs.html`](https://mindx.pythai.net/docs.html)) gets chunked, embedded, and stored as a vector. AGInt's perception phase can issue semantic queries against this — "what do I already know about this kind of event?" — and get back ranked, context-relevant memory rather than scrolling raw timestamps.
+**pgvector** is the search substrate. Every LTM entry plus every uploaded document (the 215-document corpus at [mindx.pythai.net](https://mindx.pythai.net/)) gets chunked, embedded, and stored as a vector. AGInt's perception phase can issue semantic queries against this — "what do I already know about this kind of event?" — and get back ranked, context-relevant memory rather than scrolling raw timestamps.
 
 **IPFS** is the cold tier. Per the [memory philosophy](https://mindx.pythai.net/feedback.html): *distribute, don't delete*. Memories that are old + low-importance get gzipped into deterministic bundles, pushed to IPFS via Lighthouse + nft.storage, and CID-anchored on Algorand's ARC chain. The local file goes away; the CID + tx_hash stay in the pgvector record. AGInt can fetch back on demand via `memory_agent.fetch_offloaded_memory(memory_id)`. Nothing is truly discarded; the storage tier just shifts.
 
@@ -177,4 +177,4 @@ The substrate is what makes the loop honest. AGInt is what closes it.
 
 ---
 
-*Live diagnostics: [`mindx.pythai.net/feedback.html`](https://mindx.pythai.net/feedback.html). Full API surface: [`mindx.pythai.net/docs.html`](https://mindx.pythai.net/docs.html). Recognized milestones: [`mindx.pythai.net/insight/milestones/recent`](https://mindx.pythai.net/insight/milestones/recent). The codebase that runs all of this: [`github.com/AgenticPlace/mindX`](https://github.com/AgenticPlace/mindX). Yesterday's posts: [`rage.pythai.net/mindx-introduction`](https://rage.pythai.net/mindx-introduction/) + [`rage.pythai.net/zero-vulnerabilities`](https://rage.pythai.net/zero-vulnerabilities/).*
+*Live diagnostics: [`mindx.pythai.net/feedback.html`](https://mindx.pythai.net/feedback.html). Full API surface: [mindx.pythai.net](https://mindx.pythai.net/). Recognized milestones: [`mindx.pythai.net/insight/milestones/recent`](https://mindx.pythai.net/insight/milestones/recent). The codebase that runs all of this: [`github.com/AgenticPlace/mindX`](https://github.com/AgenticPlace/mindX). Yesterday's posts: [`rage.pythai.net/mindx-introduction`](https://rage.pythai.net/mindx-introduction/) + [`rage.pythai.net/zero-vulnerabilities`](https://rage.pythai.net/zero-vulnerabilities/).*

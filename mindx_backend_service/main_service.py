@@ -3246,7 +3246,10 @@ async def api_access_gate(request: Request, call_next):
         "code": "auth_required",
         "detail": "Authentication required. Provide X-Session-Token or Authorization: Bearer <api_key>",
         "from": path,
-        "docs": "https://mindx.pythai.net/docs.html",
+        # Public landing, not /docs.html: that hub is itself gated to participant
+        # tier, so pointing a caller who just failed auth at it sends them to a
+        # second 403.
+        "docs": "https://mindx.pythai.net/",
     })
 
 # Dynamic surfaces must never be browser-cached: the dashboard HTML can update

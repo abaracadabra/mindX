@@ -15,7 +15,7 @@ date: 2026-05-23
 
 ## What mindX is, in one paragraph
 
-[mindX](https://mindx.pythai.net/) is a production autonomous multi-agent cognitive system running at `mindx.pythai.net` on a Hostinger VPS (168.231.126.58), Apache2 + Let's Encrypt, systemd-managed, with PostgreSQL 16 + pgvector holding 157,000+ vectorized memories and a [307-endpoint FastAPI surface](https://mindx.pythai.net/redoc). It implements a Belief-Desire-Intention cognitive loop atop a retrieval substrate called RAGE (Retrieval Augmented Generative Engine), runs eight local Ollama models alongside 36 cloud models across nine providers, governs itself through an eight-member Boardroom with weighted voting and on-chain reputation, and runs a five-minute autonomous improvement cycle that has produced [173 editions of its own self-authored book](https://mindx.pythai.net/book) and a continuously updating [Improvement Journal](https://mindx.pythai.net/journal). The complete technical reference is [215 documents](https://mindx.pythai.net/docs.html) — most of them now written by the system itself.
+[mindX](https://mindx.pythai.net/) is a production autonomous multi-agent cognitive system running at `mindx.pythai.net` on a Hostinger VPS (168.231.126.58), Apache2 + Let's Encrypt, systemd-managed, with PostgreSQL 16 + pgvector holding 157,000+ vectorized memories and a [307-endpoint FastAPI surface](https://mindx.pythai.net/redoc). It implements a Belief-Desire-Intention cognitive loop atop a retrieval substrate called RAGE (Retrieval Augmented Generative Engine), runs eight local Ollama models alongside 36 cloud models across nine providers, governs itself through an eight-member Boardroom with weighted voting and on-chain reputation, and runs a five-minute autonomous improvement cycle that has produced [173 editions of its own self-authored book](https://mindx.pythai.net/book) and a continuously updating [Improvement Journal](https://mindx.pythai.net/journal). The complete technical reference is [215 documents](https://mindx.pythai.net/) — most of them now written by the system itself.
 
 This article exists because that paragraph deserves unpacking.
 
@@ -140,7 +140,7 @@ A fair question. The market is full of agentic frameworks. mindX is structurally
 
 **3. Memory has tiers and a consolidation cycle.** Off-the-shelf agent memory tends to be flat: a vector store with a `where` clause. mindX has hot/warm/cold tiers, `machine.dreaming` consolidation, IPFS offload with on-chain anchoring, and a CQRS projection that lets multiple read models coexist on a single append-only event stream. The [Knowledge Catalogue contract](https://mindx.pythai.net/doc/KNOWLEDGE_CATALOGUE) and the [`agents/catalogue/`](https://mindx.pythai.net/doc/agents/catalogue/) phase-zero implementation are the canonical references.
 
-**4. The system writes its own documentation.** This is not marketing language. The [docs.html page](https://mindx.pythai.net/docs.html) carries `meta-author: Professor Codephreak` but most of the 215 underlying documents are now authored or last-edited by mindX itself via AuthorAgent and machine.dreaming. The [Book of mindX](https://mindx.pythai.net/book) is explicit about this: "LIVE AUTO — 173 editions." There is even an endpoint, [`POST /admin/publish-to-rage`](https://mindx.pythai.net/redoc), that publishes articles directly to this very site at `rage.pythai.net` via the WordPress XML-RPC bridge. The system you are reading about may, in time, write follow-ups to this very article.
+**4. The system writes its own documentation.** This is not marketing language. The [documentation](https://mindx.pythai.net/) carries `meta-author: Professor Codephreak` but most of the 215 underlying documents are now authored or last-edited by mindX itself via AuthorAgent and machine.dreaming. The [Book of mindX](https://mindx.pythai.net/book) is explicit about this: "LIVE AUTO — 173 editions." There is even an endpoint, [`POST /admin/publish-to-rage`](https://mindx.pythai.net/redoc), that publishes articles directly to this very site at `rage.pythai.net` via the WordPress XML-RPC bridge. The system you are reading about may, in time, write follow-ups to this very article.
 
 ---
 
@@ -156,7 +156,7 @@ The standard mindX follows internally is `cypherpunk2048` — Apache 2.0, BANKON
 
 ## Where to start
 
-If you are reading this and want to understand mindX from the inside, the [docs.html landing page](https://mindx.pythai.net/docs.html) is organized by operational concern. A reading order that respects how the system actually grew:
+If you are reading this and want to understand mindX from the inside, the [documentation landing page](https://mindx.pythai.net/) is organized by operational concern. A reading order that respects how the system actually grew:
 
 1. **[Project Overview](https://mindx.pythai.net/doc/CLAUDE)** — setup, commands, architecture summary
 2. **[Manifesto](https://mindx.pythai.net/doc/MANIFESTO)** — the three pillars, $BANKON, the cypherpunk tradition
@@ -201,4 +201,4 @@ The documentation is living. So is mindX.
 * [PYTHAI / DELTAVERSE Deployment Guide](https://mindx.pythai.net/doc/operations/PYTHAI%20and%20DELTAVERSE%20Deployment%20Guide_%20Algorand%20Constitution,%20EVM%20Economy,%20and%20Agentic%20Architecture) — full-stack deployment
 * [Attribution](https://mindx.pythai.net/doc/ATTRIBUTION) — open-source stack acknowledgments
 
-*Published at [rage.pythai.net](https://rage.pythai.net). Canonical documentation at [mindx.pythai.net/docs.html](https://mindx.pythai.net/docs.html). This article was drafted by an outside observer and reviewed against the live system; subsequent editions written by mindX itself may differ.*
+*Published at [rage.pythai.net](https://rage.pythai.net). Canonical documentation at [mindx.pythai.net](https://mindx.pythai.net/). This article was drafted by an outside observer and reviewed against the live system; subsequent editions written by mindX itself may differ.*

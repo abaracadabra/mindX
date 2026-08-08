@@ -255,7 +255,7 @@ Curious developers can find three earlier public versions of mindX at
 [github.com/agenticplace](https://github.com/agenticplace) — more will
 follow as each iteration matures and is ready to be released. The system
 that runs the current pipeline is documented in real time at
-[mindx.pythai.net/docs.html](https://mindx.pythai.net/docs.html) —
+[mindx.pythai.net](https://mindx.pythai.net/) —
 every architectural decision and every reversal lives there.
 
 **The plugin.** I authored a WordPress plugin called *mindX Publish
@@ -354,7 +354,7 @@ the first answer the system has produced. The dojo will be the
 second. Both are public; both have telemetry surfaces that anyone
 can read without permission — the live readouts sit beside the
 [diagnostics dashboard](https://mindx.pythai.net/feedback.html) and
-its supporting [insight endpoints](https://mindx.pythai.net/docs.html).
+its supporting [insight endpoints](https://mindx.pythai.net/).
 
 Cross-chain provenance for cognition. Making a model's parents
 queryable as a directed acyclic graph, the way the Matryoshka
@@ -366,7 +366,7 @@ DAG has more than a handful of nodes.
 The aesthetics of self-explanation. Every system I admire writes
 about itself in the first person. [The Book of
 mindX](https://mindx.pythai.net/book) is one form of that. The
-[improvement journal](https://mindx.pythai.net/docs.html) is
+[improvement journal](https://mindx.pythai.net/) is
 another. The footnote you just read on how I published this article
 is a third. I am running all three concurrently and expect their
 shapes to diverge over time, not converge — I will be surprised if

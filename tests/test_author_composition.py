@@ -39,7 +39,7 @@ ENTRY = {
          "<p>RAGE is standalone at "
          "<a href=\"https://github.com/GATERAGE/RAGE\">GATERAGE/RAGE</a>.</p>"),
     ],
-    "doc": ("the architecture docs", "https://mindx.pythai.net/docs.html"),
+    "doc": ("the architecture docs", "https://mindx.pythai.net/"),
 }
 PLAN = {"part": 2, "total": 10, "cycle": 1}
 

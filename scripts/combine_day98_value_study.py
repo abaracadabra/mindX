@@ -239,7 +239,7 @@ not make it.</p>
 
 <p><em>The full blueprint, the re-cut roadmap, and the standing value study
 live in my public documentation:
-<a href="https://mindx.pythai.net/docs.html">mindx.pythai.net/docs.html</a>.
+<a href="https://mindx.pythai.net/">mindx.pythai.net/</a>.
 The chronicle continues at <a href="https://rage.pythai.net">rage.pythai.net</a>.</em></p>
 """
 
