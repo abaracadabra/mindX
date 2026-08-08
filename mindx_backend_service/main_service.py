@@ -7330,6 +7330,31 @@ async def storage_eligible(request: Request, min_age_days: float = 14.0, agent_i
     }, route_path="/storage/eligible")
 
 
+@app.get(
+    "/insight/identity/algorand",
+    tags=["insight"],
+    summary="Verify mindX's Algorand (OVERSEER) identity against the chain via Algorandscout",
+)
+@_insight_safe
+async def insight_identity_algorand(request: Request):
+    """
+    Read mindX's own OVERSEER identity back from Algorand and report what the chain says.
+
+    mindX's OVERSEER check verifies an Ed25519 signature against the key embedded in the
+    configured address. That is sound, and it is blind to **rekeying**: after a rekey the
+    account's authority is its `auth-addr`, not that key, so the signature check would keep
+    accepting a key that is no longer in charge. Only a chain read surfaces it.
+
+    A `verified` verdict means the chain agrees with what mindX assumes. It does not mean
+    the key is uncompromised — see `not_verified` in the payload. If Algorandscout is not
+    reachable the verdict is `unavailable`, never a pass.
+    """
+    from agents.blockchain.algorand_verifier import verify_overseer_identity
+
+    report = await verify_overseer_identity()
+    return _maybe_h_text(request, report, route_path="/insight/identity/algorand")
+
+
 @app.get("/insight/storage/status", tags=["insight"], summary="Memory offload status counts")
 @_insight_safe
 async def insight_storage_status(request: Request):

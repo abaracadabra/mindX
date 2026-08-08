@@ -222,6 +222,47 @@ def render_table(
 # ── Per-endpoint renderers ────────────────────────────────────────────────
 
 
+def render_identity_algorand(d: dict) -> str:
+    """Terminal view of the Algorand identity verdict — `watch`-friendly."""
+    lines = [
+        render_kv(
+            {
+                "verdict":     d.get("verdict"),
+                "verifier":    d.get("verifier"),
+                "available":   d.get("verifier_available"),
+                "network":     d.get("network"),
+                "lag_rounds":  d.get("indexer_lag_rounds"),
+                "addresses":   d.get("configured_addresses"),
+            }
+        )
+    ]
+    for r in d.get("results") or []:
+        chain = r.get("chain") or {}
+        addr = r.get("address") or "?"
+        lines.append("")
+        lines.append(f"{addr}  [{r.get('verdict')}]")
+        lines.append(
+            "  balance {b} ALGO · {st} · sig {sg} · rekeyed {rk}".format(
+                b=chain.get("balance", "?"),
+                st=chain.get("status", "?"),
+                sg=chain.get("signature_type", "?"),
+                rk=chain.get("rekeyed_to") or "no",
+            )
+        )
+        for f in r.get("findings") or []:
+            lines.append(f"  [{f.get('severity','?')}] {f.get('code','?')}: {f.get('detail','')}")
+
+    for f in d.get("findings") or []:
+        lines.append(f"[{f.get('severity','?')}] {f.get('code','?')}: {f.get('detail','')}")
+
+    if d.get("not_verified"):
+        lines.append("")
+        lines.append("not verified by this check:")
+        for item in d["not_verified"]:
+            lines.append(f"  - {item}")
+    return "\n".join(lines)
+
+
 def render_storage_status(d: dict) -> str:
     return render_kv(
         {
@@ -1768,6 +1809,7 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/catalogue/stats":     render_catalogue_stats,
     "/insight/catalogue/kinds":     render_catalogue_kinds,
     "/insight/catalogue/lineage":   render_catalogue_lineage,
+    "/insight/identity/algorand":   render_identity_algorand,
     "/insight/storage/status":      render_storage_status,
     "/insight/storage/recent":      render_storage_recent,
     "/insight/cost/summary":        render_cost_summary,
