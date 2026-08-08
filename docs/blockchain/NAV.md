@@ -38,7 +38,7 @@ enumerated below.
 Theses & integration guides
 - [0G-Integration-Guide.md](0G-Integration-Guide.md) — 0G (ZeroGravity) integration
 - [aave01062026.md](aave01062026.md) — Aave analysis
-- [algorandscout.md](algorandscout.md) — **Algorandscout** — [`OpenBDK/algorandscout`](https://github.com/openbdk/algorandscout), an independent BANKON-licensed **explorer API for Algorand** (accounts, assets, applications, transactions, rounds over algod + indexer). Covers where `mindx.algo` and BONA FIDE live. Built 2026-08-08, 186 tests; **capability, not yet wired into mindX**
+- [algorandscout.md](algorandscout.md) — **Algorandscout** — [`OpenBDK/algorandscout`](https://github.com/openbdk/algorandscout), an independent BANKON-licensed **explorer API for Algorand** (accounts, assets, applications, transactions, rounds over algod + indexer). Covers where `mindx.algo` and BONA FIDE live. **[v1.0.0](https://github.com/openbdk/algorandscout/releases/tag/v1.0.0)** released 2026-08-08, 185 tests; API stable under semver, **but not yet operated and not yet wired into mindX**
 - [BLOCKCHAIN_AGENTS.md](BLOCKCHAIN_AGENTS.md) — blockchain agents overview
 - [blockscout.md](blockscout.md) — **Blockscout MCP** — how Claude reads the chain: all 16 tools + params, the unlock-once session, PRO-key/credit model (key mandatory from 2026-10-08), REST fallback, `blockscout-analysis` v0.6.0 operating rules, 97-chain coverage (incl. Arc `5042002`) and the honest gaps. Companion skill: `~/.claude/skills/blockscout/`
 - [BTC_op_cat_quantum_fork.md](BTC_op_cat_quantum_fork.md) — Bitcoin OP_CAT / quantum fork thesis

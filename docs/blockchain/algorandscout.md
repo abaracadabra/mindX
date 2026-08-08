@@ -6,9 +6,13 @@
 > [algod](https://developer.algorand.org/docs/rest-apis/algod/) and
 > [indexer](https://developer.algorand.org/docs/rest-apis/indexer/) APIs.
 >
-> **Built 2026-08-08.** Version 0.1.0 · 12 `/api/v2` routes + allowlisted passthrough ·
-> **186 tests** passing offline against fixtures captured live from Algorand mainnet ·
-> container, Prometheus metrics, liveness/readiness probes.
+> **[v1.0.0](https://github.com/openbdk/algorandscout/releases/tag/v1.0.0) — released 2026-08-08.**
+> 12 `/api/v2` routes + allowlisted passthrough · **185 tests** passing offline against fixtures
+> captured live from Algorand mainnet · container, Prometheus metrics, liveness/readiness probes,
+> checksum-validated inputs, CI on Python 3.10–3.12.
+>
+> **What 1.0.0 claims:** the `/api/v2` response shapes and configuration surface are stable under
+> semver. **What it does not claim:** production operation — built and tested, not yet operated.
 >
 > **Why mindX cares:** mindX's governance identity lives on Algorand, and until this existed
 > mindX had no way to verify it independently.
