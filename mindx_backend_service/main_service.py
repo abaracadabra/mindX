@@ -9494,6 +9494,21 @@ async def startup_event():
 
         asyncio.create_task(_auto_start_autonomous())
         asyncio.create_task(_periodic_memory_promotion())
+
+        # Periodic identity verification — re-read mindX's OVERSEER account from
+        # Algorand and alert on transitions. A rekey at 03:00 should not wait for
+        # someone to open a dashboard; steady state stays quiet.
+        try:
+            from agents.blockchain.algorand_verifier import MONITOR_ENABLED, run_identity_monitor
+
+            if MONITOR_ENABLED:
+                asyncio.create_task(run_identity_monitor())
+                logger.info("Identity monitor started (Algorand OVERSEER via Algorandscout)")
+            else:
+                logger.info("Identity monitor disabled (MINDX_IDENTITY_CHECK_ENABLED=0)")
+        except Exception as identity_e:
+            logger.warning(f"Identity monitor failed to start: {identity_e}")
+
         asyncio.create_task(_periodic_dream_cycle())
         asyncio.create_task(_periodic_journal())
         asyncio.create_task(_periodic_author())

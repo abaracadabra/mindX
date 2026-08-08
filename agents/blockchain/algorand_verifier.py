@@ -30,7 +30,9 @@ an unavailable verifier that looks like a passing one is worse than an outage.
 
 from __future__ import annotations
 
+import asyncio
 import os
+import time
 from typing import Any, Optional
 
 import aiohttp
@@ -43,6 +45,13 @@ logger = get_logger(__name__)
 #: service it queries are colocated, so this never crosses the network.
 ALGORANDSCOUT_URL = os.environ.get("MINDX_ALGORANDSCOUT_URL", "http://127.0.0.1:8100")
 REQUEST_TIMEOUT_S = float(os.environ.get("MINDX_ALGORANDSCOUT_TIMEOUT_S", "20"))
+
+#: Periodic re-check. The point of running on a schedule is not to re-confirm a
+#: good answer — it is to notice the *transition* on the day one occurs. A rekey
+#: that happens at 03:00 should not wait for a human to open a dashboard.
+MONITOR_ENABLED = os.environ.get("MINDX_IDENTITY_CHECK_ENABLED", "1") not in ("0", "false", "no")
+MONITOR_INTERVAL_S = float(os.environ.get("MINDX_IDENTITY_CHECK_INTERVAL_S", "3600"))
+MONITOR_START_DELAY_S = float(os.environ.get("MINDX_IDENTITY_CHECK_START_DELAY_S", "120"))
 
 #: Verdicts, worst-first. `attention` means the chain disagrees with an assumption
 #: mindX is making; `unavailable` means nothing was checked and nothing is claimed.
@@ -273,7 +282,7 @@ class AlgorandVerifier:
         return report
 
 
-async def _emit_catalogue(report: dict[str, Any]) -> None:
+async def _emit_catalogue(report: dict[str, Any], changes: Optional[list] = None) -> None:
     """
     Mirror the verdict into the catalogue.
 
@@ -301,6 +310,7 @@ async def _emit_catalogue(report: dict[str, Any]) -> None:
                 "network": report.get("network"),
                 "addresses": report.get("configured_addresses"),
                 "critical_findings": critical,
+                "changes": changes or [],
                 "results": [
                     {
                         "address": r["address"],
@@ -328,4 +338,131 @@ def get_verifier() -> AlgorandVerifier:
 
 async def verify_overseer_identity() -> dict[str, Any]:
     """Module-level entry point used by the insight route."""
-    return await get_verifier().verify_overseer()
+    report = await get_verifier().verify_overseer()
+    report["monitor"] = {
+        "enabled": MONITOR_ENABLED,
+        "interval_s": MONITOR_INTERVAL_S,
+        "last_periodic_check": _LAST_REPORT.get("checked_at"),
+        "last_change": _LAST_CHANGE,
+    }
+    return report
+
+
+# ---------------------------------------------------------------- periodic monitor
+
+#: Last completed report, and the last observed per-address fingerprint. Held in
+#: process: this is a change detector, not an audit log — the durable record is
+#: the `identity.verified` catalogue stream.
+_LAST_REPORT: dict[str, Any] = {}
+_LAST_STATE: dict[str, tuple] = {}
+_LAST_CHANGE: Optional[dict[str, Any]] = None
+
+
+def _fingerprint(result: dict[str, Any]) -> tuple:
+    """The facts whose change is worth waking someone for."""
+    chain = result.get("chain") or {}
+    return (result.get("verdict"), chain.get("rekeyed_to"), chain.get("deleted"), chain.get("signature_type"))
+
+
+def last_report() -> dict[str, Any]:
+    """Most recent periodic result, for the insight route to report alongside a live check."""
+    return dict(_LAST_REPORT)
+
+
+def _detect_changes(report: dict[str, Any]) -> list[dict[str, Any]]:
+    """
+    Compare against the previous observation.
+
+    The first sighting of an address establishes a baseline and is deliberately
+    *not* a change — otherwise every restart would alert, and an alert that fires
+    on every restart is one nobody reads.
+    """
+    changes: list[dict[str, Any]] = []
+    for result in report.get("results", []):
+        address = result.get("address")
+        current = _fingerprint(result)
+        previous = _LAST_STATE.get(address)
+        _LAST_STATE[address] = current
+        if previous is None or previous == current:
+            continue
+        changes.append(
+            {
+                "address": address,
+                "from": {
+                    "verdict": previous[0],
+                    "rekeyed_to": previous[1],
+                    "deleted": previous[2],
+                    "signature_type": previous[3],
+                },
+                "to": {
+                    "verdict": current[0],
+                    "rekeyed_to": current[1],
+                    "deleted": current[2],
+                    "signature_type": current[3],
+                },
+            }
+        )
+    return changes
+
+
+async def run_identity_monitor(
+    interval_s: Optional[float] = None,
+    start_delay_s: Optional[float] = None,
+) -> None:
+    """
+    Re-verify the OVERSEER identity on an interval, alerting on transitions.
+
+    Steady state is quiet: an unchanged, verified identity logs at info and emits
+    its catalogue event, nothing more. A change — above all a rekey appearing
+    where there was none — logs at **error** and emits an event carrying both the
+    old and new state, so the transition itself is on the record rather than only
+    the new value.
+    """
+    global _LAST_REPORT, _LAST_CHANGE
+
+    interval = interval_s if interval_s is not None else MONITOR_INTERVAL_S
+    await asyncio.sleep(start_delay_s if start_delay_s is not None else MONITOR_START_DELAY_S)
+
+    while True:
+        try:
+            report = await get_verifier().verify_overseer()
+            report["checked_at"] = time.time()
+
+            changes = _detect_changes(report)
+            if changes:
+                _LAST_CHANGE = {"at": report["checked_at"], "changes": changes}
+                report["changes"] = changes
+                for change in changes:
+                    logger.error(
+                        "IDENTITY CHANGED on chain: %s %s -> %s. mindX's OVERSEER assumptions "
+                        "may no longer hold; investigate before trusting further signatures.",
+                        change["address"],
+                        change["from"],
+                        change["to"],
+                    )
+                await _emit_catalogue(report, changes=changes)
+            elif report.get("verdict") == VERDICT_ATTENTION:
+                logger.error(
+                    "identity check: verdict=attention — %s",
+                    [f for r in report.get("results", []) for f in r.get("findings", [])],
+                )
+            elif report.get("verdict") == VERDICT_UNAVAILABLE:
+                # Not an identity problem, and not a pass either. Info, so a flapping
+                # verifier does not train anyone to ignore this logger.
+                logger.info("identity check: verifier unavailable — nothing verified")
+            else:
+                logger.info(
+                    "identity check: %s (%s address(es), network=%s)",
+                    report.get("verdict"),
+                    report.get("configured_addresses"),
+                    report.get("network"),
+                )
+
+            _LAST_REPORT = report
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001 — a monitor must outlive its own bugs
+            logger.warning("identity monitor cycle failed: %s", exc)
+
+        await asyncio.sleep(interval)
+

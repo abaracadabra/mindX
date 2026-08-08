@@ -255,6 +255,19 @@ def render_identity_algorand(d: dict) -> str:
     for f in d.get("findings") or []:
         lines.append(f"[{f.get('severity','?')}] {f.get('code','?')}: {f.get('detail','')}")
 
+    mon = d.get("monitor") or {}
+    if mon:
+        lines.append("")
+        lines.append(
+            "monitor: {en} · every {iv}s · last periodic {lp}".format(
+                en="on" if mon.get("enabled") else "OFF",
+                iv=int(mon.get("interval_s") or 0),
+                lp=human_ts_with_rel(mon["last_periodic_check"]) if mon.get("last_periodic_check") else "not yet run",
+            )
+        )
+        if mon.get("last_change"):
+            lines.append(f"  LAST CHANGE: {mon['last_change']}")
+
     if d.get("not_verified"):
         lines.append("")
         lines.append("not verified by this check:")
