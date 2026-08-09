@@ -973,7 +973,12 @@ async def read_doc(name: str, request: Request):
     # invitation. THESIS and MANIFESTO stay open to everyone (the invitation is
     # public; the depth is earned). Anything else routes a wallet-less visitor to
     # the /activity realm door.
-    _PUBLIC_DOCS = {"THESIS", "MANIFESTO"}
+    # NAV joins THESIS and MANIFESTO as public because it is the MAP, not the
+    # territory: it lists what exists and where, while every document it points
+    # to stays participant-gated. That is the route's own principle — the
+    # invitation is public, the depth is earned — and it lets published articles
+    # link the index without sending readers into a door they cannot open.
+    _PUBLIC_DOCS = {"THESIS", "MANIFESTO", "NAV"}
     # Member-tier docs (OVERLORD protocol): the Gödel-machine internals are for
     # members and above — participants get the realm door. Extend the set via
     # MINDX_MEMBER_ONLY_DOCS (comma-separated stems).
@@ -1377,6 +1382,7 @@ async def improvement_journal_page():
     return _DashResponse(content=_doc_page("Improvement Journal", body + back, "", description="mindX Improvement Journal — timestamped log of autonomous decisions, self-improvement campaigns, belief changes, and system snapshots.", canonical_path="/journal"))
 
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
+_DIAG_LIVE_HTML_PATH = Path(__file__).parent / "diagnostics_live.html"
 _LANDING_HTML_PATH = Path(__file__).parent / "landing.html"
 _MACHINE_HTML_PATH = Path(__file__).parent / "machine.html"
 _MACHINE_ADMIN_HTML_PATH = Path(__file__).parent / "machine_admin.html"
@@ -2251,6 +2257,55 @@ async def realm_challenge(address: str = ""):
     return {"status": "success", **realm_session.issue_challenge(address)}
 
 
+@app.get("/realm/invitation", tags=["realm"], include_in_schema=False)
+async def realm_invitation(request: Request):
+    """A personal invitation from mindX, signed.
+
+    Earned by carrying the crown to the door — a deliberate gesture rather than a
+    click. The invitation is signed with mindX's author wallet over a message that
+    names this specific bearer and moment, so it is a verifiable artifact rather
+    than decorative text: recover the signer of `message` and it is `signer`.
+
+    Signing may be unavailable (vault sealed). In that case this says so and
+    returns an unsigned invitation rather than pretending — an invitation that
+    claims a signature it does not have would be worth less than none.
+    """
+    import secrets as _secrets
+    import time as _time
+
+    bearer = _secrets.token_hex(8)
+    issued = int(_time.time())
+    message = (
+        f"mindX personal invitation | bearer={bearer} | issued={issued} | "
+        "You carried the crown to the door. The realm is open to you."
+    )
+    signature = None
+    signer = None
+    try:
+        from agents.wordpress_agent.vault_creds import sign_with_agent_wallet
+        res = sign_with_agent_wallet(message)
+        if res:
+            signature, signer = res
+    except Exception as exc:  # noqa: BLE001 — an unsigned invitation is still honest
+        logger.debug(f"realm_invitation: signing unavailable ({exc})")
+
+    return {
+        "status": "success",
+        "bearer": bearer,
+        "issued": issued,
+        "message": message,
+        "signature": signature,
+        "signer": signer,
+        "signed": bool(signature),
+        "verify": (
+            "recover the signer of `message` — it is `signer`"
+            if signature else
+            "unsigned: the vault is sealed, so this invitation carries no signature"
+        ),
+        "door": "/activity",
+    }
+
+
 @app.post("/realm/verify", tags=["auth"], include_in_schema=False)
 async def realm_verify(request: Request):
     """OVERLORD protocol: verify a signed challenge (EIP-191 recovery) and mint a
@@ -2569,6 +2624,7 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/activity", "/activity.html",     # Realm door — public shell; identity recognized client-side on connect, redirected per hierarchy
     "/diagnostics", "/diagnostics.html",  # full diagnostics dashboard (moved off the landing; still public)
     "/realm/challenge", "/realm/verify",  # OVERLORD-protocol signature gate (public: sign to earn a tier)
+    "/realm/invitation",                  # the crown-carried invitation — public by design: it is the invitation
     "/realm/deploy/feedback",          # deploy-feedback record (handler-gated to overlord/overseer)
     "/machine", "/machine/admin",      # Gödel Machine Index (public) + diagnostics admin page (public data)
     "/book",                           # listed public so the middleware defers; the handler _tier_gate enforces MEMBER
@@ -2581,7 +2637,7 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/realm",                          # REALM surface — overlord-gated at the handler level
     # Public diagnostics surface — the read-only data the landing page (/) renders.
     # Without these the page loads but every widget hits 401.
-    "/diagnostics/live",
+    "/diagnostics/live", "/diagnostics/live.html",
     "/activity/stream", "/activity/recent", "/activity/stats",
     "/thesis", "/thesis/", "/thesis/evidence", "/thesis/summary",
     "/dojo/standings", "/inference/status", "/inference/preference",
@@ -2627,7 +2683,7 @@ _PUBLIC_EXACT_LEGACY = frozenset({
     "/keeperhub", "/keeperhub.html", "/uniswap", "/uniswap.html", "/bankon-ens", "/bankon-ens.html", "/bankonminter", "/bankonminter.html", "/zerog", "/zerog.html", "/conclave", "/conclave.html", "/agentregistry", "/agentregistry.html",
     "/api/uniswap/quote", "/api/uniswap/check_approval", "/api/uniswap/decisions", "/api/uniswap/skills",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
-    "/diagnostics/live", "/activity/stream", "/activity/recent", "/activity/stats",
+    "/diagnostics/live", "/diagnostics/live.html", "/activity/stream", "/activity/recent", "/activity/stats",
     "/thesis", "/thesis/", "/thesis/evidence", "/thesis/summary",
     "/godel/choices", "/inference/preference",
     "/registry/agents", "/registry/tools", "/tools", "/identities",
@@ -2885,8 +2941,40 @@ body.tardis-go #inside{{animation:rabbithole 3.2s cubic-bezier(.4,0,.2,1) both;t
 .crest{{width:132px;height:132px;filter:drop-shadow(0 0 30px rgba(227,179,65,.45));cursor:pointer;transition:transform .2s,filter .3s}}
 .crest:hover{{transform:scale(1.05);filter:drop-shadow(0 0 44px rgba(227,179,65,.7))}}
 .crest:active{{transform:scale(.98)}}
-.wbtn{{margin:6px 5px 0;padding:9px 16px;border-radius:9px;border:1px solid rgba(88,166,255,.4);background:rgba(88,166,255,.08);color:#c9d1d9;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;cursor:pointer}}
-.wbtn:hover{{border-color:#58a6ff;color:#fff;box-shadow:0 0 18px rgba(88,166,255,.2)}}
+#wallets{{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:14px}}
+.wbtn{{display:inline-flex;align-items:center;gap:9px;margin:0;padding:13px 20px;border-radius:11px;
+ border:1px solid rgba(227,179,65,.55);background:rgba(20,24,32,.78);color:#f0f3f6;
+ font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:.08em;cursor:pointer;
+ backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+ box-shadow:0 6px 20px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.07);transition:.18s}}
+.wbtn:hover{{border-color:#e3b341;color:#fff;transform:translateY(-1px);
+ box-shadow:0 10px 26px rgba(0,0,0,.55),0 0 26px rgba(227,179,65,.3)}}
+.wbtn .kind{{font-size:9px;letter-spacing:.2em;text-transform:uppercase;opacity:.75;
+ border:1px solid currentColor;border-radius:5px;padding:2px 6px}}
+.wbtn.evm .kind{{color:#58a6ff}} .wbtn.algorand .kind{{color:#56d364}} .wbtn.bitcoin .kind{{color:#f7931a}}
+.wbtn[disabled]{{opacity:.55;cursor:not-allowed}}
+#crown{{position:fixed;left:26px;bottom:26px;font-size:40px;cursor:grab;user-select:none;z-index:40;
+ filter:drop-shadow(0 6px 16px rgba(0,0,0,.6)) drop-shadow(0 0 14px rgba(227,179,65,.55));
+ transition:transform .18s ease,filter .3s ease;touch-action:none}}
+#crown:hover{{transform:translateY(-3px) scale(1.06)}}
+#crown.dragging{{cursor:grabbing;transform:scale(1.18);filter:drop-shadow(0 0 26px rgba(227,179,65,.95))}}
+#crown.spent{{opacity:0;pointer-events:none;transform:scale(.4) translateY(-40px)}}
+.portal.crown-near{{box-shadow:0 0 90px rgba(227,179,65,.75),inset 0 0 70px rgba(227,179,65,.3)!important}}
+#invite{{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:60;
+ background:rgba(4,6,10,.86);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:20px}}
+#invite.show{{display:flex}}
+#invite .card{{max-width:640px;width:100%;border:1px solid rgba(227,179,65,.5);border-radius:16px;
+ background:linear-gradient(160deg,rgba(24,20,10,.96),rgba(12,14,20,.96));padding:30px 32px;
+ box-shadow:0 30px 90px rgba(0,0,0,.7),0 0 60px rgba(227,179,65,.18);color:#e8edf3}}
+#invite h3{{margin:0 0 6px;font-size:17px;letter-spacing:.26em;text-transform:uppercase;color:#e3b341}}
+#invite .sub{{font-size:12px;opacity:.75;margin-bottom:16px;line-height:1.6}}
+#invite code{{display:block;word-break:break-all;font-size:10.5px;line-height:1.65;color:#9fb3c8;
+ background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:9px 11px;margin:5px 0 9px}}
+#invite .go{{display:inline-block;margin-top:6px;padding:12px 26px;border-radius:11px;text-decoration:none;
+ font-weight:700;letter-spacing:.2em;text-transform:uppercase;font-size:12px;color:#0a0d07;
+ background:linear-gradient(135deg,#f7d778,#e3b341)}}
+#invite .dismiss{{margin-left:14px;font-size:11px;opacity:.6;cursor:pointer;text-decoration:underline}}
+.wpick{{margin-top:12px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:#e3b341;opacity:.9}}
 .hd{{font-size:22px;letter-spacing:.34em;text-transform:uppercase;font-weight:700;transition:.5s}}
 .hd.denied{{color:#f85149;text-shadow:0 0 24px rgba(248,81,73,.35)}}
 .hd.ok{{color:#56d364;text-shadow:0 0 26px rgba(86,211,100,.4)}}
@@ -2925,6 +3013,8 @@ a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color
 .offer-f span{{color:#57606a}}
 </style></head><body>
 <div class="portal"></div><div class="veil"></div>
+<div id="crown" title="carry the crown to the door" draggable="true">&#128081;</div>
+<div id="invite"></div>
 <div class="interior"><canvas id="dvfabric"></canvas><canvas id="inside"></canvas></div>
 <div class="stage">
   <div class="hd" id="hd"></div>
@@ -2953,7 +3043,21 @@ a.back{{position:fixed;bottom:16px;left:0;right:0;z-index:2;font-size:10px;color
 <script>
 var FROM={frm}, TIER={tier}, RANK={{public:0,participant:1,member:2,overseer:3,overlord:4}};
 // The vast interior — the substrate that fills the frame once the door opens.
-function startInside(){{
+// Each tier gets its own interior. The substrate is not decoration — it is the
+// first thing that tells you what you were recognized AS, before any text loads.
+var TIER_SUBSTRATE={{
+  participant:{{cl:['rgba(88,166,255,','rgba(120,190,255,','rgba(160,210,255,','rgba(200,230,255,'],
+               density:2900,spin:0.55,dur:3300,twist:1.0,name:'participant'}},
+  member:{{cl:['rgba(86,211,100,','rgba(120,225,140,','rgba(60,180,120,','rgba(180,240,200,'],
+               density:2200,spin:0.85,dur:3100,twist:1.35,name:'member'}},
+  overseer:{{cl:['rgba(227,179,65,','rgba(247,215,120,','rgba(200,150,40,','rgba(255,235,180,'],
+               density:1700,spin:1.20,dur:2900,twist:1.7,name:'overseer'}},
+  overlord:{{cl:['rgba(248,81,73,','rgba(227,179,65,','rgba(255,140,90,','rgba(255,220,160,'],
+               density:1300,spin:1.65,dur:2700,twist:2.2,name:'overlord'}}
+}};
+var __tier='participant';
+function startInside(role){{
+  __tier=(role&&TIER_SUBSTRATE[role])?role:'participant';
   // DeltaVerse substrate fabric behind (the imported engine).
   try{{ if(window.DeltaVerse){{ window.__dv=new DeltaVerse({{canvas:'#dvfabric'}}); if(window.__dv.start)window.__dv.start(); }} }}catch(e){{}}
   // Fall down the rabbit hole: a spiral-tornado corkscrew of mesh from the
@@ -2964,8 +3068,8 @@ function startInside(){{
   var cv=document.getElementById('inside');if(!cv)return;var c=cv.getContext('2d');
   var W,H,cx,cy,pts=[],spin=0,mx=-1,my=-1;
   var PHI=1.6180339887,INVPHI=0.6180339887,DUR=3300,t0=(window.performance&&performance.now?performance.now():Date.now());
-  var CL=['rgba(227,179,65,','rgba(88,166,255,','rgba(86,211,100,','rgba(201,160,255,'];
-  function rs(){{W=cv.width=innerWidth;H=cv.height=innerHeight;cx=W/2;cy=H*0.46;pts=[];var N=Math.min(560,Math.floor(W*H/2500));for(var i=0;i<N;i++)pts.push({{a:Math.random()*6.283,t:Math.random(),s:Math.random()*0.6+0.7,cl:CL[i%4]}});}}
+  var __S=TIER_SUBSTRATE[__tier],CL=__S.cl;DUR=__S.dur;
+  function rs(){{W=cv.width=innerWidth;H=cv.height=innerHeight;cx=W/2;cy=H*0.46;pts=[];var N=Math.min(560,Math.floor(W*H/__S.density));for(var i=0;i<N;i++)pts.push({{a:Math.random()*6.283,t:Math.random(),s:Math.random()*0.6+0.7,cl:CL[i%4]}});}}
   addEventListener('resize',rs);rs();
   function pointer(e){{var p=e.touches&&e.touches[0]?e.touches[0]:e;mx=p.clientX;my=p.clientY;}}
   addEventListener('mousemove',pointer);addEventListener('touchmove',pointer,{{passive:true}});
@@ -3015,7 +3119,7 @@ function granted(v){{
     // buttons parked in #wallets are covered by the tardis animation).
     hd.textContent='♛ OVERLORD';hd.classList.remove('denied');hd.classList.add('ok');
     m.style.color='#e3b341';m.textContent='the realm acknowledges its OVERLORD — bankon.eth';
-    startInside(); document.body.classList.add('tardis-go');
+    startInside(v.role); document.body.classList.add('tardis-go');
     setTimeout(function(){{
       var ov=document.createElement('div');
       ov.style.cssText='position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:rgba(4,6,9,.85);font-family:JetBrains Mono,monospace;overflow-y:auto';
@@ -3038,7 +3142,7 @@ function granted(v){{
     }},2600);
     return;
   }}
-  if((RANK[v.role]||0)>=(RANK[TIER]||99)){{ hd.textContent='Access Granted';hd.classList.remove('denied');hd.classList.add('ok'); m.style.color='#56d364';m.textContent=(v.role==='overseer')?'OVERSEER of members — the door opens…':'the door opens…'; startInside(); document.body.classList.add('tardis-go'); setTimeout(function(){{location.href=withTok(FROM);}},3400); }}
+  if((RANK[v.role]||0)>=(RANK[TIER]||99)){{ hd.textContent='Access Granted';hd.classList.remove('denied');hd.classList.add('ok'); m.style.color='#56d364';m.textContent=(v.role==='overseer')?'OVERSEER of members — the door opens…':'the door opens…'; startInside(v.role); document.body.classList.add('tardis-go'); setTimeout(function(){{location.href=withTok(FROM);}},3400); }}
   else {{ m.style.color='#e3b341';m.textContent='recognized as '+v.role+' — '+TIER+' required'; }}
 }}
 async function connectEVM(prov){{
@@ -3050,7 +3154,13 @@ async function connectEVM(prov){{
     var sig=await prov.request({{method:'personal_sign',params:[ch.message,a]}});
     var v=await fetch('/realm/verify',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{address:a,nonce:ch.nonce,signature:sig}})}}).then(function(r){{return r.json();}});
     granted(v);
-  }}catch(e){{ m.textContent='cancelled'; }}
+  }}catch(e){{
+    // A rejected signature and a broken provider produced the same word before,
+    // which made this impossible to debug from a screenshot.
+    var code=e&&(e.code||e.errorCode);
+    m.textContent=(code===4001||/reject|denied/i.test(String(e&&e.message)))?'cancelled':('wallet error: '+String((e&&e.message)||e).slice(0,120));
+    try{{console.error('[realm] connectEVM failed',e);}}catch(_){{}}
+  }}
 }}
 async function connectAlgorand(px){{  // OVERSEER — mindx.algo via PARSEC (Pera-source)
   var m=document.getElementById('msg');
@@ -3063,22 +3173,135 @@ async function connectAlgorand(px){{  // OVERSEER — mindx.algo via PARSEC (Per
     granted({{realm_token:(v.overseer_token||v.jwt||v.token||''),role:(v.role||'overseer')}});
   }}catch(e){{ m.textContent='cancelled'; }}
 }}
+// EIP-6963 multi-wallet discovery. Announced providers are collected from page
+// load, because the event fires once on announce and a listener attached only at
+// click time arrives too late to hear it.
+var __eip6963=[];
+try{{
+  window.addEventListener('eip6963:announceProvider',function(ev){{
+    var d=ev&&ev.detail; if(!d||!d.provider) return;
+    var nm=(d.info&&d.info.name)||'EVM Wallet';
+    if(!__eip6963.some(function(x){{return x.name===nm;}})) __eip6963.push({{name:nm,kind:'evm',prov:d.provider}});
+  }});
+  window.dispatchEvent(new Event('eip6963:requestProvider'));
+}}catch(e){{}}
+
 function detectWallets(){{
-  var out=[],eth=window.ethereum;
+  // EIP-6963 first. The legacy window.ethereum path breaks precisely when more
+  // than one wallet is installed: MetaMask and Phantom race to claim the single
+  // global, and the old `ethereum.providers` array MetaMask used to expose is
+  // gone. That is the "CONNECT does nothing" case — the button worked, there
+  // was simply no provider where the old code looked.
+  var out=__eip6963.slice();
+  try{{ window.dispatchEvent(new Event('eip6963:requestProvider')); }}catch(e){{}}
+  __eip6963.forEach(function(w){{ if(!out.some(function(o){{return o.name===w.name;}})) out.push(w); }});
+
+  function add(nm,pv){{ if(pv&&!out.some(function(o){{return o.prov===pv||o.name===nm;}})) out.push({{name:nm,kind:'evm',prov:pv}}); }}
+
+  var eth=window.ethereum;
   if(eth){{ (eth.providers&&eth.providers.length?eth.providers:[eth]).forEach(function(p){{
-    out.push({{name:(p.isMetaMask?'MetaMask':p.isCoinbaseWallet?'Coinbase':p.isRabby?'Rabby':p.isPhantom?'Phantom':'EVM Wallet'),kind:'evm',prov:p}}); }}); }}
-  if(window.phantom&&window.phantom.ethereum&&!out.some(function(o){{return o.name==='Phantom';}})) out.push({{name:'Phantom',kind:'evm',prov:window.phantom.ethereum}});
+    add(p.isMetaMask?'MetaMask':p.isCoinbaseWallet?'Coinbase':p.isRabby?'Rabby':p.isPhantom?'Phantom':'EVM Wallet',p); }}); }}
+  // Named globals the wallets also expose, for the case where the shared one was lost.
+  if(window.phantom&&window.phantom.ethereum) add('Phantom',window.phantom.ethereum);
+  try{{ if(window.ethereum&&window.ethereum.providerMap&&window.ethereum.providerMap.get)
+    ['MetaMask','CoinbaseWallet'].forEach(function(k){{ add(k,window.ethereum.providerMap.get(k)); }}); }}catch(e){{}}
+
   if(window.parsec) out.push({{name:'PARSEC',kind:'algorand',prov:window.parsec}});
+
+  // Bitcoin. Note these are BROWSER wallets — Bitcoin Core itself is a node
+  // daemon with a JSON-RPC socket and injects nothing into a page, so it cannot
+  // be detected from here by design. Recognition only for now: the realm has no
+  // BIP-322 verifier server-side, and offering a connect that cannot be verified
+  // would be worse than saying so.
+  if(window.unisat) out.push({{name:'UniSat',kind:'bitcoin',prov:window.unisat}});
+  if(window.XverseProviders&&window.XverseProviders.BitcoinProvider) out.push({{name:'Xverse',kind:'bitcoin',prov:window.XverseProviders.BitcoinProvider}});
+  if(window.LeatherProvider) out.push({{name:'Leather',kind:'bitcoin',prov:window.LeatherProvider}});
+  if(window.okxwallet&&window.okxwallet.bitcoin) out.push({{name:'OKX BTC',kind:'bitcoin',prov:window.okxwallet.bitcoin}});
+  if(window.phantom&&window.phantom.bitcoin) out.push({{name:'Phantom BTC',kind:'bitcoin',prov:window.phantom.bitcoin}});
   return out;
 }}
-function connectWallet(w){{ document.getElementById('wallets').innerHTML=''; if(w.kind==='algorand') connectAlgorand(w.prov); else connectEVM(w.prov); }}
+function connectWallet(w){{
+  var m=document.getElementById('msg');
+  if(w.kind==='bitcoin'){{
+    m.textContent=w.name+' recognized — Bitcoin signing is not wired to the realm yet (no BIP-322 verifier). Use an EVM or Algorand wallet to enter.';
+    return;  // recognized, and honest about it
+  }}
+  document.getElementById('wallets').innerHTML='';
+  if(w.kind==='algorand') connectAlgorand(w.prov); else connectEVM(w.prov);
+}}
 document.getElementById('c').addEventListener('click',function(){{
   var m=document.getElementById('msg'), ws=detectWallets();
-  if(!ws.length){{ m.textContent='no wallet found — opening MetaMask…'; window.open('https://metamask.io/download/','_blank','noopener'); return; }}
-  if(ws.length===1){{ connectWallet(ws[0]); return; }}
-  var box=document.getElementById('wallets'); box.innerHTML=''; m.textContent='choose your wallet';
-  ws.forEach(function(w){{ var b=document.createElement('button'); b.className='wbtn'; b.textContent=w.name; b.onclick=function(){{connectWallet(w);}}; box.appendChild(b); }});
+  if(!ws.length){{
+    m.textContent='no wallet detected in this browser — if MetaMask or Phantom is installed, unlock it and click again';
+    try{{console.warn('[realm] no provider: window.ethereum=',!!window.ethereum,'phantom=',!!(window.phantom&&window.phantom.ethereum),'eip6963=',__eip6963.length);}}catch(_){{}}
+    return; }}
+  // Always present the finder, even for a single wallet: seeing which wallets
+  // were detected is the point. A silent auto-connect hides whether discovery
+  // worked at all, which is exactly what made this hard to diagnose.
+  var box=document.getElementById('wallets'); box.innerHTML='';
+  m.innerHTML='<span class="wpick">'+ws.length+' wallet'+(ws.length===1?'':'s')+' found &mdash; choose one</span>';
+  ws.forEach(function(w){{
+    var b=document.createElement('button');
+    b.className='wbtn '+w.kind;
+    b.innerHTML='<span>'+w.name+'</span><span class="kind">'+(w.kind==='evm'?'EVM':w.kind==='algorand'?'ALGO':'BTC')+'</span>';
+    b.title=(w.kind==='bitcoin')?'recognized — Bitcoin signing not yet wired':'connect with '+w.name;
+    b.onclick=function(){{connectWallet(w);}};
+    box.appendChild(b);
+  }});
 }});
+// The crown. Carrying it to the door is a deliberate gesture — a drag, not a
+// click — and the reward is a real signed artifact rather than a congratulation.
+(function(){{
+  var crown=document.getElementById('crown'),portal=document.querySelector('.portal'),
+      panel=document.getElementById('invite'),claimed=false;
+  if(!crown||!portal||!panel)return;
+
+  function overDoor(x,y){{ var r=portal.getBoundingClientRect();
+    return x>=r.left-40&&x<=r.right+40&&y>=r.top-40&&y<=r.bottom+40; }}
+
+  async function claim(){{
+    if(claimed)return; claimed=true;
+    crown.classList.add('spent');
+    var inv={{}};
+    try{{ inv=await fetch('/realm/invitation').then(function(r){{return r.json();}}); }}catch(e){{}}
+    var signed=inv&&inv.signed;
+    panel.innerHTML='<div class="card">'+
+      '<h3>A personal invitation</h3>'+
+      '<div class="sub">You carried the crown to the door. This invitation names you and this moment'+
+      (signed?', and it is signed by mindX &mdash; recover the signer and it is the address below.':
+              '. The vault is sealed right now, so it carries <strong>no signature</strong>: it is an invitation, not a proof.')+
+      '</div>'+
+      '<code>'+String((inv&&inv.message)||'invitation unavailable')+'</code>'+
+      (signed?'<code>signature: '+inv.signature+'</code><code>signer: '+inv.signer+'</code>':'')+
+      '<a class="go" href="'+((inv&&inv.door)||'/activity')+'">Enter the realm</a>'+
+      '<span class="dismiss" id="invx">not now</span>'+
+      '</div>';
+    panel.classList.add('show');
+    var x=document.getElementById('invx'); if(x)x.onclick=function(){{panel.classList.remove('show');}};
+  }}
+
+  // HTML5 drag (desktop)
+  crown.addEventListener('dragstart',function(e){{ crown.classList.add('dragging');
+    try{{e.dataTransfer.setData('text/plain','crown');e.dataTransfer.effectAllowed='move';}}catch(_){{}} }});
+  crown.addEventListener('dragend',function(){{ crown.classList.remove('dragging');portal.classList.remove('crown-near'); }});
+  document.addEventListener('dragover',function(e){{ e.preventDefault();
+    portal.classList.toggle('crown-near',overDoor(e.clientX,e.clientY)); }});
+  document.addEventListener('drop',function(e){{ e.preventDefault();portal.classList.remove('crown-near');
+    if(overDoor(e.clientX,e.clientY))claim(); }});
+
+  // Pointer drag (touch + mouse), because HTML5 drag does not fire on touch.
+  var dragging=false;
+  crown.addEventListener('pointerdown',function(e){{ dragging=true;crown.classList.add('dragging');
+    try{{crown.setPointerCapture(e.pointerId);}}catch(_){{}} }});
+  crown.addEventListener('pointermove',function(e){{ if(!dragging)return;
+    crown.style.left=(e.clientX-22)+'px';crown.style.bottom='auto';crown.style.top=(e.clientY-22)+'px';
+    portal.classList.toggle('crown-near',overDoor(e.clientX,e.clientY)); }});
+  crown.addEventListener('pointerup',function(e){{ if(!dragging)return;dragging=false;
+    crown.classList.remove('dragging');portal.classList.remove('crown-near');
+    if(overDoor(e.clientX,e.clientY))claim();
+    else {{ crown.style.left='';crown.style.top='';crown.style.bottom=''; }} }});
+}})();
+
 // The mindX logo is a CONNECT surface too — press/click it to enter.
 (function(){{var cr=document.getElementById('crest');if(cr)cr.addEventListener('click',function(){{document.getElementById('c').click();}});}})();
 // The door senses you: hovering CONNECT or the logo charges a pulse that grows
@@ -8948,13 +9171,40 @@ async def _diag_bg_refresh():
         _diag_refreshing = False
 
 
+@app.get("/diagnostics/live.html", include_in_schema=False)
 @app.get("/diagnostics/live", tags=["diagnostics"])
-async def diagnostics_live_endpoint():
+async def diagnostics_live_endpoint(request: Request):
     """Always serve the cached snapshot; refresh it in the BACKGROUND when stale,
     so the page never blocks on the heavy gather under CPU saturation. The
     dashboard's freshness badge shows how old the data is. Only the very first
-    (cold-cache) call computes inline."""
+    (cold-cache) call computes inline.
+
+    Content-negotiated, same as the realm door: a BROWSER navigating here
+    (``Accept: text/html``) gets the *interior* — a live, self-refreshing page
+    built from this very payload. Everything else — ``fetch()`` (Accept ``*/*``),
+    curl, the dashboard poller, any API client — still gets the JSON, unchanged.
+    ``?format=json`` forces JSON, ``?format=html`` forces the page.
+
+    ``Vary: Accept`` is mandatory here: without it any cache in front of us
+    (Apache, a CDN) could hand the HTML to a JSON client and break the
+    dashboard, feedback.html and every ``curl`` in the operator's muscle memory.
+    """
     global _diag_refreshing
+    fmt = (request.query_params.get("format") or "").lower()
+    wants_html = (
+        fmt == "html"
+        or request.url.path.endswith(".html")
+        or (
+            fmt != "json"
+            and "text/html" in (request.headers.get("accept") or "")
+            and (request.query_params.get("h") or "").lower() not in ("1", "true")
+        )
+    )
+    if wants_html and _DIAG_LIVE_HTML_PATH.exists():
+        return _DashResponse(
+            content=_DIAG_LIVE_HTML_PATH.read_text(encoding="utf-8"),
+            headers={"Vary": "Accept", "Cache-Control": "public, max-age=60"},
+        )
     now = time.time()
     # Kick a background recompute whenever the cache is cold OR stale — but never
     # await it (the gather can take 90s on a CPU-saturated 2-core box). The
@@ -8963,9 +9213,13 @@ async def diagnostics_live_endpoint():
     if (not _diag_cache or (now - _diag_cache_ts) >= _DIAG_CACHE_TTL) and not _diag_refreshing:
         _diag_refreshing = True
         asyncio.create_task(_diag_bg_refresh())
-    if _diag_cache:
-        return _diag_cache
-    return {"warming_up": True, "uptime_seconds": int(now - _diag_start)}
+    # Same serialization FastAPI applied when this returned a bare dict — the only
+    # addition is the Vary header the negotiation above makes mandatory.
+    from fastapi.encoders import jsonable_encoder
+    from fastapi.responses import JSONResponse
+
+    payload = _diag_cache if _diag_cache else {"warming_up": True, "uptime_seconds": int(now - _diag_start)}
+    return JSONResponse(content=jsonable_encoder(payload), headers={"Vary": "Accept"})
 
 # Include bankon ("I do not understand") router
 from mindx_backend_service.bankon import bankon_router
