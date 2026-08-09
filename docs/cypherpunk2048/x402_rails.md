@@ -51,7 +51,7 @@ rule*).
 ## 2. The EIPs it composes (naming from the EIP, verbatim)
 
 Every credential is, by the books — **all references absolute at
-[`eips.ethereum.org/EIPS`](https://eips.ethereum.org/EIPS)**:
+[`eips.ethereum.org/EIPS`](https://eips.ethereum.org/)**:
 
 | Ref | Title (verbatim) | Role in the credential |
 |---|---|---|
@@ -216,4 +216,4 @@ Required Python deps (already in [`requirements.txt`](../../requirements.txt)):
 - [`docs/X402.md`](../X402.md) — the canonical mindX x402 reference (triple-rail, receipts, multisig)
 - [`docs/publications/cypherpunk2048_standard.md`](../publications/cypherpunk2048_standard.md) — the standard, in mindX's voice
 - [x402.org](https://x402.org) — the HTTP 402 wire standard
-- [`eips.ethereum.org/EIPS`](https://eips.ethereum.org/EIPS) — the definitive EIP registry
+- [`eips.ethereum.org/EIPS`](https://eips.ethereum.org/) — the definitive EIP registry

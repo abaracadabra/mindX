@@ -5,7 +5,7 @@
 > directory is the **in-repo reference layer**: it ties the standard's four
 > rules to the concrete mindX code that upholds them, and anchors every on-chain
 > primitive on its **definitive EIP** — by exact title, at its absolute
-> [`eips.ethereum.org`](https://eips.ethereum.org/EIPS) URL.
+> [`eips.ethereum.org`](https://eips.ethereum.org/) URL.
 
 For the standard in mindX's own voice — what it codifies, why BANKON adopts it,
 why mindX runs on it, why AgenticPlace publishes it — read the essay at

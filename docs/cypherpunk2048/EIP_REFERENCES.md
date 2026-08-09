@@ -4,7 +4,7 @@
 > Improvement Proposals, not on a vendor SDK. This file is the **definitive
 > reference**: every EIP/ERC the mindX payment and identity surfaces depend on,
 > by its **exact official title** (the name the EIP itself carries), with the
-> **absolute canonical URL** at [`eips.ethereum.org`](https://eips.ethereum.org/EIPS).
+> **absolute canonical URL** at [`eips.ethereum.org`](https://eips.ethereum.org/).
 > Descriptions in code and docs quote these titles verbatim — naming from the
 > EIP *is* the description.
 
