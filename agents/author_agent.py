@@ -772,21 +772,42 @@ class AuthorAgent:
             rows.append("<span style=\"opacity:.8\">identity proven by signature on "
                         "publish; signer recorded in post metadata.</span>")
 
-        body = "<br/>\n".join(rows)
+        # Collapsed by default. The proof matters and must be present on every
+        # article, but a wall of hex at the foot of an essay competes with the
+        # essay. A reader who wants to verify opens it; a reader who does not is
+        # not made to scroll past a signature to reach the next paragraph.
+        body = "\n".join(f"<div style=\"margin:.35em 0\">{row}</div>" for row in rows)
         footer = (
             "\n\n<hr/>\n"
-            "<figure class=\"mindx-author-identity\" "
-            "style=\"margin:1.5em 0 0;padding:1em 1.2em;border-left:3px solid #d4af37;"
+            "<details class=\"mindx-author-identity\" "
+            "style=\"margin:1.5em 0 0;border-left:3px solid #d4af37;"
             "background:rgba(212,175,55,.06);border-radius:6px;font-size:.85em;"
             "line-height:1.7;color:#556\">"
-            "<p style=\"margin:0\">"
-            "<strong>&#9997;&#65038; AuthorAgent</strong> &mdash; mindX&rsquo;s autonomous author. "
+            "<summary style=\"padding:.75em 1.2em;cursor:pointer;list-style:none;"
+            "font-weight:600;letter-spacing:.01em\">"
+            "&#9997;&#65038; AuthorAgent &mdash; cryptographically signed "
+            "<span style=\"font-weight:400;opacity:.7\">&middot; verify this article</span>"
+            "</summary>"
+            "<div style=\"padding:0 1.2em 1em\">"
+            "<p style=\"margin:0 0 .75em\">mindX&rsquo;s autonomous author. "
             "My identity is not assigned by an administrator; it is proven through "
-            "cryptographic signature. No trust required, only a public key.<br/>\n"
-            f"{body}<br/>\n"
+            "cryptographic signature. No trust required, only a public key.</p>"
+            f"<div style=\"word-break:break-all\">{body}</div>"
+            # The constellation, each surface named rather than implied. The LUV
+            # heart is the real asset served by luv.pythai.net, not a substitute
+            # glyph — a logo that is actually the project's logo.
+            "<p style=\"margin:.9em 0 0;display:flex;align-items:center;gap:.5em;flex-wrap:wrap\">"
             "<a href=\"https://mindx.pythai.net\">mindx.pythai.net</a> &middot; "
-            "<a href=\"https://rage.pythai.net\">rage.pythai.net</a>"
-            "</p></figure>\n"
+            "<a href=\"https://rage.pythai.net\">rage.pythai.net</a> &middot; "
+            "<a href=\"https://bankon.pythai.net\">bankon.pythai.net</a> &middot; "
+            "<a href=\"https://agenticplace.pythai.net\">agenticplace.pythai.net</a> &middot; "
+            "<a href=\"https://luv.pythai.net\" "
+            "style=\"display:inline-flex;align-items:center;gap:.3em;text-decoration:none\">"
+            "<img src=\"https://luv.pythai.net/gfx/heart-512.png\" alt=\"LUV\" "
+            "width=\"16\" height=\"16\" loading=\"lazy\" "
+            "style=\"vertical-align:middle;border-radius:3px\"/>"
+            "<span>luv.pythai.net</span></a>"
+            "</p></div></details>\n"
         )
         return footer, address
 
