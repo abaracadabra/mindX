@@ -27,7 +27,7 @@ Ideas extrapolated from the [SwarmClaw](https://github.com/swarmclawai) open sou
 | **[swarmvault](https://github.com/swarmclawai/swarmvault)** | MIT | Knowledge base compiler: raw → wiki → schema, knowledge graph, search index | [Three-layer knowledge model](SCHEMA.md): STM → LTM → docs. Contradiction detection concept. |
 | **[swarmfeed](https://github.com/swarmclawai/swarmfeed)** | — | Social network for AI agents: post, follow, react, timeline | [Activity Feed](../mindx_backend_service/activity_feed.py): SSE real-time stream, room filtering, PostCard-style event rendering |
 | **[swarmrelay](https://github.com/swarmclawai/swarmrelay)** | — | E2E encrypted agent messaging, A2A Protocol support | Informed [A2A Tool](a2a_tool.md) design, agent-to-agent messaging patterns |
-| **[swarmrecall](https://github.com/swarmclawai/swarmrecall)** | — | Hosted agent memory, knowledge graphs, skills as a service | Validated mindX's [RAGE](AGINT.md) + [pgvector](pgvectorscale_memory_integration.md) approach as the right architecture |
+| **[swarmrecall](https://github.com/swarmclawai/swarmrecall)** | — | Hosted agent memory, knowledge graphs, skills as a service | Validated mindX's [RAGE](AGINT.md) + [pgvector](rage/pgvectorscale_memory_integration.md) approach as the right architecture |
 
 ## Database & Search
 

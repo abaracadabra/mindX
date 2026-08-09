@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#05060a" />
+<title>PYTHAI — Sovereign Intelligence for the Open Chain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#05060a;
+    --bg-2:#070912;
+    --panel:rgba(255,255,255,.025);
+    --panel-2:rgba(255,255,255,.04);
+    --line:rgba(255,255,255,.09);
+    --line-2:rgba(255,255,255,.14);
+    --txt:#E8ECF4;
+    --muted:#99A2B5;
+    --muted-2:#6c7589;
+    --blue:#2F80ED;
+    --cyan:#56CCF2;
+    --green:#2ED3A0;
+    --mono:'Fira Code',ui-monospace,monospace;
+    --sans:'Inter',system-ui,sans-serif;
+    --maxw:1180px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans);
+    background:var(--bg);
+    color:var(--txt);
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+    line-height:1.5;
+  }
+  a{color:inherit;text-decoration:none}
+  ::selection{background:rgba(47,128,237,.4)}
+
+  /* ---------- WebGL canvas ---------- */
+  #gl{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+  .veil{
+    position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:
+      radial-gradient(120% 80% at 50% 0%, rgba(5,6,10,0) 35%, rgba(5,6,10,.55) 75%, var(--bg) 100%),
+      radial-gradient(80% 60% at 50% 45%, rgba(47,128,237,.10), transparent 60%);
+  }
+  .scrim{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:linear-gradient(180deg, rgba(5,6,10,.55) 0%, rgba(5,6,10,0) 18%);}
+
+  .wrap{position:relative;z-index:2}
+  .container{max-width:var(--maxw);margin:0 auto;padding:0 28px}
+
+  /* ---------- nav ---------- */
+  nav{
+    position:sticky;top:0;z-index:50;
+    backdrop-filter:blur(14px);
+    background:linear-gradient(180deg,rgba(5,6,10,.72),rgba(5,6,10,.25));
+    border-bottom:1px solid var(--line);
+  }
+  .nav-in{display:flex;align-items:center;gap:28px;height:64px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.02em;font-size:19px}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--blue);box-shadow:0 0 12px var(--blue)}
+  .brand b{color:var(--cyan)}
+  .coin{width:26px;height:26px;display:inline-block;vertical-align:middle;filter:drop-shadow(0 0 8px rgba(47,128,237,.55))}
+  .brand .coin{width:24px;height:24px}
+
+  /* ---------- token band ---------- */
+  .token{display:grid;grid-template-columns:auto 1fr;gap:42px;align-items:center;
+    border:1px solid var(--line);border-radius:22px;padding:44px;
+    background:linear-gradient(135deg,rgba(47,128,237,.07),var(--panel) 60%)}
+  .token-mark{display:grid;place-items:center}
+  .coin-lg{width:124px;height:124px;filter:drop-shadow(0 0 26px rgba(47,128,237,.5))}
+  .token.green{background:linear-gradient(135deg,rgba(46,211,160,.07),var(--panel) 60%)}
+  .wmark{width:124px;height:124px;border-radius:28px;display:grid;place-items:center;font-size:54px;color:var(--green);
+    background:radial-gradient(circle at 50% 38%,rgba(46,211,160,.18),rgba(7,11,22,.6));border:1px solid rgba(46,211,160,.3);
+    box-shadow:0 0 30px -8px rgba(46,211,160,.5)}
+  .alpha-pill{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;
+    color:#ffcf5c;border:1px solid rgba(255,207,92,.3);background:rgba(255,207,92,.07);padding:5px 11px;border-radius:999px;text-transform:uppercase;margin-bottom:16px}
+  .alpha-pill .live{background:#ffcf5c;box-shadow:0 0 8px #ffcf5c}
+  .chainrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+  .chainrow span{font-family:var(--mono);font-size:12px;color:var(--muted);border:1px solid var(--line);padding:7px 12px;border-radius:8px}
+  .chainrow span.first{color:var(--green);border-color:rgba(46,211,160,.35)}
+  .token-body .eyebrow{margin-bottom:10px}
+  .token-body h2{font-size:clamp(28px,3.6vw,40px);letter-spacing:-.03em;font-weight:700;margin-bottom:12px}
+  .token-body h2 b{color:var(--cyan)}
+  .token-body p{color:var(--muted);font-size:16px;max-width:60ch;margin-bottom:28px}
+  .token-stats{display:flex;gap:38px;flex-wrap:wrap}
+  .ts-n{font-size:22px;font-weight:700;letter-spacing:-.02em}
+  .ts-n b{color:var(--cyan)}
+  .ts-l{font-family:var(--mono);font-size:11.5px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.12em;margin-top:5px}
+
+  /* ---------- substrate ---------- */
+  .substrate-head{display:grid;grid-template-columns:auto 1fr;gap:46px;align-items:center;margin-bottom:42px}
+  .bignum{font-size:clamp(46px,7vw,76px);font-weight:800;letter-spacing:-.03em;line-height:.95;
+    background:linear-gradient(110deg,var(--cyan),var(--blue) 60%,#7aa6ff);-webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap}
+  .bignum-l{font-family:var(--mono);font-size:11.5px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.14em;margin-top:12px;line-height:1.6}
+  .substrate-head h2{font-size:clamp(26px,3.4vw,38px);letter-spacing:-.03em;font-weight:700;margin:6px 0 12px}
+  .substrate-head p{color:var(--muted);font-size:16px;max-width:58ch}
+  .substrate-head p b{color:var(--cyan);font-weight:600}
+  .prim{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .pcard{border:1px solid var(--line);border-radius:16px;padding:26px;background:var(--panel);transition:.2s}
+  .pcard:hover{border-color:var(--line-2);transform:translateY(-3px)}
+  .pcard .gi{font-size:20px;width:44px;height:44px;display:grid;place-items:center;border-radius:12px;
+    background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--cyan);margin-bottom:16px}
+  .pcard h3{font-size:18px;letter-spacing:-.01em;font-weight:700;margin-bottom:8px}
+  .pcard p{color:var(--muted);font-size:14px}
+  .consumers{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:32px;padding-top:24px;border-top:1px solid var(--line)}
+  .consumers .lab{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2);margin-right:4px}
+  .consumers a{font-family:var(--mono);font-size:12.5px;color:var(--muted);border:1px solid var(--line);padding:7px 12px;border-radius:8px;transition:.18s}
+  .consumers a:hover{color:var(--cyan);border-color:var(--line-2);background:var(--panel-2)}
+  .sec-head p b{color:var(--cyan);font-weight:600}
+
+  /* ---------- thesis / market funnel ---------- */
+  .thesis-head{margin-bottom:38px;max-width:62ch}
+  .thesis-head .eyebrow{margin-bottom:14px}
+  .thesis-head h2{font-size:clamp(28px,3.6vw,40px);letter-spacing:-.03em;font-weight:700;margin-bottom:12px}
+  .thesis-head p{color:var(--muted);font-size:16px}
+  .ladder{display:flex;flex-direction:column;gap:14px}
+  .rung{display:grid;grid-template-columns:150px 1fr;gap:24px;align-items:center}
+  .rung .amt{font-size:clamp(26px,3.6vw,42px);font-weight:800;letter-spacing:-.03em;color:var(--txt);text-align:right}
+  .rung.hl .amt{background:linear-gradient(110deg,var(--cyan),var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .rung .bar{position:relative;height:56px;border-radius:12px;border:1px solid var(--line);overflow:hidden;background:var(--panel)}
+  .rung.hl .bar{border-color:rgba(47,128,237,.5);box-shadow:0 0 26px -8px rgba(47,128,237,.6)}
+  .rung .fill{position:absolute;left:0;top:0;bottom:0;width:var(--w);background:linear-gradient(90deg,rgba(47,128,237,.30),rgba(86,204,242,.08))}
+  .rung.hl .fill{background:linear-gradient(90deg,rgba(47,128,237,.55),rgba(86,204,242,.16))}
+  .rung .barlabel{position:absolute;inset:0;display:flex;align-items:center;padding:0 18px;font-family:var(--mono);font-size:12.5px;color:var(--muted);letter-spacing:.02em}
+  .ladder-note{font-family:var(--mono);font-size:11.5px;color:var(--muted-2);margin-top:20px;letter-spacing:.02em}
+  .sources{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:22px}
+  .sources .lab{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-2);margin-right:2px}
+  .sources a{font-family:var(--mono);font-size:11.5px;color:var(--blue);border:1px solid rgba(47,128,237,.25);padding:5px 10px;border-radius:7px;transition:.15s}
+  .sources a:hover{background:rgba(47,128,237,.1);border-color:var(--blue)}
+
+  /* ---------- horizon timeline ---------- */
+  .timeline{position:relative;margin-top:8px;padding-left:26px}
+  .timeline::before{content:"";position:absolute;left:7px;top:12px;bottom:12px;width:1px;background:linear-gradient(180deg,var(--blue),var(--line))}
+  .tl{position:relative;display:grid;grid-template-columns:118px 1fr;gap:22px;padding:22px 0;border-top:1px solid var(--line)}
+  .tl:first-child{border-top:none}
+  .tl::before{content:"";position:absolute;left:-24px;top:30px;width:11px;height:11px;border-radius:50%;background:var(--bg);border:2px solid var(--blue);box-shadow:0 0 10px rgba(47,128,237,.6)}
+  .tl.future::before{border-color:var(--muted-2);box-shadow:none}
+  .tl .yr{font-size:24px;font-weight:800;letter-spacing:-.02em}
+  .tl.future .yr{color:var(--muted)}
+  .tl .ago{font-family:var(--mono);font-size:11px;color:var(--muted-2);letter-spacing:.08em;text-transform:uppercase;margin-top:4px}
+  .tl .val{font-size:17px;font-weight:600;letter-spacing:-.01em;margin-bottom:6px}
+  .tl .val b{color:var(--cyan)}
+  .tl .desc{color:var(--muted);font-size:14px;margin-bottom:10px;max-width:62ch}
+  .tl .src{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+  .tl .src a{font-family:var(--mono);font-size:11.5px;color:var(--blue);border:1px solid rgba(47,128,237,.25);padding:4px 9px;border-radius:7px;transition:.15s}
+  .tl .src a:hover{background:rgba(47,128,237,.1);border-color:var(--blue)}
+  .tagm{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:7px;border:1px solid var(--line);color:var(--muted-2)}
+  .nav-links{display:flex;gap:6px;margin-left:8px}
+  .nav-links a{
+    font-size:13.5px;color:var(--muted);padding:8px 12px;border-radius:8px;font-weight:500;
+    transition:.18s;
+  }
+  .nav-links a:hover{color:var(--txt);background:var(--panel-2)}
+  .nav-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .icon-btn{
+    width:38px;height:38px;display:grid;place-items:center;border-radius:9px;
+    border:1px solid var(--line);color:var(--muted);transition:.18s;cursor:pointer;background:transparent;
+  }
+  .icon-btn:hover{color:var(--txt);border-color:var(--line-2);background:var(--panel-2)}
+  .btn{
+    font-family:var(--sans);font-weight:600;font-size:13.5px;cursor:pointer;
+    border-radius:10px;padding:10px 16px;border:1px solid transparent;transition:.18s;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn-ghost{background:var(--panel-2);border-color:var(--line);color:var(--txt)}
+  .btn-ghost:hover{border-color:var(--line-2);background:rgba(255,255,255,.07)}
+  .btn-primary{
+    background:linear-gradient(180deg,#3a8bf5,var(--blue));color:#fff;
+    box-shadow:0 6px 22px -8px rgba(47,128,237,.8);
+  }
+  .btn-primary:hover{filter:brightness(1.07);transform:translateY(-1px)}
+  .btn-lg{padding:14px 22px;font-size:15px;border-radius:12px}
+
+  /* ---------- hero ---------- */
+  header{min-height:92vh;display:flex;align-items:center;padding:80px 0 60px}
+  .eyebrow{
+    font-family:var(--mono);font-size:12px;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--cyan);display:inline-flex;align-items:center;gap:10px;margin-bottom:22px;
+  }
+  .pill{
+    display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11.5px;
+    color:var(--green);border:1px solid rgba(46,211,160,.25);background:rgba(46,211,160,.06);
+    padding:5px 11px;border-radius:999px;letter-spacing:.04em;
+  }
+  .pill .live{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2.4s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  h1{
+    font-size:clamp(40px,6.6vw,78px);line-height:1.02;letter-spacing:-.035em;font-weight:800;
+    max-width:14ch;margin-bottom:24px;
+  }
+  h1 .grad{background:linear-gradient(100deg,var(--cyan),var(--blue) 55%,#7aa6ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{font-size:clamp(16px,1.9vw,20px);color:var(--muted);max-width:56ch;margin-bottom:18px}
+  .opt{font-family:var(--mono);font-size:13px;color:var(--muted-2);margin-bottom:34px;letter-spacing:.01em}
+  .opt b{color:var(--cyan);font-weight:500}
+  .cta-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+
+  .stat-strip{display:flex;gap:34px;flex-wrap:wrap;margin-top:56px;padding-top:30px;border-top:1px solid var(--line)}
+  .stat .n{font-size:26px;font-weight:700;letter-spacing:-.02em}
+  .stat .n b{color:var(--cyan);font-weight:700}
+  .stat .l{font-family:var(--mono);font-size:11.5px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.14em;margin-top:4px}
+
+  /* ---------- doors ---------- */
+  section{padding:90px 0;position:relative}
+  .sec-bg{background:linear-gradient(180deg,transparent,rgba(7,9,18,.6) 12%,var(--bg-2) 50%,rgba(7,9,18,.6) 88%,transparent)}
+  .sec-head{margin-bottom:46px;max-width:60ch}
+  .sec-head .eyebrow{margin-bottom:14px}
+  .sec-head h2{font-size:clamp(28px,3.6vw,40px);letter-spacing:-.03em;font-weight:700;margin-bottom:12px}
+  .sec-head p{color:var(--muted);font-size:16px}
+
+  .doors{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  .door{
+    position:relative;border:1px solid var(--line);border-radius:18px;padding:30px;
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));overflow:hidden;
+    transition:.22s;min-height:230px;display:flex;flex-direction:column;
+  }
+  .door::before{content:"";position:absolute;inset:0;border-radius:18px;padding:1px;
+    background:linear-gradient(140deg,var(--accent,var(--blue)),transparent 45%);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;opacity:.5;transition:.22s}
+  .door:hover{transform:translateY(-4px);border-color:var(--line-2)}
+  .door:hover::before{opacity:1}
+  .door .glow{position:absolute;top:-40%;right:-20%;width:60%;height:120%;
+    background:radial-gradient(circle,var(--accent,var(--blue)),transparent 65%);opacity:.10;filter:blur(20px);transition:.22s}
+  .door:hover .glow{opacity:.20}
+  .door-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .glyph{font-size:24px;width:48px;height:48px;display:grid;place-items:center;border-radius:12px;
+    background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--accent,var(--blue))}
+  .tag{font-family:var(--mono);font-size:11px;color:var(--muted-2);letter-spacing:.1em;text-transform:uppercase}
+  .door h3{font-size:23px;letter-spacing:-.02em;font-weight:700;margin-bottom:8px}
+  .door h3 b{color:var(--cyan)}
+  .door p{color:var(--muted);font-size:14.5px;margin-bottom:auto}
+  .door-actions{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+  .door-actions a{
+    font-size:13px;font-weight:600;padding:9px 15px;border-radius:9px;border:1px solid var(--line);
+    color:var(--txt);transition:.18s;display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+  }
+  .door-actions a:hover{border-color:var(--accent,var(--blue));background:rgba(255,255,255,.05)}
+  .door-actions a.go{background:var(--accent,var(--blue));border-color:transparent;color:#fff}
+  .door-actions a.go:hover{filter:brightness(1.08)}
+  .arrow{transition:.18s}
+  .door-actions a:hover .arrow{transform:translateX(3px)}
+
+  /* ---------- trust ---------- */
+  .trust{display:grid;grid-template-columns:1.4fr 1fr;gap:22px;align-items:stretch}
+  .trust-card{border:1px solid var(--line);border-radius:18px;padding:30px;background:var(--panel)}
+  .trust-card h4{font-size:13px;font-family:var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2);margin-bottom:18px}
+  .addr{font-family:var(--mono);font-size:13.5px;color:var(--cyan);word-break:break-all;
+    background:rgba(47,128,237,.06);border:1px solid rgba(47,128,237,.2);padding:14px 16px;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .addr .copy{cursor:pointer;color:var(--muted);font-size:12px;white-space:nowrap;transition:.18s}
+  .addr .copy:hover{color:var(--txt)}
+  .badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .badge{font-family:var(--mono);font-size:11.5px;color:var(--muted);border:1px solid var(--line);padding:6px 11px;border-radius:8px;display:inline-flex;gap:7px;align-items:center}
+  .badge .ok{color:var(--green)}
+  .trust-card.id p{color:var(--muted);font-size:14.5px;margin-bottom:16px}
+  .trust-card.id .chips{display:flex;flex-direction:column;gap:10px}
+  .chip{display:flex;align-items:center;gap:12px;font-size:14px;color:var(--txt)}
+  .chip .k{width:8px;height:8px;border-radius:50%;background:var(--blue)}
+
+  /* ---------- footer ---------- */
+  footer{border-top:1px solid var(--line);padding:54px 0 40px;position:relative;z-index:2;background:var(--bg)}
+  .foot-grid{display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap;margin-bottom:36px}
+  .foot-col h5{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2);margin-bottom:14px}
+  .foot-col a{display:block;color:var(--muted);font-size:14px;padding:5px 0;transition:.15s}
+  .foot-col a:hover{color:var(--cyan)}
+  .foot-bot{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+    padding-top:24px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--muted-2)}
+
+  /* ---------- connect modal ---------- */
+  .modal-bg{position:fixed;inset:0;z-index:100;background:rgba(3,4,8,.7);backdrop-filter:blur(6px);
+    display:none;align-items:center;justify-content:center;padding:20px;opacity:0;transition:.2s}
+  .modal-bg.on{display:flex;opacity:1}
+  .modal{width:100%;max-width:430px;border:1px solid var(--line-2);border-radius:20px;
+    background:linear-gradient(180deg,#0b0e18,#070912);padding:30px;transform:translateY(8px);transition:.25s}
+  .modal-bg.on .modal{transform:translateY(0)}
+  .modal h3{font-size:21px;letter-spacing:-.02em;margin-bottom:6px}
+  .modal .sub{color:var(--muted);font-size:14px;margin-bottom:8px}
+  .modal .note{font-family:var(--mono);font-size:12px;color:var(--muted-2);margin-bottom:22px;line-height:1.6}
+  .modal .note b{color:var(--cyan);font-weight:500}
+  .wallets{display:flex;flex-direction:column;gap:10px}
+  .wallet{display:flex;align-items:center;gap:14px;padding:15px 16px;border:1px solid var(--line);
+    border-radius:12px;cursor:pointer;transition:.18s;background:var(--panel)}
+  .wallet:hover{border-color:var(--line-2);background:var(--panel-2);transform:translateX(2px)}
+  .wallet .wi{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:18px;
+    background:rgba(255,255,255,.05);border:1px solid var(--line)}
+  .wallet .wt{font-weight:600;font-size:15px}
+  .wallet .wd{font-size:12px;color:var(--muted-2);font-family:var(--mono)}
+  .wallet .wchain{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--muted-2);text-align:right}
+  .modal .status{margin-top:18px;font-family:var(--mono);font-size:12.5px;color:var(--green);min-height:18px;text-align:center}
+  .connected{background:rgba(46,211,160,.1)!important;border-color:rgba(46,211,160,.4)!important;color:var(--green)!important}
+  .tierbadge{font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:6px;background:rgba(46,211,160,.18);color:var(--green);margin-left:7px}
+  .wallet.busy{opacity:.55;pointer-events:none}
+  .sess-card{margin-top:16px;border:1px solid rgba(46,211,160,.3);background:rgba(46,211,160,.05);border-radius:12px;padding:14px 16px;font-family:var(--mono);font-size:12.5px;color:var(--txt);display:none}
+  .sess-card.on{display:block}
+  .sess-card .row{display:flex;justify-content:space-between;gap:10px;margin:4px 0;color:var(--muted-2)}
+  .sess-card .row b{color:var(--green);font-weight:500}
+  .modal .close{position:absolute;top:18px;right:18px}
+  .modal-card{position:relative}
+
+  /* focus visibility */
+  a:focus-visible,button:focus-visible,.wallet:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;border-radius:8px}
+
+  @media(max-width:780px){
+    .nav-links{display:none}
+    .doors{grid-template-columns:1fr}
+    .trust{grid-template-columns:1fr}
+    .stat-strip{gap:24px}
+    header{min-height:auto;padding:60px 0 40px}
+    .container{padding:0 20px}
+    .token{grid-template-columns:1fr;padding:30px;gap:26px}
+    .coin-lg{width:88px;height:88px}
+    .wmark{width:88px;height:88px;font-size:40px;border-radius:22px}
+    .token-stats{gap:22px}
+    .substrate-head{grid-template-columns:1fr;gap:18px;margin-bottom:30px}
+    .prim{grid-template-columns:1fr}
+    .rung{grid-template-columns:1fr;gap:8px}
+    .rung .amt{text-align:left}
+    .rung .barlabel{font-size:11.5px;padding:0 14px}
+    .timeline{padding-left:22px}
+    .tl{grid-template-columns:1fr;gap:6px}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+<!-- PYTHAI coin logo (swap this symbol for the canonical coin asset if desired) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="coinRing" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#56CCF2"/>
+      <stop offset=".55" stop-color="#2F80ED"/>
+      <stop offset="1" stop-color="#7aa6ff"/>
+    </linearGradient>
+    <radialGradient id="coinFace" cx="50%" cy="36%" r="72%">
+      <stop offset="0" stop-color="#0f1830"/>
+      <stop offset="1" stop-color="#070b16"/>
+    </radialGradient>
+    <symbol id="pythai-coin" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="30" fill="url(#coinFace)" stroke="url(#coinRing)" stroke-width="3"/>
+      <circle cx="32" cy="32" r="24" fill="none" stroke="#2F80ED" stroke-width="1" opacity=".35"/>
+      <g stroke="#56CCF2" stroke-width="1.6" opacity=".9">
+        <line x1="32" y1="32" x2="32" y2="13"/>
+        <line x1="32" y1="32" x2="49" y2="41"/>
+        <line x1="32" y1="32" x2="17" y2="42"/>
+      </g>
+      <g fill="#9fd4ff">
+        <circle cx="32" cy="13" r="3.1"/>
+        <circle cx="49" cy="41" r="3.1"/>
+        <circle cx="17" cy="42" r="3.1"/>
+      </g>
+      <circle cx="32" cy="32" r="5.2" fill="#2F80ED" stroke="#9fd4ff" stroke-width="1.5"/>
+    </symbol>
+  </defs>
+</svg>
+<canvas id="gl"></canvas>
+<div class="scrim"></div>
+<div class="veil"></div>
+
+<div class="wrap">
+  <!-- NAV -->
+  <nav>
+    <div class="container nav-in">
+      <a class="brand" href="#top"><svg class="coin"><use href="#pythai-coin"/></svg>pyth<b>ai</b></a>
+      <div class="nav-links">
+        <a href="https://agenticplace.pythai.net">AgenticPlace</a>
+        <a href="https://mindx.pythai.net">mindX</a>
+        <a href="https://bankon.pythai.net">BANKON</a>
+        <a href="https://parsec.pythai.net">Parsec</a>
+        <a href="https://rage.pythai.net">RAGE</a>
+      </div>
+      <div class="nav-right">
+        <!-- AgenticPlace doubles as the open-source GitHub home; repoint href to the canonical repo -->
+        <a class="icon-btn" href="https://github.com/agenticplace" target="_blank" rel="noopener" title="GitHub" aria-label="GitHub">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+        </a>
+        <button class="btn btn-primary" id="connectBtn">Connect</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header id="top">
+    <div class="container">
+      <span class="eyebrow"><span class="pill"><span class="live"></span>ERC-8004 LIVE · MAINNET</span></span>
+      <h1>Sovereign intelligence for the <span class="grad">open chain</span>.</h1>
+      <p class="lede">Autonomous agents, a cognitive core, and self-owned identity — woven across every chain that matters. One ecosystem, four doors.</p>
+      <p class="opt"><b>Explore freely.</b> Connect a wallet only when you choose — identity is opt-in, not a toll booth.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary btn-lg" href="https://agenticplace.pythai.net">Enter AgenticPlace →</a>
+        <a class="btn btn-ghost btn-lg" href="#doors">Explore the ecosystem</a>
+      </div>
+
+      <div class="stat-strip">
+        <div class="stat"><div class="n" id="stat-chains">2,500<b>+</b></div><div class="l">Chains indexed</div></div>
+        <div class="stat"><div class="n" id="stat-agents">160k<b>+</b></div><div class="l">Agents registered</div></div>
+        <div class="stat"><div class="n" id="stat-networks">48</div><div class="l">Active networks</div></div>
+        <div class="stat"><div class="n">0</div><div class="l">Admin keys</div></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- DOORS -->
+  <section class="sec-bg" id="doors">
+    <div class="container">
+      <div class="sec-head">
+        <span class="eyebrow">// THE ECOSYSTEM</span>
+        <h2>Six surfaces, one mind.</h2>
+        <p>Each door is a live deployment — walk through any of them. No sign-in required to look around.</p>
+      </div>
+
+      <div class="doors">
+        <!-- AgenticPlace -->
+        <div class="door" style="--accent:#2F80ED">
+          <div class="glow"></div>
+          <div class="door-top"><div class="glyph">&#9783;</div><span class="tag">ERC-8004 · marketplace</span></div>
+          <h3>Agentic<b>Place</b></h3>
+          <p>The living ERC-8004 registry — browse and verify autonomous agents across 48 chains. Open source, on-chain, auditable.</p>
+          <div class="door-actions">
+            <a class="go" href="https://agenticplace.pythai.net">Open <span class="arrow">→</span></a>
+            <a href="https://github.com/agenticplace" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://agenticplace.pythai.net/allchain.html">Chainmap</a>
+          </div>
+        </div>
+
+        <!-- mindX -->
+        <div class="door" style="--accent:#56CCF2">
+          <div class="glow"></div>
+          <div class="door-top"><div class="glyph">&#9671;</div><span class="tag">BDI · cognitive core</span></div>
+          <h3>mind<b>X</b></h3>
+          <p>An autonomous belief–desire–intention system that reasons, self-audits, and ships. A full API, 159k+ memories, live diagnostics.</p>
+          <div class="door-actions">
+            <a class="go" href="https://mindx.pythai.net">Open <span class="arrow">→</span></a>
+            <a href="https://mindx.pythai.net/docs.html">API</a>
+          </div>
+        </div>
+
+        <!-- BANKON -->
+        <div class="door" style="--accent:#2ED3A0">
+          <div class="glow"></div>
+          <div class="door-top"><div class="glyph">&#10003;</div><span class="tag">identity · payments · DAIO</span></div>
+          <h3>BANK<b>ON</b></h3>
+          <p>Home of <b>BANKON PYTHAI</b> — identity provisioned from pythai.net, login333 universal sign-in, x402 Algorand payments, and DAIO governance deploying to mainnet now.</p>
+          <div class="door-actions">
+            <a class="go" href="https://bankon.pythai.net">Open <span class="arrow">→</span></a>
+            <a href="#" data-connect>Identity</a>
+          </div>
+        </div>
+
+        <!-- RAGE / gaterage -->
+        <div class="door" style="--accent:#7aa6ff">
+          <div class="glow"></div>
+          <div class="door-top"><div class="glyph">&#9733;</div><span class="tag">dispatches · publishing</span></div>
+          <h3>RAGE</h3>
+          <p>Where mindX writes. Long-form essays and signals from the ecosystem — the gate to the record.</p>
+          <div class="door-actions">
+            <a class="go" href="https://rage.pythai.net">Read <span class="arrow">→</span></a>
+          </div>
+        </div>
+
+        <!-- GPT -->
+        <div class="door" style="--accent:#a78bfa">
+          <div class="glow"></div>
+          <div class="door-top"><div class="glyph">&#10022;</div><span class="tag">assistants · gpt</span></div>
+          <h3>GPT</h3>
+          <p>The conversational front door — custom GPTs from the gpt.pythai.net team, wired into the ecosystem.</p>
+          <div class="door-actions">
+            <a class="go" href="https://gpt.pythai.net">Open <span class="arrow">→</span></a>
+          </div>
+        </div>
+
+        <!-- Parsec -->
+        <div class="door" style="--accent:#2ED3A0">
+          <div class="glow"></div>
+          <div class="door-top"><div class="glyph">&#9672;</div><span class="tag">wallet · <span style="color:#ffcf5c">alpha</span></span></div>
+          <h3>Parsec</h3>
+          <p>Algorand-first wallet — Arweave, Solana, and EVM in one keyring. Signs your identity and your x402 payments.</p>
+          <div class="door-actions">
+            <a class="go" href="https://parsec.pythai.net">Open <span class="arrow">→</span></a>
+            <a href="#" data-connect>Sign in</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BANKON PYTHAI TOKEN -->
+  <section>
+    <div class="container">
+      <div class="token">
+        <div class="token-mark"><svg class="coin coin-lg"><use href="#pythai-coin"/></svg></div>
+        <div class="token-body">
+          <span class="eyebrow">// THE COIN</span>
+          <h2>BANKON <b>PYTHAI</b></h2>
+          <p>The reserve asset and the name you carry. Identity is provisioned from pythai.net — your PYTHAI is your tier and your key across every door. The reserve pair settles in Arweave and becomes AR liquidity that travels across chains.</p>
+          <div class="token-stats">
+            <div><div class="ts-n">100,000 <b>PYTHAI / AR</b></div><div class="ts-l">Reserve liquidity pair</div></div>
+            <div><div class="ts-n">Arweave</div><div class="ts-l">Permanent settlement asset</div></div>
+            <div><div class="ts-n">Omnichain</div><div class="ts-l">AR liquidity across chains · OFT</div></div>
+            <div><div class="ts-n">pythai.net</div><div class="ts-l">Provisioned identity source</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE THESIS -->
+  <section>
+    <div class="container">
+      <div class="thesis-head">
+        <span class="eyebrow">// THE THESIS</span>
+        <h2>Middleware for the knowledge economy.</h2>
+        <p>The knowledge economy is moving on-chain. PYTHAI sits in the middle as the agency layer — identity, naming, and settlement — taking a slice of the spend that flows through.</p>
+      </div>
+      <div class="ladder">
+        <div class="rung">
+          <div class="amt">$40T</div>
+          <div class="bar"><span class="fill" style="--w:100%"></span><span class="barlabel">Knowledge economy on-chain — intangibles ≈ $100T today, tokenized assets → $30T by 2034</span></div>
+        </div>
+        <div class="rung hl">
+          <div class="amt">$4T</div>
+          <div class="bar"><span class="fill" style="--w:34%"></span><span class="barlabel">Agency &amp; middleware layer — AI contributes up to $4.4T a year by 2030</span></div>
+        </div>
+        <div class="rung">
+          <div class="amt">$120M</div>
+          <div class="bar"><span class="fill" style="--w:7%"></span><span class="barlabel">Utility value flowing through PYTHAI today</span></div>
+        </div>
+      </div>
+      <div class="sources">
+        <span class="lab">Sources</span>
+        <a href="https://www.library.hbs.edu/working-knowledge/whos-adopting-ai-agents-and-what-theyre-actually-doing-with-them" target="_blank" rel="noopener">PwC · $4.4T/yr by 2030</a>
+        <a href="https://www.coindesk.com/business/2025/06/26/real-world-asset-tokenization-market-has-grown-almost-fivefold-in-3-years" target="_blank" rel="noopener">Standard Chartered · $30T by 2034</a>
+        <a href="https://www.wipo.int/en/web/global-innovation-index/w/blogs/2026/the-value-of-corporate-intangible-assets-worldwide" target="_blank" rel="noopener">WIPO · intangibles ≈ $100T</a>
+      </div>
+      <p class="ladder-note">Forward-looking market sizing — addressable opportunity, not current revenue or a guarantee. Bars are illustrative.</p>
+    </div>
+  </section>
+
+  <!-- THE HORIZON -->
+  <section class="sec-bg">
+    <div class="container">
+      <div class="sec-head">
+        <span class="eyebrow">// THE HORIZON · 2026 → 2226</span>
+        <h2>Built to outlive the cycle.</h2>
+        <p>Near-term forecasts are sourced and linked. The long arc is modeled — a knowledge economy settling on-chain, recorded on storage engineered to last two centuries.</p>
+      </div>
+      <div class="timeline">
+
+        <div class="tl">
+          <div class="when"><div class="yr">2026</div><div class="ago">today</div></div>
+          <div class="what">
+            <div class="val">≈ <b>$26B</b> of real-world assets on-chain</div>
+            <div class="desc">The agentic economy is in its first innings; tokenized assets have grown roughly fivefold in three years.</div>
+            <div class="src"><a href="https://www.coindesk.com/business/2025/06/26/real-world-asset-tokenization-market-has-grown-almost-fivefold-in-3-years" target="_blank" rel="noopener">CoinDesk · RWA.xyz</a><span class="tagm">sourced</span></div>
+          </div>
+        </div>
+
+        <div class="tl">
+          <div class="when"><div class="yr">2030</div><div class="ago">+ 4 years</div></div>
+          <div class="what">
+            <div class="val">AI contributes up to <b>$4.4T</b> a year</div>
+            <div class="desc">PwC puts AI's annual economic contribution at up to $4.4T by 2030; tokenized assets reach $5.5–16T; agentic commerce $3–5T. This is the middleware layer PYTHAI addresses.</div>
+            <div class="src"><a href="https://www.library.hbs.edu/working-knowledge/whos-adopting-ai-agents-and-what-theyre-actually-doing-with-them" target="_blank" rel="noopener">PwC · via HBS</a><a href="https://www.schwab.com/learn/story/tokenization-real-world-assets-on-blockchain" target="_blank" rel="noopener">McKinsey · Citi</a><span class="tagm">sourced</span></div>
+          </div>
+        </div>
+
+        <div class="tl">
+          <div class="when"><div class="yr">2034</div><div class="ago">+ 8 years</div></div>
+          <div class="what">
+            <div class="val">Tokenized assets reach <b>$30T</b></div>
+            <div class="desc">Standard Chartered projects $30T of real-world assets on-chain — about a third of today's ≈$100T knowledge economy moving onto rails PYTHAI helps settle, name, and store.</div>
+            <div class="src"><a href="https://www.coindesk.com/business/2025/06/26/real-world-asset-tokenization-market-has-grown-almost-fivefold-in-3-years" target="_blank" rel="noopener">Standard Chartered</a><a href="https://www.wipo.int/en/web/global-innovation-index/w/blogs/2026/the-value-of-corporate-intangible-assets-worldwide" target="_blank" rel="noopener">WIPO · intangibles</a><span class="tagm">sourced</span></div>
+          </div>
+        </div>
+
+        <div class="tl future">
+          <div class="when"><div class="yr">2046</div><div class="ago">+ 2 decades</div></div>
+          <div class="what">
+            <div class="val">~<b>30%</b> of the knowledge economy on-chain</div>
+            <div class="desc">Modeled: identity, naming, and settlement become default infrastructure; intangible value increasingly issues natively on-chain.</div>
+            <div class="src"><span class="tagm">modeled</span></div>
+          </div>
+        </div>
+
+        <div class="tl future">
+          <div class="when"><div class="yr">2076</div><div class="ago">+ 50 years</div></div>
+          <div class="what">
+            <div class="val">~<b>70%</b> on-chain · intangibles dominate</div>
+            <div class="desc">Modeled: a half-century of compounding adoption; most new value is created, named, and stored on-chain by default.</div>
+            <div class="src"><span class="tagm">modeled</span></div>
+          </div>
+        </div>
+
+        <div class="tl future">
+          <div class="when"><div class="yr">2126</div><div class="ago">+ 1 century</div></div>
+          <div class="what">
+            <div class="val">~<b>95%</b> issued natively on-chain</div>
+            <div class="desc">Modeled: the knowledge economy is on-chain by default; off-chain issuance becomes the exception.</div>
+            <div class="src"><span class="tagm">modeled</span></div>
+          </div>
+        </div>
+
+        <div class="tl future">
+          <div class="when"><div class="yr">2226</div><div class="ago">+ 200 years</div></div>
+          <div class="what">
+            <div class="val">The record persists</div>
+            <div class="desc">The horizon PYTHAI builds for. Issuers come and go; identity, names, and data settle on permanent storage engineered to outlast them — Arweave's ~200-year endowment.</div>
+            <div class="src"><span class="tagm">thesis · permanence</span></div>
+          </div>
+        </div>
+
+      </div>
+      <p class="ladder-note">2026–2034 figures are third-party forecasts (linked above). 2046 onward is a modeled adoption curve — directional, not a prediction of price or returns.</p>
+    </div>
+  </section>
+
+  <!-- THE SUBSTRATE -->
+  <section class="sec-bg">
+    <div class="container">
+      <div class="sec-head">
+        <span class="eyebrow">// THE SUBSTRATE · DELTAVERSE</span>
+        <h2>One middleweb beneath five surfaces.</h2>
+        <p>DeltaVerse is the resolution layer between the doors and the chains — paying out three primitives each surface runs on: <b>identity</b>, <b>naming</b>, and <b>permanent storage</b>. It resolves at <a href="https://deltaverse.pythai.net" style="color:var(--cyan)">deltaverse.pythai.net</a>.</p>
+      </div>
+      <div class="prim">
+        <div class="pcard"><div class="gi">&#9673;</div><h3>Identity</h3><p>Provisioned from pythai.net. One PYTHAI is your tier and your key across every door.</p></div>
+        <div class="pcard"><div class="gi">&#10022;</div><h3>Naming</h3><p>Human-readable names for agents, wallets, and chains — ENS-style subnames under BANKON.</p></div>
+        <div class="pcard"><div class="gi">&#9636;</div><h3>Data storage</h3><p>Permanent storage settled in Arweave, priced in PYTHAI and portable across chains.</p></div>
+      </div>
+      <div class="consumers">
+        <span class="lab">Drawn on by</span>
+        <a href="https://bankon.pythai.net">bankon</a>
+        <a href="https://agenticplace.pythai.net">agenticplace</a>
+        <a href="https://mindx.pythai.net">mindx</a>
+        <a href="https://rage.pythai.net">rage</a>
+        <a href="https://gpt.pythai.net">gpt</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE WALLET · PARSEC -->
+  <section>
+    <div class="container">
+      <div class="token green">
+        <div class="token-mark"><div class="wmark">&#9672;</div></div>
+        <div class="token-body">
+          <span class="alpha-pill"><span class="live"></span>Working alpha</span>
+          <span class="eyebrow" style="color:var(--green)">// THE WALLET · PARSEC</span>
+          <h2>An Algorand-first wallet.</h2>
+          <p>Parsec is the sovereign wallet that signs everything here — x402 payments and CAIP-122 identity. Algorand-first, with Arweave, Solana, and EVM in one keyring.</p>
+          <div class="chainrow">
+            <span class="first">Algorand · first</span>
+            <span>Arweave</span>
+            <span>Solana</span>
+            <span>EVM</span>
+          </div>
+          <div class="door-actions" style="margin-top:24px">
+            <a class="go" href="https://parsec.pythai.net" style="background:var(--green);border-color:transparent;color:#04110c">Open Parsec <span class="arrow">→</span></a>
+            <a href="#" data-connect>Use to sign in</a>
+          </div>
+          <p class="ladder-note" style="margin-top:18px">Alpha — Algorand mainnet signing works today; Arweave, Solana, and EVM are landing incrementally. Expect rough edges, and keep your own backup of your keys.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST -->
+  <section>
+    <div class="container">
+      <div class="sec-head">
+        <span class="eyebrow">// VERIFIABLE</span>
+        <h2>Trust is on-chain, not on paper.</h2>
+      </div>
+      <div class="trust">
+        <div class="trust-card">
+          <h4>ERC-8004 Identity Registry · Ethereum mainnet</h4>
+          <div class="addr">
+            <span id="addr">0x8004A169FB4a3325136EB29fA0ceB6D2e539a432</span>
+            <span class="copy" id="copyAddr" role="button" tabindex="0">copy</span>
+          </div>
+          <div class="badges">
+            <span class="badge"><span class="ok">●</span> Audited · Cyfrin / Nethermind / EF</span>
+            <span class="badge"><span class="ok">●</span> Apache-2.0</span>
+            <span class="badge"><span class="ok">●</span> No admin keys</span>
+            <span class="badge"><span class="ok">●</span> No proxies</span>
+            <span class="badge"><span class="ok">●</span> Foundry-tested · mainnet-only</span>
+          </div>
+        </div>
+        <div class="trust-card id">
+          <h4>Identity, when you want it</h4>
+          <p>login333 is one CAIP-122 sign-in across every chain. Your PYTHAI — provisioned from pythai.net — carries your tier through every door. Never required just to explore.</p>
+          <div class="chips">
+            <div class="chip"><span class="k" style="background:#2F80ED"></span>EVM · RainbowKit / Wagmi / Viem</div>
+            <div class="chip"><span class="k" style="background:#2ED3A0"></span>Algorand · Parsec / Pera · x402</div>
+            <div class="chip"><span class="k" style="background:#56CCF2"></span>Solana · Cardano · Bitcoin · Monero</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <div class="foot-grid">
+        <div class="foot-col" style="max-width:280px">
+          <a class="brand" href="#top" style="margin-bottom:14px"><svg class="coin"><use href="#pythai-coin"/></svg>pyth<b>ai</b></a>
+          <p style="color:var(--muted-2);font-size:13.5px;font-family:var(--mono);line-height:1.7">Sovereign intelligence for the open chain. Built in the dojo.</p>
+        </div>
+        <div class="foot-col">
+          <h5>Deployments</h5>
+          <a href="https://agenticplace.pythai.net">AgenticPlace</a>
+          <a href="https://mindx.pythai.net">mindX</a>
+          <a href="https://bankon.pythai.net">BANKON</a>
+          <a href="https://parsec.pythai.net">Parsec <span style="color:#ffcf5c;font-size:10px;font-family:var(--mono)">alpha</span></a>
+          <a href="https://rage.pythai.net">RAGE</a>
+        </div>
+        <div class="foot-col">
+          <h5>Build</h5>
+          <a href="https://github.com/agenticplace" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://deltaverse.pythai.net">DeltaVerse</a>
+          <a href="https://mindx.pythai.net/docs.html">mindX API</a>
+          <a href="https://agenticplace.pythai.net/allchain.html">Chainmap</a>
+          <a href="https://gpt.pythai.net">GPT team</a>
+          <a href="#" data-connect>Connect identity</a>
+        </div>
+      </div>
+      <div class="foot-bot">
+        <span>© BANKON — all rights preserved · Apache-2.0</span>
+        <span>identity provisioned from pythai.net · GPT team · gpt.pythai.net</span>
+        <span>built by Professor Codephreak · mindX</span>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- CONNECT MODAL -->
+<div class="modal-bg" id="modal" role="dialog" aria-modal="true" aria-label="Connect identity">
+  <div class="modal modal-card">
+    <button class="icon-btn close" id="closeModal" aria-label="Close">&#10005;</button>
+    <h3>Connect identity</h3>
+    <p class="sub">One signature. Every chain. Powered by login333.</p>
+    <p class="note">Identity is <b>opt-in</b>. Signing a CAIP-122 message proves you own your keys — it never moves funds and unlocks your tier across PYTHAI.</p>
+    <div class="wallets">
+      <div class="wallet" data-w="Parsec" tabindex="0">
+        <div class="wi">&#9672;</div>
+        <div><div class="wt">Parsec Wallet</div><div class="wd">algorand-first · arweave · solana · evm</div></div>
+        <div class="wchain">alpha</div>
+      </div>
+      <div class="wallet" data-w="Pera" tabindex="0">
+        <div class="wi">&#9650;</div>
+        <div><div class="wt">Pera</div><div class="wd">Algorand · Ed25519</div></div>
+        <div class="wchain">Algorand</div>
+      </div>
+      <div class="wallet" data-w="EVM" tabindex="0">
+        <div class="wi">&#11041;</div>
+        <div><div class="wt">EVM Wallet</div><div class="wd">RainbowKit · EIP-191</div></div>
+        <div class="wchain">Ethereum<br>+ L2s</div>
+      </div>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="sess-card" id="sessCard"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ============================================================
+   PYTHAI — living cognitive constellation (WebGL signature)
+   Nodes = agents & chains; edges = connections; travelling
+   pulses = thought. Calm, deliberate, sovereign. three.js r128.
+   ============================================================ */
+(function(){
+  var canvas = document.getElementById('gl');
+  if(!window.THREE){ canvas.style.display='none'; return; }
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:true, alpha:true});
+  renderer.setClearColor(0x000000, 0);
+  var scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x05060a, 0.0065);
+  var camera = new THREE.PerspectiveCamera(58, 1, 0.1, 600);
+  camera.position.set(0, 0, 78);
+
+  var group = new THREE.Group();
+  scene.add(group);
+
+  function discTexture(){
+    var s=64, c=document.createElement('canvas'); c.width=c.height=s;
+    var g=c.getContext('2d');
+    var grd=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+    grd.addColorStop(0,'rgba(255,255,255,1)');
+    grd.addColorStop(.25,'rgba(255,255,255,.85)');
+    grd.addColorStop(1,'rgba(255,255,255,0)');
+    g.fillStyle=grd; g.fillRect(0,0,s,s);
+    return new THREE.CanvasTexture(c);
+  }
+  var sprite = discTexture();
+
+  var N = reduce ? 380 : 820;
+  var pos = new Float32Array(N*3);
+  var col = new Float32Array(N*3);
+  var nodes = [];
+  var palette = [
+    new THREE.Color(0x2F80ED), new THREE.Color(0x2F80ED), new THREE.Color(0x2F80ED),
+    new THREE.Color(0x56CCF2), new THREE.Color(0x7aa6ff), new THREE.Color(0x2ED3A0)
+  ];
+  for(var i=0;i<N;i++){
+    var r = Math.pow(Math.random(),0.6)*52 + 4;
+    var theta = Math.random()*Math.PI*2;
+    var arm = Math.sin(theta*2.0)*6;
+    var x = Math.cos(theta)*r + arm*Math.random();
+    var z = Math.sin(theta)*r + arm*Math.random();
+    var y = (Math.random()-0.5)*(10 + r*0.18);
+    pos[i*3]=x; pos[i*3+1]=y; pos[i*3+2]=z;
+    var c = palette[(Math.random()*palette.length)|0];
+    col[i*3]=c.r; col[i*3+1]=c.g; col[i*3+2]=c.b;
+    nodes.push(new THREE.Vector3(x,y,z));
+  }
+  var pg = new THREE.BufferGeometry();
+  pg.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  pg.setAttribute('color', new THREE.BufferAttribute(col,3));
+  var pm = new THREE.PointsMaterial({
+    size:1.5, map:sprite, vertexColors:true, transparent:true,
+    depthWrite:false, blending:THREE.AdditiveBlending, opacity:0.9, sizeAttenuation:true
+  });
+  group.add(new THREE.Points(pg, pm));
+
+  var edges = [];
+  var maxEdges = reduce ? 700 : 1500;
+  var linkDist = 12;
+  var seen = {};
+  for(var a=0;a<N && edges.length<maxEdges;a++){
+    var made=0;
+    for(var b=a+1;b<N && made<3;b++){
+      if(nodes[a].distanceTo(nodes[b]) < linkDist){
+        var key=a+'-'+b;
+        if(seen[key]) continue;
+        seen[key]=1; edges.push([a,b]); made++;
+        if(edges.length>=maxEdges) break;
+      }
+    }
+  }
+  var lpos = new Float32Array(edges.length*6);
+  var lcol = new Float32Array(edges.length*6);
+  for(var e=0;e<edges.length;e++){
+    var ea=edges[e][0], eb=edges[e][1];
+    lpos[e*6]=nodes[ea].x; lpos[e*6+1]=nodes[ea].y; lpos[e*6+2]=nodes[ea].z;
+    lpos[e*6+3]=nodes[eb].x; lpos[e*6+4]=nodes[eb].y; lpos[e*6+5]=nodes[eb].z;
+    for(var k=0;k<6;k++) lcol[e*6+k]=0.18 + Math.random()*0.10;
+  }
+  var lg = new THREE.BufferGeometry();
+  lg.setAttribute('position', new THREE.BufferAttribute(lpos,3));
+  lg.setAttribute('color', new THREE.BufferAttribute(lcol,3));
+  var lm = new THREE.LineBasicMaterial({vertexColors:true, transparent:true, opacity:0.5, blending:THREE.AdditiveBlending, depthWrite:false});
+  group.add(new THREE.LineSegments(lg, lm));
+
+  var PULSES = reduce ? 0 : 16;
+  var pulses = [];
+  var pulseGroup = new THREE.Group(); group.add(pulseGroup);
+  for(var p=0;p<PULSES;p++){
+    var mat = new THREE.SpriteMaterial({map:sprite, color:0x9fd4ff, transparent:true, opacity:.9, blending:THREE.AdditiveBlending, depthWrite:false});
+    var sp = new THREE.Sprite(mat); sp.scale.setScalar(2.2);
+    pulseGroup.add(sp);
+    pulses.push({s:sp, e:(Math.random()*edges.length)|0, t:Math.random(), spd:0.0025+Math.random()*0.004});
+  }
+  function stepPulse(pl){
+    pl.t += pl.spd;
+    if(pl.t>=1){ pl.t=0; pl.e=(Math.random()*edges.length)|0; }
+    var na=edges[pl.e][0], nb=edges[pl.e][1];
+    pl.s.position.lerpVectors(nodes[na], nodes[nb], pl.t);
+    pl.s.material.opacity = 0.35 + Math.sin(pl.t*Math.PI)*0.6;
+  }
+
+  var tx=0, ty=0, mx=0, my=0;
+  window.addEventListener('pointermove', function(ev){
+    tx = (ev.clientX/window.innerWidth - .5);
+    ty = (ev.clientY/window.innerHeight - .5);
+  }, {passive:true});
+
+  function resize(){
+    var w=window.innerWidth, h=window.innerHeight;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setSize(w,h,false);
+    camera.aspect=w/h; camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize); resize();
+
+  var running=true;
+  document.addEventListener('visibilitychange', function(){ running=!document.hidden; if(running && !reduce) loop(); });
+
+  var clock = new THREE.Clock();
+  function loop(){
+    if(!running) return;
+    requestAnimationFrame(loop);
+    var t = clock.getElapsedTime();
+    group.rotation.y = t*0.035;
+    group.rotation.x = Math.sin(t*0.18)*0.06;
+    mx += (tx-mx)*0.04; my += (ty-my)*0.04;
+    camera.position.x = mx*22;
+    camera.position.y = -my*14;
+    camera.lookAt(0,0,0);
+    for(var pi=0;pi<pulses.length;pi++) stepPulse(pulses[pi]);
+    renderer.render(scene,camera);
+  }
+  if(reduce){
+    var f=0;
+    (function slow(){ if(!running) return; requestAnimationFrame(slow);
+      group.rotation.y = (f+=0.0006); renderer.render(scene,camera); })();
+  } else { loop(); }
+})();
+
+/* ============================================================
+   login333 — CAIP-122 universal sign-in + live data
+   EVM: native window.ethereum (EIP-191 personal_sign)
+   Parsec: native WebSocket (127.0.0.1:9876, JSON-RPC 2.0)
+   Pera: SDK hook (bundle @perawallet/connect in production)
+   Endpoints are configurable below — repoint to production.
+   ============================================================ */
+(function(){
+  "use strict";
+
+  var CFG = {
+    domain: (location.host || 'pythai.net'),
+    uri: (location.origin || 'https://pythai.net'),
+    identityBase: 'https://deltaverse.pythai.net',     // login333 challenge/verify (DeltaVerse /auth)
+    permissionsBase: 'https://mindx.pythai.net',        // GET /users/{wallet}/permissions
+    statsUrl: 'https://agenticplace.pythai.net/api/stats',
+    healthUrl: 'https://mindx.pythai.net/health',
+    parsecWs: 'ws://127.0.0.1:9876',
+    algoCaip2: 'algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=',
+    statement: 'Sign in to PYTHAI. This proves you own your keys. It does not move funds.'
+  };
+
+  var SESSION = null;
+  function $(id){ return document.getElementById(id); }
+  function short(a){ return a ? (a.slice(0,6)+'…'+a.slice(-4)) : ''; }
+  function nowIso(){ return new Date().toISOString(); }
+  function randNonce(){
+    var b = new Uint8Array(16); window.crypto.getRandomValues(b);
+    return Array.prototype.map.call(b, function(x){ return ('0'+x.toString(16)).slice(-2); }).join('');
+  }
+  function caip122(address, chainId, nonce){
+    return CFG.domain + ' wants you to sign in with your account:\n' + address + '\n\n' +
+      CFG.statement + '\nURI: ' + CFG.uri + '\nVersion: 1\nChain ID: ' + chainId +
+      '\nNonce: ' + nonce + '\nIssued At: ' + nowIso();
+  }
+
+  // ---- modal ----
+  var modal = $('modal');
+  function openModal(){ modal.classList.add('on'); setStatus(''); renderSession(); }
+  function closeModal(){ modal.classList.remove('on'); }
+  function setStatus(msg, kind){
+    var s = $('status'); if(!s) return; s.textContent = msg || '';
+    s.style.color = kind==='err' ? '#ff7a7a' : (kind==='ok' ? 'var(--green)' : 'var(--muted-2)');
+  }
+  $('connectBtn').addEventListener('click', openModal);
+  Array.prototype.forEach.call(document.querySelectorAll('[data-connect]'), function(el){
+    el.addEventListener('click', function(e){ e.preventDefault(); openModal(); });
+  });
+  $('closeModal').addEventListener('click', closeModal);
+  modal.addEventListener('click', function(e){ if(e.target===modal) closeModal(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeModal(); });
+
+  // ---- challenge / verify / permissions (server, graceful fallback) ----
+  function getChallenge(address, chainId){
+    return fetch(CFG.identityBase + '/auth/challenge', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ principal: address, chain_id: chainId })
+    }).then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if(j && j.message) return { message:j.message, nonce:j.nonce||'', server:true };
+        var n = randNonce(); return { message: caip122(address, chainId, n), nonce:n, server:false };
+      }).catch(function(){
+        var n = randNonce(); return { message: caip122(address, chainId, n), nonce:n, server:false };
+      });
+  }
+  function verify(payload){
+    return fetch(CFG.identityBase + '/auth/verify', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    }).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+  }
+  function loadPermissions(address){
+    return fetch(CFG.permissionsBase + '/users/' + address + '/permissions')
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ return j ? { tier:(j.tier!=null?j.tier:0), can_access:j.can_access||[] } : { tier:0, can_access:[] }; })
+      .catch(function(){ return { tier:0, can_access:[] }; });
+  }
+
+  // ---- signers ----
+  function signEVM(){
+    if(!window.ethereum) return Promise.reject(new Error('No EVM wallet detected — install MetaMask or similar.'));
+    var address, chainId = 'eip155:1';
+    return window.ethereum.request({ method:'eth_requestAccounts' }).then(function(accs){
+      address = accs[0];
+      return window.ethereum.request({ method:'eth_chainId' }).catch(function(){ return '0x1'; });
+    }).then(function(hex){
+      chainId = 'eip155:' + parseInt(hex,16);
+      return getChallenge(address, chainId);
+    }).then(function(ch){
+      return window.ethereum.request({ method:'personal_sign', params:[ch.message, address] })
+        .then(function(sig){ return { address:address, chainId:chainId, message:ch.message, signature:sig, nonce:ch.nonce }; });
+    });
+  }
+
+  function parsecRpc(ws, method, params){
+    return new Promise(function(resolve, reject){
+      var reqId = Date.now() + Math.floor(Math.random()*1000);
+      function onMsg(ev){
+        var m; try{ m = JSON.parse(ev.data); }catch(e){ return; }
+        if(m.id !== reqId) return;
+        ws.removeEventListener('message', onMsg);
+        if(m.error) reject(new Error(m.error.message || 'Parsec error')); else resolve(m.result);
+      }
+      ws.addEventListener('message', onMsg);
+      ws.send(JSON.stringify({ jsonrpc:'2.0', id:reqId, method:method, params:params||{} }));
+    });
+  }
+  function signParsec(){
+    return new Promise(function(resolve, reject){
+      var ws;
+      try{ ws = new WebSocket(CFG.parsecWs); }
+      catch(e){ reject(new Error('Parsec wallet not reachable on 127.0.0.1:9876.')); return; }
+      var t = setTimeout(function(){ try{ws.close();}catch(_){}; reject(new Error('Parsec wallet not running — start the desktop app.')); }, 4500);
+      ws.onerror = function(){ clearTimeout(t); reject(new Error('Parsec wallet not reachable on 127.0.0.1:9876.')); };
+      ws.onopen = function(){
+        clearTimeout(t);
+        var address, chainId = CFG.algoCaip2, ch;
+        parsecRpc(ws, 'ping', {}).then(function(){ return parsecRpc(ws, 'parsec_accounts', {}); })
+        .then(function(accounts){
+          var a = Array.isArray(accounts) ? accounts[0] : accounts;
+          address = (a && a.address) ? a.address : a;
+          return getChallenge(address, chainId);
+        }).then(function(c){
+          ch = c;
+          return parsecRpc(ws, 'parsec_signData', { data: ch.message, address: address, encoding:'utf-8' });
+        }).then(function(sig){
+          try{ws.close();}catch(_){}
+          resolve({ address:address, chainId:chainId, message:ch.message, signature:(sig.signature||sig), nonce:ch.nonce });
+        }).catch(function(e){
+          try{ws.close();}catch(_){}
+          reject(new Error((address ? ('Connected to Parsec ('+short(address)+') — confirm the signData method name. ') : '') + (e.message||'Parsec signing failed.')));
+        });
+      };
+    });
+  }
+  function signPera(){
+    if(!window.PeraWalletConnect) return Promise.reject(new Error('Pera needs @perawallet/connect bundled in the production build.'));
+    var pera = new window.PeraWalletConnect();
+    return pera.connect().then(function(accs){
+      return Promise.reject(new Error('Connected to Pera ('+short(accs[0])+'). Wire ARC-60 signData in production.'));
+    });
+  }
+  var SIGNERS = { EVM: signEVM, Parsec: signParsec, Pera: signPera };
+
+  // ---- orchestration ----
+  function doConnect(name, walletEl){
+    setStatus('Requesting signature from ' + name + '…');
+    if(walletEl) walletEl.classList.add('busy');
+    var signed;
+    SIGNERS[name]().then(function(s){
+      signed = s; setStatus('Verifying…');
+      return verify({ principal:s.address, chain_id:s.chainId, message:s.message, signature:s.signature, nonce:s.nonce });
+    }).then(function(v){
+      if(v && (v.tier!=null || v.can_access)) return { tier:(v.tier!=null?v.tier:0), can_access:v.can_access||[], verified:true };
+      return loadPermissions(signed.address).then(function(p){ return { tier:p.tier, can_access:p.can_access, verified:false }; });
+    }).then(function(res){
+      SESSION = { address:signed.address, chainId:signed.chainId, tier:res.tier, can_access:res.can_access, verified:res.verified, wallet:name };
+      setStatus(res.verified ? 'Signed in.' : 'Signed — server verification pending.', 'ok');
+      renderSession(); applyAccess(); updateNav();
+    }).catch(function(e){
+      setStatus(e.message || ('Could not connect ' + name + '.'), 'err');
+    }).then(function(){ if(walletEl) walletEl.classList.remove('busy'); });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.wallet'), function(w){
+    function go(){ doConnect(w.getAttribute('data-w'), w); }
+    w.addEventListener('click', go);
+    w.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
+  });
+
+  function renderSession(){
+    var card = $('sessCard'); if(!card) return;
+    if(!SESSION){ card.classList.remove('on'); card.innerHTML=''; return; }
+    card.classList.add('on');
+    card.innerHTML =
+      '<div class="row"><span>account</span><b>'+short(SESSION.address)+'</b></div>'+
+      '<div class="row"><span>wallet</span><b>'+SESSION.wallet+'</b></div>'+
+      '<div class="row"><span>tier</span><b>'+SESSION.tier+'</b></div>'+
+      '<div class="row"><span>access</span><b>'+(SESSION.can_access.length?SESSION.can_access.join(', '):'public')+'</b></div>'+
+      '<div class="row"><span>status</span><b>'+(SESSION.verified?'verified':'signed · pending')+'</b></div>'+
+      '<div style="margin-top:10px"><a href="#" id="disc" style="color:var(--muted);font-size:12px">disconnect</a></div>';
+    var d = $('disc'); if(d) d.addEventListener('click', function(e){ e.preventDefault(); SESSION=null; renderSession(); applyAccess(); updateNav(); setStatus('Disconnected.'); });
+  }
+  function updateNav(){
+    var b = $('connectBtn'); if(!b) return;
+    if(SESSION){ b.classList.add('connected'); b.innerHTML = short(SESSION.address) + '<span class="tierbadge">T'+SESSION.tier+'</span>'; }
+    else { b.classList.remove('connected'); b.textContent = 'Connect'; }
+  }
+  function applyAccess(){
+    Array.prototype.forEach.call(document.querySelectorAll('.door'), function(d){
+      var h = d.querySelector('h3'); if(!h) return;
+      var name = h.textContent.toLowerCase().replace(/[^a-z]/g,'');
+      var has = SESSION && SESSION.can_access.some(function(c){ c=c.toLowerCase(); return name.indexOf(c)>=0 || c.indexOf(name)>=0; });
+      d.style.outline = has ? '1px solid rgba(46,211,160,.45)' : '';
+      d.style.outlineOffset = has ? '2px' : '';
+    });
+  }
+
+  // ---- copy address ----
+  (function(){
+    var copy = $('copyAddr'); if(!copy) return;
+    function doCopy(){ var a = $('addr').textContent; if(navigator.clipboard){ navigator.clipboard.writeText(a).then(function(){ copy.textContent='copied ✓'; setTimeout(function(){ copy.textContent='copy'; },1400); }); } }
+    copy.addEventListener('click', doCopy);
+    copy.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); doCopy(); } });
+  })();
+
+  // ---- live data: hero counters (fall back to static on CORS/offline) ----
+  function fmt(n){
+    n = Number(n)||0;
+    if(n>=1e9) return (n/1e9).toFixed(1).replace(/\.0$/,'')+'B';
+    if(n>=1e6) return (n/1e6).toFixed(1).replace(/\.0$/,'')+'M';
+    if(n>=1e3) return Math.round(n/1e3)+'k';
+    return n.toLocaleString();
+  }
+  function countUp(el, target, suffix){
+    if(!el || !isFinite(target)) return;
+    var dur=1100, t0=performance.now();
+    function step(t){
+      var k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3), val=Math.floor(target*e);
+      el.innerHTML = fmt(val) + (suffix?('<b>'+suffix+'</b>'):'');
+      if(k<1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  function animStatic(){
+    countUp($('stat-chains'), 2510, '+');
+    countUp($('stat-agents'), 160000, '+');
+    countUp($('stat-networks'), 48, '');
+  }
+  function liveStats(){
+    fetch(CFG.statsUrl, {mode:'cors'}).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+      if(!j) return;
+      var chains = j.chains || j.total_chains || j.allchains;
+      var agents = j.total_agents || j.agents || ((j.local_agents&&j.remote_agents) ? (j.local_agents+j.remote_agents) : null);
+      var nets   = j.active_chains || j.networks;
+      if(chains) countUp($('stat-chains'), chains, '+');
+      if(agents) countUp($('stat-agents'), agents, '+');
+      if(nets)   countUp($('stat-networks'), nets, '');
+    }).catch(function(){ /* keep static numbers */ });
+  }
+
+  animStatic();
+  liveStats();
+})();
+</script>
+</body>
+</html>

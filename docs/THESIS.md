@@ -152,7 +152,7 @@ The following chapter elaborates the theoretical foundations of [mindX](MINDX.md
 | Self-improvement | [mindXagent.py](../agents/core/mindXagent.py) | [CORE](CORE.md) |
 | Machine dreaming | [machine_dreaming.py](../agents/machine_dreaming.py) | [machinedream](https://github.com/AION-NET/machinedream) |
 | Belief system | [belief_system.py](../agents/core/belief_system.py) | [CORE](CORE.md) |
-| RAGE memory | [memory_pgvector.py](../agents/memory_pgvector.py) | [pgvectorscale](pgvectorscale_memory_integration.md) |
+| RAGE memory | [memory_pgvector.py](../agents/memory_pgvector.py) | [pgvectorscale](rage/pgvectorscale_memory_integration.md) |
 | Agent identity | [id_manager_agent.py](../agents/core/id_manager_agent.py) | [BANKON Vault](../mindx_backend_service/vault_bankon/) |
 | Constitutional law | [DAIO_Constitution.sol](../daio/contracts/daio/constitution/DAIO_Constitution.sol) | [DAIO](DAIO.md) |
 | Reputation containment | [BonaFide.sol](../daio/contracts/agenticplace/evm/BonaFide.sol) | [JudgeDread](../agents/judgedread.agent) |

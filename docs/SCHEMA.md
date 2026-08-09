@@ -16,7 +16,7 @@ itself serves as the schema layer — guiding how knowledge gets structured.
 | Layer | Location | Mutability | Purpose |
 |-------|----------|------------|---------|
 | **Raw** (observations) | `data/memory/stm/` | Append-only per session | Unprocessed agent observations, interaction logs, metrics |
-| **Compiled** (knowledge) | `data/memory/ltm/` + [pgvector](pgvectorscale_memory_integration.md) | Updated via [RAGE](AGINT.md) consolidation | Searchable, cross-referenced, 151K+ memories in production |
+| **Compiled** (knowledge) | `data/memory/ltm/` + [pgvector](rage/pgvectorscale_memory_integration.md) | Updated via [RAGE](AGINT.md) consolidation | Searchable, cross-referenced, 151K+ memories in production |
 | **Schema** (this file + docs/) | `docs/` | Human + autonomous edits | Instructions for how to maintain and structure the other two layers |
 
 The schema layer is **recursive**: mindX reads these docs during [autonomous cycles](AUTONOMOUS.md),

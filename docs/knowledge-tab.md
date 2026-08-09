@@ -256,7 +256,7 @@ async def discover_patterns(memories: List[Memory]) -> List[Pattern]:
 ## 📚 Related Documentation
 
 - **[Belief System](belief_system.md)**: Belief management architecture
-- **[pgvectorscale Integration](pgvectorscale_memory_integration.md)**: Semantic memory
+- **[pgvectorscale Integration](rage/pgvectorscale_memory_integration.md)**: Semantic memory
 - **[Strategic Evolution Agent](strategic_evolution_agent.md)**: Self-improvement
 - **[Memory Agent](memory_agent.md)**: Memory storage and retrieval
 

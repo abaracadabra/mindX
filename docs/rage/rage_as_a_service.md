@@ -8,9 +8,9 @@
 
 Companion specs:
 
-- [`mindx_as_a_service.md`](mindx_as_a_service.md) — broader service offering
-- [`x402_as_a_service.md`](x402_as_a_service.md) — payment substrate (some RAGE endpoints are x402-paywalled)
-- [`bankon_identity_as_a_service.md`](bankon_identity_as_a_service.md) — agent identity layer
+- [`mindx_as_a_service.md`](../services/mindx_as_a_service.md) — broader service offering
+- [`x402_as_a_service.md`](../services/x402_as_a_service.md) — payment substrate (some RAGE endpoints are x402-paywalled)
+- [`bankon_identity_as_a_service.md`](../services/bankon_identity_as_a_service.md) — agent identity layer
 
 Source code: [`github.com/GATERAGE/RAGE`](https://github.com/GATERAGE/RAGE) (canonical agnostic distribution) — published from `mindx_backend_service/rage/` per the agnostic-modules-principle.
 
@@ -309,12 +309,12 @@ of GATERAGE/RAGE; not the only home.
 
 ## 14. References
 
-- [`mindx_as_a_service.md`](mindx_as_a_service.md)
-- [`x402_as_a_service.md`](x402_as_a_service.md)
-- [`bankon_identity_as_a_service.md`](bankon_identity_as_a_service.md)
-- [`wallet_connection_as_a_service.md`](wallet_connection_as_a_service.md)
-- [`contract_interaction_as_a_service.md`](contract_interaction_as_a_service.md)
-- [`contract_deployment_as_a_service.md`](contract_deployment_as_a_service.md)
+- [`mindx_as_a_service.md`](../services/mindx_as_a_service.md)
+- [`x402_as_a_service.md`](../services/x402_as_a_service.md)
+- [`bankon_identity_as_a_service.md`](../services/bankon_identity_as_a_service.md)
+- [`wallet_connection_as_a_service.md`](../services/wallet_connection_as_a_service.md)
+- [`contract_interaction_as_a_service.md`](../services/contract_interaction_as_a_service.md)
+- [`contract_deployment_as_a_service.md`](../services/contract_deployment_as_a_service.md)
 - [`docs/publications/mindx_first_production_rage_postgres.md`](../publications/mindx_first_production_rage_postgres.md)
 - [llmstxt.org](https://llmstxt.org) — LLM-ingestion sitemap convention
 - [sentence-transformers](https://sbert.net/) — embedding library

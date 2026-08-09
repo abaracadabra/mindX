@@ -2,7 +2,7 @@
 
 > Auto-maintained by [AuthorAgent](AUTHOR_AGENT.md). Regenerated on every recognized milestone (`github.awareness`). Do not edit by hand — changes are overwritten. The curated hub is [NAV.md](NAV.md); this is the exhaustive catalogue, grouped as on [/docs.html](https://mindx.pythai.net/docs.html).
 
-_Last regenerated: 2026-07-07 07:55 UTC · 257 documents in 10 categories._
+_Last regenerated: 2026-07-07 10:12 UTC · 257 documents in 10 categories._
 
 [Core Architecture](#core-architecture) (17) · [Agents](#agents) (46) · [Tools](#tools) (33) · [Governance & DAIO](#governance--daio) (7) · [Memory & Knowledge](#memory--knowledge) (11) · [Deployment & Operations](#deployment--operations) (19) · [API & Integration](#api--integration) (18) · [Philosophy & Vision](#philosophy--vision) (13) · [Tutorials & Guides](#tutorials--guides) (4) · [Other](#other) (89)
 
@@ -49,7 +49,7 @@ _Last regenerated: 2026-07-07 07:55 UTC · 257 documents in 10 categories._
 | [autonomous_audit_coordinator.md](autonomous_audit_coordinator.md) | Autonomous Audit Coordinator | 2026-01-12 |
 | [base_gen_agent_backup.md](base_gen_agent_backup.md) | BaseGenAgent (`base_gen_agent.py`) - Configurable Codebase Documenter | 2026-01-12 |
 | [basegenagent_optimization_assessment.md](basegenagent_optimization_assessment.md) | BaseGenAgent Optimization Assessment for Code Auditing | 2025-09-21 |
-| [BOOK_OF_MINDX.md](BOOK_OF_MINDX.md) | The Book of mindX | 2026-06-24 |
+| [BOOK_OF_MINDX.md](BOOK_OF_MINDX.md) | The Book of mindX | 2026-07-07 |
 | [CEO.md](CEO.md) | What Has Been Built Here? A High-Level Explanation | 2026-01-05 |
 | [CEO_AGENT_BATTLE_HARDENED_GUIDE.md](CEO_AGENT_BATTLE_HARDENED_GUIDE.md) | CEO Agent Battle Hardened Guide | 2026-01-05 |
 | [CEO_AGENT_TEMPLATE.md](CEO_AGENT_TEMPLATE.md) | CEO Agent Template Documentation | 2026-01-05 |
@@ -143,7 +143,11 @@ _Last regenerated: 2026-07-07 07:55 UTC · 257 documents in 10 categories._
 | [memory_storage_review.md](memory_storage_review.md) | Memory Agent Storage and Data Folder Log Review | 2026-04-03 |
 | [memory_system_replacement_audit.md](memory_system_replacement_audit.md) | Memory System Replacement Audit Report | 2025-09-21 |
 | [memory_tiers.md](memory_tiers.md) | Memory Tiers — retention policy | 2026-04-27 |
-| [pgvectorscale_memory_integration.md](pgvectorscale_memory_integration.md) | pgvectorscale Memory Integration | 2026-03-29 |
+| [rage/rage_system.md](rage/rage_system.md) | RAGE — The Retrieval Augmented Generative Engine (index + embedding-protocol review) | 2026-07-07 |
+| [rage/pgvectorscale_memory_integration.md](rage/pgvectorscale_memory_integration.md) | pgvectorscale Memory Integration | 2026-03-29 |
+| [rage/rage_as_a_service.md](rage/rage_as_a_service.md) | RAGE as a Service | 2026-07-07 |
+| [rage/vectorsearch_pgvectorscale_embedding.md](rage/vectorsearch_pgvectorscale_embedding.md) | Vector Search, Embeddings, and a Deep-Dive Evaluation of pgvectorscale | 2026-07-07 |
+| [rage/EMBEDDING_SYSTEM.md](rage/EMBEDDING_SYSTEM.md) | RAGE Embed — Semantic Search over Documentation and Memory | 2026-07-07 |
 
 ## Deployment & Operations
 
@@ -248,12 +252,11 @@ _Last regenerated: 2026-07-07 07:55 UTC · 257 documents in 10 categories._
 | [DIAGNOSTICS_REPORT_20260410.md](DIAGNOSTICS_REPORT_20260410.md) | mindX Diagnostics Report — 2026-04-10 | 2026-04-10 |
 | [DIRECTIVES.md](DIRECTIVES.md) | mindX Directives | 2026-03-29 |
 | [economy-tab.md](economy-tab.md) | Economy Tab: Autonomous Treasury Management | 2026-03-29 |
-| [EMBEDDING_SYSTEM.md](EMBEDDING_SYSTEM.md) | RAGE Embed — Semantic Search over Documentation and Memory | 2026-04-03 |
 | [emergent.md](emergent.md) | emergent.md — what mindX is currently doing, and what it should be | 2026-06-13 |
 | [enhanced_simple_coder.md](enhanced_simple_coder.md) | Enhanced Simple Coder Agent | 2026-01-12 |
 | [faicey_integration.md](faicey_integration.md) | Faicey Integration - Modular UI/UX Expression System | 2026-03-29 |
 | [frontend_backend_analysis.md](frontend_backend_analysis.md) | Frontend-Backend Analysis and Updates | 2025-09-21 |
-| [GITMIND.md](GITMIND.md) | gitmind — self-contained git monitor + multi-source backup/rollback | 2026-06-28 |
+| [rage/GITMIND.md](rage/GITMIND.md) | gitmind — self-contained git monitor + multi-source backup/rollback (RAGE extension) | 2026-06-28 |
 | [goal_management.md](goal_management.md) | Goal Management System | 2026-01-13 |
 | [graceful_degradation.md](graceful_degradation.md) | Graceful Degradation Implementation for mindX | 2025-09-21 |
 | [HERMES_INTEGRATION.md](HERMES_INTEGRATION.md) | Hermes Integration — Day-1: SKILL.md procedural memory | 2026-05-19 |

@@ -274,7 +274,12 @@ All tool documentation is organized in the `tools/` folder. Tools are now organi
 - **[BDI Agent](agents/bdi_agent.md)** - Belief-Desire-Intention cognitive architecture
 - **[Belief System](belief_system.md)** - Belief management and confidence scoring
 - **[Memory System](memory.md)** - Memory architecture and persistence
-- **[pgvectorscale Memory Integration](pgvectorscale_memory_integration.md)** - Semantic memory with vector similarity search
+- **[RAGE — Retrieval Augmented Generative Engine](rage/rage_system.md)** - Vector-search, embedding, and retrieval substrate (`docs/rage/`); index + embedding-protocol review
+  - **[RAGE as a Service](rage/rage_as_a_service.md)** - Service contract: ingest, index, retrieve, guarantees
+  - **[RAGE Embed — Semantic Search](rage/EMBEDDING_SYSTEM.md)** - Embedding layer bridging LLM inference and pgvector (default `bge-m3`, `VECTOR(1024)`)
+  - **[pgvectorscale Memory Integration](rage/pgvectorscale_memory_integration.md)** - Semantic memory with vector similarity search
+  - **[Vector Search & pgvectorscale Deep-Dive](rage/vectorsearch_pgvectorscale_embedding.md)** - Embeddings, ANN indexes, StreamingDiskANN benchmarks
+  - **[gitmind — RAGE extension](rage/GITMIND.md)** - Self-contained git monitor + multi-source backup/rollback (THOT bundles → THlNK → local/IPFS/Arweave)
 - **[Vault System](vault_system.md)** - ✅ **PRODUCTION ENCRYPTED VAULT** AES-256 encrypted credential storage with PBKDF2 key derivation, secure wallet private key management, URL/IP access tracking, **vault-backed user sessions** (wallet auth), **per-wallet user folders** (signature-scoped), and frontend `vault_manager.js`. Optional **access gate** (NFT/fungible) for session issuance; see [LIT_AND_ACCESS_ISSUANCE](LIT_AND_ACCESS_ISSUANCE.md). DAIO **keyminter** contracts ([VaultKeyDynamic](daio/contracts/docs/keyminter/KEYMINTER_VAULT_ACCESS.md), [VaultKeyIntelligent](daio/contracts/keyminter/README.md)) mint vault access keys.
 - **[BANKON Vault — canonical reference](BANKON_VAULT.md)** - ✅ **DEEP DIVE** Crypto stack (AES-256-GCM + HKDF-SHA512 + per-entry domain separation), on-disk layout, three custody modes (Machine/Human/DAIO with overseer-aware unlock), lifecycle (startup unlock, sentinel-mode restart, two-phase rotation), HTTP surface, 10 tests via `make test-vault`. Operator ceremony in [BANKON_VAULT_HANDOFF.md](BANKON_VAULT_HANDOFF.md); phased retirement of legacy vault modules in [LEGACY_VAULT_MIGRATION.md](LEGACY_VAULT_MIGRATION.md).
 - **[Identity Management](IDENTITY.md)** - Identity and authentication systems

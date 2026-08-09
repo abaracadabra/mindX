@@ -1,5 +1,11 @@
 # pgvectorscale Memory Integration
 
+> ⚠️ **Canonical protocol note.** The model/dimension details below are historical
+> (`all-MiniLM-L6-v2`, 384-dim). The live embedding protocol is **`bge-m3` / `VECTOR(1024)`**,
+> switchable via `MINDX_EMBED_MODEL` — see [EMBEDDING_SYSTEM.md](EMBEDDING_SYSTEM.md) (canonical)
+> and the [RAGE system review](rage_system.md). This doc is kept for its install, resource-metrics,
+> and dual-write operational detail.
+
 ## Overview
 
 **pgvectorscale** is the semantic memory backbone of the mindX autonomous intelligence platform, providing vector similarity search capabilities for context-aware reasoning and self-improvement.
@@ -535,11 +541,11 @@ Get system performance statistics.
 
 ## 🔗 Related Documentation
 
-- **[Memory Agent](memory_agent.md)**: Core memory management
+- **[Memory Agent](../agents/memory_agent.md)**: Core memory management
 - **[RAGE System](rage_system.md)**: Retrieval augmented generation
-- **[mindXagent](mindxagent.md)**: Meta-agent orchestration
-- **[Platform Architecture](MINDX.md)**: System overview
-- **[Installation Guide](../scripts/install_pgvectorscale.sh)**: Setup script
+- **[mindXagent](../mindXagent.md)**: Meta-agent orchestration
+- **[Platform Architecture](../MINDX.md)**: System overview
+- **[Installation Guide](../../scripts/install_pgvectorscale.sh)**: Setup script
 
 ---
 

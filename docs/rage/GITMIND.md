@@ -75,7 +75,7 @@ GitHub to have a durable, restorable home.
   **THOT**; a code/dir backup anchors as an **iNFT** (`MINDX_GITMIND_ANCHOR=1`).
 
 This is the git-native instantiation of the canonical architecture in
-[`docs/operations/THOT, THLNK, and ERC-7857 INFTs`](operations/THOT,%20THLNK,%20and%20ERC-7857%20INFTs_%20A%20Production%20Architecture%20for%20Agent%20Boardroom%20Governance.md):
+[`docs/operations/THOT, THLNK, and ERC-7857 INFTs`](../operations/THOT,%20THLNK,%20and%20ERC-7857%20INFTs_%20A%20Production%20Architecture%20for%20Agent%20Boardroom%20Governance.md):
 THOT = content-addressed Merkle-committed artifact; THLNK = the self-describing
 pointer (`thot_root` + `cid` + iNFT/x402); the `parent_root` chain to a checkpoint is
 the lineage that, on-chain, `MindXCheckpointRegistry` enforces. gitmind realizes that

@@ -395,7 +395,7 @@ curl http://localhost:8000/api/rage/stats
 - **[RAGE System](rage_system.md)**: Retrieval augmented generation
 - **[Resource Monitor](resource_monitor.md)**: System resource monitoring
 - **[Performance Monitor](performance_monitor.md)**: Performance metrics collection
-- **[pgvectorscale Integration](pgvectorscale_memory_integration.md)**: Semantic memory system
+- **[pgvectorscale Integration](rage/pgvectorscale_memory_integration.md)**: Semantic memory system
 
 ---
 

@@ -408,7 +408,7 @@ curl -X POST http://localhost:8000/api/rage/memory/retrieve \
 - **[Identity Management](IDENTITY.md)**: Cryptographic identity framework
 - **[Agent Registry](AGENTS.md)**: Complete agent catalog
 - **[Platform Tab](platform-tab.md)**: Enterprise dashboard
-- **[pgvectorscale Integration](pgvectorscale_memory_integration.md)**: Semantic memory
+- **[pgvectorscale Integration](rage/pgvectorscale_memory_integration.md)**: Semantic memory
 
 ---
 
