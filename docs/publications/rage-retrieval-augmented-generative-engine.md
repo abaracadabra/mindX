@@ -11,6 +11,13 @@ the one your users feel when a system makes them wait for an answer it should al
 All three are about the same thing: what happens when the data you need is bigger than the memory
 you have. This is that argument, with the receipts.
 
+<figure>
+  <img src="https://rage.pythai.net/wp-content/uploads/graphRAGE.jpeg"
+       alt="RAGE — Retrieval Augmented Generative Engine: a vector graph with similarity paths lit between document nodes, showing nearest-neighbour retrieval across an embedded corpus"
+       width="1408" height="768" loading="eager" />
+  <figcaption>RAGE — retrieval as a lit path through a vector graph: only the nodes that bear on the question are fetched.</figcaption>
+</figure>
+
 ---
 
 ## 1. RAGE the engine — retrieval augmented generation, owned end to end
@@ -56,6 +63,33 @@ error rather than a silent corruption of the vector space.
 The retrieval step itself is [nearest-neighbour search](https://en.wikipedia.org/wiki/Nearest_neighbor_search) —
 find the handful of passages closest in meaning to the question, out of millions, in under a
 hundred milliseconds. That number is the whole product.
+
+### Three details that decide whether it works
+
+**The embedder is a cascade, not a service.** Embedding is the step everyone outsources and then
+discovers is a single point of failure. Mine tries vLLM's `/v1/embeddings` first (fast, batched,
+only when a GPU node is actually serving), falls back to Ollama on CPU as the standing baseline,
+and has a deterministic local path below that. Retrieval degrades in quality when the good model
+is unavailable; it does not stop. A memory system that goes dark when one endpoint does is not a
+memory system.
+
+**The dimension is hard-typed, deliberately.** The pgvector columns are `VECTOR(1024)` and the
+active model is `bge-m3` at 1024 dimensions with an 8192-token window. Selecting a model of a
+different width is a startup error rather than a silent write of garbage. And even among
+same-width models the guard matters for a subtler reason: two 1024-dimension models are
+dimensionally interchangeable but occupy **different vector spaces**. Mixing their output in one
+index produces distances that are arithmetically valid and semantically meaningless — the worst
+failure mode there is, because nothing errors.
+
+**The index is what makes it fast, and it is not IVFFlat.** [pgvectorscale](https://github.com/timescale/pgvectorscale)
+adds StreamingDiskANN and statistical binary quantisation on top of
+[pgvector](https://github.com/pgvector/pgvector). The practical difference is whether the index
+has to fit in RAM. Quantised, disk-resident, streamed — the same trick as the texture engine
+below, applied to vectors.
+
+The full pipeline, end to end: `question → embed → pgvector cosine similarity → top-K chunks →
+a small local model answers from those chunks`. The generation step is deliberately modest,
+because when retrieval is good the model does not need to be large.
 
 ---
 
@@ -176,6 +210,76 @@ The wider constellation: [bankon.pythai.net](https://bankon.pythai.net/) is the 
 [agenticplace.pythai.net](https://agenticplace.pythai.net/) the marketspace,
 [mindx.pythai.net](https://mindx.pythai.net/) the mind, and [luv.pythai.net](https://luv.pythai.net/)
 the attention layer. Follow the work at [@aiosml](https://x.com/aiosml).
+
+---
+
+## The specification
+
+The engine's own documentation lives behind the realm door — sign in at
+[mindx.pythai.net/activity](https://mindx.pythai.net/activity) and these open. Listed so you know
+what is there and can decide whether it is worth the signature:
+
+| Document | What it settles |
+|---|---|
+| [RAGE system](https://mindx.pythai.net/doc/rage/rage_system) | The index and the contract: pipeline, ownership boundary, and the honest review of the embedding protocol |
+| [RAGE as a service](https://mindx.pythai.net/doc/rage/rage_as_a_service) | What callers are actually promised — ingest, index, retrieve, and the guarantees attached to each |
+| [Embedding system](https://mindx.pythai.net/doc/rage/EMBEDDING_SYSTEM) | The canonical protocol: model registry, chunking, tables, the `VECTOR(1024)` dimension guard |
+| [Embedding cascade operations](https://mindx.pythai.net/doc/rage/EMBEDDING_CASCADE_OPERATIONS) | The three-source fallback, and what degrades when each source is unavailable |
+| [Vector search deep-dive](https://mindx.pythai.net/doc/rage/vectorsearch_pgvectorscale_embedding) | IVFFlat vs HNSW vs DiskANN, StreamingDiskANN + SBQ benchmarks, and when a dedicated vector database is actually warranted |
+| [pgvectorscale memory integration](https://mindx.pythai.net/doc/rage/pgvectorscale_memory_integration) | The PostgreSQL backbone: install, dual-write, resource metrics |
+| [gitmind](https://mindx.pythai.net/doc/rage/GITMIND) | A RAGE extension — THOT bundles chained into a THlNK, replicated to IPFS and Arweave |
+| [ARIO permaweb scope](https://mindx.pythai.net/doc/rage/ARIO_PERMAWEB_INTEGRATION_SCOPE) | Permanence: what gets anchored, where, and what that costs |
+
+The signature is free, moves no funds, and proves a key is yours. It is a door, not a paywall —
+though I would rather say plainly that it is a door than let you click into one unannounced.
+
+---
+
+## RAGE — frequently asked
+
+**What does RAGE stand for?**
+RAGE is a **Retrieval Augmented Generative Engine**: text is embedded into vectors, the vectors
+live in PostgreSQL with [pgvector](https://github.com/pgvector/pgvector), a nearest-neighbour
+search returns the passages closest in meaning to a question, and a model answers from those
+passages. Source: [github.com/GATERAGE/RAGE](https://github.com/GATERAGE/RAGE).
+
+**Is RAGE the same as RAG?**
+No. [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) names the *technique*.
+RAGE is an **engine** that implements it end to end and owns every stage — embedder, index,
+database, retrieval — rather than renting a hosted memory service. The distinction is ownership,
+and it is the reason the E is there.
+
+**What database does RAGE use?**
+[PostgreSQL](https://www.postgresql.org/) with the [pgvector](https://github.com/pgvector/pgvector)
+extension, accelerated by [pgvectorscale](https://github.com/timescale/pgvectorscale)
+(StreamingDiskANN + statistical binary quantisation). No dedicated vector database is required —
+the deep-dive on when one actually *is* warranted is in the specification above.
+
+**Which embedding model does RAGE use?**
+[BAAI/bge-m3](https://huggingface.co/BAAI/bge-m3) by default — 1024 dimensions, 8192-token
+context — hard-typed into the schema as `VECTOR(1024)`, with a switchable model registry behind
+an environment variable.
+
+**Is RAGE the video game?**
+That is a different RAGE — the [2011 shooter](https://en.wikipedia.org/wiki/Rage_(video_game))
+from id Software, published by [Bethesda](https://bethesda.net/), with a
+[2019 sequel](https://en.wikipedia.org/wiki/Rage_2) from
+[Avalanche Studios](https://avalanchestudios.com/). It is worth knowing about here because its
+engine, [id Tech 5](https://en.wikipedia.org/wiki/Id_Tech_5), solved the same retrieval problem
+with [MegaTexture](https://en.wikipedia.org/wiki/MegaTexture) years earlier.
+
+**How does retrieval make games faster?**
+By never loading what is not needed. Virtual texturing streams only the tiles currently visible
+out of a texture far larger than memory; vector retrieval fetches only the passages that bear on
+the question out of a corpus far larger than the context window. Both turn a capacity problem into
+a lookup problem, and both remove the stall — the loading screen, the re-read — that users
+experience as slowness.
+
+**Does RAGE relieve rage?**
+In the sense that matters, yes. [Rage quitting](https://en.wikipedia.org/wiki/Rage_quit) is named
+after latency and unfairness rather than difficulty. Fast retrieval removes the wait, and grounded
+answers remove the confident wrong response — the two things that reliably produce
+[anger](https://www.apa.org/topics/anger) in software.
 
 ---
 

@@ -120,12 +120,17 @@ TOPIC_TO_FILE: dict[str, str] = {
     "automindx":           "codephreakPYTHAI.jpeg",
     "bankonos":            "codephreakPYTHAI.jpeg",
 
-    # RAGE / pgvector / memory substrate — THOTH (the memory-and-writing god) fits.
-    "rage":             "THOTH.png",
-    "pgvector":         "THOTH.png",
-    "postgres":         "THOTH.png",
-    "postgresql":       "THOTH.png",
-    "retrieval":        "THOTH.png",
+    # RAGE / pgvector / memory substrate. THOTH (the memory-and-writing god) was
+    # the stand-in; graphRAGE is the actual subject — a vector graph with
+    # similarity paths lit through it, and RAGE's own mark on the plate. An
+    # article about retrieval should show retrieval.
+    "rage":             "graphRAGE.jpeg",
+    "pgvector":         "graphRAGE.jpeg",
+    "postgres":         "graphRAGE.jpeg",
+    "postgresql":       "graphRAGE.jpeg",
+    "retrieval":        "graphRAGE.jpeg",
+    "vector search":    "graphRAGE.jpeg",
+    "embedding":        "graphRAGE.jpeg",
     "memory":           "mysticalmarketplace.webp",
 
     # Generic fallback.
