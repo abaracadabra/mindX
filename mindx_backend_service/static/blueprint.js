@@ -18,9 +18,67 @@
   function h(html){var d=document.createElement("div");d.innerHTML=html;return d.firstChild;}
   function auth(tok){return tok?{"Authorization":"Bearer "+tok}:{};}
 
-  function panel(title, subtitle){
+  function panel(title, subtitle, actions){
     return '<div class="bp-panel"><div class="bp-h"><span class="bp-t">'+esc(title)+'</span>'+
-      (subtitle?'<span class="bp-s">'+esc(subtitle)+'</span>':'')+'</div><div class="bp-body"></div></div>';
+      (subtitle?'<span class="bp-s">'+esc(subtitle)+'</span>':'')+
+      (actions?'<span class="bp-act">'+actions+'</span>':'')+'</div><div class="bp-body"></div></div>';
+  }
+
+  // — export: the raw payload out of the browser, verbatim —
+  // Flatten any nested object to dot-path key/value rows so the CSV is a real
+  // table (arrays become key[0], key[1]) rather than one cell of stringified JSON.
+  function flatten(v, prefix, out){
+    out=out||[]; prefix=prefix||"";
+    if(v===null||typeof v!=="object"){out.push([prefix,v===null?"":String(v)]);return out;}
+    if(Array.isArray(v)){
+      if(!v.length){out.push([prefix,""]);return out;}
+      for(var i=0;i<v.length;i++)flatten(v[i],prefix+"["+i+"]",out);
+      return out;
+    }
+    var ks=Object.keys(v);
+    if(!ks.length){out.push([prefix,""]);return out;}
+    for(var j=0;j<ks.length;j++)flatten(v[ks[j]],prefix?prefix+"."+ks[j]:ks[j],out);
+    return out;
+  }
+  function csvCell(s){return '"'+String(s==null?"":s).replace(/"/g,'""')+'"';}
+  function toCSV(gmi){
+    return "key,value\r\n"+flatten(gmi||{}).map(function(r){
+      return csvCell(r[0])+","+csvCell(r[1]);
+    }).join("\r\n")+"\r\n";
+  }
+  function stamp(){
+    // filenames sort chronologically: mindx-godel-audit-20260810T1432Z.json
+    return new Date().toISOString().replace(/[-:]/g,"").slice(0,13)+"Z";
+  }
+  function download(text, ext, mime){
+    var blob=new Blob([text],{type:mime+";charset=utf-8"}), url=URL.createObjectURL(blob);
+    var a=document.createElement("a");
+    a.href=url; a.download="mindx-godel-audit-"+stamp()+"."+ext;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  }
+  function copyText(text, btn){
+    function done(ok){
+      if(!btn)return;
+      var was=btn.textContent;
+      btn.textContent=ok?"copied":"copy failed";
+      btn.className=ok?"bp-btn ok":"bp-btn no";
+      setTimeout(function(){btn.textContent=was;btn.className="bp-btn";},1600);
+    }
+    // clipboard API needs a secure context; fall back to the textarea trick
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){done(true);},function(){done(legacyCopy(text));});
+    }else{done(legacyCopy(text));}
+  }
+  function legacyCopy(text){
+    try{
+      var ta=document.createElement("textarea");
+      ta.value=text; ta.setAttribute("readonly","");
+      ta.style.cssText="position:fixed;top:-1000px;opacity:0";
+      document.body.appendChild(ta); ta.select();
+      var ok=document.execCommand("copy");
+      document.body.removeChild(ta); return ok;
+    }catch(e){return false;}
   }
 
   // — surface 1: per-predicate evidence ledger (flatten every evidence key) —
@@ -85,8 +143,62 @@
       '.bp-tbl td.v{color:#e6edf3;font-variant-numeric:tabular-nums;word-break:break-word}'+
       '.bp-math td{padding:6px 14px 6px 0}.bp-note{margin-top:12px;font-size:11px;color:'+MUT+';line-height:1.6}'+
       '.bp-raw{margin:0 24px 22px;padding:14px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.06);border-radius:9px;'+
-      'font-size:10.5px;color:#9aa4b0;white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto}';
+      'font-size:10.5px;color:#9aa4b0;white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto;cursor:copy}'+
+      '.bp-raw:hover{border-color:rgba(120,170,225,.22)}'+
+      /* header actions — press to copy, download arrow with format choice */
+      '.bp-act{margin-left:auto;display:inline-flex;align-items:center;gap:8px;position:relative}'+
+      '.bp-btn{font:inherit;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#a7b8cc;'+
+      'background:rgba(120,170,225,.08);border:1px solid rgba(120,170,225,.18);border-radius:5px;'+
+      'padding:5px 11px;cursor:pointer;line-height:1.2;transition:color .18s,border-color .18s,background .18s}'+
+      '.bp-btn:hover{color:#e6edf3;border-color:rgba(120,170,225,.45);background:rgba(120,170,225,.16)}'+
+      '.bp-btn.ok{color:'+OK+';border-color:rgba(86,211,100,.45)}'+
+      '.bp-btn.no{color:'+NO+';border-color:rgba(248,81,73,.45)}'+
+      '.bp-btn.arrow{font-size:12px;letter-spacing:0;padding:3px 10px 5px}'+
+      '.bp-menu{position:absolute;top:calc(100% + 7px);right:0;min-width:172px;background:#0a1320;'+
+      'border:1px solid rgba(120,170,225,.24);border-radius:8px;padding:5px;z-index:40;display:none;'+
+      'box-shadow:0 14px 36px rgba(0,0,0,.6)}'+
+      '.bp-menu.open{display:block}'+
+      '.bp-menu button{display:flex;width:100%;align-items:baseline;justify-content:space-between;gap:14px;'+
+      'background:none;border:0;color:#dfe8f2;font:inherit;font-size:11px;padding:7px 9px;border-radius:5px;'+
+      'cursor:pointer;text-align:left}'+
+      '.bp-menu button:hover{background:rgba(120,170,225,.14)}'+
+      '.bp-menu button b{color:'+GOLD+';font-weight:600}'+
+      '.bp-menu button span{color:'+MUT+';font-size:9.5px;letter-spacing:.08em}';
     document.head.appendChild(s);
+  }
+
+  // — wire the raw-payload controls: press-to-copy + the download arrow —
+  function wireExport(sec, gmi, pretty){
+    if(!sec)return;
+    var copyBtn=sec.querySelector('[data-a="copy"]'),
+        dlBtn=sec.querySelector('[data-a="dl"]'),
+        menu=sec.querySelector('[data-m="dl"]'),
+        block=sec.querySelector('.bp-raw');
+    function closeMenu(){menu.classList.remove("open");dlBtn.setAttribute("aria-expanded","false");}
+    copyBtn.addEventListener("click",function(){copyText(pretty,copyBtn);});
+    // the block itself is press-to-copy, but never steal a deliberate selection
+    block.addEventListener("click",function(){
+      var sel=window.getSelection&&window.getSelection().toString();
+      if(sel&&sel.length)return;
+      copyText(pretty,copyBtn);
+    });
+    dlBtn.addEventListener("click",function(e){
+      e.stopPropagation();
+      var open=!menu.classList.contains("open");
+      menu.classList.toggle("open",open);
+      dlBtn.setAttribute("aria-expanded",open?"true":"false");
+    });
+    menu.addEventListener("click",function(e){
+      var b=e.target.closest?e.target.closest("button[data-f]"):null;
+      if(!b)return;
+      var f=b.getAttribute("data-f");
+      if(f==="csv")download(toCSV(gmi),"csv","text/csv");
+      else if(f==="txt")download(pretty+"\n","txt","text/plain");
+      else download(pretty+"\n","json","application/json");
+      closeMenu();
+    });
+    document.addEventListener("click",function(e){if(!sec.contains(e.target))closeMenu();});
+    document.addEventListener("keydown",function(e){if(e.key==="Escape")closeMenu();});
   }
 
   window.Blueprint={
@@ -96,11 +208,21 @@
         '<div data-s="ledger">'+panel("Predicate Evidence Ledger","every measured surface, G1–G8")+'</div>'+
         '<div data-s="math">'+panel("Coverage Math","actual vs blueprint thresholds")+'</div>'+
         '<div data-s="telemetry">'+panel("Gödel-Choice Telemetry","last 25 self-referential choices (live)")+'</div>'+
-        '<div data-s="raw">'+panel("Raw Audit Payload","the verbatim /insight/godel/machine object")+'</div>';
+        '<div data-s="raw">'+panel("Raw Audit Payload","the verbatim /insight/godel/machine object",
+          '<button type="button" class="bp-btn" data-a="copy" title="press to copy the whole payload">copy</button>'+
+          '<button type="button" class="bp-btn arrow" data-a="dl" title="download as .txt, .csv or .json" '+
+            'aria-haspopup="true" aria-expanded="false">&#x2913;</button>'+
+          '<div class="bp-menu" data-m="dl" role="menu">'+
+            '<button type="button" data-f="txt"><b>.txt</b><span>pretty text</span></button>'+
+            '<button type="button" data-f="csv"><b>.csv</b><span>flat key/value</span></button>'+
+            '<button type="button" data-f="json"><b>.json</b><span>verbatim</span></button>'+
+          '</div>')+'</div>';
       root.querySelector('[data-s="ledger"] .bp-body').innerHTML=evidenceLedger(gmi||{});
       root.querySelector('[data-s="math"] .bp-body').innerHTML=coverageMath(gmi||{});
       var raw=root.querySelector('[data-s="raw"] .bp-body');
-      raw.innerHTML='<div class="bp-raw">'+esc(JSON.stringify(gmi||{},null,2))+'</div>';
+      var pretty=JSON.stringify(gmi||{},null,2);
+      raw.innerHTML='<div class="bp-raw" title="press to copy">'+esc(pretty)+'</div>';
+      wireExport(root.querySelector('[data-s="raw"]'), gmi||{}, pretty);
       telemetry(root, tok);
     }
   };
