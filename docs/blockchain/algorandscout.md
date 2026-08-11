@@ -151,21 +151,39 @@ Retry policy: **5xx retried 3× with jittered backoff; 4xx never — except 429*
 
 ## 6. mindX integration status — honest
 
-**Not yet wired.** Algorandscout is built, tested, and published; nothing in mindX calls it yet.
-What it unlocks, in the order worth doing:
+**Wired for one of four uses.** Item 1 below is live in production; items 2–4 are not built.
 
-1. **OVERSEER identity verification** — read `mindx.algo`'s account, rekey state, and holdings
-   independently of the login path that asserts them, the same way
+1. **OVERSEER identity verification — LIVE.**
+   [`agents/blockchain/algorand_verifier.py`](../../agents/blockchain/algorand_verifier.py) reads
+   `mindx.algo`'s account, **rekey state**, and holdings back through Algorandscout on loopback
+   `:8100` (systemd `algorandscout.service`) and compares them against what mindX assumes — the
+   same shape as
    [`get_transaction_info`](blockscout.md#81-verify-a-memory-anchor-without-trusting-our-own-logs)
-   independently verifies an Arc memory anchor.
+   independently verifying an Arc memory anchor.
+
+   This closes a **structural blind spot**, not a hypothetical one. The OVERSEER login verifies an
+   Ed25519 signature against the public key embedded in the address. Algorand lets an account's
+   signing authority be **rekeyed** to a different address; after a rekey the original key still
+   produces signatures that verify against the address, while on-chain authority has moved to
+   `auth-addr`. A signature check cannot see that. Only reading the account can.
+
+   Surfaced at `/insight/identity/algorand` (`?h=true` for plain text), emitted to the catalogue as
+   `identity.verified`, and re-checked hourly by `run_identity_monitor()`, which alerts on
+   **transitions only** — silent baseline, one alert per change.
+
+   **No fallback by design:** if Algorandscout is unreachable the verdict is `unavailable`. It is
+   never a pass. A verifier that degrades to "probably fine" when its evidence source is down is
+   not a verifier. The response also carries its own `not_verified` list: the chain shows
+   *authority*, never *custody*, and the endpoint says so rather than implying it proved more.
 2. **BONA FIDE reputation reads** — holdings and app state as the objective input to the
    privilege ladder, rather than self-reported governance state.
 3. **A second `/insight/*` chain surface** — an Algorand analogue of `/insight/storage/*`, so the
    diagnostics dashboard stops being EVM-shaped.
 4. **Parsec / AVM x402 rail settlement checks** — confirm an AVM-rail payment landed.
 
-Until those exist, this document describes a **capability, not a deployment**. mindX asserts
-nothing about Algorand state on the strength of it.
+Items 2–4 do not exist. mindX asserts nothing about BONA FIDE reputation, Algorand-side
+diagnostics, or AVM-rail settlement on the strength of this service — only the identity verdict
+in item 1, which is the one that runs.
 
 ---
 

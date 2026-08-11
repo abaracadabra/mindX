@@ -24,6 +24,7 @@ import os
 import re
 import time
 import asyncio
+import urllib.parse
 from pathlib import Path
 from datetime import datetime, timezone, timedelta, date
 from typing import Optional, Dict, Any, List
@@ -1052,6 +1053,17 @@ class AuthorAgent:
         # I sign what I publish; my identity is proven by key, not assigned. The
         # footer carries my public address + a signature over the body's sha256,
         # so any reader can recover the signer and confirm authorship.
+        # The editor's measurement travels with the article it judged, so the
+        # scorecard is verifiable from the post itself rather than only the log.
+        if editor_verdict:
+            post_meta.setdefault("_mindx_editor_verdict", editor_verdict.get("verdict", ""))
+            post_meta.setdefault("_mindx_editor_clarity", str(editor_verdict.get("clarity", "")))
+            post_meta.setdefault("_mindx_editor_genius", str(editor_verdict.get("genius", "")))
+            post_meta.setdefault("_mindx_editor_style", str(editor_verdict.get("style", "")))
+            post_meta.setdefault("_mindx_editor_wisdom", str(editor_verdict.get("wisdom", "")))
+            post_meta.setdefault("_mindx_editor_ref_density",
+                                 str(editor_verdict.get("reference_density", "")))
+
         if append_identity_footer:
             footer, signer_addr = self._identity_footer(content_html, slug=slug)
             content_html = content_html.rstrip() + footer
@@ -1065,6 +1077,14 @@ class AuthorAgent:
         # artist.agent CREATES an original cypherpunk2048 poster and/or CHOOSES
         # a /gfx asset, returns a featured-image id, an og:image url, and an
         # optional inline hero <figure> we prepend to the body.
+        #
+        # Unset now means "both" rather than the legacy auto-pick, so artist.agent
+        # is employed on every publish: it renders an original poster and only
+        # falls back to choosing an existing /gfx asset if creation fails. The
+        # house rubric asks for an image on every article; this is what supplies
+        # it. MINDX_PUBLISH_GRAPHICS overrides the default; "none" opts out.
+        if graphics_mode is None:
+            graphics_mode = os.getenv("MINDX_PUBLISH_GRAPHICS", "both")
         if featured_media is None and graphics_mode and graphics_mode.lower() != "none":
             featured_media, og_image_url, hero_html = await self._compose_article_graphics(
                 title=title.strip(),
@@ -1149,6 +1169,10 @@ class AuthorAgent:
                 confirmed = await self._confirm_publication(data.get("post_id"), status)
                 if confirmed is not None:
                     data["confirmed"] = confirmed
+                # Keep the publication map current on every publish, so the very
+                # next essay can link this one. Cheap and offline — a full
+                # catalogue refresh still runs during editorial grounding.
+                self._note_publication_in_map(data, title=title, excerpt=excerpt, status=status)
                 return data
             except (httpx.TransportError, httpx.HTTPError) as e:
                 last_err = e
@@ -1160,6 +1184,40 @@ class AuthorAgent:
                 break
         logger.warning(f"AuthorAgent.publish_to_rage: giving up — {last_err!r} (is the wordpress-agent service running?)")
         return None
+
+    def _note_publication_in_map(
+        self,
+        data: Dict[str, Any],
+        *,
+        title: str,
+        excerpt: Optional[str],
+        status: str,
+    ) -> None:
+        """Fold a just-published post into the rage.pythai.net publication map.
+
+        Best-effort and never raises: the post is already live, so a map write
+        failure must not turn a successful publish into an error. Drafts are
+        skipped by ``upsert`` — they are not links a reader can follow.
+        """
+        try:
+            from agents.author_publications import RagePublicationMap
+            pm = RagePublicationMap.load()
+            changed = pm.upsert(
+                post_id=data.get("post_id"),
+                url=str(data.get("url") or ""),
+                title=title,
+                description=str(excerpt or ""),
+                slug=str(data.get("slug") or ""),
+                date_gmt=str(data.get("date_gmt") or ""),
+                status=str(data.get("status") or status),
+            )
+            if changed:
+                pm.save()
+                logger.info(
+                    f"AuthorAgent: publication map updated → {pm.data.get('count')} entries"
+                )
+        except Exception as e:  # pragma: no cover - advisory only
+            logger.warning(f"AuthorAgent._note_publication_in_map: {e}")
 
     async def _confirm_publication(
         self, post_id: Optional[int], expected_status: str
@@ -3134,8 +3192,24 @@ class AuthorAgent:
         the number of docs indexed. Defensive — never raises."""
         try:
             DOCS_DIR.mkdir(parents=True, exist_ok=True)
-            docs = [p for p in sorted(DOCS_DIR.glob("*.md"), key=lambda p: p.name.lower())
-                    if p.name != DOC_INDEX_PATH.name]
+            try:
+                from utils.reference_corpus import is_private_doc as _is_private_doc
+            except ImportError:  # pragma: no cover - corpus module optional
+                def _is_private_doc(_p: str) -> bool:
+                    return False
+
+            # Walk the whole tree, not just the top level: this file calls itself
+            # the exhaustive catalogue, and a one-level glob silently omitted every
+            # public subtree (rage/, services/, agents/ …). Gated reference subtrees
+            # are excluded by prefix — they are ingest-only and must never be listed
+            # on a public surface.
+            docs = sorted(
+                (p for p in DOCS_DIR.rglob("*.md")
+                 if p.is_file()
+                 and p.name != DOC_INDEX_PATH.name
+                 and not _is_private_doc(p.relative_to(DOCS_DIR).as_posix())),
+                key=lambda p: p.relative_to(DOCS_DIR).as_posix().lower(),
+            )
             now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
             # Bucket, preserving category order; "Other" last.
@@ -3177,21 +3251,23 @@ class AuthorAgent:
                     except Exception:
                         mtime = "—"
                     safe_title = title.replace("|", "/")[:90]
-                    lines.append(f"| [{p.name}]({p.name}) | {safe_title} | {mtime} |")
+                    rel = p.relative_to(DOCS_DIR).as_posix()
+                    # Percent-encode the destination: many doc filenames carry
+                    # spaces, commas and parentheses, and a bare parenthesis
+                    # terminates a markdown link early — producing a row that
+                    # renders as text and silently stops being a link.
+                    href = urllib.parse.quote(rel)
+                    lines.append(f"| [{rel}]({href}) | {safe_title} | {mtime} |")
 
+            # Gated reference subtrees stay off the public catalogue.
             subdirs = [d.name for d in sorted(DOCS_DIR.iterdir())
-                       if d.is_dir() and not d.name.startswith(".")]
-            try:
-                from utils.reference_corpus import is_private_doc as _is_private_doc
-                # Gated reference subtrees stay off the public catalogue.
-                subdirs = [s for s in subdirs if not _is_private_doc(s + "/")]
-            except ImportError:
-                pass
+                       if d.is_dir() and not d.name.startswith(".")
+                       and not _is_private_doc(d.name + "/")]
             if subdirs:
                 lines += ["", "## Subtrees", "",
                           ", ".join(f"`{s}/`" for s in subdirs)
-                          + " — browse directly; lunar editions & dailies live under "
-                            "`publications/`."]
+                          + " — indexed above by relative path; lunar editions & "
+                            "dailies live under `publications/`."]
             DOC_INDEX_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
             return len(docs)
         except Exception as e:  # pragma: no cover - defensive

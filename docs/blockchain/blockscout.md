@@ -363,8 +363,11 @@ OVERSEER identity (`mindx.algo`) and BONA FIDE reputation live: those reads go t
 > algod + indexer directly and preserves Algorand's own model — ASA clawback roles,
 > close-remainder, inner transactions, finality — declaring at `/api/v2/capabilities` every
 > place a generic explorer model does not apply. Its REST layout follows common explorer
-> conventions so tooling interoperates, which is compatibility, not lineage. Capability only:
-> nothing in mindX calls it yet.
+> conventions so tooling interoperates, which is compatibility, not lineage. **Wired since
+> 2026-08-08** for one use: [`algorand_verifier`](../../agents/blockchain/algorand_verifier.py)
+> reads mindX's own OVERSEER account back through it hourly to catch a **rekey** — which the
+> Ed25519 signature check at login is structurally blind to — and publishes the verdict at
+> `/insight/identity/algorand`.
 
 ---
 

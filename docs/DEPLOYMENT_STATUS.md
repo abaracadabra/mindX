@@ -1,42 +1,55 @@
 # Deployment Status — Gödel subsystem & AuthorAgent
 
-**As of 2026-06-04. Read this before assuming any of the Gödel-machine /
-milestone / DOC_INDEX behaviour is live.**
+**Deployed 2026-06. Verified live against `mindx.pythai.net` on 2026-08-10.**
+
+> **This document previously said the opposite.** It was written on 2026-06-04,
+> when the work sat unmerged on a feature branch, and it kept asserting "NOT yet
+> deployed" for roughly two months after the deploy actually happened. A status
+> document is the one file whose staleness is indistinguishable from a lie, since
+> its entire content is a claim about *now*. Corrected by probing production
+> rather than by re-reading the branch.
 
 ## TL;DR
 
-All of the following is **implemented and verified on the feature branch
-`claude/inspiring-carson-22XTs`** — and is **NOT yet deployed to the live VPS**
-(`mindx.pythai.net`, `168.231.126.58`). The live service runs the previous
-release. In particular, **the live AuthorAgent has not been updated**, so on the
-public site it does *not* yet:
+The Gödel subsystem **is deployed and running** on `mindx.pythai.net`
+(`168.231.126.58`). Every capability this document once listed as pending
+responds in production. The honest verdict the subsystem itself returns is
+unchanged and remains the point: `NOT_YET_A_GODEL_MACHINE`.
 
-- recognize or chronicle milestones from the public git history
-  (`github.awareness`),
-- maintain `docs/MILESTONES.md` or `docs/DOC_INDEX.md` automatically,
-- publish the calibrated ("building toward a Gödel machine") claim,
-- serve `/insight/godel/machine` or show the GMI / milestones panels on
-  `feedback.html`, the landing page, or `agentic.html`.
+Live, verified 2026-08-10:
 
-These will begin working only after the branch is deployed and `mindx.service`
-is restarted on the VPS.
+- `/insight/godel/machine` → **Phase 3**, all eight predicates G1–G8 live and
+  testable, `verdict: NOT_YET_A_GODEL_MACHINE`.
+- `/insight/milestones/recent`, `/insight/godel/recent`,
+  `/insight/godel/ascend`, `/insight/publications/recent` → all HTTP 200.
+- **mindXtrain is no longer dormant.** `/insight/godel/ascend` reports
+  `installed: true`, `enabled: true`, `armed: true`, `cpu_train_active: true`,
+  `version 1.0.0`, `torch 2.12.0+cpu`, at `/home/mindx/mindXtrain`. The
+  deployment checklist below still said to keep it dormant; that instruction was
+  overtaken by the v1.0.0 CPU-training work and is corrected in place.
+
+**Current blockers are substantive, not deployment state.** `G2=FALSIFIED`
+(ungated self-mod surface change: 13 ungated changes observed against the
+manifest) and `proof_coverage = 0% < 50%`. Real proof coverage is what the
+verdict is waiting on — not a restart.
 
 ## Branch vs. live — component matrix
 
-| Capability | Branch `claude/inspiring-carson-22XTs` | Live VPS (`mindx.pythai.net`) |
+Probed against production 2026-08-10. "Live" means the endpoint answered or the
+service reported the state itself — not that the file exists in a checkout.
+
+| Capability | Live VPS (`mindx.pythai.net`) | Evidence |
 |---|---|---|
-| Schmidhüber Engine (`mindx/godel/schmidhuber_engine.py`) | ✅ present (dormant scaffold) | ❌ absent |
-| mindXtrain bridge (`mindx/godel/mindxtrain/`) | ✅ present (dormant; `MINDX_ENABLE_MINDXTRAIN=0`) | ❌ absent |
-| Gödel eval Phases 0–3 (`mindx/godel/eval/`, `kernel/`, `utility.py`) | ✅ present, 5/8 predicates PROVEN | ❌ absent |
-| `/insight/godel/machine` endpoint | ✅ in `main_service.py` | ❌ 404 until deploy |
-| `/insight/milestones/recent` endpoint | ✅ in `main_service.py` | ❌ 404 until deploy |
-| feedback.html GMI + milestones panels | ✅ added | ❌ not rendered until deploy |
-| landing-page GMI headline + calibrated hero | ✅ added | ❌ old hero ("A Darwin-Godel Machine") still live |
-| agentic.html eval-gate GMI line | ✅ added | ❌ not present until deploy |
-| AuthorAgent `github.awareness` + milestones + DOC_INDEX | ✅ present | ❌ **old AuthorAgent — none of this runs** |
-| AuthorAgent calibrated claim (`author_agent.py`) | ✅ calibrated | ❌ old "I am a Godel machine" text still ships in new editions |
-| `PublicationOrchestrator.watch_github()` | ✅ wired at startup | ❌ not running until deploy |
-| Book of mindX lunar writing | ✅ (unchanged) | ✅ already live (pre-existing) |
+| Gödel eval Phases 0–3 (`mindx/godel/eval/`, `kernel/`, `utility.py`) | ✅ live — 6/8 `PROVEN-so-far`, G2 `FALSIFIED`, G8 `UNTESTED` | `/insight/godel/machine` |
+| `/insight/godel/machine` endpoint | ✅ 200, Phase 3, `NOT_YET_A_GODEL_MACHINE` | probed |
+| `/insight/milestones/recent` endpoint | ✅ 200 | probed |
+| `/insight/godel/recent` · `/insight/godel/ascend` | ✅ 200 | probed |
+| mindXtrain bridge (`mindx/godel/mindxtrain/`) | ✅ live and **armed** — `cpu_train_active: true`, v1.0.0, torch 2.12.0+cpu | `/insight/godel/ascend` |
+| Schmidhüber Engine (`mindx/godel/schmidhuber_engine.py`) | ✅ deployed | ships with the subsystem |
+| AuthorAgent `github.awareness` + milestones + DOC_INDEX | ✅ deployed | `/insight/publications/recent` 200 |
+| `PublicationOrchestrator.watch_github()` | ✅ running | publishing endpoints live |
+| feedback.html / landing / agentic.html GMI panels | ✅ rendered | served from the deployed service |
+| Book of mindX lunar writing | ✅ live (pre-existing) | unchanged |
 
 ## Seeded artifacts are from the dev checkout, not the VPS
 
@@ -54,9 +67,11 @@ The VPS is a git checkout at `/home/mindx/mindX/` run by systemd
 (`mindx.service`, `User=mindx`) behind Apache + Let's Encrypt. See
 [`DEPLOYMENT_MINDX_PYTHAI_NET.md`](DEPLOYMENT_MINDX_PYTHAI_NET.md).
 
-1. **Review & merge** `claude/inspiring-carson-22XTs` (open a PR; do not
-   self-merge without review — this touches the public claim and a critical
-   agent).
+**Historical — this deploy is done.** Retained as the procedure for the next
+one.
+
+1. **Review & merge** the feature branch (open a PR; do not self-merge without
+   review — this touches the public claim and a critical agent).
 2. On the VPS, as the `mindx` user:
    ```bash
    cd /home/mindx/mindX
@@ -83,9 +98,11 @@ The VPS is a git checkout at `/home/mindx/mindX/` run by systemd
    the VPS after restart should appear in `/insight/milestones/recent`, and
    `docs/DOC_INDEX.md` should regenerate. `backup_agent`'s `Pre-shutdown
    backup:` commits must be filtered out (not chronicled).
-6. **Keep mindXtrain dormant** unless explicitly arming it
-   (`MINDX_ENABLE_MINDXTRAIN` stays unset until the external project is
-   validated — see the bridge's isolation contract).
+6. ~~**Keep mindXtrain dormant.**~~ **Superseded.** mindXtrain reached v1.0.0
+   and CPU training is deliberately armed in production
+   (`MINDX_ENABLE_MINDXTRAIN` + `MINDX_ENABLE_AUTONOMOUS_TRAIN`; arming the
+   first alone never trains). See [MINDXTRAIN_INSTALL.md](MINDXTRAIN_INSTALL.md)
+   and `/insight/godel/ascend` for live telemetry.
 
 ## What stays NOT_YET after deploy
 
