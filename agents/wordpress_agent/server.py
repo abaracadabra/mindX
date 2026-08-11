@@ -11,6 +11,7 @@ as a *dev-only* fallback (vault unavailable).
 from __future__ import annotations
 
 import logging
+import re
 import tempfile
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -216,10 +217,18 @@ async def upload_media(
         settings = _resolve_settings()
     except Exception as exc:
         raise HTTPException(status_code=503, detail=f"no credentials available: {exc}") from exc
-    suffix = Path(file.filename or "upload.bin").suffix or ".bin"
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp_path = Path(tmp.name)
-        tmp.write(await file.read())
+    # Preserve the caller's filename. WordPress names the uploaded attachment
+    # after the file it receives, and the temp path was leaking straight through
+    # — every image mindX has published is called tmpXXXXXXXX.jpeg on the CDN.
+    # An image filename is a real search signal and a permanent one; a slug is
+    # free to set and impossible to change later without breaking the URL.
+    original = Path(file.filename or "upload.bin").name
+    suffix = Path(original).suffix or ".bin"
+    stem = re.sub(r"[^a-zA-Z0-9._-]+", "-", Path(original).stem).strip("-.") or "image"
+    safe_name = f"{stem[:96]}{suffix}"
+    tmp_dir = Path(tempfile.mkdtemp(prefix="mindx-media-"))
+    tmp_path = tmp_dir / safe_name
+    tmp_path.write_bytes(await file.read())
     try:
         async with WordpressAgent(settings) as agent:
             result = await agent.upload_media(
@@ -232,6 +241,10 @@ async def upload_media(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     finally:
         tmp_path.unlink(missing_ok=True)
+        try:
+            tmp_dir.rmdir()
+        except OSError:
+            pass
     return MediaResponse(
         media_id=result.media_id,
         url=result.url,
