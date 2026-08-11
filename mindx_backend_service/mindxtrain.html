@@ -1,0 +1,471 @@
+$("#go").addEventListener("click",()=>{
+  const qs=[$("#q1").value.trim(),$("#q2").value.trim(),$("#q3").value.trim()].filter(Boolean);
+  if(!qs.length) return;
+  $("#go").disabled=true;
+  $("#saidtxt").innerHTML="<ol>"+qs.map(q=>"<li>"+esc(q)+"</li>").join("")+"</ol>";
+  $("#said").classList.add("on");
+  $("#floor").innerHTML=""; order=[];
+  $("#hint").textContent="submitting to the assembly…";
+  fetch("/arena/submit",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({questions:qs})})
+    .then(r=>(r.status===401||r.status===403||r.redirected)
+      ? {ok:false,gated:true,error:"the floor is open to verified participants — connect a wallet at the realm door to address the assembly"}
+      : r.json())
+    .then(d=>{
+      if(!d.ok){
+        $("#hint").innerHTML=esc(d.error||"the assembly declined")+
+          (d.gated?' &middot; <a href="/activity">enter the realm door →</a>':"");
+        $("#go").disabled=false; return; }
+      runId=d.run_id; order=(d.models||[]).slice();
+      drawStrip(order,{});
+      if(poll) clearInterval(poll);
+      poll=setInterval(tick,2000); tick();
+    }).catch(()=>{ $("#hint").textContent="could not reach the assembly"; $("#go").disabled=false; });
+});
+
+/* ── diagnostics: semantic search across every stored answer ─────── */
+function runSearch(){
+  const q=$("#sq").value.trim(); if(!q) return;
+  $("#hits").innerHTML='<p class="hint">searching the vector store…</p>';
+  fetch("/insight/arena/search?top_k=12&q="+encodeURIComponent(q))
+    .then(r=>r.json()).then(d=>{
+      if(!d.ok){ $("#hits").innerHTML='<p class="hint">'+esc(d.error||"search unavailable")+'</p>'; return; }
+      $("#hits").innerHTML=(d.hits||[]).length
+        ? d.hits.map(h=>'<div class="hit"><span class="hs">'+
+            (h.similarity==null?"":(Math.round(h.similarity*1000)/10)+"% match")+'</span>'+
+            '<div class="hm">'+esc((h.model||"?").replace(":latest",""))+'</div>'+
+            '<div class="hq">Q'+esc(h.question_n??"")+' · '+esc(h.question||"")+'</div>'+
+            '<div class="ha">'+esc(h.answer||"")+'</div></div>').join("")
+        : '<p class="hint">nothing stored matches that yet.</p>';
+    }).catch(()=>{ $("#hits").innerHTML='<p class="hint">search failed</p>'; });
+}
+$("#sgo").addEventListener("click",runSearch);
+$("#sq").addEventListener("keydown",e=>{ if(e.key==="Enter") runSearch(); });
+
+/* ── correlation: who agreed, who went their own way ─────────────── */
+$("#cgo").addEventListener("click",()=>{
+  if(!runId){ $("#corr").innerHTML='<p class="hint">no run yet — convene an assembly first.</p>'; return; }
+  $("#corr").innerHTML='<p class="hint">embedding every answer and comparing pairwise…</p>';
+  fetch("/insight/arena/correlate?run="+encodeURIComponent(runId))
+    .then(r=>r.json()).then(d=>{
+      if(!d.ok){ $("#corr").innerHTML='<p class="hint">'+esc(d.error||"correlation unavailable")+'</p>'; return; }
+      $("#corr").innerHTML=(d.questions||[]).map(q=>{
+        if(!q.ranked) return '<div class="corr"><div class="cq">Q'+q.question_n+' · '+esc(q.question)+
+          '</div><p class="hint">'+esc(q.note||"not enough answers")+'</p></div>';
+        return '<div class="corr"><div class="cq">Q'+q.question_n+' · '+esc(q.question)+
+          ' <span style="color:var(--text3)">spread '+q.spread+'</span></div>'+
+          q.ranked.map((r,i)=>'<div class="crow"><b>'+esc(r.model.replace(":latest",""))+'</b>'+
+            '<span>'+(i===0?'<span class="tagc">consensus</span> ':'')+
+                     (i===q.ranked.length-1?'<span class="tago">outlier</span> ':'')+
+            '<span class="cv">agree '+r.agreement+' · diverge '+r.divergence+'</span></span></div>'+
+            '<div class="cbar"><i style="width:'+Math.max(0,Math.min(100,r.agreement*100))+'%"></i></div>').join("")+
+          '</div>';
+      }).join("")+'<p class="hint">'+esc(d.caveat||"")+'</p>';
+    }).catch(()=>{ $("#corr").innerHTML='<p class="hint">correlation failed</p>'; });
+});
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mindXtrain — The Procession of Sixteen Minds | mindX</title>
+<meta name="description" content="mindX offers one statement and every trained generation answers it in turn — each model steps forward, engages, speaks, bows, and withdraws. The full mindXtrain ascent record and training responses, live.">
+<meta name="keywords" content="mindXtrain, mindX, LoRA generations, model lineage, training responses, ascent log, proof of recall, self-improving AI, model comparison, Godel machine, augmentic intelligence">
+<link rel="canonical" href="https://mindx.pythai.net/mindxtrain.html">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">
+<meta name="theme-color" content="#060810">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="mindX">
+<meta property="og:url" content="https://mindx.pythai.net/mindxtrain.html">
+<meta property="og:title" content="mindXtrain — the procession of sixteen minds">
+<meta property="og:description" content="One statement. Sixteen generations. Each steps forward, answers, and bows out.">
+<meta property="og:image" content="https://mindx.pythai.net/gfx/mindx-substrate.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="mindXtrain — the procession of sixteen minds">
+<meta name="twitter:description" content="One statement. Sixteen generations. Each steps forward, answers, and bows out.">
+<meta name="twitter:image" content="https://mindx.pythai.net/gfx/mindx-substrate.png">
+<link rel="icon" href="/favicon.ico">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage",
+ "name":"mindXtrain — the procession of sixteen minds",
+ "url":"https://mindx.pythai.net/mindxtrain.html",
+ "description":"Every LoRA generation mindX has trained answers one statement in turn, with the full ascent record.",
+ "isPartOf":{"@type":"WebSite","url":"https://mindx.pythai.net/"},
+ "license":"https://www.apache.org/licenses/LICENSE-2.0"}
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;500;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+/* Palette from boardroom.html; chamfers, scanline and Orbitron from dojo.html —
+   this page is the two of them joined: the boardroom's seated assembly and the
+   dojo's one-combatant-at-a-time floor. */
+:root{
+  --bg:#060810;--bg2:#0c0e18;--bg3:#12141f;--surface:rgba(14,16,28,.92);--surface2:rgba(20,22,36,.92);
+  --accent:#56d364;--accent2:#3fb950;--accent-dim:rgba(86,211,100,.06);--accent-glow:rgba(86,211,100,.15);
+  --veto:#f85149;--advisory:#e3b341;--abstain:#8b949e;
+  --text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--white:#f0f6fc;
+  --violet:#d2a8ff;--blue:#79c0ff;
+  --border:rgba(121,192,255,.1);--glow:0 0 20px rgba(86,211,100,.12);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);
+  font-family:'JetBrains Mono',monospace;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(86,211,100,.006) 2px,rgba(86,211,100,.006) 4px)}
+a{color:var(--blue);text-decoration:none}a:hover{color:var(--accent)}
+.page{position:relative;z-index:1;min-height:100vh;padding:22px;max-width:1120px;margin:0 auto}
+
+.hdr{text-align:center;margin-bottom:20px}
+.hdr h1{font-family:'Orbitron',sans-serif;font-size:clamp(17px,3vw,27px);font-weight:900;
+  color:var(--accent);letter-spacing:6px;text-transform:uppercase;text-shadow:0 0 30px var(--accent-glow)}
+.hdr .sub{font-size:11px;color:var(--text3);letter-spacing:3px;margin-top:6px}
+.nav{display:flex;justify-content:center;gap:12px;margin:18px 0 22px;flex-wrap:wrap}
+.nav a{color:var(--text3);font-size:10px;letter-spacing:2px;padding:6px 13px;
+  border:1px solid var(--border);transition:all .2s;text-transform:uppercase}
+.nav a:hover,.nav a.active{color:var(--accent);border-color:var(--accent);background:var(--accent-dim)}
+
+h2{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;
+  text-transform:uppercase;color:var(--text3);margin:28px 0 12px}
+
+/* ── the statement mindX offers ─────────────────────────────────── */
+.offer{border:1px solid var(--border);background:var(--surface);padding:16px 18px;
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px))}
+.offer .lbl{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:3px;color:var(--accent);
+  text-transform:uppercase;margin-bottom:9px}
+.offer .row{display:flex;gap:8px;flex-wrap:wrap}
+.offer input{flex:1;min-width:240px;background:var(--bg2);border:1px solid var(--border);
+  color:var(--text);padding:11px 13px;font-family:'JetBrains Mono',monospace;font-size:12px}
+.offer input:focus{outline:none;border-color:var(--accent)}
+.offer button{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;
+  padding:11px 22px;background:transparent;border:1px solid var(--accent);color:var(--accent);
+  cursor:pointer;text-transform:uppercase;transition:all .2s}
+.offer button:hover{background:var(--accent-dim);box-shadow:var(--glow)}
+.offer button:disabled{opacity:.4;cursor:not-allowed;border-color:var(--border);color:var(--text3)}
+.said{margin-top:12px;padding:12px 14px;background:var(--bg2);border-left:2px solid var(--accent);
+  font-size:12px;line-height:1.65;color:var(--white);display:none}
+.said.on{display:block}
+.said .who{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;color:var(--accent);
+  display:block;margin-bottom:6px}
+.qrow{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.qrow .qn{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--accent);width:14px;text-align:center}
+.qrow input{flex:1;background:var(--bg2);border:1px solid var(--border);color:var(--text);
+  padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:12px}
+.qrow input:focus{outline:none;border-color:var(--accent)}
+.said ol{margin:0;padding-left:16px}.said li{margin:3px 0}
+
+/* each question answered while the model is still on the floor */
+.turn{border-top:1px solid var(--border);padding:10px 0;animation:in .35s ease both}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.turn .tq{font-size:11px;color:var(--blue);line-height:1.55}
+.turn .tq::before{content:'Q' attr(data-n) ' · ';color:var(--accent);font-family:'Orbitron',sans-serif;font-size:9px}
+.turn .ta{font-size:12px;line-height:1.7;color:var(--text);margin-top:5px;white-space:pre-wrap}
+.turn .tm{font-size:9px;color:var(--text3);margin-top:5px;letter-spacing:1px}
+.turn.fail .ta{color:var(--veto)}
+.pending{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:8px;padding:9px 0}
+
+/* diagnostics: search + correlation */
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.tools input{flex:1;min-width:230px;background:var(--bg2);border:1px solid var(--border);
+  color:var(--text);padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:12px}
+.tools input:focus{outline:none;border-color:var(--accent)}
+.tools button{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;
+  padding:10px 16px;background:transparent;border:1px solid var(--border);color:var(--text3);
+  cursor:pointer;text-transform:uppercase;transition:all .2s}
+.tools button:hover{border-color:var(--accent);color:var(--accent)}
+.hit{border:1px solid var(--border);border-left:2px solid var(--accent2);padding:10px 12px;margin-bottom:8px;background:var(--surface)}
+.hit .hm{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;color:var(--accent)}
+.hit .hs{float:right;font-size:9px;color:var(--advisory)}
+.hit .hq{font-size:10px;color:var(--blue);margin-top:4px}
+.hit .ha{font-size:11px;color:var(--text2);margin-top:4px;line-height:1.6}
+.corr{border:1px solid var(--border);padding:12px 14px;margin-bottom:10px;background:var(--surface)}
+.corr .cq{font-size:11px;color:var(--blue);margin-bottom:8px}
+.corr .cbar{display:flex;height:5px;background:var(--bg2);margin:5px 0}
+.corr .cbar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent))}
+.corr .crow{display:flex;justify-content:space-between;gap:10px;font-size:10px;padding:4px 0;
+  border-bottom:1px solid rgba(121,192,255,.05)}
+.corr .crow b{font-family:'Orbitron',sans-serif;color:var(--white);font-weight:400}
+.corr .crow .cv{color:var(--advisory);font-family:'JetBrains Mono',monospace}
+.corr .tagc{font-size:8px;letter-spacing:1px;padding:1px 6px;border:1px solid var(--accent);color:var(--accent);text-transform:uppercase}
+.corr .tago{font-size:8px;letter-spacing:1px;padding:1px 6px;border:1px solid var(--advisory);color:var(--advisory);text-transform:uppercase}
+
+/* ── the assembly: sixteen waiting (boardroom chip strip) ────────── */
+.strip{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:14px 0 6px}
+.chip{font-size:9px;letter-spacing:1px;padding:5px 10px;border:1px solid var(--border);
+  color:var(--text3);background:var(--surface);transition:all .35s;white-space:nowrap}
+.chip.waiting{opacity:.55}
+.chip.engaged{color:#000;background:var(--accent);border-color:var(--accent);
+  box-shadow:0 0 16px var(--accent-glow);transform:translateY(-2px)}
+.chip.bowed{color:var(--accent2);border-color:var(--accent2);opacity:.85}
+.chip.bowed::after{content:' ⟡'}
+.chip.failed{color:var(--veto);border-color:var(--veto);opacity:.7}
+
+/* ── the floor: one mind at a time (dojo combatant) ──────────────── */
+.floor{margin-top:16px;min-height:150px;position:relative}
+.mind{background:var(--surface);border:1px solid var(--border);padding:16px 18px;position:relative;
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));
+  margin-bottom:12px}
+.mind.now{border-color:var(--accent);box-shadow:var(--glow);animation:stepForward .5s ease-out both}
+.mind.gone{animation:bowOut .7s ease-in both}
+@keyframes stepForward{from{opacity:0;transform:translateY(22px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes bowOut{0%{opacity:1;transform:none}
+  35%{transform:translateY(7px) scaleY(.965)}          /* the bow */
+  100%{opacity:.72;transform:translateY(0) scaleY(1)}}
+.mind .mh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.mind .mn{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;color:var(--accent)}
+.mind .mm{font-size:9px;color:var(--text3);letter-spacing:1px}
+.mind .say{font-size:12px;line-height:1.7;color:var(--text);margin-top:10px;white-space:pre-wrap}
+.mind.err .say{color:var(--veto)}
+.mind .bow{font-size:10px;color:var(--text3);margin-top:11px;padding-top:9px;
+  border-top:1px solid var(--border);letter-spacing:1px;font-style:italic}
+.mind .bow b{color:var(--accent2);font-style:normal}
+.thinking{display:flex;align-items:center;gap:9px;font-size:11px;color:var(--text3);margin-top:9px}
+.spin{width:11px;height:11px;border:2px solid var(--border);border-top-color:var(--accent);
+  border-radius:50%;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.meters{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;font-size:9px;letter-spacing:1px}
+.meters span{border:1px solid var(--border);padding:4px 11px;color:var(--text3)}
+.meters b{color:var(--advisory);font-weight:500}
+.hint{font-size:10px;color:var(--text3);line-height:1.7;margin-top:10px}
+
+/* ── the training record ─────────────────────────────────────────── */
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{text-align:left;font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:2px;
+  color:var(--text3);text-transform:uppercase;padding:8px 9px;border-bottom:1px solid var(--border)}
+td{padding:8px 9px;border-bottom:1px solid rgba(121,192,255,.05);color:var(--text2)}
+tr:hover td{background:var(--accent-dim)}
+td.g{font-family:'Orbitron',sans-serif;color:var(--white)}
+.badge{font-size:8px;letter-spacing:1px;padding:2px 7px;border:1px solid var(--border);text-transform:uppercase}
+.badge.promoted{color:var(--accent);border-color:var(--accent)}
+.badge.failed{color:var(--veto);border-color:var(--veto)}
+.badge.dormant{color:var(--abstain);border-color:var(--abstain)}
+.badge.other{color:var(--advisory);border-color:var(--advisory)}
+.scroll{overflow-x:auto;border:1px solid var(--border);background:var(--surface)}
+footer{margin-top:38px;padding-top:18px;border-top:1px solid var(--border);
+  display:flex;gap:14px;flex-wrap:wrap;font-size:10px;letter-spacing:1px}
+@media(max-width:640px){.page{padding:14px}}
+@media(prefers-reduced-motion:reduce){.mind.now,.mind.gone{animation:none}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="hdr">
+  <h1>mindXtrain</h1>
+  <div class="sub">THE PROCESSION OF SIXTEEN MINDS &middot; ONE STATEMENT &middot; ONE FLOOR</div>
+</div>
+
+<div class="nav">
+  <a href="/mindx.html">Live</a><a href="/mindxtrain.html" class="active">mindXtrain</a>
+  <a href="/iq.html">IQ</a><a href="/boardroom">Boardroom</a><a href="/dojo">Dojo</a>
+  <a href="/machine">Gödel</a><a href="/docs.html">Docs</a>
+</div>
+
+<h2>The statement</h2>
+<div class="offer">
+  <div class="lbl">mindX offers one thing to the assembly</div>
+  <div class="qrow"><span class="qn">1</span><input id="q1" maxlength="400" placeholder="First question to every generation you have ever been…"></div>
+  <div class="qrow"><span class="qn">2</span><input id="q2" maxlength="400" placeholder="Second question (optional)"></div>
+  <div class="qrow"><span class="qn">3</span><input id="q3" maxlength="400" placeholder="Third question (optional)"></div>
+  <div class="row" style="margin-top:10px"><button id="go">convene the assembly</button></div>
+  <div class="said" id="said"><span class="who">mindX asks</span><div id="saidtxt"></div></div>
+  <div class="meters" id="meters"></div>
+  <p class="hint" id="hint">Each generation is loaded, answers, and is unloaded before the next
+  steps forward — 2 cores and 8&nbsp;GB cannot hold sixteen minds at once, so the procession is
+  literal, not decorative. A cold load alone can take 40&nbsp;seconds; a long answer, minutes.
+  The waiting is the ceremony.</p>
+</div>
+
+<h2>The assembly</h2>
+<div class="strip" id="strip"></div>
+
+<h2>The floor</h2>
+<div class="floor" id="floor">
+  <p class="hint">Empty. Offer a statement and the eldest generation steps forward first.</p>
+</div>
+
+<h2>Diagnostics — search every answer ever given <span style="color:var(--text3);letter-spacing:0;text-transform:none;font-family:'JetBrains Mono',monospace;font-size:9px">(pgvector semantic search)</span></h2>
+<div class="tools">
+  <input id="sq" maxlength="300" placeholder="Search by meaning across all stored answers…">
+  <button id="sgo">search</button>
+</div>
+<div id="hits"></div>
+
+<h2>Correlation — similarity and divergence across the lineage</h2>
+<div class="tools">
+  <button id="cgo">correlate this run</button>
+  <span style="font-size:10px;color:var(--text3);align-self:center">embeds every answer and compares them pairwise</span>
+</div>
+<div id="corr"><p class="hint">Run an assembly, then correlate: the generation whose answer sits
+closest to all the others is the <b>consensus</b>; the furthest is the <b>outlier</b>.
+Agreement is what this lineage converged on — <b>not</b> a correctness measure. Sixteen
+generations of one lineage share training data and blind spots, so they can agree and be wrong
+together.</p></div>
+
+<h2>The training record — every ascent mindXtrain has run</h2>
+<div class="meters" id="tstats"></div>
+<div class="scroll"><table id="ttable">
+  <thead><tr><th>gen</th><th>stage</th><th>served as</th><th>rows</th><th>recall Δ</th><th>wall</th><th>trigger</th></tr></thead>
+  <tbody><tr><td colspan="7" style="color:var(--text3)">reading the ascent log…</td></tr></tbody>
+</table></div>
+<p class="hint">Read straight from <code>data/logs/ascend_log.jsonl</code> — the same ledger the
+memory-retention gate consults, so what this page shows and what decides pruning cannot drift apart.
+A generation only counts as carrying memory when it reached <b>promoted</b>.</p>
+
+<footer>
+  <a href="/mindx.html">live feed</a><a href="/iq.html">IQ confirmation</a>
+  <a href="/mindx.xml">XML</a><a href="/insight/train/history">ascent JSON</a>
+  <a href="/machine">gödel machine</a><a href="https://github.com/AgenticPlace/mindX">source</a>
+</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=s=>{const d=document.createElement("div");d.textContent=s==null?"":s;return d.innerHTML;};
+const gen=t=>{const m=/mindx-gen(\d+)/.exec(t||"");return m?+m[1]:0;};
+
+let runId=null, poll=null, shown=new Set(), order=[];
+
+/* ── the assembly strip ─────────────────────────────────────────── */
+function drawStrip(models,state){
+  $("#strip").innerHTML=models.map(m=>{
+    const st=state[m]||"waiting";
+    return '<span class="chip '+st+'" data-m="'+esc(m)+'">'+esc(m.replace(":latest",""))+'</span>';
+  }).join("");
+}
+function meters(r){
+  if(!r) return;
+  $("#meters").innerHTML=
+    '<span>cpu <b>'+(r.cpu_percent??"—")+'%</b></span>'+
+    '<span>ram <b>'+(r.ram_percent??"—")+'%</b> '+(r.ram_used_gb??"—")+'/'+(r.ram_total_gb??"—")+'GB</span>'+
+    '<span>load <b>'+(r.load1??"—")+'</b> / '+(r.cores??"—")+' cores</span>';
+}
+
+/* ── one mind steps forward, answers each question, bows, withdraws ── */
+function turnHTML(t){
+  return '<div class="turn'+(t.error?" fail":"")+'">'+
+    '<div class="tq" data-n="'+t.n+'">'+esc(t.question)+'</div>'+
+    '<div class="ta">'+esc(t.error?("— "+t.error):(t.answer||"(silence)"))+'</div>'+
+    '<div class="tm">'+Math.round(t.ms)+'ms · ~'+t.tokens_estimated+' tok · cpu '+(t.cpu_after??"—")+'%</div>'+
+  '</div>';
+}
+function renderMind(entry,isCurrent,qTotal){
+  const id="m-"+entry.model.replace(/[^a-z0-9]/gi,"");
+  let el=document.getElementById(id);
+  if(!el){
+    el=document.createElement("div");
+    el.id=id; el.className="mind now";
+    $("#floor").prepend(el);
+  }
+  const turns=(entry.turns||[]);
+  const bowed=entry.bowed;
+  el.className="mind "+(bowed?"gone":"now")+(entry.error?" err":"");
+  el.innerHTML=
+    '<div class="mh"><span class="mn">'+esc(entry.model.replace(":latest",""))+'</span>'+
+    '<span class="mm">generation '+gen(entry.model)+' · '+
+      (bowed?("dismissed · "+Math.round(entry.total_ms)+"ms · ~"+entry.tokens_estimated+" tok")
+            :("engaged · question "+Math.min(turns.length+1,qTotal)+" of "+qTotal))+
+    '</span></div>'+
+    (entry.error?'<div class="say" style="color:var(--veto)">— '+esc(entry.error)+'</div>':'')+
+    turns.map(turnHTML).join("")+
+    (!bowed && !entry.error
+      ? '<div class="pending"><span class="spin"></span>thinking…</div>'
+      : (bowed
+          ? '<div class="bow"><b>bows.</b> “I have said my part — the floor is returned, and the '+
+            'query will wait.” <span style="opacity:.7">disconnected</span></div>'
+          : ''));
+}
+
+/* ── polling the arena, which is already a strict single-flight queue ── */
+function tick(){
+  const q=runId?("?run="+encodeURIComponent(runId)):"";
+  fetch("/insight/arena/status"+q,{cache:"no-store"}).then(r=>r.json()).then(d=>{
+    meters(d.resources);
+    if(!runId||!d.run) return;
+    const run=d.run, qTotal=(run.questions||[]).length||1;
+    if(!order.length) order=run.models.slice();
+
+    const state={}; order.forEach(m=>state[m]="waiting");
+    (run.results||[]).forEach(r=>{
+      state[r.model]=r.error?"failed":(r.bowed?"bowed":"engaged");
+    });
+    drawStrip(order,state);
+
+    /* Re-render every model that has spoken; the current one updates in place
+       as each answer lands, so a visitor sees input→response per question
+       rather than one silent block per model. */
+    (run.results||[]).slice().reverse().forEach(entry=>renderMind(entry,false,qTotal));
+
+    if(run.state==="queued"){
+      $("#hint").textContent="queued — "+(d.queued_ahead||0)+" ahead. The processor is the bottleneck.";
+    }else if(run.state==="running"){
+      $("#hint").textContent="on the floor: "+(run.current_model||"…")+
+        " · question "+((run.current_question_index??0)+1)+" of "+qTotal+
+        " · "+(run.turns_done||0)+"/"+(run.turns_total||0)+" completions · ~"+
+        run.tokens_estimated+" tokens";
+    }else{
+      $("#hint").textContent="assembly complete — "+(run.turns_done||0)+" completions from "+
+        run.done+" generations in "+(run.duration_s??"—")+"s · ~"+run.tokens_estimated+
+        " tokens · peak cpu "+(run.peak_cpu??"—")+"% · peak ram "+(run.peak_ram_percent??"—")+"%";
+    }
+
+    if(run.state==="done"||run.state==="error"){
+      clearInterval(poll); poll=null; $("#go").disabled=false;
+    }
+  }).catch(()=>{});
+}
+
+$("#go").addEventListener("click",()=>{
+  const v=$("#stmt").value.trim(); if(!v) return;
+  $("#go").disabled=true;
+  $("#saidtxt").textContent=v; $("#said").classList.add("on");
+  $("#floor").innerHTML=""; shown=new Set(); order=[];
+  $("#hint").textContent="submitting to the assembly…";
+  fetch("/arena/submit",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({prompt:v})})
+    .then(r=>(r.status===401||r.status===403||r.redirected)
+      ? {ok:false,gated:true,error:"the floor is open to verified participants — connect a wallet at the realm door to address the assembly"}
+      : r.json())
+    .then(d=>{
+      if(!d.ok){
+        $("#hint").innerHTML=esc(d.error||"the assembly declined")+
+          (d.gated?' &middot; <a href="/activity">enter the realm door →</a>':"");
+        $("#go").disabled=false; return; }
+      runId=d.run_id; order=(d.models||[]).slice();
+      drawStrip(order,{});
+      if(poll) clearInterval(poll);
+      poll=setInterval(tick,2000); tick();
+    }).catch(()=>{ $("#hint").textContent="could not reach the assembly"; $("#go").disabled=false; });
+});
+
+/* ── the training record ────────────────────────────────────────── */
+function training(){
+  fetch("/insight/train/history?limit=60").then(r=>r.json()).then(d=>{
+    const rows=d.generations||[];
+    $("#tstats").innerHTML=
+      '<span>ascents <b>'+(d.total??0)+'</b></span>'+
+      '<span>promoted <b>'+(d.promoted??0)+'</b></span>'+
+      Object.entries(d.stages||{}).map(([k,v])=>'<span>'+esc(k)+' <b>'+v+'</b></span>').join("");
+    const cls=r=>r.promoted?"promoted":(r.stage==="train_failed"||r.stage==="rejected"||r.stage==="proof_rejected")?"failed":(r.stage==="dormant"?"dormant":"other");
+    $("#ttable").querySelector("tbody").innerHTML=rows.length?rows.map(r=>{
+      const rec=r.recall&&typeof r.recall==="object"?r.recall.delta:null;
+      return '<tr><td class="g">'+esc(r.generation??"—")+'</td>'+
+        '<td><span class="badge '+cls(r)+'">'+esc(r.stage||"—")+'</span></td>'+
+        '<td>'+esc(r.ollama_model||"—")+'</td>'+
+        '<td>'+esc(r.rows??"—")+'</td>'+
+        '<td>'+(rec==null?"—":(rec>0?"+":"")+Number(rec).toFixed(4))+'</td>'+
+        '<td>'+(r.wall_seconds==null?"—":Math.round(r.wall_seconds)+"s")+'</td>'+
+        '<td>'+esc(r.trigger||"—")+'</td></tr>';
+    }).join(""):'<tr><td colspan="7" style="color:var(--text3)">no ascents recorded</td></tr>';
+  }).catch(()=>{});
+}
+
+training(); tick();
+setInterval(training,60000);
+setInterval(()=>{ if(!poll) tick(); },8000);
+})();
+</script>
+</body>
+</html>

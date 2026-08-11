@@ -22,6 +22,15 @@ except ImportError: # pragma: no cover
 from utils.logging_config import get_logger
 from .llm_interface import LLMHandlerInterface # Ensure this is in __init__.py or path correct
 
+# Public conversation ledger: every exchange with a model is recorded for
+# the live substrate at mindx.pythai.net/mindx.html. Import is lazy-safe —
+# a missing recorder degrades to a no-op decorator, never a broken handler.
+try:
+    from agents.interaction_recorder import observe as _observe_interaction
+except Exception:  # pragma: no cover
+    def _observe_interaction(_provider):
+        return lambda fn: fn
+
 logger = get_logger(__name__)
 
 class OllamaHandler(LLMHandlerInterface): # pragma: no cover
@@ -141,6 +150,7 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
             logger.debug(f"OllamaHandler: direct cloud fallback failed: {e}")
             return None
 
+    @_observe_interaction("ollama")
     async def generate_text(self, prompt: str, model: str,
                             max_tokens: Optional[int] = None,
                             temperature: Optional[float] = 0.7,

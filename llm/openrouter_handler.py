@@ -38,6 +38,15 @@ except ImportError:  # pragma: no cover
 from utils.logging_config import get_logger
 from .llm_interface import LLMHandlerInterface
 
+# Public conversation ledger: every exchange with a model is recorded for
+# the live substrate at mindx.pythai.net/mindx.html. Import is lazy-safe —
+# a missing recorder degrades to a no-op decorator, never a broken handler.
+try:
+    from agents.interaction_recorder import observe as _observe_interaction
+except Exception:  # pragma: no cover
+    def _observe_interaction(_provider):
+        return lambda fn: fn
+
 logger = get_logger(__name__)
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
@@ -124,6 +133,7 @@ class OpenRouterHandler(LLMHandlerInterface):
             self._session = aiohttp.ClientSession(json_serialize=json.dumps)
         return self._session
 
+    @_observe_interaction("openrouter")
     async def generate_text(
         self,
         prompt: str,

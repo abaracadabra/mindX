@@ -45,6 +45,47 @@ ASCEND_WORK = PROJECT_ROOT / "data" / "godel" / "ascend"
 ASCEND_LOG = PROJECT_ROOT / "data" / "logs" / "ascend_log.jsonl"
 
 
+def trained_through_ts() -> Optional[float]:
+    """Epoch seconds up to which dream knowledge is provably *in the weights*.
+
+    The retention gate for LTM. A memory may only leave machine.dream's LTM
+    once a model actually learned it, and the only durable evidence of that is
+    an ascent that reached `promoted` — LoRA trained, proof-of-recall passed,
+    Modelfile served to Ollama. Returns the ts of the most recent such
+    generation, or None when nothing has ever been promoted (in which case
+    NOTHING is prunable, which is the safe default).
+
+    Deliberately NOT `read_watermark()`. The watermark is stamped after every
+    ascent *attempt*, promoted or not: on 2026-08-09 it sat at Aug-09 22:09
+    while the last promoted generation was gen16 on Aug-06 09:29, because
+    gens 17 (accepted, unpromoted), 18 (dormant) and 19 (train_failed) each
+    pushed it forward. Pruning on the watermark would therefore delete three
+    days of memory that no model ever saw.
+    """
+    latest: Optional[float] = None
+    try:
+        if not ASCEND_LOG.exists():
+            return None
+        with ASCEND_LOG.open("r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rec = json.loads(line)
+                except Exception:
+                    continue
+                if not rec.get("promoted"):
+                    continue
+                ts = rec.get("ts")
+                if isinstance(ts, (int, float)) and (latest is None or ts > latest):
+                    latest = float(ts)
+    except Exception as e:  # pragma: no cover - defensive
+        logger.debug("trained_through_ts: unreadable ascend log: %s", e)
+        return None
+    return latest
+
+
 def should_ascend(self_eval: Optional[dict], cap=None) -> Tuple[bool, str]:
     """Decide whether an autonomous ascent may run now. Returns (ok, reason)."""
     if not autonomous_train_enabled():

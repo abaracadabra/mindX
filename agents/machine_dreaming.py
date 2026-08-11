@@ -288,6 +288,10 @@ class DreamResult:
     training_file: str = ""
     evolution_proposals_written: int = 0
     evolution_file: str = ""
+    # LTM retention (KNOWLEDGE -> WISDOM -> WEIGHTS -> compaction):
+    ltm_records_compacted: int = 0   # aged, already-trained records folded into rollups
+    ltm_rollups_written: int = 0
+    ltm_untrained_retained: int = 0  # aged but not yet in any promoted model — kept
 
     @property
     def stm_bytes_freed(self) -> int:
@@ -618,6 +622,41 @@ class MachineDreamCycle:
             logger.debug(f"{self.log_prefix} Pruning failed: {e}")
             return 0
 
+    async def _compact_ltm(self, agent_id: str) -> Dict[str, Any]:
+        """Close the loop: fold trained-away LTM into monthly rollups.
+
+        This step only ever pruned STM (prune_stm above), so LTM grew without
+        bound — 67,309 pattern-promotion files by 2026-08-09, all re-read on
+        every get_ltm_insights() call. The dream produces the training data,
+        mindXtrain turns it into weights, and once a generation is *promoted*
+        the model carries that memory; the files behind it can then collapse.
+
+        Gated on trained_through_ts() — the last promoted ascent, not the
+        ascend watermark (which advances on failed generations too). If
+        training is dormant or failing, this becomes a no-op and LTM simply
+        keeps growing: disk is recoverable, unlearned memory is not.
+        """
+        empty = {"compacted": 0, "rollups": 0, "skipped_untrained": 0}
+        if not self.memory_agent or not hasattr(self.memory_agent, "compact_ltm"):
+            return empty
+        try:
+            from mindx.godel.ascend_scheduler import trained_through_ts
+            through = trained_through_ts()
+        except Exception as e:
+            logger.debug(f"{self.log_prefix} trained-through lookup failed: {e}")
+            return empty
+
+        if through is None:
+            logger.debug(f"{self.log_prefix} LTM compaction skipped — no promoted generation yet")
+            return empty
+
+        try:
+            return await self.memory_agent.compact_ltm(
+                agent_id, trained_through_ts=through)
+        except Exception as e:
+            logger.debug(f"{self.log_prefix} LTM compaction failed: {e}")
+            return empty
+
     # === FULL DREAM CYCLE FOR ONE AGENT ===
 
     @staticmethod
@@ -720,6 +759,15 @@ class MachineDreamCycle:
             # Phase 7: Memory Pruning (distribute, don't delete)
             archived = await self._prune_memories(agent_id, scored_insights)
             result.archived = archived
+
+            # Phase 7b: LTM retention — fold aged records whose knowledge now
+            # lives in a promoted model into monthly rollups. Runs after the
+            # training data for THIS cycle is already written above, so the
+            # current dream is never a candidate for its own compaction.
+            compaction = await self._compact_ltm(agent_id)
+            result.ltm_records_compacted = compaction.get("compacted", 0)
+            result.ltm_rollups_written = compaction.get("rollups", 0)
+            result.ltm_untrained_retained = compaction.get("skipped_untrained", 0)
 
         except Exception as e:
             logger.warning(f"{self.log_prefix} Dream cycle error for {agent_id}: {e}")
@@ -1192,6 +1240,9 @@ class MachineDreamCycle:
         total_insights = 0
         total_promoted = 0
         total_archived = 0
+        total_ltm_compacted = 0
+        total_ltm_rollups = 0
+        total_ltm_untrained = 0
         all_tuning = []
         cross_agent_patterns = {}
 
@@ -1202,6 +1253,9 @@ class MachineDreamCycle:
                 total_insights += len(result.insights)
                 total_promoted += result.promoted_to_ltm
                 total_archived += result.archived
+                total_ltm_compacted += result.ltm_records_compacted
+                total_ltm_rollups += result.ltm_rollups_written
+                total_ltm_untrained += result.ltm_untrained_retained
                 all_tuning.extend(result.tuning_recommendations)
 
                 # Track cross-agent patterns
@@ -1305,6 +1359,12 @@ class MachineDreamCycle:
             "insights_generated": total_insights,
             "memories_promoted_to_ltm": total_promoted,
             "memories_archived": total_archived,
+            "ltm_retention": {
+                # The weights now hold what these files held.
+                "records_compacted": total_ltm_compacted,
+                "rollups_written": total_ltm_rollups,
+                "untrained_retained": total_ltm_untrained,
+            },
             "tuning_recommendations": all_tuning,
             "model_selector_retrain": selector_retrain,
             "cross_agent_patterns": cross_agent_patterns,

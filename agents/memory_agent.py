@@ -17,6 +17,7 @@ import re
 import json
 import hashlib
 import shutil
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
@@ -35,6 +36,47 @@ from utils.config import Config, PROJECT_ROOT
 from utils.logging_config import get_logger, setup_logging
 
 logger = get_logger(__name__)
+
+
+# ── LTM retention ─────────────────────────────────────────────────────────
+#
+# Nothing pruned LTM before 2026-08-09: the dream cycle's _prune_memories()
+# only ever called prune_stm(), so STM stayed bounded at 30 days while LTM
+# grew without limit — 67,309 *_pattern_promotion.json files across all
+# agents, ~3,600 for the hottest one, every single one re-read on each
+# get_ltm_insights() call. Records older than the window are merged into one
+# ROLLUP_YYYYMM file per month, which keeps every pattern in the live read
+# path (unlike archiving) while collapsing thousands of files into a dozen.
+LTM_RETENTION_DAYS = int(os.getenv("MINDX_LTM_RETENTION_DAYS", "90"))
+
+# Rollups are themselves *_pattern_promotion.json so get_ltm_insights() picks
+# them up with no reader change, and this prefix keeps them out of their own
+# input set on the next pass.
+LTM_ROLLUP_PREFIX = "ROLLUP_"
+
+
+def _atomic_write_json(path: Path, payload: Any) -> None:
+    """Write JSON so a reader never observes a partial or empty file.
+
+    Temp file in the same directory (os.replace is only atomic within a
+    filesystem), fsync before rename so the bytes are on disk, then rename
+    over the target. Callers run this in a worker thread — see the
+    single-worker event-loop constraint on this deployment.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp{os.getpid()}")
+    try:
+        with tmp.open("w", encoding="utf-8") as f:
+            f.write(json_lib.dumps(payload, indent=2))
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+        raise
 
 
 # ── Gödel eval gate (fail-open since 2026-05-19) ──────────────────────────
@@ -766,10 +808,56 @@ class MemoryAgent:
         
         return agent_dir
 
+    # Flood gate for process logs: identical payloads within the dup window are
+    # suppressed, and each (agent, process) pair writes at most once per
+    # min-interval. Suppression counts surface on the next written record so no
+    # information is silently lost — only redundancy.
+    _PROCESS_LOG_MIN_INTERVAL_S = 5.0
+    _PROCESS_LOG_DUP_WINDOW_S = 300.0
+    _PROCESS_LOG_MAX_BYTES = 262144
+
+    def _shrink_for_log(self, obj: Any, max_list: int = 20, max_str: int = 2000, depth: int = 0) -> Any:
+        if depth > 6:
+            return "..."
+        if isinstance(obj, dict):
+            return {k: self._shrink_for_log(v, max_list, max_str, depth + 1) for k, v in list(obj.items())[:64]}
+        if isinstance(obj, list):
+            out = [self._shrink_for_log(v, max_list, max_str, depth + 1) for v in obj[:max_list]]
+            if len(obj) > max_list:
+                out.append({"_truncated_items": len(obj) - max_list})
+            return out
+        if isinstance(obj, str) and len(obj) > max_str:
+            return obj[:max_str] + f"...(+{len(obj) - max_str} chars)"
+        return obj
+
     async def log_process(self, process_name: str, data: Dict[str, Any], metadata: Dict[str, Any]) -> Optional[Path]:
         """Log process information (compatibility method)."""
         agent_id = metadata.get("agent_id", "unknown")
-        
+
+        gate = getattr(self, "_process_log_gate", None)
+        if gate is None:
+            gate = self._process_log_gate = {}
+        key = (agent_id, process_name)
+        now = time.monotonic()
+        try:
+            payload = json_lib.dumps(data, default=str, sort_keys=True)
+        except Exception:
+            payload = str(data)
+        digest = hashlib.sha256(payload.encode("utf-8", errors="replace")).hexdigest()
+        last = gate.get(key)
+        if last is not None:
+            elapsed = now - last["ts"]
+            if (digest == last["digest"] and elapsed < self._PROCESS_LOG_DUP_WINDOW_S) or \
+               elapsed < self._PROCESS_LOG_MIN_INTERVAL_S:
+                last["suppressed"] += 1
+                return None
+        suppressed = last["suppressed"] if last is not None else 0
+        gate[key] = {"digest": digest, "ts": now, "suppressed": 0}
+        if len(payload) > self._PROCESS_LOG_MAX_BYTES:
+            data = self._shrink_for_log(data)
+        if suppressed:
+            metadata = {**metadata, "suppressed_since_last": suppressed}
+
         # Save as timestamped memory
         memory_id = await self.save_timestamped_memory(
             agent_id=agent_id,
@@ -783,7 +871,12 @@ class MemoryAgent:
         try:
             agent_workspace = self.get_agent_data_directory(agent_id)
             filepath = agent_workspace / "process_trace.jsonl"
-            
+            try:
+                if filepath.exists() and filepath.stat().st_size > 50 * 1024 * 1024:
+                    filepath.replace(filepath.with_suffix(".jsonl.1"))
+            except OSError:
+                pass
+
             timestamp = datetime.now()
             log_record = {
                 "timestamp_utc": timestamp.utcnow().isoformat(),
@@ -1544,13 +1637,22 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                 }
             }
             
-            # Save to LTM
+            # Save to LTM.
+            #
+            # Written atomically. `open(..., "w")` truncates on open, so a crash
+            # or SIGKILL between open and write left a 0-byte file behind that
+            # every later get_ltm_insights() then failed to parse — 1,181 such
+            # corpses had accumulated by 2026-08-09, and mindx.service does get
+            # SIGKILLed (it ignored SIGTERM through the stop timeout). Write to a
+            # sibling temp file, fsync, then os.replace() — the rename is atomic
+            # within a directory, so readers see either the old file or a
+            # complete new one, never an empty one.
             ltm_file = self.ltm_path / agent_id / f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_pattern_promotion.json"
             ltm_file.parent.mkdir(parents=True, exist_ok=True)
-            
-            async with aiofiles.open(ltm_file, "w", encoding="utf-8") as f:
-                await f.write(json_lib.dumps(ltm_record, indent=2))
-            
+
+            await asyncio.to_thread(
+                _atomic_write_json, ltm_file, ltm_record)
+
             logger.info(f"Promoted STM patterns to LTM for {agent_id}: {ltm_file}")
             
             return {
@@ -1579,35 +1681,248 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             ltm_dir = self.ltm_path / agent_id
             if not ltm_dir.exists():
                 return []
-            
-            insights = []
-            for ltm_file in ltm_dir.glob("*_pattern_promotion.json"):
-                try:
-                    async with aiofiles.open(ltm_file, "r", encoding="utf-8") as f:
-                        content = await f.read()
-                        ltm_record = json_lib.loads(content)
-                        
-                    if insight_type:
-                        # Filter by insight type
-                        filtered_patterns = ltm_record.get("patterns", {}).get(insight_type, [])
-                        if filtered_patterns:
-                            insights.extend(filtered_patterns)
-                    else:
-                        # Return all patterns
-                        patterns = ltm_record.get("patterns", {})
-                        for pattern_type, pattern_list in patterns.items():
-                            if isinstance(pattern_list, list):
-                                insights.extend(pattern_list)
-                            
-                except Exception as e:
-                    logger.warning(f"Failed to load LTM file {ltm_file}: {e}")
-                    continue
-            
+
+            # A busy agent has thousands of promotion files (67k across all agents
+            # as of 2026-08-09, ~3.6k for the hottest one). Reading them with a
+            # per-file `async with aiofiles.open(...)` costs two executor
+            # round-trips EACH, and every corrupt file logged a warning straight
+            # to journald — enough scheduler churn to stall the shared event loop
+            # for seconds at a time, which on this single-worker deployment means
+            # mindx.pythai.net stops answering. Do the whole directory in ONE
+            # thread hop with plain synchronous reads, and summarise the failures
+            # instead of emitting one log record per bad file.
+            def _read_all() -> Tuple[List[Dict[str, Any]], List[str]]:
+                collected: List[Dict[str, Any]] = []
+                failed: List[str] = []
+                for ltm_file in sorted(ltm_dir.glob("*_pattern_promotion.json")):
+                    try:
+                        ltm_record = json_lib.loads(
+                            ltm_file.read_text(encoding="utf-8"))
+
+                        if insight_type:
+                            # Filter by insight type
+                            filtered_patterns = ltm_record.get("patterns", {}).get(insight_type, [])
+                            if filtered_patterns:
+                                collected.extend(filtered_patterns)
+                        else:
+                            # Return all patterns
+                            patterns = ltm_record.get("patterns", {})
+                            for pattern_type, pattern_list in patterns.items():
+                                if isinstance(pattern_list, list):
+                                    collected.extend(pattern_list)
+                    except Exception as e:
+                        failed.append(f"{ltm_file.name}: {e}")
+                        continue
+                return collected, failed
+
+            insights, failures = await asyncio.to_thread(_read_all)
+
+            if failures:
+                logger.warning(
+                    "get_ltm_insights(%s): skipped %d unreadable LTM file(s) "
+                    "(e.g. %s)", agent_id, len(failures), failures[0])
+
             return insights
-            
+
         except Exception as e:
             logger.error(f"Failed to get LTM insights for {agent_id}: {e}", exc_info=True)
             return []
+
+    async def compact_ltm(self,
+                          agent_id: str,
+                          max_age_days: Optional[int] = None,
+                          trained_through_ts: Optional[float] = None,
+                          dry_run: bool = False) -> Dict[str, Any]:
+        """Merge aged, already-trained LTM records into monthly rollups.
+
+        Closes the KNOWLEDGE -> WISDOM -> WEIGHTS loop at the memory end: once
+        machine.dream's output has been distilled, forged and trained into a
+        promoted model, the model *is* the memory, so the thousands of
+        individual pattern-promotion files that produced it can collapse into
+        one ROLLUP_YYYYMM file per month.
+
+        A record is only compacted when BOTH gates pass:
+
+          1. older than `max_age_days` (default MINDX_LTM_RETENTION_DAYS=90)
+          2. older than `trained_through_ts` — the timestamp of the most
+             recent *promoted* ascent (see ascend_scheduler.trained_through_ts).
+             Pass None and nothing is compacted at all: memory that no model
+             has learned is never touched, so a stalled training loop can only
+             ever cost disk, never knowledge.
+
+        Rollups keep every pattern (exact duplicates deduped) and are named
+        `*_pattern_promotion.json` so get_ltm_insights() reads them with no
+        change. `*_training.jsonl` files — mindXtrain's corpus source — are
+        never touched here.
+        """
+        max_age_days = LTM_RETENTION_DAYS if max_age_days is None else max_age_days
+
+        stats: Dict[str, Any] = {
+            "agent_id": agent_id, "status": "ok", "compacted": 0, "rollups": 0,
+            "zero_byte_removed": 0, "quarantined": 0, "skipped_untrained": 0,
+            "dry_run": dry_run,
+        }
+
+        if trained_through_ts is None:
+            stats["status"] = "no_trained_model"
+            stats["message"] = ("no promoted ascent yet — nothing is provably in "
+                                "the weights, so nothing is prunable")
+            return stats
+
+        ltm_dir = self.ltm_path / agent_id
+        if not ltm_dir.exists():
+            stats["status"] = "no_ltm"
+            return stats
+
+        quarantine_dir = self.memory_base_path / "archive" / agent_id / "corrupt"
+        age_cutoff = time.time() - (max_age_days * 86400)
+        zero_byte_cutoff = time.time() - 3600
+
+        def _compact_sync() -> Dict[str, Any]:
+            groups: Dict[str, List[Path]] = defaultdict(list)
+
+            for f in sorted(ltm_dir.glob("*_pattern_promotion.json")):
+                if f.name.startswith(LTM_ROLLUP_PREFIX):
+                    continue  # never fold a rollup back into itself
+                try:
+                    # Filenames are YYYYMMDD_HHMMSS_pattern_promotion.json; mtime
+                    # is the fallback for anything that doesn't parse.
+                    stamp = datetime.strptime(f.name[:15], "%Y%m%d_%H%M%S")
+                    rec_ts = stamp.timestamp()
+                    month = stamp.strftime("%Y%m")
+                except Exception:
+                    try:
+                        rec_ts = f.stat().st_mtime
+                    except OSError:
+                        continue
+                    month = datetime.fromtimestamp(rec_ts).strftime("%Y%m")
+
+                # Zero-byte files are checked BEFORE the retention gates: a
+                # truncated write carries no knowledge at any age, so keeping
+                # one for 90 days protects nothing and costs a failed parse on
+                # every read. The one-hour grace only exists so a file being
+                # written right now is never mistaken for a corpse (writes are
+                # atomic via a .tmp sibling since 2026-08-09, so this is belt
+                # and braces).
+                try:
+                    if f.stat().st_size == 0:
+                        if rec_ts < zero_byte_cutoff:
+                            if not dry_run:
+                                f.unlink()
+                            stats["zero_byte_removed"] += 1
+                        continue
+                except OSError:
+                    continue
+
+                if rec_ts >= age_cutoff:
+                    continue                       # still inside the window
+                if rec_ts >= trained_through_ts:
+                    stats["skipped_untrained"] += 1
+                    continue                       # not yet in any model
+                groups[month].append(f)
+
+            for month, files in sorted(groups.items()):
+                rollup_path = ltm_dir / f"{LTM_ROLLUP_PREFIX}{month}_pattern_promotion.json"
+                merged: Dict[str, List[Any]] = defaultdict(list)
+                seen: Dict[str, set] = defaultdict(set)
+                merged_count = 0
+
+                def _absorb(patterns: Dict[str, Any]) -> None:
+                    for ptype, plist in (patterns or {}).items():
+                        if not isinstance(plist, list):
+                            continue
+                        for entry in plist:
+                            try:
+                                key = json_lib.dumps(entry, sort_keys=True)
+                            except Exception:
+                                key = repr(entry)
+                            if key in seen[ptype]:
+                                continue      # identical entry already kept
+                            seen[ptype].add(key)
+                            merged[ptype].append(entry)
+
+                # Fold into an existing rollup rather than replacing it, so a
+                # later pass over the same month is additive.
+                existing_merged = 0
+                if rollup_path.exists():
+                    try:
+                        prior = json_lib.loads(rollup_path.read_text(encoding="utf-8"))
+                        _absorb(prior.get("patterns", {}))
+                        existing_merged = int(prior.get("records_merged", 0))
+                    except Exception as e:
+                        logger.warning("compact_ltm(%s): unreadable rollup %s (%s) — "
+                                       "leaving month %s untouched",
+                                       agent_id, rollup_path.name, e, month)
+                        continue
+
+                absorbed: List[Path] = []
+                for f in files:
+                    try:
+                        rec = json_lib.loads(f.read_text(encoding="utf-8"))
+                    except Exception as e:
+                        # Non-empty but unparseable: preserve it for inspection
+                        # instead of destroying possibly-partial memory.
+                        stats["quarantined"] += 1
+                        if not dry_run:
+                            try:
+                                quarantine_dir.mkdir(parents=True, exist_ok=True)
+                                f.rename(quarantine_dir / f.name)
+                            except OSError as move_err:
+                                logger.debug("compact_ltm: quarantine failed for %s: %s",
+                                             f.name, move_err)
+                        logger.debug("compact_ltm(%s): quarantined %s (%s)",
+                                     agent_id, f.name, e)
+                        continue
+                    _absorb(rec.get("patterns", {}))
+                    merged_count += 1
+                    absorbed.append(f)
+
+                if not absorbed:
+                    continue
+
+                rollup = {
+                    "agent_id": agent_id,
+                    "schema": "ltm_rollup_v1",
+                    "rollup_month": month,
+                    "records_merged": existing_merged + merged_count,
+                    "patterns": dict(merged),
+                    "compacted_at": datetime.now().isoformat(),
+                    "retention": {
+                        "max_age_days": max_age_days,
+                        "trained_through_ts": trained_through_ts,
+                        "gate": "promoted_ascent",
+                    },
+                }
+
+                if not dry_run:
+                    # Rollup lands atomically FIRST; sources are only removed
+                    # once it is safely on disk, so a crash mid-compaction can
+                    # duplicate a record but can never lose one.
+                    _atomic_write_json(rollup_path, rollup)
+                    for f in absorbed:
+                        try:
+                            f.unlink()
+                        except OSError as e:
+                            logger.debug("compact_ltm: could not remove %s: %s", f.name, e)
+
+                stats["compacted"] += len(absorbed)
+                stats["rollups"] += 1
+
+            return stats
+
+        try:
+            result = await asyncio.to_thread(_compact_sync)
+            if result["compacted"] or result["zero_byte_removed"] or result["quarantined"]:
+                logger.info(
+                    "compact_ltm(%s): %d records -> %d monthly rollup(s), "
+                    "%d zero-byte removed, %d quarantined, %d left untrained%s",
+                    agent_id, result["compacted"], result["rollups"],
+                    result["zero_byte_removed"], result["quarantined"],
+                    result["skipped_untrained"], " [dry-run]" if dry_run else "")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to compact LTM for {agent_id}: {e}", exc_info=True)
+            return {"agent_id": agent_id, "status": "error", "message": str(e)}
 
     async def generate_self_improvement_recommendations(self, agent_id: str) -> Dict[str, Any]:
         """

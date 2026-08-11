@@ -1097,7 +1097,14 @@ class StrategicEvolutionAgent:
             for target_path in audit_targets:
                 if Path(target_path).exists():
                     try:
-                        success, target_results = self.optimized_audit_agent.generate_audit_documentation(
+                        # generate_audit_documentation is fully synchronous: it rglobs the
+                        # whole target tree, read_text()s every file and writes the chunk
+                        # reports. Called inline it blocks the event loop for the duration —
+                        # which is the same loop uvicorn serves mindx.pythai.net on, so the
+                        # site stops accepting connections until the audit finishes
+                        # (proven outage 2026-08-09). Offload to a worker thread.
+                        success, target_results = await asyncio.to_thread(
+                            self.optimized_audit_agent.generate_audit_documentation,
                             root_path_str=target_path,
                             focus_areas=[audit_scope],
                             additional_exclude_patterns=["*.pyc", "__pycache__/*", "*.log"]

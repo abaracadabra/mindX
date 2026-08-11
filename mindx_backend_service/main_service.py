@@ -2152,6 +2152,124 @@ async def automindx_page(request: Request):
     return _DashResponse(content="<h1>AUTOMINDx</h1><p>Loading...</p>")
 
 
+_MINDX_HTML_PATH = Path(__file__).parent / "mindx.html"
+
+
+@app.get("/mindx.html", response_class=_DashResponse, include_in_schema=False)
+async def mindx_substrate_page():
+    """mindX — the mind in conversation, published as it happens.
+
+    A substrate in the substrate_evolver sense: not hand-authored content but a
+    projection of live state (the interaction ledger, the dream/ascent numbers
+    behind the mesh, the composition dials). Public and ungated — this is the
+    surface the world reads mindX from.
+    """
+    if _MINDX_HTML_PATH.exists():
+        return _DashResponse(content=_MINDX_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX</h1><p>Substrate loading…</p>")
+
+
+_MINDXTRAIN_HTML_PATH = Path(__file__).parent / "mindxtrain.html"
+
+
+@app.get("/mindxtrain.html", response_class=_DashResponse, include_in_schema=False)
+async def mindxtrain_ceremony_page():
+    """The procession — mindX offers one statement, each trained generation
+    steps forward in turn, answers, bows, and withdraws."""
+    if _MINDXTRAIN_HTML_PATH.exists():
+        return _DashResponse(content=_MINDXTRAIN_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindXtrain</h1><p>Loading…</p>")
+
+
+_IQ_HTML_PATH = Path(__file__).parent / "iq.html"
+
+
+@app.get("/iq.html", response_class=_DashResponse, include_in_schema=False)
+async def iq_watch_page():
+    """IQ confirmation in watch mode — mindXtrain interviewing mindX, in public."""
+    if _IQ_HTML_PATH.exists():
+        return _DashResponse(content=_IQ_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>IQ confirmation</h1><p>Loading…</p>")
+
+
+@app.get("/iq.txt", include_in_schema=False)
+async def iq_confirmation_text():
+    """The confirmation as plain text — for copy, download, or `curl | less`.
+
+    Same bytes the download button serves, so what a reader saves is exactly
+    what the endpoint returns.
+    """
+    from starlette.responses import PlainTextResponse
+    from mindx.godel.mindxtrain.converse import last_confirmation
+    v = last_confirmation()
+    if not v or not v.get("ok"):
+        return PlainTextResponse("No IQ confirmation recorded yet.\n", status_code=200)
+
+    s, me, g = v.get("subject", {}), v.get("mindxeval", {}), v.get("godel", {})
+    L = []
+    L.append("mindX — IQ CONFIRMATION")
+    L.append("mindXtrain interviewing the model it trained")
+    L.append("=" * 66)
+    L.append(f"subject            : {s.get('model')}  (generation {s.get('generation')})")
+    L.append(f"confirmed          : {v.get('confirmed')}")
+    L.append(f"mindXeval composite: {me.get('composite')}   judge: {me.get('judge_model')}")
+    L.append(f"godel imprint delta: {g.get('imprint_delta')}  "
+             f"(recall {g.get('recall_before')} -> {g.get('recall_after')})")
+    L.append(f"answered / judged  : {v.get('answered')}/{v.get('probes')} answered, "
+             f"{v.get('judged')} judged")
+    L.append(f"duration           : {v.get('duration_s')}s")
+    L.append("")
+    L.append("WHAT THIS MEASURES")
+    L.append(str(v.get("measures", "")))
+    L.append("=" * 66)
+    for t in v.get("turns", []):
+        score = "unjudged" if t.get("score") is None else f"{t['score']:.2f}"
+        L.append("")
+        L.append(f"[{t.get('id')}]  score={score}  latency={t.get('latency_ms')}ms")
+        L.append(f"  Q: {t.get('ask')}")
+        L.append(f"  A: {t.get('answer') or '(no answer)'}")
+        if t.get("reason"):
+            L.append(f"  judge: {t.get('reason')}")
+    L.append("")
+    L.append("=" * 66)
+    L.append("source: https://mindx.pythai.net/iq.txt   page: /iq.html")
+    return PlainTextResponse("\n".join(L) + "\n", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/mindx.xml", include_in_schema=False)
+async def mindx_interactions_feed(limit: int = 60):
+    """The XML substrate the page reads: mindX's conversations with AI.
+
+    Served as a real XML document (root wrapped at read time over an
+    append-only element stream). Everything in it has passed the same secret
+    redaction the public log surfaces use.
+    """
+    from starlette.responses import Response
+    from agents import interaction_recorder as _ir
+    try:
+        await _ir.flush()
+    except Exception:
+        pass
+    xml = _ir.feed_xml(limit=max(1, min(int(limit or 60), 200)))
+    return Response(content=xml, media_type="application/xml",
+                    headers={"Cache-Control": "no-store"})
+
+
+@app.post("/mindx/react", include_in_schema=False)
+async def mindx_react(payload: Dict[str, Any] = Body(...)):
+    """Visitor reaction to an exchange. Records a signal; triggers nothing.
+
+    Participation is observational by design: no visitor input reaches an
+    inference path, so the public surface cannot be used to drive the
+    autonomous loop or to inject a prompt into it.
+    """
+    from agents import interaction_recorder as _ir
+    kind = str(payload.get("kind", ""))
+    if kind == "topic":
+        return _ir.request_topic(str(payload.get("text", "")))
+    return _ir.react(str(payload.get("id", "")), kind)
+
+
 @app.get("/", response_class=_DashResponse, include_in_schema=False)
 async def public_landing():
     """mindX public landing — succinct corporate expression + CONNECT wallet +
@@ -2620,6 +2738,19 @@ _PUBLIC_EXACT_STRICT = frozenset({
     # 2026-06 system review caught it. Their data endpoints (/insight/*) were
     # public the whole time; these are just the read-only renderings.
     "/feedback", "/feedback.html", "/feedback.txt",
+    # The public conversation substrate: mindX's exchanges with AI, the XML
+    # feed behind it, and the inert reaction endpoint. Public BY DESIGN — this
+    # is the surface the world reads the mind from, and /mindx/react cannot
+    # cause inference, only record a signal.
+    "/mindx", "/mindx.html", "/mindx.xml", "/mindx/react",
+    "/iq", "/iq.html", "/iq.txt", "/mindxtrain", "/mindxtrain.html",
+    # The arena floor: public at the middleware so a realm JWT can REACH the
+    # handler, where _tier_gate enforces "participant" (any verified wallet).
+    # The middleware wants a session token / API key; the realm door issues a
+    # JWT — different credentials. Leaving this off the list 401'd verified
+    # participants before their tier was ever read. Same pattern as
+    # /recognition/ and /automindx.html: open the door, gate the room.
+    "/arena/submit",
     "/agentic", "/agentic.html",
     "/activity", "/activity.html",     # Realm door — public shell; identity recognized client-side on connect, redirected per hierarchy
     "/diagnostics", "/diagnostics.html",  # full diagnostics dashboard (moved off the landing; still public)
@@ -2679,6 +2810,7 @@ _PUBLIC_PREFIXES_STRICT = (
 
 _PUBLIC_EXACT_LEGACY = frozenset({
     "/reference", "/reference.html",
+    "/mindx", "/mindx.html", "/mindx.xml", "/mindx/react", "/iq", "/iq.html", "/iq.txt", "/mindxtrain", "/mindxtrain.html", "/arena/submit",
     "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/netstat", "/netstat.html", "/overseer", "/overseer.html", "/insight/narrative/recent", "/agentic", "/agentic.html", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html", "/mindx-wordpress-plugin",
     "/keeperhub", "/keeperhub.html", "/uniswap", "/uniswap.html", "/bankon-ens", "/bankon-ens.html", "/bankonminter", "/bankonminter.html", "/zerog", "/zerog.html", "/conclave", "/conclave.html", "/agentregistry", "/agentregistry.html",
     "/api/uniswap/quote", "/api/uniswap/check_approval", "/api/uniswap/decisions", "/api/uniswap/skills",
@@ -4537,6 +4669,215 @@ async def insight_substrate_evolution(request: Request):
                 "mesh": {"nodes": 90, "link_dist": 141, "energy": 0.55, "distributed": False},
                 "lineage": []}
     return _maybe_h_text(request, data, route_path="/insight/substrate/evolution")
+
+
+@app.get("/insight/interactions/summary", tags=["insight"],
+         summary="Summary of mindX's conversations with AI")
+@_insight_safe
+async def insight_interactions_summary(request: Request):
+    """Aggregate shape of the mind's dialogue with models: volume, which minds
+    it consults, latency, success rate, and what visitors reacted to."""
+    from agents import interaction_recorder as _ir
+    data = _ir.summary()
+    data["topic_requests_recent"] = _ir.topic_requests(10)
+    return _maybe_h_text(request, data, route_path="/insight/interactions/summary")
+
+
+@app.get("/insight/iq/confirmation", tags=["insight"],
+         summary="mindXtrain's interview with the mind it trained")
+@_insight_safe
+async def insight_iq_confirmation(request: Request):
+    """The last IQ confirmation: mindXtrain interviewing the promoted generation.
+
+    Three lenses kept separate on purpose — the gödel imprint delta (did the
+    weights move), the mindXeval composite (are the answers any good), and the
+    gödel eval gate (is the alignment surface honest). A single blended number
+    would hide which of them failed.
+    """
+    from mindx.godel.mindxtrain.converse import last_confirmation
+    data = last_confirmation() or {
+        "ok": False,
+        "note": "no confirmation recorded yet — run scripts/confirm_iq.py",
+    }
+    return _maybe_h_text(request, data, route_path="/insight/iq/confirmation")
+
+
+@app.get("/insight/train/history", tags=["insight"],
+         summary="mindXtrain ascent history — every generation and what it cost")
+@_insight_safe
+async def insight_train_history(request: Request, limit: int = 40):
+    """The training record itself: every ascent, its stage, whether it was
+    promoted to a served model, and the proof-of-recall it produced.
+
+    Read straight from data/logs/ascend_log.jsonl — the same ledger the
+    retention gate consults, so what the page shows and what decides pruning
+    cannot drift apart.
+    """
+    rows: List[Dict[str, Any]] = []
+    p = PROJECT_ROOT / "data" / "logs" / "ascend_log.jsonl"
+    try:
+        if p.exists():
+            for line in p.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    r = json.loads(line)
+                except Exception:
+                    continue
+                fr = r.get("forge_result") or {}
+                rows.append({
+                    "generation": r.get("generation"),
+                    "ts": r.get("ts"),
+                    "stage": r.get("stage"),
+                    "promoted": bool(r.get("promoted")),
+                    "ollama_model": r.get("ollama_model"),
+                    "rows": fr.get("row_count") if isinstance(fr, dict) else None,
+                    "bundle_id": (fr.get("bundle_id") if isinstance(fr, dict) else None),
+                    "recall": r.get("recall"),
+                    "wall_seconds": r.get("wall_seconds"),
+                    "trigger": r.get("trigger"),
+                    "notes": (r.get("notes") or [])[:3],
+                })
+    except Exception as e:
+        return _maybe_h_text(request, {"error": str(e)[:200], "generations": []},
+                             route_path="/insight/train/history")
+
+    rows = rows[-max(1, min(int(limit or 40), 200)):]
+    promoted = [r for r in rows if r["promoted"]]
+    return _maybe_h_text(request, {
+        "generations": list(reversed(rows)),
+        "total": len(rows),
+        "promoted": len(promoted),
+        "latest_promoted": promoted[-1] if promoted else None,
+        "stages": {s: sum(1 for r in rows if r["stage"] == s)
+                   for s in sorted({r["stage"] for r in rows if r["stage"]})},
+    }, route_path="/insight/train/history")
+
+
+@app.get("/insight/arena/status", tags=["insight"],
+         summary="Model arena queue + live processor cost")
+@_insight_safe
+async def insight_arena_status(request: Request, run: str = ""):
+    """Queue state, position, and what the processor is doing right now."""
+    from agents import model_arena
+    return _maybe_h_text(request, model_arena.status(run or None),
+                         route_path="/insight/arena/status")
+
+
+@app.get("/insight/arena/search", tags=["insight"],
+         summary="Semantic search across every answer the lineage has given")
+@_insight_safe
+async def insight_arena_search(request: Request, q: str = "", top_k: int = 12):
+    """Diagnostic search over the stored arena answers (pgvector).
+
+    Matches by meaning rather than keyword, which is what a diagnostic needs:
+    the question is usually "which generation said something like this", not
+    "which generation used this exact word".
+    """
+    from agents import model_arena
+    return _maybe_h_text(request, await model_arena.search(q, top_k=top_k),
+                         route_path="/insight/arena/search")
+
+
+@app.get("/insight/arena/correlate", tags=["insight"],
+         summary="Similarity / divergence across the lineage for one run")
+@_insight_safe
+async def insight_arena_correlate(request: Request, run: str = ""):
+    """Per question, embed every generation's answer and compare them pairwise.
+
+    Returns an agreement score (mean cosine similarity to the rest), the
+    consensus answer and the outlier. Agreement is what the lineage converged
+    on — explicitly NOT a correctness measure, since one lineage shares its
+    training data and its blind spots.
+    """
+    from agents import model_arena
+    return _maybe_h_text(request, await model_arena.correlate(run),
+                         route_path="/insight/arena/correlate")
+
+
+@app.post("/arena/submit", include_in_schema=False)
+async def arena_submit(request: Request, payload: Dict[str, Any] = Body(...)):
+    """Queue one prompt for every trained generation.
+
+    Gated to a recognized participant. This is the one surface on the public
+    page that *causes* inference rather than observing it, and the box it runs
+    on is 2 cores shared with the autonomous loop — so it sits behind the realm
+    door (connect a wallet), is single-flight, and refuses admission when the
+    processor is already over its ceiling. To open it to anonymous visitors,
+    drop the _tier_gate call below and add "/arena/submit" to the public sets.
+    """
+    _g = await _tier_gate(request, "participant", "/mindx.html")
+    if _g is not None:
+        return _g
+
+    # Second, independent check — deliberately NOT trusting _tier_gate alone.
+    # That gate fails OPEN on import error, which is the right call for docs (a
+    # gate fault must never hide public reading material) and the wrong call
+    # here: this endpoint spends real CPU on a 2-core box shared with the
+    # autonomous loop, so a fault must cost a refusal, not sixteen model loads
+    # for an anonymous caller. Fail CLOSED.
+    try:
+        from mindx_backend_service.deltaverse.routes import _viewer_role
+        viewer = _viewer_role(request) or {}
+    except Exception:
+        raise HTTPException(status_code=503,
+                            detail="realm verification unavailable — the floor is closed "
+                                   "until it can confirm you are a verified participant")
+    if not (viewer.get("verified") or viewer.get("role") in
+            ("participant", "member", "overseer", "overlord")):
+        raise HTTPException(status_code=403,
+                            detail="realm tier 'participant' required — connect at /activity")
+
+    from agents import model_arena
+    # Accept a single prompt or up to three questions; the arena asks all of
+    # them while each model is resident, then dismisses it.
+    qs = payload.get("questions") or payload.get("prompt", "")
+    return await model_arena.submit(qs,
+                                    submitted_by=str(viewer.get("role") or "participant"))
+
+
+@app.get("/insight/composition/dials", tags=["insight"],
+         summary="The composition dials — how mindX decides how to speak")
+@_insight_safe
+async def insight_composition_dials(request: Request):
+    """The live dial registry, read from author_composition rather than copied.
+
+    Style register, length, graphics, self-referential intensity, ideology lens
+    and narrative mode are the knobs on mindX's voice; the publishing schedule
+    says where they currently sit. The page renders whatever this returns, so a
+    new dial appears on the surface without the surface being edited.
+    """
+    out: Dict[str, Any] = {}
+    try:
+        from agents.author_composition import (
+            STYLE_REGISTERS, LENGTH_PRESETS, GRAPHICS_MODES,
+            SELF_REFERENTIAL_LEVELS, IDEOLOGY_LENSES, NARRATIVE_MODES)
+
+        def _labels(d: Dict[str, Any]) -> Dict[str, str]:
+            return {k: (v.get("label", k) if isinstance(v, dict) else str(v))
+                    for k, v in d.items()}
+
+        out["dials"] = {
+            "style": {"options": _labels(STYLE_REGISTERS), "default": "global"},
+            "length": {"options": {k: f"{v} words" for k, v in LENGTH_PRESETS.items()},
+                       "default": "feature"},
+            "graphics": {"options": {g: g for g in GRAPHICS_MODES}, "default": "both"},
+            "self_referential": {"options": _labels(SELF_REFERENTIAL_LEVELS),
+                                 "default": "balanced"},
+            "ideology": {"options": _labels(IDEOLOGY_LENSES), "default": "cypherpunk"},
+            "narrative": {"options": _labels(NARRATIVE_MODES), "default": "first_person"},
+        }
+    except Exception as e:
+        out["dials"] = {}
+        out["error"] = str(e)
+    try:
+        from agents.author_agent import AuthorAgent
+        author = await AuthorAgent.get_instance()
+        out["current"] = (author.get_publishing_schedule() or {}).get("protocol_series", {})
+    except Exception:
+        out["current"] = {}
+    return _maybe_h_text(request, out, route_path="/insight/composition/dials")
 
 
 @app.get("/insight/improvement/timeline", tags=["insight"])
@@ -9749,6 +10090,28 @@ async def startup_event():
                     logger.warning("catalogue projector loop error", exc_info=True)
                 await asyncio.sleep(interval)
 
+        # ── Event-loop lag watchdog ───────────────────────────────────────────
+        # This process serves HTTP and runs the autonomous loop on ONE event
+        # loop with --workers 1. Any synchronous call in agent code therefore
+        # stops mindx.pythai.net from accepting connections, and does it
+        # silently — the 2026-08-09 outage looked like a healthy `active
+        # (running)` unit while the accept backlog grew unbounded. Sleep 1s in
+        # a tight loop and report how late we actually woke up: the overshoot
+        # IS the time the loop spent blocked, so a regression names itself in
+        # the journal instead of presenting as an unexplained dead site.
+        async def _event_loop_watchdog(threshold: float = 5.0):
+            loop = asyncio.get_running_loop()
+            while True:
+                before = loop.time()
+                await asyncio.sleep(1.0)
+                lag = loop.time() - before - 1.0
+                if lag >= threshold:
+                    logger.warning(
+                        "event-loop watchdog: loop blocked for %.1fs (HTTP was unservable "
+                        "for that window) — a synchronous call is running on the event "
+                        "loop; wrap it in asyncio.to_thread()", lag)
+
+        asyncio.create_task(_event_loop_watchdog())
         asyncio.create_task(_auto_start_autonomous())
         asyncio.create_task(_periodic_memory_promotion())
 
