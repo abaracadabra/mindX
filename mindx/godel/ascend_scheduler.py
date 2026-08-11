@@ -31,7 +31,8 @@ from typing import Optional, Tuple
 from .mindxtrain import (autonomous_train_enabled, is_enabled,
                          ASCEND_COOLDOWN_S, CPU_RECIPE_REAL)
 from .mindxtrain import bridge as _bridge
-from .mindxtrain.ascend import ascend_recipe, read_watermark, write_watermark
+from .mindxtrain.ascend import (ascend_recipe, read_watermark, write_watermark,
+                               write_trained_watermark)
 
 try:
     from utils.config import PROJECT_ROOT
@@ -156,7 +157,26 @@ async def run_ascent_if_due(self_eval: Optional[dict] = None, *, sea=None) -> Op
         logger.warning("ascend_scheduler: ascent failed: %s", e)
         return None
 
+    # The ATTEMPT clock advances unconditionally — a failed ascent must still
+    # serve its cooldown, or the scheduler retries a 20-minute CPU training run
+    # immediately and storms the box (gen19 on 2026-08-09 died 20 minutes in, at
+    # 35/116 steps and ~35s per step).
     write_watermark(ASCEND_WORK, time.time())
+
+    # The PROMOTION clock advances only when a generation is actually served,
+    # so a curriculum selector never treats the dreams behind a failed ascent as
+    # already learned. This is the same criterion the LTM retention gate uses
+    # (ascend_scheduler.trained_through_ts), kept on disk so the forge-based
+    # ascend() path can default to it without reading the ascent log.
+    if getattr(result, "promoted", False):
+        write_trained_watermark(ASCEND_WORK, time.time())
+        logger.info("ascend_scheduler: generation %d promoted — trained-through advanced",
+                    generation)
+    else:
+        logger.info("ascend_scheduler: generation %d not promoted (stage=%s) — "
+                    "trained-through held; its dreams stay in the curriculum",
+                    generation, getattr(result, "stage", "?"))
+
     _record_generation(generation)
     rec = result.as_dict()
     rec["ts"] = time.time()

@@ -123,6 +123,15 @@ async def ascend(
         )
 
     # 1. distill + 2. curate (streamed)
+    #
+    # An unspecified `since_ts` defaults to the PROMOTION clock, never the
+    # attempt clock. Defaulting to "when did we last try" would silently drop
+    # the dreams behind every failed generation out of the curriculum forever —
+    # they would be marked consumed by an ascent that never produced a model.
+    # None (nothing ever promoted) correctly means "consume everything", since
+    # no dream has been learned yet.
+    if since_ts is None:
+        since_ts = read_trained_watermark(work_dir)
     stats = CurationStats()
     rows = curate(distill(dreams_dir, since_ts=since_ts),
                   min_score=min_score, stats=stats)
@@ -375,19 +384,65 @@ def _find_adapter(runs_dir: Path):
     return None
 
 
+# ── Two clocks, deliberately separate ─────────────────────────────────────
+#
+# These used to be one file, and one file cannot answer both questions:
+#
+#   "when did we last TRY?"     → paces retries. Must advance on every attempt,
+#                                 including failures, or a failing ascent clears
+#                                 its own cooldown and retry-storms 20-minute
+#                                 training runs on a 2-core box.
+#   "what has been LEARNED?"    → selects the curriculum. Must advance ONLY on
+#                                 promotion, or a failed generation silently
+#                                 marks its dreams as consumed and no later
+#                                 generation ever trains on them.
+#
+# On 2026-08-09 the single watermark read 3 days ahead of the last promoted
+# generation because gens 17 (unpromoted), 18 (dormant) and 19 (train_failed)
+# each advanced it. That is correct for the retry clock and wrong for the
+# curriculum clock — hence the split.
+
 def watermark_path(work_dir: Path) -> Path:
+    """The ATTEMPT clock — advanced after every ascent, promoted or not."""
     return Path(work_dir) / ".ascend_watermark"
 
 
-def read_watermark(work_dir: Path) -> Optional[float]:
-    p = watermark_path(work_dir)
+def trained_watermark_path(work_dir: Path) -> Path:
+    """The PROMOTION clock — advanced only when a generation is actually served."""
+    return Path(work_dir) / ".ascend_trained_through"
+
+
+def _read_ts(p: Path) -> Optional[float]:
     try:
         return float(p.read_text().strip())
     except Exception:
         return None
 
 
-def write_watermark(work_dir: Path, ts: Optional[float] = None) -> None:
-    p = watermark_path(work_dir)
+def _write_ts(p: Path, ts: Optional[float]) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(str(ts if ts is not None else time.time()))
+
+
+def read_watermark(work_dir: Path) -> Optional[float]:
+    """When did we last attempt an ascent? Paces the cooldown."""
+    return _read_ts(watermark_path(work_dir))
+
+
+def write_watermark(work_dir: Path, ts: Optional[float] = None) -> None:
+    _write_ts(watermark_path(work_dir), ts)
+
+
+def read_trained_watermark(work_dir: Path) -> Optional[float]:
+    """Up to when is dream knowledge provably IN the weights?
+
+    None means nothing has ever been promoted — in which case a curriculum
+    selector must consume everything rather than nothing, since no dream has
+    been learned yet.
+    """
+    return _read_ts(trained_watermark_path(work_dir))
+
+
+def write_trained_watermark(work_dir: Path, ts: Optional[float] = None) -> None:
+    """Call ONLY after a generation reaches `promoted`."""
+    _write_ts(trained_watermark_path(work_dir), ts)
